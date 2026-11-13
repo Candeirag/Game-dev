@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+
+/*
+ * Tema "muro dos boxes": fundo grafite, painéis em camadas e um único acento
+ * em vermelho de bandeira. Números usam algarismos tabulares, como em telemetria.
+ */
+@theme {
+  --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --color-ink-950: #07090d;
+  --color-ink-900: #0c1017;
+  --color-ink-850: #111722;
+  --color-ink-800: #161d2a;
+  --color-ink-700: #212a3a;
+  --color-ink-600: #2e3a4f;
+  --color-ink-400: #6b7a93;
+  --color-ink-300: #97a3b8;
+  --color-ink-100: #e6ebf3;
+
+  --color-apex-500: #ef3b2d;
+  --color-apex-400: #ff5a4a;
+  --color-apex-600: #c92a1e;
+  --color-gold-400: #f6c343;
+  --color-silver-300: #c9d1dc;
+  --color-bronze-400: #d08b4f;
+  --color-go-400: #34d399;
+  --color-rain-400: #60a5fa;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-ink-950);
+  }
+  body {
+    @apply bg-ink-950 font-sans text-ink-100 antialiased;
+    min-height: 100vh;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-apex-400);
+    outline-offset: 2px;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+}
+
+@keyframes flash-in {
+  from {
+    background-color: color-mix(in oklab, var(--color-apex-500) 22%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.animate-flash {
+  animation: flash-in 1.2s ease-out;
+}
