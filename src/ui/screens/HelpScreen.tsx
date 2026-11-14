@@ -48,6 +48,7 @@ const TOPICS: { title: string; items: string[] }[] = [
       'As decisões pendentes (eventos) precisam ser resolvidas antes de abrir o fim de semana.',
       'A corrida é mostrada na pista: toque em Largar, controle a transmissão com Pausar, 1× a 8× e +1 volta, e escolha entre a câmera geral e a que acompanha o seu carro. Tocar num piloto da classificação (ou num carro) o destaca.',
       'Ritmo e pedido de parada valem para a volta seguinte à que o líder está fazendo; a tela mostra qual é. Reiniciar visualização só repete as imagens: o que já aconteceu não muda.',
+      'Cada categoria tem o seu veículo, do kart 4 tempos ao Fórmula 1. Os autódromos seguem o traçado de pistas reais, com nomes fictícios (geometria: bacinger/f1-circuits, licença MIT).',
     ],
   },
   {

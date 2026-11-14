@@ -11,6 +11,8 @@ import { WEATHER_LABELS } from '@/domain/labels';
 import { getTrack } from '@/data/tracks';
 import { TYRES, buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName, isRaceFinished, lapInfoAt, standingsAt, type StandingRow } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
+import { VEHICLES } from '@/data/vehicles';
+import { CarSprite } from '../components/CarSprite';
 import { CompoundDot, EVENT_TONE, RaceResultPanel } from '../components/RaceView';
 import { Button, Card, cx } from '../components/ui';
 import { formatLap } from '../format';
@@ -295,6 +297,10 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
                   </div>
                   <div className="truncate text-xs text-ink-400">{teams[focus.teamId]?.name}{focusIsPlayer ? ' · você' : focusIsMine ? ' · sua equipe' : ''}</div>
                 </div>
+              </div>
+              <div className="flex items-center gap-3 border-t border-ink-800 bg-ink-850 px-3 py-2">
+                <CarSprite categoryId={category.id} teamId={focus.teamId} color={teams[focus.teamId]?.color ?? '#9aa3b2'} driverId={focus.driverId} number={focus.number} className="w-36 shrink-0" />
+                <span className="text-xs text-ink-400">{VEHICLES[category.id].name}</span>
               </div>
               <dl className="grid grid-cols-3 gap-x-3 gap-y-2.5 border-t border-ink-800 px-3 py-3 text-sm">
                 <div>

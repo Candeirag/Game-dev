@@ -5,6 +5,7 @@
 export { CIRCUIT, buildCircuit, poseAt, racingLineAt, tauAt, sAtTau, paceAt, pitLateralAt, pitBoxAt, sectorAt, wrap01, type Circuit, type CircuitCorner, type CircuitStyle, type PitLane, type TrackPose } from './circuit';
 export {
   appendRaceLap,
+  assignCarNumbers,
   buildRaceTimeline,
   circuitForRace,
   createRaceTimeline,

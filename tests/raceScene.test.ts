@@ -9,8 +9,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CategoryId, Driver, Team } from '@/domain/schemas';
 import { getTrack } from '@/data/tracks';
-import { CAR_SIZE, createSceneMemory, driverCode, placeCars } from '@/ui/race/raceScene';
-import { LAP_SECONDS } from '@/ui/race/useRacePlayback';
+import { vehicleFor } from '@/data/vehicles';
+import { createSceneMemory, driverCode, placeCars } from '@/ui/race/raceScene';
+import { lapSecondsFor } from '@/ui/race/useRacePlayback';
 import { CIRCUIT, buildCategoryField, buildRaceTimeline, circuitForRace, createRaceSim, getCategory, isRaceFinished, lapInfoAt, standingsAt, stepRaceLap, type RaceContext, type RaceSimState } from './engineApi';
 
 function fieldRace(categoryId: CategoryId, trackId: string, seed: number, wetness = 0) {
@@ -45,15 +46,15 @@ interface FrameStats {
 function play(race: ReturnType<typeof fieldRace>, from: number, to: number, speed: number): FrameStats {
   const { timeline, circuit } = race;
   const memory = createSceneMemory();
-  const size = CAR_SIZE[circuit.style];
+  const size = vehicleFor(timeline.categoryId);
   const dt = 1 / 60;
-  const rate = (timeline.referenceLap / LAP_SECONDS) * speed;
+  const rate = (timeline.referenceLap / lapSecondsFor(timeline.circuitLength)) * speed;
   const restarts = timeline.suspensions.filter((s) => !s.final).map((s) => s.time);
   const stats: FrameStats = { frames: 0, worstJump: 0, pairs: 0, overlapping: 0, widest: 0 };
   let previous = new Map<string, { x: number; y: number }>();
   for (let t = from; t <= to; t += dt * rate) {
     const info = lapInfoAt(timeline, t);
-    const placed = placeCars(standingsAt(timeline, circuit, t), circuit, memory, dt, info?.flag === 'sc' && t < info.end);
+    const placed = placeCars(standingsAt(timeline, circuit, t), circuit, memory, dt, info?.flag === 'sc' && t < info.end, size);
     const regrid = restarts.some((r) => r > t - dt * rate && r <= t);
     const positions = new Map<string, { x: number; y: number }>();
     for (const car of placed) {
@@ -86,7 +87,7 @@ describe('formação dos carros na pista', () => {
     expect(stats.frames).toBeGreaterThan(3000);
     // Em 1×, a volta dura 24 s: um carro anda cerca de 1,5 unidade por quadro (2 nas retas).
     expect(stats.worstJump).toBeLessThan(4.5);
-    expect(stats.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - CAR_SIZE.kart.width / 2);
+    expect(stats.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('kart-regional').width / 2);
     // Com 20 karts em 5 segundos de pista, a formação em duas filas quase elimina a sobreposição.
     expect(stats.overlapping / stats.pairs).toBeLessThan(0.004);
   });
@@ -97,13 +98,13 @@ describe('formação dos carros na pista', () => {
     expect(race.final.redFlags).toBeGreaterThan(0);
     const slow = play(race, 0, race.timeline.laps[3]!.end, 1);
     expect(slow.worstJump).toBeLessThan(5);
-    expect(slow.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - CAR_SIZE.formula.width / 2);
+    expect(slow.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('f1').width / 2);
     expect(slow.overlapping / slow.pairs).toBeLessThan(0.006);
     // Em 8× cada quadro avança oito vezes mais; o limite de deslocamento cresce na mesma proporção.
     const fast = play(race, 0, race.timeline.endTime!, 8);
     expect(fast.frames).toBeGreaterThan(5000);
     expect(fast.worstJump).toBeLessThan(5 * 8);
-    expect(fast.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - CAR_SIZE.formula.width / 2);
+    expect(fast.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('f1').width / 2);
   });
 
   it('atrás do safety car os carros ficam em fila única', () => {
@@ -112,8 +113,8 @@ describe('formação dos carros na pista', () => {
     expect(sc).toBeDefined();
     const memory = createSceneMemory();
     const t = sc!.start + (sc!.end - sc!.start) * 0.6;
-    let placed = placeCars(standingsAt(race.timeline, race.circuit, t), race.circuit, memory, 1 / 60, true);
-    for (let i = 0; i < 120; i++) placed = placeCars(standingsAt(race.timeline, race.circuit, t), race.circuit, memory, 1 / 60, true);
+    let placed = placeCars(standingsAt(race.timeline, race.circuit, t), race.circuit, memory, 1 / 60, true, vehicleFor('f1'));
+    for (let i = 0; i < 120; i++) placed = placeCars(standingsAt(race.timeline, race.circuit, t), race.circuit, memory, 1 / 60, true, vehicleFor('f1'));
     // Fila na ordem em que os carros estão na pista, a partir do líder (um retardatário pode estar no meio dela).
     const onTrack = placed.filter((c) => c.row.state === 'racing' && !c.row.sample.inPitLane);
     const leader = onTrack.find((c) => c.row.position === Math.min(...onTrack.map((o) => o.row.position)))!;
@@ -123,8 +124,8 @@ describe('formação dos carros na pista', () => {
     for (let i = 1; i < queue.length; i++) {
       const gap = (behindLeader(queue[i]!) - behindLeader(queue[i - 1]!)) * race.circuit.length;
       // Um carro atrás do outro, nunca lado a lado.
-      expect(gap, `fila ${i}`).toBeGreaterThanOrEqual(CAR_SIZE.formula.length * 1.02);
-      expect(Math.abs(queue[i]!.lateral - queue[i - 1]!.lateral), `fila ${i}`).toBeLessThan(CAR_SIZE.formula.width);
+      expect(gap, `fila ${i}`).toBeGreaterThanOrEqual(vehicleFor('f1').length * 1.02);
+      expect(Math.abs(queue[i]!.lateral - queue[i - 1]!.lateral), `fila ${i}`).toBeLessThan(vehicleFor('f1').width);
     }
   });
 

@@ -1,15 +1,20 @@
 /**
  * Geometria dos circuitos para a transmissão visual.
  *
- * Cada pista do jogo ganha um traçado próprio, gerado de forma determinística a
- * partir do seu id e das suas características (as mesmas que o motor de corrida
- * usa): pistas de motor têm retas longas; pistas travadas têm mais curvas e
- * raios menores. O traçado é um polígono com os cantos arredondados, ou seja,
- * retas de verdade ligadas por curvas de raio constante, como num mapa de
- * circuito.
+ * Os autódromos (as 14 pistas dos monopostos) usam o traçado real da pista que
+ * inspira cada um: os pontos vêm de src/data/circuitLayouts.ts, em metros, e são
+ * só girados e ampliados para caber na área de desenho. Curvas, retas, sentido
+ * da corrida e posição da largada são os reais; os nomes das pistas são fictícios.
  *
- * As medidas estão em "unidades de mundo": a pista inteira cabe numa área de
- * 1000 × 640. A escala é esquemática de propósito. Em escala real, um carro de
+ * Os kartódromos, que não têm traçado real cadastrado, ganham um traçado
+ * próprio gerado de forma determinística a partir do id e das características
+ * da pista (as mesmas que o motor de corrida usa): pistas de motor têm retas
+ * longas; pistas travadas têm mais curvas e raios menores. Nesse caso o traçado
+ * é um polígono com os cantos arredondados.
+ *
+ * As medidas estão em "unidades de mundo": a área de desenho tem 1000 × 640, ou
+ * um múltiplo disso nos traçados reais mais apertados (ver realCircuit). A
+ * escala é esquemática de propósito. Em escala real, um carro de
  * 5 m numa pista de 5 km teria 2 pixels; aqui carros e largura da pista são
  * ampliados para que a disputa seja visível, como em qualquer jogo de gestão.
  * A velocidade exibida ao jogador usa o comprimento real da pista (em metros)
@@ -20,6 +25,7 @@
  * rápido nas retas), igual para todos.
  */
 import type { Track } from '@/domain/schemas';
+import { CIRCUIT_LAYOUTS, type CircuitLayout } from '@/data/circuitLayouts';
 import { createRng, hashSeed, uniform, type Rng } from '../rng';
 
 export type CircuitStyle = 'kart' | 'formula';
@@ -50,6 +56,16 @@ export const CIRCUIT = {
 } as const;
 
 /** Perfil de velocidade por tipo de veículo (valores relativos à velocidade máxima). */
+/**
+ * Perfil dos traçados reais, em metros: um F1 faz de pé embaixo curvas com mais de 240 m de raio,
+ * precisa de uns 400 m para ir da velocidade de um grampo à máxima e de uns 110 m para o inverso.
+ * Para os karts não há traçado real cadastrado; o valor fica pronto para quando houver.
+ */
+const METRIC_PROFILE: Record<CircuitStyle, { fullRadius: number; minSpeed: number; accel: number; brake: number; peak: number }> = {
+  kart: { fullRadius: 60, minSpeed: 0.46, accel: 0.006, brake: 0.014, peak: 1.36 },
+  formula: { fullRadius: 240, minSpeed: 0.27, accel: 0.0011, brake: 0.0042, peak: 1.5 },
+};
+
 const SPEED_PROFILE: Record<CircuitStyle, { fullRadius: number; minSpeed: number; accel: number; brake: number; peak: number }> = {
   // Kart: pouca diferença entre reta e curva, retomada curta.
   kart: { fullRadius: 150, minSpeed: 0.46, accel: 0.0026, brake: 0.006, peak: 1.36 },
@@ -78,6 +94,8 @@ export interface PitLane {
   /** Trecho em que ficam as posições de parada das equipes. */
   boxFrom: number;
   boxTo: number;
+  /** Profundidade do prédio dos boxes (menor onde o traçado real deixa pouco espaço). */
+  building: number;
 }
 
 export interface Circuit {
@@ -108,6 +126,14 @@ export interface Circuit {
   gridSlot: number;
   /** Limites entre os setores 1/2 e 2/3. */
   sectors: [number, number];
+  /** O traçado reproduz uma pista real (false = gerado por regras). */
+  real: boolean;
+  /** Unidades de mundo por metro de pista. */
+  unitsPerMetre: number;
+  /** Viadutos: o trecho `over` passa por cima do trecho `under` (frações da volta). */
+  bridges: { over: [number, number]; under: [number, number] }[];
+  /** Zonas de ultrapassagem: as retas mais longas (frações da volta; `to` pode passar de 1). */
+  zones: { from: number; to: number }[];
 }
 
 interface Vertex {
@@ -157,7 +183,7 @@ const FLOWING = -3;
  *    entra no infield e volta), grampos, chicanes e esses. Pistas travadas
  *    recebem mais trechos; pistas de motor ficam com as retas inteiras.
  *
- * Quem garante que nada se sobrepõe é a validação feita depois (isValid).
+ * Quem garante que nada se sobrepõe é a validação feita depois (tracksClear e a conferência dos boxes).
  */
 function basePolygon(rng: Rng, track: Track, style: CircuitStyle, attempt: number): Vertex[] {
   const twist = clamp((track.overtakingDifficulty - 0.3) / 0.65, 0, 1);
@@ -441,19 +467,27 @@ function peakPace(tau: number[], count: number): number {
   return peak;
 }
 
-function assemble(trackId: string, style: CircuitStyle, fillets: Fillet[], clockwise: boolean): Circuit | null {
-  // A volta começa na reta dos boxes: entre o fim do arco do vértice 0 e o começo do arco do vértice 1.
-  const first = at(fillets, 0);
-  const second = at(fillets, 1);
-  const straight = Math.hypot(second.ax - first.bx, second.ay - first.by);
-  const behind = straight * 0.6;
-  const ahead = straight - behind;
-  if (behind < 150 || ahead < 90) return null;
+/** Traçado fechado, já em unidades de mundo, com tudo o que falta para montar o circuito. */
+interface PathSpec {
+  trackId: string;
+  style: CircuitStyle;
+  dense: { x: number[]; y: number[] };
+  /** Distância, ao longo de `dense`, até a linha de largada. */
+  startLength: number;
+  clockwise: boolean;
+  width: number;
+  height: number;
+  /** Reta antes e depois da largada; nos traçados reais é medida pela curvatura. */
+  straight: { behind: number; ahead: number } | null;
+  /** Unidades por metro (traçado real) ou null (gerado: perfil de velocidade em unidades). */
+  unitsPerMetre: number | null;
+  bridge: boolean;
+}
 
-  const dense = tracePath(fillets);
-  // O traçado denso começa no arco do vértice 0; a linha de chegada fica `behind` depois do fim dele.
-  const startLength = Math.abs(first.turn) * first.radius + behind;
-  const sampled = resample(dense, startLength);
+function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
+  const { trackId, style, clockwise } = spec;
+  const real = spec.unitsPerMetre !== null;
+  const sampled = resample(spec.dense, spec.startLength);
   const { x, y, length, step } = sampled;
   const count = x.length;
 
@@ -464,19 +498,21 @@ function assemble(trackId: string, style: CircuitStyle, fillets: Fillet[], clock
   const curvature = movingAverage(rawCurvature, 2);
 
   // Perfil de velocidade: limite de cada curva, depois os limites de aceleração e de freada.
-  const profile = SPEED_PROFILE[style];
+  // Nos traçados reais as contas são em metros; nos gerados, em unidades de mundo.
+  const profile = real ? METRIC_PROFILE[style] : SPEED_PROFILE[style];
+  const metres = 1 / (spec.unitsPerMetre ?? 1);
   const speed = curvature.map((k) => {
-    const radius = Math.abs(k) < 1e-5 ? Infinity : 1 / Math.abs(k);
+    const radius = Math.abs(k) < 1e-5 ? Infinity : metres / Math.abs(k);
     return clamp(Math.sqrt(radius / profile.fullRadius), profile.minSpeed, 1);
   });
   for (let pass = 0; pass < 2; pass++) {
     for (let i = 0; i < count; i++) {
       const j = (i + 1) % count;
-      speed[j] = Math.min(at(speed, j), Math.sqrt(at(speed, i) ** 2 + 2 * profile.accel * step));
+      speed[j] = Math.min(at(speed, j), Math.sqrt(at(speed, i) ** 2 + 2 * profile.accel * step * metres));
     }
     for (let i = count - 1; i >= 0; i--) {
       const j = (i + 1) % count;
-      speed[i] = Math.min(at(speed, i), Math.sqrt(at(speed, j) ** 2 + 2 * profile.brake * step));
+      speed[i] = Math.min(at(speed, i), Math.sqrt(at(speed, j) ** 2 + 2 * profile.brake * step * metres));
     }
   }
   // A velocidade máxima não passa de um múltiplo plausível da média da volta (cerca de 330 km/h
@@ -517,30 +553,118 @@ function assemble(trackId: string, style: CircuitStyle, fillets: Fillet[], clock
     }
   }
 
-  // Lado de dentro na linha de chegada: o lado em que está o centro do circuito.
+  // Lado dos boxes. Nos traçados reais é o lado de dentro pelo sentido da corrida (à direita
+  // de quem anda no sentido horário); nos gerados, o lado em que está o centro do circuito.
   const cx = x.reduce((s, v) => s + v, 0) / count;
   const cy = y.reduce((s, v) => s + v, 0) / count;
   const h0 = at(heading, 0);
-  const insideSign: 1 | -1 = (cx - at(x, 0)) * -Math.sin(h0) + (cy - at(y, 0)) * Math.cos(h0) >= 0 ? 1 : -1;
+  const towardsCentre: 1 | -1 = (cx - at(x, 0)) * -Math.sin(h0) + (cy - at(y, 0)) * Math.cos(h0) >= 0 ? 1 : -1;
+  const insideSign: 1 | -1 = real ? (clockwise ? 1 : -1) : towardsCentre;
 
-  const entryLength = Math.min(behind * 0.93, 330);
-  const exitLength = ahead * 0.93;
-  const ramp = Math.min(CIRCUIT.PIT_RAMP, exitLength * 0.45);
-  const pit: PitLane = {
-    entry: 1 - entryLength / length,
-    entryEnd: 1 - (entryLength - CIRCUIT.PIT_RAMP) / length,
-    exitStart: (exitLength - ramp) / length,
-    exit: exitLength / length,
-    offset: insideSign * CIRCUIT.PIT_OFFSET,
-    boxFrom: 1 - (entryLength - CIRCUIT.PIT_RAMP - 14) / length,
-    boxTo: 1 - 16 / length,
+  // Reta da largada: nos traçados reais vai até a primeira curva fechada de cada lado.
+  let behind = spec.straight?.behind ?? 0;
+  let ahead = spec.straight?.ahead ?? 0;
+  if (!spec.straight) {
+    const tight = 1 / 75;
+    let back = 1;
+    while (back < count / 2 && Math.abs(at(curvature, -back)) < tight) back++;
+    let front = 1;
+    while (front < count / 2 && Math.abs(at(curvature, front)) < tight) front++;
+    behind = clamp(back * step, 140, 400);
+    ahead = clamp(front * step, 80, 230);
+  }
+  // Boxes. Nos traçados reais nem sempre há espaço para o pit lane inteiro e o prédio do lado de
+  // dentro da reta; tenta-se do maior para o menor e fica o primeiro que não encosta em outro trecho.
+  const pitVariant = (maxEntry: number, maxExit: number, building: number): PitLane => {
+    const entryLength = Math.min(behind * 0.93, maxEntry);
+    const exitLength = Math.min(ahead * 0.93, maxExit);
+    const ramp = Math.min(CIRCUIT.PIT_RAMP, exitLength * 0.45);
+    return {
+      entry: 1 - entryLength / length,
+      entryEnd: 1 - (entryLength - CIRCUIT.PIT_RAMP) / length,
+      exitStart: (exitLength - ramp) / length,
+      exit: exitLength / length,
+      offset: insideSign * CIRCUIT.PIT_OFFSET,
+      boxFrom: 1 - (entryLength - CIRCUIT.PIT_RAMP - 14) / length,
+      boxTo: 1 - 16 / length,
+      building,
+    };
   };
+  const pitClear = (candidate: PitLane): boolean => {
+    const reach = CIRCUIT.PIT_OFFSET + CIRCUIT.PIT_WIDTH / 2 + candidate.building;
+    const needed = CIRCUIT.TRACK_WIDTH / 2 + (real ? 4 : 10);
+    const minArc = 150 / step;
+    const from = Math.floor(candidate.entry * count);
+    const to = Math.ceil(candidate.exit * count) + count;
+    for (let k = from; k <= to; k += 3) {
+      const i = k % count;
+      const px = at(x, i) - Math.sin(at(heading, i)) * reach * insideSign;
+      const py = at(y, i) + Math.cos(at(heading, i)) * reach * insideSign;
+      for (let j = 0; j < count; j += 3) {
+        const arc = Math.min(Math.abs(j - i), count - Math.abs(j - i));
+        if (arc >= minArc && Math.hypot(px - at(x, j), py - at(y, j)) < needed) return false;
+      }
+    }
+    return true;
+  };
+  const variants = real
+    ? [pitVariant(330, 400, CIRCUIT.PIT_BUILDING), pitVariant(250, 130, 17), pitVariant(190, 75, 9)]
+    : [pitVariant(330, 400, CIRCUIT.PIT_BUILDING)];
+  const fitting = variants.find(pitClear);
+  const pit = fitting ?? at(variants, variants.length - 1);
+
+  // Viaduto: o ponto em que o traçado passa por cima de si mesmo. O trecho que vem depois na
+  // volta é o que passa por cima.
+  const bridges: Circuit['bridges'] = [];
+  if (spec.bridge) {
+    let best: { i: number; j: number; distance: number } | null = null;
+    for (let i = 0; i < count; i++) {
+      for (let j = i + Math.ceil(200 / step); j < count; j++) {
+        if (count - (j - i) < 200 / step) continue;
+        const distance = Math.hypot(at(x, i) - at(x, j), at(y, i) - at(y, j));
+        if (!best || distance < best.distance) best = { i, j, distance };
+      }
+    }
+    if (best && best.distance < step * 2) {
+      const half = 42 / length;
+      bridges.push({ under: [best.i / count - half, best.i / count + half], over: [best.j / count - half, best.j / count + half] });
+    }
+  }
+
+  // Zonas de ultrapassagem: as duas retas mais longas (só nos autódromos).
+  const zones: Circuit['zones'] = [];
+  if (style === 'formula') {
+    const straights: { from: number; samples: number }[] = [];
+    // Reta, para este fim, é tudo o que se faz de pé embaixo: curvas de raio acima de 260 unidades contam.
+    const isStraight = (i: number) => Math.abs(at(curvature, i)) < 1 / 260;
+    let first = 0;
+    while (first < count && isStraight(first)) first++;
+    if (first < count) {
+      let run: { from: number; samples: number } | null = null;
+      for (let k = 0; k <= count; k++) {
+        const i = first + k;
+        if (k < count && isStraight(i)) {
+          if (!run) run = { from: i, samples: 0 };
+          run.samples++;
+        } else if (run) {
+          straights.push(run);
+          run = null;
+        }
+      }
+    }
+    straights.sort((a, b) => b.samples - a.samples);
+    for (const run of straights.slice(0, 2)) {
+      if (run.samples * step < 190) continue;
+      // A zona ocupa a segunda metade da reta, até a freada.
+      zones.push({ from: (run.from + run.samples * 0.45) / count, to: (run.from + run.samples) / count });
+    }
+  }
 
   const circuit: Circuit = {
     trackId,
     style,
-    width: CIRCUIT.WORLD_WIDTH,
-    height: CIRCUIT.WORLD_HEIGHT,
+    width: spec.width,
+    height: spec.height,
     length,
     step,
     count,
@@ -557,35 +681,176 @@ function assemble(trackId: string, style: CircuitStyle, fillets: Fillet[], clock
     pit,
     gridSlot: CIRCUIT.GRID_SLOT / length,
     sectors: [1 / 3, 2 / 3],
+    real,
+    unitsPerMetre: spec.unitsPerMetre ?? 1,
+    bridges,
+    zones,
   };
-  return isValid(circuit) ? circuit : null;
+  return { circuit, valid: fitting !== undefined && tracksClear(circuit) };
 }
 
-/** Confere se nenhum trecho passa perto demais de outro e se a área dos boxes está livre. */
-function isValid(circuit: Circuit): boolean {
+/** Monta um traçado gerado por regras (polígono com cantos arredondados). Devolve null se não for válido. */
+function assembleGenerated(trackId: string, style: CircuitStyle, fillets: Fillet[], clockwise: boolean): Circuit | null {
+  // A volta começa na reta dos boxes: entre o fim do arco do vértice 0 e o começo do arco do vértice 1.
+  const first = at(fillets, 0);
+  const second = at(fillets, 1);
+  const straight = Math.hypot(second.ax - first.bx, second.ay - first.by);
+  const behind = straight * 0.6;
+  const ahead = straight - behind;
+  if (behind < 150 || ahead < 90) return null;
+  const built = assemble({
+    trackId,
+    style,
+    dense: tracePath(fillets),
+    // O traçado denso começa no arco do vértice 0; a linha de chegada fica `behind` depois do fim dele.
+    startLength: Math.abs(first.turn) * first.radius + behind,
+    clockwise,
+    width: CIRCUIT.WORLD_WIDTH,
+    height: CIRCUIT.WORLD_HEIGHT,
+    straight: { behind, ahead },
+    unitsPerMetre: null,
+    bridge: false,
+  });
+  return built.valid ? built.circuit : null;
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. Traçados reais                                                    */
+/* ------------------------------------------------------------------ */
+
+/** Curva suave que passa por todos os pontos do traçado (Catmull-Rom centrípeta), um ponto a cada ~2 m. */
+function smoothClosed(points: readonly number[]): { x: number[]; y: number[] } {
+  const n = points.length / 2;
+  const px = (i: number) => points[(((i % n) + n) % n) * 2] ?? 0;
+  const py = (i: number) => points[(((i % n) + n) % n) * 2 + 1] ?? 0;
+  const x: number[] = [];
+  const y: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const p0 = [px(i - 1), py(i - 1)] as const;
+    const p1 = [px(i), py(i)] as const;
+    const p2 = [px(i + 1), py(i + 1)] as const;
+    const p3 = [px(i + 2), py(i + 2)] as const;
+    const knot = (a: readonly [number, number], b: readonly [number, number]) => Math.max(1e-3, Math.sqrt(Math.hypot(b[0] - a[0], b[1] - a[1])));
+    const t0 = 0;
+    const t1 = t0 + knot(p0, p1);
+    const t2 = t1 + knot(p1, p2);
+    const t3 = t2 + knot(p2, p3);
+    const steps = Math.max(1, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 2));
+    for (let k = 0; k < steps; k++) {
+      const t = t1 + ((t2 - t1) * k) / steps;
+      const mix = (a: number, b: number, ta: number, tb: number) => ((tb - t) * a + (t - ta) * b) / (tb - ta);
+      for (const axis of [0, 1] as const) {
+        const a1 = mix(p0[axis], p1[axis], t0, t1);
+        const a2 = mix(p1[axis], p2[axis], t1, t2);
+        const a3 = mix(p2[axis], p3[axis], t2, t3);
+        const b1 = mix(a1, a2, t0, t2);
+        const b2 = mix(a2, a3, t1, t3);
+        (axis === 0 ? x : y).push(mix(b1, b2, t1, t2));
+      }
+    }
+  }
+  return { x, y };
+}
+
+/**
+ * Escala dos traçados reais: unidades de mundo por metro. Com 1 unidade por metro, um carro
+ * (21 unidades) aparece com quase quatro vezes o tamanho real, a mesma proporção dos kartódromos.
+ * Os fatores seguintes só entram quando dois trechos vizinhos se encostariam.
+ */
+const REAL_SCALE = 1;
+const REAL_FACTORS = [1, 1.1, 1.2, 1.35, 1.5] as const;
+const REAL_MARGIN = 84;
+
+/**
+ * Circuito de traçado real. Os pontos (em metros) são girados para deitar o traçado na área de
+ * desenho, sem espelhar, e ampliados pela mesma escala em todas as pistas: assim um circuito
+ * longo é mesmo maior na tela do que um curto, e a velocidade dos carros na imagem acompanha a
+ * real. Como pista e carros são desenhados mais largos do que em escala, trechos vizinhos podem
+ * se encostar; nesse caso a escala daquela pista cresce um pouco, até caberem.
+ */
+function realCircuit(track: Track, style: CircuitStyle, layout: CircuitLayout): Circuit {
+  const smooth = smoothClosed(layout.points);
+  const n = smooth.x.length;
+  const aspect = CIRCUIT.WORLD_WIDTH / CIRCUIT.WORLD_HEIGHT;
+
+  // Giro que melhor aproveita uma tela deitada; entre as duas opções a 180°, a que deixa a largada embaixo.
+  let best = { angle: 0, fit: 0 };
+  for (let degrees = 0; degrees < 180; degrees += 2) {
+    const angle = (degrees * Math.PI) / 180;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < n; i += 4) {
+      const rx = at(smooth.x, i) * cos - at(smooth.y, i) * sin;
+      const ry = at(smooth.x, i) * sin + at(smooth.y, i) * cos;
+      minX = Math.min(minX, rx);
+      maxX = Math.max(maxX, rx);
+      minY = Math.min(minY, ry);
+      maxY = Math.max(maxY, ry);
+    }
+    const fit = Math.min(aspect / (maxX - minX), 1 / (maxY - minY));
+    if (fit > best.fit) best = { angle, fit };
+  }
+  const place = (angle: number) => {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const rx = smooth.x.map((v, i) => v * cos - at(smooth.y, i) * sin);
+    const ry = smooth.x.map((v, i) => v * sin + at(smooth.y, i) * cos);
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < n; i++) {
+      minX = Math.min(minX, at(rx, i));
+      maxX = Math.max(maxX, at(rx, i));
+      minY = Math.min(minY, at(ry, i));
+      maxY = Math.max(maxY, at(ry, i));
+    }
+    return { rx, ry, minX, maxX, minY, maxY };
+  };
+  let placed = place(best.angle);
+  if (at(placed.ry, 0) < (placed.minY + placed.maxY) / 2) placed = place(best.angle + Math.PI);
+
+  let chosen: Circuit | null = null;
+  for (const factor of REAL_FACTORS) {
+    const k = REAL_SCALE * factor;
+    const built = assemble({
+      trackId: track.id,
+      style,
+      dense: { x: placed.rx.map((v) => REAL_MARGIN + (v - placed.minX) * k), y: placed.ry.map((v) => REAL_MARGIN + (v - placed.minY) * k) },
+      startLength: 0,
+      clockwise: layout.clockwise,
+      width: (placed.maxX - placed.minX) * k + 2 * REAL_MARGIN,
+      height: (placed.maxY - placed.minY) * k + 2 * REAL_MARGIN,
+      straight: null,
+      unitsPerMetre: k,
+      bridge: layout.bridge,
+    });
+    chosen = built.circuit;
+    if (built.valid) break;
+  }
+  if (!chosen) throw new Error(`Não foi possível montar o circuito de ${track.id}.`);
+  return chosen;
+}
+
+/** Confere se nenhum trecho passa perto demais de outro (a área dos boxes é conferida à parte). */
+function tracksClear(circuit: Circuit): boolean {
   const { x, y, count, step } = circuit;
   const stride = 3;
-  const minArc = 150 / step;
+  // Nos traçados reais, as duas pernas de um grampo ficam mesmo coladas: só se comparam trechos
+  // bem distantes ao longo da volta, e a folga pedida é só os dois asfaltos não se tocarem.
+  const minArc = (circuit.real ? 330 : 150) / step;
+  const clearance = circuit.real ? CIRCUIT.TRACK_WIDTH + 4 : CIRCUIT.MIN_CLEARANCE;
+  // Perto de um viaduto os dois trechos se cruzam de propósito.
+  const nearBridge = (i: number) => circuit.bridges.some((b) => [b.over, b.under].some(([from, to]) => i / count > from - 0.012 && i / count < to + 0.012));
   for (let i = 0; i < count; i += stride) {
     for (let j = i + stride; j < count; j += stride) {
       const arc = Math.min(j - i, count - (j - i));
       if (arc < minArc) continue;
-      if (Math.hypot(at(x, i) - at(x, j), at(y, i) - at(y, j)) < CIRCUIT.MIN_CLEARANCE) return false;
-    }
-  }
-  // Pit lane e prédio: o lado de dentro da reta precisa estar desocupado.
-  const reach = CIRCUIT.PIT_OFFSET + CIRCUIT.PIT_WIDTH / 2 + CIRCUIT.PIT_BUILDING;
-  const needed = CIRCUIT.TRACK_WIDTH / 2 + 10;
-  const from = Math.floor(circuit.pit.entry * count);
-  const to = Math.ceil(circuit.pit.exit * count) + count;
-  for (let k = from; k <= to; k += stride) {
-    const i = k % count;
-    const px = at(x, i) - Math.sin(at(circuit.heading, i)) * reach * circuit.insideSign;
-    const py = at(y, i) + Math.cos(at(circuit.heading, i)) * reach * circuit.insideSign;
-    for (let j = 0; j < count; j += stride) {
-      const arc = Math.min(Math.abs(j - i), count - Math.abs(j - i));
-      if (arc < minArc) continue;
-      if (Math.hypot(px - at(x, j), py - at(y, j)) < needed) return false;
+      if (Math.hypot(at(x, i) - at(x, j), at(y, i) - at(y, j)) < clearance && !(nearBridge(i) && nearBridge(j))) return false;
     }
   }
   return true;
@@ -613,18 +878,24 @@ export function buildCircuit(track: Track, style: CircuitStyle): Circuit {
   const key = `${track.id}|${style}`;
   const cached = cache.get(key);
   if (cached) return cached;
+  const layout = CIRCUIT_LAYOUTS[track.id];
+  if (layout) {
+    const real = realCircuit(track, style, layout);
+    cache.set(key, real);
+    return real;
+  }
   const clockwise = createRng(hashSeed('circuit', track.id, 'direction')).next() < 0.68;
   let circuit: Circuit | null = null;
   for (let attempt = 0; attempt < 150 && !circuit; attempt++) {
     const rng = createRng(hashSeed('circuit', track.id, attempt));
     const vertices = fitToWorld(basePolygon(rng, track, style, attempt), !clockwise);
     const fillets = buildFillets(rng, vertices, track, style);
-    if (fillets) circuit = assemble(track.id, style, fillets, clockwise);
+    if (fillets) circuit = assembleGenerated(track.id, style, fillets, clockwise);
   }
   if (!circuit) {
     const rng = createRng(hashSeed('circuit', track.id, 'fallback'));
     const fillets = buildFillets(rng, fitToWorld(fallbackPolygon(), !clockwise), track, style);
-    circuit = fillets ? assemble(track.id, style, fillets, clockwise) : null;
+    circuit = fillets ? assembleGenerated(track.id, style, fillets, clockwise) : null;
   }
   if (!circuit) throw new Error(`Não foi possível gerar o circuito de ${track.id}.`);
   cache.set(key, circuit);
@@ -632,7 +903,7 @@ export function buildCircuit(track: Track, style: CircuitStyle): Circuit {
 }
 
 /* ------------------------------------------------------------------ */
-/* 4. Consultas                                                        */
+/* 5. Consultas                                                        */
 /* ------------------------------------------------------------------ */
 
 export interface TrackPose {

@@ -1,12 +1,15 @@
 import { ROLE_LABELS } from '@/domain/labels';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
 import { computeCareerStats, fullName, getReserve, overallRating, rankTeams } from '@/engine';
+import { VEHICLES } from '@/data/vehicles';
+import { CarSprite } from '../components/CarSprite';
 import { Card, Meter, PageHeader, Pill, Stat, TeamSwatch } from '../components/ui';
 import { formatMoney, formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
 export function TeamScreen() {
-  const { career, player, team, teammate, category, drivers, driverStandings, teamStandings } = useCareerView();
+  const { career, player, team, teammate, category, drivers, driverStandings, teamStandings, carNumbers } = useCareerView();
+  const vehicle = VEHICLES[category.id];
   const reserve = getReserve(career, team.id);
   const rank = rankTeams(career.teams).findIndex((t) => t.id === team.id) + 1;
   const teamPosition = teamStandings.find((s) => s.teamId === team.id);
@@ -54,6 +57,24 @@ export function TeamScreen() {
           </dl>
         </Card>
       </div>
+
+      <Card title={`Garagem · ${vehicle.name}`}>
+        <div className="grid items-center gap-6 md:grid-cols-[1fr_1fr_1.1fr]">
+          {lineup.map((d) => (
+            <div key={d.id} className="text-center">
+              <div className="rounded-lg bg-ink-850 px-4 py-5">
+                <CarSprite categoryId={category.id} teamId={team.id} color={team.color} driverId={d.id} number={carNumbers[d.id]} className="mx-auto w-full max-w-[260px]" title={`${vehicle.name} de ${fullName(d)}`} />
+              </div>
+              <div className="mt-2 font-display text-lg font-bold uppercase leading-tight">#{carNumbers[d.id]} {fullName(d)}</div>
+              <div className="text-xs text-ink-400">{ROLE_LABELS[d.role ?? 'second']}{d.isPlayer ? ' · você' : ''}</div>
+            </div>
+          ))}
+          <div className="text-sm text-ink-300">
+            <p>{vehicle.description}</p>
+            <p className="mt-2 text-xs text-ink-400">A pintura é a da equipe; o capacete e o número são de cada piloto. É este o {category.machine} que aparece na pista durante a corrida.</p>
+          </div>
+        </div>
+      </Card>
 
       <Card title="Pilotos e hierarquia">
         <div className="grid gap-4 md:grid-cols-3">

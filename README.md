@@ -24,7 +24,7 @@ Abra o endereço mostrado no terminal (normalmente http://localhost:5173).
 | --- | --- |
 | `npm run build` | Checa os tipos e gera o build de produção em `dist/` |
 | `npm run preview` | Serve o build de produção localmente |
-| `npm test` | Roda os 209 testes automatizados (Vitest); leva cerca de 25 segundos |
+| `npm test` | Roda os 215 testes automatizados (Vitest); leva cerca de 25 segundos |
 | `npm run typecheck` | Só a checagem de tipos |
 | `npm run calibrate` | Imprime os relatórios de balanceamento (carreiras, vidas inteiras, equipes, investimentos em 40 temporadas, saúde do mundo em 60 temporadas) e roda os testes de estresse (vidas com políticas variadas e um "macaco" que aperta botões ao acaso); leva cerca de 6 minutos (no Windows: `set CALIBRATE=1 && npx vitest run --reporter=verbose`) |
 | `npm run bench` | Mede o desempenho do motor e dos saves |
@@ -38,7 +38,9 @@ O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer serv
 - **Contratos:** duração, salário, custo da vaga, bônus, multa rescisória e cláusula de desempenho; propostas no fim do ano, negociação com margem e paciência, renovação e rescisão; mercado de pilotos entre as temporadas.
 - **Piloto:** nove atributos, treino com foco e intensidade, fase, confiança e moral, lesões e recuperação, envelhecimento e declínio.
 - **Corrida:** classificação (eliminatória na F1), largada, ultrapassagens e defesa, erros e acidentes, danos, quebras, safety car, safety car virtual, bandeira vermelha, punições, clima que muda durante a prova, compostos de pneu, desgaste, paradas, estratégia e combustível.
-- **Corrida visual:** cada pista tem um circuito visto de cima, e os carros (com a pintura de cada equipe) andam por ele no tempo real da simulação: largada com luzes, disputas lado a lado, ultrapassagens, paradas no pit lane, rodadas, abandonos, safety car, bandeira vermelha com relargada e chuva. Há torre de tempos, câmera geral ou acompanhando um carro, pausa e velocidades de 1× a 8×.
+- **Corrida visual:** a corrida acontece num circuito visto de cima, com os carros (pintura de cada equipe, capacete e número de cada piloto) andando no tempo real da simulação: largada com luzes, disputas lado a lado, ultrapassagens, paradas no pit lane, rodadas, abandonos, safety car, bandeira vermelha com relargada e chuva. Há torre de tempos, câmera geral ou acompanhando um carro, pausa e velocidades de 1× a 8×.
+- **Um veículo por categoria:** kart 4 tempos de chassi tubular (Regional), kart 125 cc carenado (Nacional), kart 125 cc com câmbio (Internacional), Fórmula 4, Fórmula 3, Fórmula 2 e Fórmula 1. O mesmo veículo aparece na corrida, na garagem (tela Equipe), no grid e na escada da tela Carreira.
+- **Circuitos reais com nomes fictícios:** os 14 autódromos reproduzem o traçado da pista real que inspira cada um (curvas, retas, sentido da corrida, largada e, no Circuito do Oito, o viaduto). Os 20 kartódromos têm traçado gerado por regras. O mapa de cada pista aparece no calendário, no painel e antes da largada.
 - **Equipes:** primeiro piloto, segundo e reserva; ordens de equipe; confiança, relação com o companheiro e rivalidades; academias das equipes de F1.
 - **Economia pessoal:** salário, patrocínios, bônus, custo da vaga, padrão de vida, conta de danos e impostos; renda fixa, fundo, ações com cotação que muda a cada etapa, imóveis, empresas, participações em equipes com dividendos, empréstimos e dívida.
 - **Eventos:** entrevistas, polêmicas, rivalidades, investigações, protestos, problemas contratuais, pressão de patrocinadores, imprevistos, vida em família e decisões de gestão, todos com consequências sobre os outros sistemas.
@@ -100,10 +102,13 @@ src/
   store/        Zustand (camada fina sobre o motor + autosave)
   ui/           telas, componentes e layout
     race/         corrida visual: canvas, pintura dos carros, torre de tempos, controles
-  assets/race/  sprites dos carros (monoposto, kart, safety car)
+  assets/race/  sprites vistos de cima: um veículo por categoria, safety car e cenário
+scripts/        importação dos traçados reais (gera src/data/circuitLayouts.ts)
 tests/          testes do motor, da carreira, dos saves, da corrida visual, de várias temporadas e de vidas inteiras
 legacy/simdev/  projeto anterior do repositório, preservado e fora do build
 ```
+
+Créditos: os traçados dos autódromos vêm do conjunto de dados [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (licença MIT; ver [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md)). Os sprites de veículos e de cenário foram gerados no Higgsfield.
 
 Documentação detalhada:
 - [ARCHITECTURE.md](ARCHITECTURE.md): camadas, motor de corrida, fluxo de dados, determinismo, persistência, compatibilidade de saves e como estender.

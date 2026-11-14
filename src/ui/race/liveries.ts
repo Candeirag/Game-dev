@@ -1,40 +1,55 @@
 /**
- * Pintura dos carros da transmissão.
+ * Pintura dos veículos.
  *
- * Os sprites-base (monoposto, kart e safety car) são imagens vistas de cima
- * geradas no Higgsfield, com carroceria branca. Cada equipe ganha a sua pintura
- * em tempo de execução: a cor da equipe multiplica
- * a carroceria branca (pneus, asas e sombras continuam escuros) e um desenho de
- * pintura acrescenta a cor de contraste. O capacete recebe a cor do piloto.
+ * Cada categoria tem o seu sprite-base (src/assets/race/vehicles), uma imagem
+ * vista de cima gerada no Higgsfield, com a carroceria branca. Cada equipe ganha
+ * a sua pintura em tempo de execução: a cor da equipe multiplica a carroceria
+ * branca (pneus, asas e sombras continuam escuros), um desenho de pintura
+ * acrescenta a cor de contraste, o capacete recebe a cor do piloto e o número
+ * do carro vai no bico.
  *
  * Se a imagem não carregar, o carro é desenhado em vetor (drawVectorCar), então
  * a corrida funciona mesmo sem o arquivo.
  */
-import type { CircuitStyle } from '@/engine';
-import formulaUrl from '@/assets/race/formula.png';
-import kartUrl from '@/assets/race/kart.png';
-import safetyCarUrl from '@/assets/race/safety-car.png';
+import type { CategoryId } from '@/domain/schemas';
+import { VEHICLES } from '@/data/vehicles';
+import f1Url from '@/assets/race/vehicles/f1.webp';
+import f2Url from '@/assets/race/vehicles/f2.webp';
+import f3Url from '@/assets/race/vehicles/f3.webp';
+import f4Url from '@/assets/race/vehicles/f4.webp';
+import kartInternationalUrl from '@/assets/race/vehicles/kart-international.webp';
+import kartNationalUrl from '@/assets/race/vehicles/kart-national.webp';
+import kartRegionalUrl from '@/assets/race/vehicles/kart-regional.webp';
+import safetyCarUrl from '@/assets/race/vehicles/safety-car.webp';
 
 export type CarCanvas = HTMLCanvasElement;
+
+interface SpriteSpec {
+  url: string;
+  /** Capacete: centro e raio, em fração da largura e da altura do sprite (medidos na imagem). */
+  helmet: { x: number; y: number; r: number };
+  /** Onde vai o número do carro (centro e altura dos algarismos, em frações); null se não há painel para ele. */
+  number: { x: number; y: number; size: number } | null;
+}
+
+const SPRITES: Readonly<Record<CategoryId, SpriteSpec>> = {
+  'kart-regional': { url: kartRegionalUrl, helmet: { x: 0.262, y: 0.486, r: 0.096 }, number: null },
+  'kart-national': { url: kartNationalUrl, helmet: { x: 0.281, y: 0.479, r: 0.082 }, number: { x: 0.875, y: 0.5, size: 0.17 } },
+  'kart-international': { url: kartInternationalUrl, helmet: { x: 0.251, y: 0.472, r: 0.075 }, number: { x: 0.8, y: 0.5, size: 0.15 } },
+  f4: { url: f4Url, helmet: { x: 0.497, y: 0.483, r: 0.034 }, number: { x: 0.79, y: 0.5, size: 0.15 } },
+  f3: { url: f3Url, helmet: { x: 0.483, y: 0.478, r: 0.028 }, number: { x: 0.77, y: 0.5, size: 0.14 } },
+  f2: { url: f2Url, helmet: { x: 0.513, y: 0.483, r: 0.031 }, number: { x: 0.8, y: 0.5, size: 0.14 } },
+  f1: { url: f1Url, helmet: { x: 0.508, y: 0.484, r: 0.026 }, number: { x: 0.79, y: 0.5, size: 0.11 } },
+};
 
 interface BaseSprite {
   image: HTMLImageElement;
   /** Região da carroceria (branca no sprite), onde a pintura é aplicada. */
   mask: HTMLCanvasElement;
-  /** Capacete: centro e raio, em fração da largura e da altura. */
-  helmet: { x: number; y: number; r: number };
 }
 
-/** Posição do capacete em cada sprite (medida na imagem). */
-const HELMETS: Record<CircuitStyle, { x: number; y: number; r: number }> = {
-  formula: { x: 0.521, y: 0.498, r: 0.037 },
-  kart: { x: 0.293, y: 0.496, r: 0.092 },
-};
-
-const SOURCES: Record<CircuitStyle, string> = { formula: formulaUrl, kart: kartUrl };
-
-const bases: Partial<Record<CircuitStyle, BaseSprite | 'failed'>> = {};
-const pending: Partial<Record<CircuitStyle, Promise<void>>> = {};
+const bases: Partial<Record<CategoryId, BaseSprite | 'failed'>> = {};
+const pending: Partial<Record<CategoryId, Promise<void>>> = {};
 const liveries = new Map<string, CarCanvas>();
 let safetyCar: HTMLImageElement | 'failed' | null = null;
 
@@ -55,7 +70,7 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 /** Separa a carroceria (clara) do resto do carro (pneus, asas, cockpit). */
-function bodyMask(image: HTMLImageElement, helmet: BaseSprite['helmet']): HTMLCanvasElement {
+function bodyMask(image: HTMLImageElement, helmet: SpriteSpec['helmet']): HTMLCanvasElement {
   const canvas = makeCanvas(image.width, image.height);
   const g = canvas.getContext('2d', { willReadFrequently: true });
   if (!g) return canvas;
@@ -75,31 +90,31 @@ function bodyMask(image: HTMLImageElement, helmet: BaseSprite['helmet']): HTMLCa
   // O capacete é pintado à parte.
   g.globalCompositeOperation = 'destination-out';
   g.beginPath();
-  g.arc(helmet.x * canvas.width, helmet.y * canvas.height, helmet.r * canvas.width * 1.15, 0, Math.PI * 2);
+  g.arc(helmet.x * canvas.width, helmet.y * canvas.height, helmet.r * canvas.width * 1.1, 0, Math.PI * 2);
   g.fill();
   return canvas;
 }
 
-/** Carrega os sprites (uma vez). A promessa resolve mesmo se a imagem falhar. */
-export function loadCarSprites(style: CircuitStyle): Promise<void> {
-  const existing = pending[style];
+/** Carrega o sprite de uma categoria (uma vez). A promessa resolve mesmo se a imagem falhar. */
+export function loadCarSprites(categoryId: CategoryId): Promise<void> {
+  const existing = pending[categoryId];
   if (existing) return existing;
-  const job = loadImage(SOURCES[style])
+  const spec = SPRITES[categoryId];
+  const job = loadImage(spec.url)
     .then((image) => {
-      bases[style] = { image, mask: bodyMask(image, HELMETS[style]), helmet: HELMETS[style] };
+      bases[categoryId] = { image, mask: bodyMask(image, spec.helmet) };
     })
     .catch(() => {
-      bases[style] = 'failed';
+      bases[categoryId] = 'failed';
     });
-  pending[style] = job;
+  pending[categoryId] = job;
   if (safetyCar === null) {
+    safetyCar = 'failed';
     loadImage(safetyCarUrl)
       .then((image) => {
         safetyCar = image;
       })
-      .catch(() => {
-        safetyCar = 'failed';
-      });
+      .catch(() => undefined);
   }
   return job;
 }
@@ -114,6 +129,12 @@ function hash(text: string): number {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
+  // Embaralha os bits: sem isto, textos que só diferem no último caractere dão valores vizinhos.
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
   return h >>> 0;
 }
 
@@ -170,17 +191,23 @@ const PATTERNS: ((g: CanvasRenderingContext2D, w: number, h: number) => void)[] 
   },
 ];
 
+function textOn(hex: string): string {
+  return luminance(hex) > 0.58 ? '#0b0d11' : '#ffffff';
+}
+
 /**
- * Carro pintado de uma equipe, com o capacete do piloto. Devolve null enquanto
- * o sprite não carregou (ou se falhou); nesse caso quem chama usa o desenho em vetor.
+ * Veículo da categoria com a pintura de uma equipe, o capacete do piloto e o número do carro.
+ * Devolve null enquanto o sprite não carregou (ou se falhou); nesse caso quem chama usa o
+ * desenho em vetor.
  */
-export function liveryFor(style: CircuitStyle, teamId: string, primary: string, driverId: string): CarCanvas | null {
-  const base = bases[style];
+export function liveryFor(categoryId: CategoryId, teamId: string, primary: string, driverId: string, carNumber?: number): CarCanvas | null {
+  const base = bases[categoryId];
   if (!base || base === 'failed') return null;
-  const key = `${style}|${teamId}|${primary}|${driverId}`;
+  const key = `${categoryId}|${teamId}|${primary}|${driverId}|${carNumber ?? ''}`;
   const cached = liveries.get(key);
   if (cached) return cached;
-  const { image, mask, helmet } = base;
+  const { image, mask } = base;
+  const spec = SPRITES[categoryId];
   const w = image.width;
   const h = image.height;
 
@@ -189,10 +216,28 @@ export function liveryFor(style: CircuitStyle, teamId: string, primary: string, 
   const out = makeCanvas(w, h);
   const o = out.getContext('2d');
   if (!p || !o) return null;
+  const accent = accentFor(teamId, primary);
   p.fillStyle = primary;
   p.fillRect(0, 0, w, h);
-  p.fillStyle = accentFor(teamId, primary);
+  p.fillStyle = accent;
   PATTERNS[hash(`pattern|${teamId}`) % PATTERNS.length]?.(p, w, h);
+  if (spec.number && carNumber !== undefined) {
+    // Número no bico, lido de frente para o carro (o sprite aponta para a direita).
+    const size = spec.number.size * h;
+    p.save();
+    p.translate(spec.number.x * w, spec.number.y * h);
+    p.rotate(Math.PI / 2);
+    p.font = `700 ${size}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+    p.textAlign = 'center';
+    p.textBaseline = 'middle';
+    // Fundo na cor principal para o número não cair em cima do desenho de contraste.
+    const plate = p.measureText(String(carNumber)).width + size * 0.3;
+    p.fillStyle = primary;
+    p.fillRect(-plate / 2, -size * 0.6, plate, size * 1.2);
+    p.fillStyle = textOn(primary);
+    p.fillText(String(carNumber), 0, size * 0.04);
+    p.restore();
+  }
   p.globalCompositeOperation = 'destination-in';
   p.drawImage(mask, 0, 0);
 
@@ -210,19 +255,25 @@ export function liveryFor(style: CircuitStyle, teamId: string, primary: string, 
   o.drawImage(image, 0, 0);
   o.globalCompositeOperation = 'source-over';
 
-  // Capacete na cor do piloto, com viseira.
-  const hx = helmet.x * w;
-  const hy = helmet.y * h;
-  const hr = helmet.r * w;
-  o.fillStyle = helmetFor(driverId);
+  // Capacete na cor do piloto, visto de cima: uma faixa da frente para trás e um brilho de lado.
+  const hx = spec.helmet.x * w;
+  const hy = spec.helmet.y * h;
+  const hr = spec.helmet.r * w;
+  const shell = helmetFor(driverId);
+  o.save();
   o.beginPath();
   o.arc(hx, hy, hr, 0, Math.PI * 2);
-  o.fill();
-  o.fillStyle = 'rgba(10, 12, 16, 0.85)';
+  o.clip();
+  o.fillStyle = shell;
+  o.fillRect(hx - hr, hy - hr, hr * 2, hr * 2);
+  o.fillStyle = luminance(shell) > 0.6 ? 'rgba(12, 14, 18, 0.8)' : 'rgba(255, 255, 255, 0.85)';
+  o.fillRect(hx - hr, hy - hr * 0.2, hr * 2, hr * 0.4);
+  o.fillStyle = 'rgba(255, 255, 255, 0.28)';
   o.beginPath();
-  o.ellipse(hx + hr * 0.45, hy, hr * 0.35, hr * 0.7, 0, 0, Math.PI * 2);
+  o.ellipse(hx - hr * 0.1, hy - hr * 0.5, hr * 0.5, hr * 0.22, 0, 0, Math.PI * 2);
   o.fill();
-  o.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+  o.restore();
+  o.strokeStyle = 'rgba(0, 0, 0, 0.5)';
   o.lineWidth = Math.max(1, hr * 0.14);
   o.beginPath();
   o.arc(hx, hy, hr, 0, Math.PI * 2);
@@ -232,11 +283,17 @@ export function liveryFor(style: CircuitStyle, teamId: string, primary: string, 
   return out;
 }
 
+/** Proporção (largura ÷ altura) do sprite de uma categoria, para reservar espaço antes de a imagem carregar. */
+export function spriteAspect(categoryId: CategoryId): number {
+  const vehicle = VEHICLES[categoryId];
+  return vehicle.length / vehicle.width;
+}
+
 /**
  * Carro em vetor, usado quando o sprite não está disponível. Desenha no
  * sistema do carro: origem no centro, nariz para +x, comprimento e largura dados.
  */
-export function drawVectorCar(g: CanvasRenderingContext2D, style: CircuitStyle, length: number, width: number, primary: string, accent: string, helmet: string): void {
+export function drawVectorCar(g: CanvasRenderingContext2D, style: 'kart' | 'formula', length: number, width: number, primary: string, accent: string, helmet: string): void {
   const l = length / 2;
   const w = width / 2;
   g.fillStyle = '#0d0f13';

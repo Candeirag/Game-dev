@@ -7,6 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CategoryId, Driver, Team } from '@/domain/schemas';
+import { CIRCUIT_LAYOUTS } from '@/data/circuitLayouts';
 import { BR_KART_TRACKS, CIRCUITS, TRACKS, WORLD_KART_TRACKS, getTrack } from '@/data/tracks';
 import {
   CIRCUIT,
@@ -88,17 +89,92 @@ describe('circuitos', () => {
       expect(maxX, track.id).toBeLessThan(c.width - CIRCUIT.TRACK_WIDTH);
       expect(minY, track.id).toBeGreaterThan(CIRCUIT.TRACK_WIDTH);
       expect(maxY, track.id).toBeLessThan(c.height - CIRCUIT.TRACK_WIDTH);
-      // Dois trechos distantes ao longo da volta nunca se encostam.
+      // Dois trechos distantes ao longo da volta nunca se encostam. Nos traçados reais as pernas de
+      // um grampo ficam coladas (só se comparam trechos a mais de 330 unidades um do outro pela
+      // pista), e o viaduto é o único ponto em que o traçado se cruza.
       let closest = Infinity;
+      const nearBridge = (i: number) => c.bridges.some((b) => [b.over, b.under].some(([from, to]) => i / c.count > from - 0.012 && i / c.count < to + 0.012));
       for (let i = 0; i < c.count; i += 5) {
         for (let j = i + 5; j < c.count; j += 5) {
           const arc = Math.min(j - i, c.count - (j - i)) * c.step;
-          if (arc >= 160) closest = Math.min(closest, Math.hypot(c.x[i]! - c.x[j]!, c.y[i]! - c.y[j]!));
+          if (arc >= (c.real ? 330 : 160) && !(nearBridge(i) && nearBridge(j))) closest = Math.min(closest, Math.hypot(c.x[i]! - c.x[j]!, c.y[i]! - c.y[j]!));
         }
       }
-      expect(closest, track.id).toBeGreaterThan(CIRCUIT.TRACK_WIDTH + 8);
+      expect(closest, track.id).toBeGreaterThan(CIRCUIT.TRACK_WIDTH + (c.real ? 3 : 8));
       expect(c.corners.length, track.id).toBeGreaterThanOrEqual(6);
     }
+  });
+
+  it('os autódromos reproduzem o traçado real: forma, comprimento, sentido e largada', () => {
+    expect(Object.keys(CIRCUIT_LAYOUTS).sort()).toEqual(CIRCUITS.map((t) => t.id).sort());
+    for (const track of CIRCUITS) {
+      const layout = CIRCUIT_LAYOUTS[track.id]!;
+      const c = buildCircuit(track, 'formula');
+      expect(c.real, track.id).toBe(true);
+      // Comprimento: o do traçado de origem, que é o da pista no jogo (diferença de menos de 1%).
+      expect(Math.abs(layout.length / track.lengthMeters - 1), track.id).toBeLessThan(0.01);
+      expect(Math.abs(c.length / c.unitsPerMetre / layout.length - 1), track.id).toBeLessThan(0.012);
+
+      // Forma: a distância em linha reta entre dois pontos quaisquer da volta é a do traçado real.
+      // (Comparar distâncias dispensa saber o giro e o deslocamento aplicados ao desenho.)
+      const n = layout.points.length / 2;
+      const cumulative = [0];
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        cumulative.push(cumulative[i]! + Math.hypot(layout.points[j * 2]! - layout.points[i * 2]!, layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!));
+      }
+      const sourceAt = (fraction: number) => {
+        const target = fraction * cumulative[n]!;
+        let i = 0;
+        while (i < n - 1 && cumulative[i + 1]! < target) i++;
+        const t = (target - cumulative[i]!) / (cumulative[i + 1]! - cumulative[i]! || 1);
+        const j = (i + 1) % n;
+        return { x: layout.points[i * 2]! + (layout.points[j * 2]! - layout.points[i * 2]!) * t, y: layout.points[i * 2 + 1]! + (layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!) * t };
+      };
+      let worst = 0;
+      for (let a = 0; a < 40; a++) {
+        for (let b = a + 1; b < 40; b++) {
+          const p = poseAt(c, a / 40);
+          const q = poseAt(c, b / 40);
+          const sp = sourceAt(a / 40);
+          const sq = sourceAt(b / 40);
+          worst = Math.max(worst, Math.abs(Math.hypot(p.x - q.x, p.y - q.y) / c.unitsPerMetre - Math.hypot(sp.x - sq.x, sp.y - sq.y)));
+        }
+      }
+      // Diferença máxima de 25 m em distâncias de até 2 km (a curva suave arredonda os cantos do traçado de origem).
+      expect(worst, track.id).toBeLessThan(25);
+
+      // Sentido da corrida (na tela, y cresce para baixo: área positiva = horário). O traçado em oito fica de fora.
+      let area = 0;
+      for (let i = 0; i < c.count; i++) area += c.x[i]! * c.y[(i + 1) % c.count]! - c.x[(i + 1) % c.count]! * c.y[i]!;
+      expect(c.clockwise).toBe(layout.clockwise);
+      if (!layout.bridge) expect(area > 0, track.id).toBe(layout.clockwise);
+      // Boxes do lado de dentro: à direita de quem corre no sentido horário.
+      expect(Math.sign(c.pit.offset), track.id).toBe(layout.clockwise ? 1 : -1);
+      // Zonas de ultrapassagem nas retas mais longas.
+      expect(c.zones.length, track.id).toBeGreaterThanOrEqual(1);
+    }
+    // Os kartódromos continuam com traçado gerado.
+    expect(buildCircuit(getTrack('vale-do-sol'), 'kart').real).toBe(false);
+    expect(buildCircuit(getTrack('garda'), 'kart').bridges).toHaveLength(0);
+  });
+
+  it('o traçado em oito passa por cima de si mesmo num viaduto, e só nele', () => {
+    const c = buildCircuit(getTrack('suzuka'), 'formula');
+    expect(c.bridges).toHaveLength(1);
+    const { over, under } = c.bridges[0]!;
+    // O trecho de cima vem depois na volta (a reta oposta passa sobre o trecho antes do grampo).
+    expect(under[0]).toBeGreaterThan(0.3);
+    expect(under[1]).toBeLessThan(0.5);
+    expect(over[0]).toBeGreaterThan(0.7);
+    expect(over[1]).toBeLessThan(0.9);
+    const a = poseAt(c, (under[0] + under[1]) / 2);
+    const b = poseAt(c, (over[0] + over[1]) / 2);
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeLessThan(4);
+    // As duas pistas se cruzam em ângulo aberto (não correm lado a lado).
+    const angle = Math.abs(Math.sin(a.heading - b.heading));
+    expect(angle).toBeGreaterThan(0.5);
+    for (const other of CIRCUITS.filter((t) => t.id !== 'suzuka')) expect(buildCircuit(other, 'formula').bridges, other.id).toHaveLength(0);
   });
 
   it('o traçado é sempre o mesmo e cada pista tem o seu', () => {

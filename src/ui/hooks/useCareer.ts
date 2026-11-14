@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { CareerState } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
-import { driverMap, driverStandings, getPlayer, getTeammate, managedTeam, teamMap, teamStandings } from '@/engine';
+import { assignCarNumbers, driverMap, driverStandings, getPlayer, getTeammate, managedTeam, teamMap, teamStandings } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 
 /** Carreira ativa. Só use em telas protegidas pelo layout de carreira. */
@@ -28,6 +28,8 @@ export function useCareerView() {
       category: getCategory(career.categoryId),
       drivers: driverMap(career),
       teams: teamMap(career),
+      /** Número do carro de cada piloto do campeonato (o mesmo que aparece na corrida). */
+      carNumbers: assignCarNumbers(career.drivers.map((d) => d.id)),
       driverStandings: driverStandings(career),
       teamStandings: teamStandings(career),
     };

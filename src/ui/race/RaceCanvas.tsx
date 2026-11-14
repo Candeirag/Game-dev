@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import type { Driver, Team } from '@/domain/schemas';
+import { vehicleFor } from '@/data/vehicles';
 import type { Circuit, RaceTimeline } from '@/engine';
 import { cx } from '../components/ui';
 import { loadCarSprites } from './liveries';
 import { createSceneMemory, drawScene, type CameraMode, type SceneInput } from './raceScene';
-import { buildTrackArt } from './trackPainter';
+import { buildTrackArt, loadScenery } from './trackPainter';
 
 interface Props {
   timeline: RaceTimeline;
@@ -40,9 +41,11 @@ export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera,
   const latest = useRef<Omit<SceneInput, 'time'>>({ timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights });
   latest.current = { timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights };
 
+  const vehicle = vehicleFor(timeline.categoryId);
   useEffect(() => {
-    void loadCarSprites(circuit.style);
-  }, [circuit.style]);
+    void loadCarSprites(vehicle.categoryId);
+    loadScenery();
+  }, [vehicle.categoryId]);
 
   useEffect(() => {
     const element = canvas.current;

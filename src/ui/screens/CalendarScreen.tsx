@@ -1,5 +1,6 @@
 import { getTrack, raceLaps } from '@/data/tracks';
 import { fullName } from '@/engine';
+import { CircuitMap } from '../components/CircuitMap';
 import { Card, PageHeader, PositionBadge, WeatherBadge, cx } from '../components/ui';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
@@ -21,8 +22,9 @@ export function CalendarScreen() {
           const isNext = !career.weekend && index === career.nextRoundIndex;
           return (
             <Card key={event.round} className={cx(isCurrent || isNext ? 'border-apex-500/60' : '', record && 'opacity-90')}>
-              <div className="grid items-center gap-4 md:grid-cols-[64px_1.6fr_1fr_1fr]">
+              <div className="grid items-center gap-4 md:grid-cols-[56px_132px_1.6fr_1fr_1fr]">
                 <div className="font-display text-4xl font-bold leading-none tabular text-ink-600">{String(event.round).padStart(2, '0')}</div>
+                <CircuitMap track={track} style={category.vehicle} className="h-20 w-full max-w-[160px]" />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-display text-xl font-bold uppercase">{track.name}</span>

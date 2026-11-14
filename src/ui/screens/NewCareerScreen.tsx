@@ -14,6 +14,7 @@ import {
 import { ROOKIE_TEAM_IDS, TEAMS } from '@/data/teams';
 import { TRAINABLE_ATTRIBUTES, overallRating, validateNewCareerInput, type NewCareerInput } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
+import { CarSprite } from '../components/CarSprite';
 import { Button, Card, ChoiceCard, RatingBar, cx } from '../components/ui';
 import { formatRating } from '../format';
 
@@ -148,6 +149,7 @@ export function NewCareerScreen() {
                   title={<span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full" style={{ backgroundColor: t.color }} />{t.name}</span>}
                   description={
                     <span className="grid grid-cols-3 gap-2 pt-1 text-xs tabular">
+                      <span className="col-span-3 block py-1"><CarSprite categoryId="kart-regional" teamId={t.id} color={t.color} className="w-28" title={`Kart da ${t.name}`} /></span>
                       <span>Motor <b className="text-ink-100">{t.car.engine}</b></span>
                       <span>Chassi <b className="text-ink-100">{t.car.chassis}</b></span>
                       <span>Confiab. <b className="text-ink-100">{t.car.reliability}</b></span>

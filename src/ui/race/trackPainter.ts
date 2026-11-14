@@ -7,6 +7,29 @@
  * câmera que acompanha um carro continua nítido.
  */
 import { CIRCUIT, pitBoxAt, pitLateralAt, poseAt, type Circuit } from '@/engine';
+import grandstandUrl from '@/assets/race/scenery/grandstand.webp';
+import treeUrl from '@/assets/race/scenery/tree.webp';
+
+/**
+ * Cenário em imagem (arquibancada e copa de árvore vistas de cima, geradas no Higgsfield).
+ * Enquanto não carregam, ou se falharem, o cenário é desenhado em vetor.
+ */
+const scenery: { grandstand: HTMLImageElement | null; tree: HTMLImageElement | null; requested: boolean } = { grandstand: null, tree: null, requested: false };
+
+export function loadScenery(): void {
+  if (scenery.requested) return;
+  scenery.requested = true;
+  const load = (url: string, assign: (image: HTMLImageElement) => void) => {
+    const image = new Image();
+    image.onload = () => assign(image);
+    image.src = url;
+  };
+  load(grandstandUrl, (image) => (scenery.grandstand = image));
+  load(treeUrl, (image) => (scenery.tree = image));
+}
+
+/** Medidas da arquibancada na pista (a proporção é a da imagem). */
+const STAND = { length: 86, depth: 15.9 };
 
 const COLORS = {
   grass: '#13231b',
@@ -33,6 +56,8 @@ const COLORS = {
   roof: '#1b212d',
   mark: 'rgba(240, 243, 247, 0.75)',
   sectors: ['#f6c343', '#60a5fa'],
+  zone: 'rgba(52, 211, 153, 0.75)',
+  barrier: '#8b95a5',
 } as const;
 
 export interface TrackArt {
@@ -54,6 +79,12 @@ export interface TrackArt {
   trees: { x: number; y: number; r: number }[];
   stands: Path2D;
   seats: Path2D;
+  /** Posição de cada arquibancada; `flip` vira a frente dela para a pista. */
+  standPoses: { x: number; y: number; heading: number; flip: boolean }[];
+  /** Tabuleiro de cada viaduto (o trecho que passa por cima). */
+  decks: Path2D[];
+  /** Bordas das zonas de ultrapassagem. */
+  zones: Path2D;
 }
 
 /** Linha ao longo da pista, entre dois pontos da volta, com deslocamento lateral. */
@@ -93,6 +124,12 @@ function hash01(text: string): number {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
+  // Embaralha os bits: sem isto, textos que só diferem no último caractere dão valores vizinhos.
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
 }
 
@@ -106,10 +143,11 @@ function distanceToTrack(circuit: Circuit, x: number, y: number): number {
 /** Árvores espalhadas pelo terreno, sempre no mesmo lugar para a mesma pista e longe do asfalto e dos boxes. */
 function scatterTrees(circuit: Circuit): TrackArt['trees'] {
   const trees: TrackArt['trees'] = [];
-  const pitReach = CIRCUIT.PIT_OFFSET + CIRCUIT.PIT_WIDTH / 2 + CIRCUIT.PIT_BUILDING + 16;
+  const pitReach = CIRCUIT.PIT_OFFSET + CIRCUIT.PIT_WIDTH / 2 + circuit.pit.building + 16;
   const pitFrom = poseAt(circuit, circuit.pit.entry, Math.sign(circuit.pit.offset) * pitReach * 0.5);
   const pitTo = poseAt(circuit, circuit.pit.exit, Math.sign(circuit.pit.offset) * pitReach * 0.5);
-  for (let i = 0; i < 150 && trees.length < 46; i++) {
+  const wanted = Math.round((46 * circuit.width * circuit.height) / (CIRCUIT.WORLD_WIDTH * CIRCUIT.WORLD_HEIGHT));
+  for (let i = 0; i < wanted * 4 && trees.length < wanted; i++) {
     const x = -60 + hash01(`tx|${circuit.trackId}|${i}`) * (circuit.width + 120);
     const y = -60 + hash01(`ty|${circuit.trackId}|${i}`) * (circuit.height + 120);
     if (distanceToTrack(circuit, x, y) < 52) continue;
@@ -145,11 +183,13 @@ export function buildTrackArt(circuit: Circuit, boxColors: readonly string[], gr
   const pitLane = stretch(circuit, pit.entry, 1 + pit.exit, (s) => pitLateralAt(circuit, s));
   const sign = Math.sign(pit.offset);
   const pitWall = stretch(circuit, pit.entryEnd, 1 + pit.exitStart, sign * (half + (CIRCUIT.PIT_OFFSET - half - CIRCUIT.PIT_WIDTH / 2) / 2));
-  const buildingCentre = pit.offset + sign * (CIRCUIT.PIT_WIDTH / 2 + 4 + CIRCUIT.PIT_BUILDING / 2 - 4);
+  // O prédio acompanha o espaço disponível: fino (só a mureta dos boxes) onde o traçado real aperta.
+  const depth = Math.max(4, pit.building - 8);
+  const buildingCentre = pit.offset + sign * (CIRCUIT.PIT_WIDTH / 2 + 4 + depth / 2);
   const buildingLength = (pit.boxTo - pit.boxFrom) * circuit.length + 22;
   const buildingAt = (pit.boxFrom + pit.boxTo) / 2;
-  const building = slab(circuit, buildingAt, buildingCentre, buildingLength, CIRCUIT.PIT_BUILDING - 8);
-  const roof = slab(circuit, buildingAt, buildingCentre + sign * 2.5, buildingLength - 6, CIRCUIT.PIT_BUILDING - 17);
+  const building = slab(circuit, buildingAt, buildingCentre, buildingLength, depth);
+  const roof = slab(circuit, buildingAt, buildingCentre + sign * Math.min(2.5, depth / 6), buildingLength - 6, Math.max(1.5, depth - 9));
   const boxes = boxColors.map((color, i) => ({
     color,
     path: slab(circuit, pitBoxAt(circuit, i, boxColors.length), pit.offset + sign * (CIRCUIT.PIT_WIDTH / 2 + 2.6), Math.min(15, (buildingLength - 22) / Math.max(1, boxColors.length) - 2), 3.2),
@@ -183,18 +223,33 @@ export function buildTrackArt(circuit: Circuit, boxColors: readonly string[], gr
   const stands = new Path2D();
   const seats = new Path2D();
   const outer = -sign * (half + 21);
+  const standPoses: TrackArt['standPoses'] = [];
   for (const at of [-(pit.exit * 0.2 + 0.03), pit.exit * 0.75]) {
     const centre = poseAt(circuit, at, outer);
     if (centre.x < 30 || centre.x > circuit.width - 30 || centre.y < 16 || centre.y > circuit.height - 16) continue;
-    append(stands, slab(circuit, at, outer, 84, 15));
-    for (const row of [-4.2, 0, 4.2]) append(seats, slab(circuit, at, outer + row, 80, 2.4));
+    // Do lado de fora de uma curva o espaço some: só entra onde não encosta em outro trecho.
+    if (distanceToTrack(circuit, centre.x, centre.y) < half + 10) continue;
+    append(stands, slab(circuit, at, outer, STAND.length, STAND.depth));
+    for (const row of [-4.2, 0, 4.2]) append(seats, slab(circuit, at, outer + row, STAND.length - 4, 2.4));
+    // Na imagem, a frente da arquibancada (o corredor) fica embaixo; `outer` positivo é o lado direito da pista.
+    standPoses.push({ x: centre.x, y: centre.y, heading: centre.heading, flip: outer > 0 });
+  }
+
+  const decks = circuit.bridges.map((bridge) => stretch(circuit, bridge.over[0], bridge.over[1], 0));
+  const zones = new Path2D();
+  for (const zone of circuit.zones) {
+    append(zones, stretch(circuit, zone.from, zone.to, half - 2.2));
+    append(zones, stretch(circuit, zone.from, zone.to, -(half - 2.2)));
   }
 
   return {
     circuit,
+    decks,
+    zones,
     trees: scatterTrees(circuit),
     stands,
     seats,
+    standPoses,
     centre,
     kerbs,
     gravel,
@@ -245,6 +300,31 @@ function mix(a: string, b: string, t: number): string {
   return `rgb(${channel(16)}, ${channel(8)}, ${channel(0)})`;
 }
 
+/**
+ * Tabuleiros dos viadutos, desenhados por cima da pista (e dos carros que passam por baixo):
+ * sombra, mureta, linha branca e asfalto.
+ */
+export function drawBridges(g: CanvasRenderingContext2D, art: TrackArt, wetness: number): void {
+  if (art.decks.length === 0) return;
+  const width = CIRCUIT.TRACK_WIDTH;
+  g.lineJoin = 'round';
+  g.lineCap = 'butt';
+  for (const deck of art.decks) {
+    g.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    g.lineWidth = width + 18;
+    g.stroke(deck);
+    g.strokeStyle = COLORS.barrier;
+    g.lineWidth = width + 8;
+    g.stroke(deck);
+    g.strokeStyle = COLORS.edge;
+    g.lineWidth = width + 2.2;
+    g.stroke(deck);
+    g.strokeStyle = wetness > 0 ? mix(COLORS.asphalt, COLORS.asphaltWet, Math.min(1, wetness * 1.2)) : COLORS.asphalt;
+    g.lineWidth = width;
+    g.stroke(deck);
+  }
+}
+
 /** Desenha o circuito. O contexto já deve estar com a transformação da câmera (unidades de mundo). */
 export function drawTrack(g: CanvasRenderingContext2D, art: TrackArt, wetness: number): void {
   const { circuit } = art;
@@ -257,8 +337,18 @@ export function drawTrack(g: CanvasRenderingContext2D, art: TrackArt, wetness: n
   g.fillStyle = COLORS.infield;
   g.fill(art.centre);
 
-  // Árvores.
-  for (const tree of art.trees) {
+  // Árvores: a copa em imagem, girada de forma diferente em cada uma; em vetor, se a imagem não estiver disponível.
+  for (const [index, tree] of art.trees.entries()) {
+    if (scenery.tree) {
+      const size = tree.r * 2.7;
+      g.save();
+      g.translate(tree.x, tree.y);
+      g.rotate(index * 2.4);
+      g.globalAlpha = 0.92;
+      g.drawImage(scenery.tree, -size / 2, -size / 2, size, size);
+      g.restore();
+      continue;
+    }
     g.fillStyle = COLORS.tree;
     g.beginPath();
     g.arc(tree.x + 2, tree.y + 2.5, tree.r, 0, Math.PI * 2);
@@ -275,10 +365,20 @@ export function drawTrack(g: CanvasRenderingContext2D, art: TrackArt, wetness: n
   }
 
   // Arquibancadas.
-  g.fillStyle = COLORS.stand;
-  g.fill(art.stands);
-  g.fillStyle = COLORS.seats;
-  g.fill(art.seats);
+  if (scenery.grandstand) {
+    for (const stand of art.standPoses) {
+      g.save();
+      g.translate(stand.x, stand.y);
+      g.rotate(stand.heading + (stand.flip ? Math.PI : 0));
+      g.drawImage(scenery.grandstand, -STAND.length / 2, -STAND.depth / 2, STAND.length, STAND.depth);
+      g.restore();
+    }
+  } else {
+    g.fillStyle = COLORS.stand;
+    g.fill(art.stands);
+    g.fillStyle = COLORS.seats;
+    g.fill(art.seats);
+  }
 
   // Áreas de escape.
   g.lineCap = 'round';
@@ -336,6 +436,13 @@ export function drawTrack(g: CanvasRenderingContext2D, art: TrackArt, wetness: n
     g.stroke(art.racingLine);
     g.globalAlpha = 1;
   }
+
+  // Zonas de ultrapassagem: faixa verde tracejada junto às bordas das retas mais longas.
+  g.strokeStyle = COLORS.zone;
+  g.lineWidth = 1.4;
+  g.setLineDash([9, 7]);
+  g.stroke(art.zones);
+  g.setLineDash([]);
 
   // Mureta dos boxes.
   g.strokeStyle = COLORS.wall;

@@ -17,6 +17,8 @@ import {
   type NegotiationDemand,
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
+import { VEHICLES } from '@/data/vehicles';
+import { CarSprite } from '../components/CarSprite';
 import { Button, Card, Check, Meter, PageHeader, Pill, Stat, TeamSwatch, cx } from '../components/ui';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
@@ -32,7 +34,7 @@ const DEMANDS: { id: NegotiationDemand; label: string; available: (o: Offer) => 
 ];
 
 export function CareerScreen() {
-  const { career, player, category, drivers } = useCareerView();
+  const { career, player, team, category, drivers } = useCareerView();
   const retire = useGameStore((s) => s.retire);
   const [confirmRetire, setConfirmRetire] = useState(false);
   const next = categoryByTier(category.tier + 1);
@@ -78,6 +80,11 @@ export function CareerScreen() {
               <li key={c.id} className={cx('rounded-lg border p-3', state === 'current' ? 'border-apex-500 bg-apex-500/10' : state === 'done' ? 'border-ink-700 bg-ink-900' : 'border-ink-800 opacity-70')}>
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Degrau {c.tier}</div>
                 <div className="font-display text-lg font-bold uppercase leading-tight">{c.shortName}</div>
+                {/* O veículo de cada degrau, em proporção: do kart de entrada ao F1. Na categoria atual, com a pintura da equipe. */}
+                <div className="flex h-12 items-center" title={VEHICLES[c.id].description}>
+                  <CarSprite categoryId={c.id} teamId={state === 'current' ? team.id : 'escada'} color={state === 'current' ? team.color : '#aab3c2'} driverId={state === 'current' ? player.id : undefined} style={{ width: `${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 100)}%` }} />
+                </div>
+                <div className="text-[11px] text-ink-300">{VEHICLES[c.id].name}</div>
                 <div className="mt-1 text-xs text-ink-400">{seasons > 0 ? `${seasons} temporada(s)` : `Vaga: ${formatMoney(c.economy.seatCost[1])} a ${formatMoney(c.economy.seatCost[0])}`}</div>
               </li>
             );

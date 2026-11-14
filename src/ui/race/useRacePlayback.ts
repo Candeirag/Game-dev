@@ -11,8 +11,15 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import { lapInfoAt, type RaceTimeline } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 
-/** Em 1×, uma volta de referência dura estes segundos na tela. */
+/**
+ * Duração de uma volta de referência na tela, em 1×. Num kartódromo são 24 s. Num autódromo de
+ * traçado real o caminho desenhado é bem mais longo; a volta dura mais (até 40 s) para os carros
+ * não cruzarem a tela depressa demais. As velocidades 2×, 4× e 8× dividem esse tempo.
+ */
 export const LAP_SECONDS = 24;
+export function lapSecondsFor(circuitLength: number): number {
+  return Math.min(40, Math.max(LAP_SECONDS, circuitLength / 170));
+}
 export const SPEEDS = [1, 2, 4, 8] as const;
 /** Tempo de corrida que a imagem continua rodando depois que o último carro termina (fração da volta). */
 const TAIL = 0.05;
@@ -106,7 +113,7 @@ export function useRacePlayback(): RacePlayback {
         }
       }
 
-      let target = timeRef.current + dt * (tl.referenceLap / LAP_SECONDS) * speedRef.current;
+      let target = timeRef.current + dt * (tl.referenceLap / lapSecondsFor(tl.circuitLength)) * speedRef.current;
       let waiting = false;
 
       // Bandeira vermelha: a imagem para no instante da bandeira e espera o jogador relargar.

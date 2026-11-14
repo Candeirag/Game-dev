@@ -13,6 +13,10 @@ import { useGameStore } from '@/store/gameStore';
 import { EventsPanel } from '../components/EventsPanel';
 import { RaceResultTable } from '../components/RaceResultTable';
 import { RaceView } from '../components/RaceView';
+import { VEHICLES } from '@/data/vehicles';
+import { buildCircuit, type CircuitStyle } from '@/engine';
+import { CarSprite } from '../components/CarSprite';
+import { CircuitMap } from '../components/CircuitMap';
 import { RaceBroadcast } from '../race/RaceBroadcast';
 import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
 import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackLocation } from '../format';
@@ -227,7 +231,7 @@ function QualifyingPhase() {
 }
 
 function PreRacePhase() {
-  const { career, player, drivers, teams, category } = useCareerView();
+  const { career, player, drivers, teams, category, carNumbers } = useCareerView();
   const beginRace = useGameStore((s) => s.beginRace);
   const options = useMemo(() => playerStrategyOptions(career), [career]);
   const [selected, setSelected] = useState(0);
@@ -258,7 +262,11 @@ function PreRacePhase() {
                     <td className={cx(td, 'font-semibold tabular')}>{e.position}</td>
                     <td className={td}>
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="flex items-center gap-2"><TeamSwatch team={teams[e.teamId]} />{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
+                        <span className="flex items-center gap-2">
+                          <CarSprite categoryId={category.id} teamId={e.teamId} color={teams[e.teamId]?.color ?? '#9aa3b2'} driverId={e.driverId} number={carNumbers[e.driverId]} className="w-12 shrink-0" />
+                          <span className="w-6 text-right text-xs tabular text-ink-400">{carNumbers[e.driverId]}</span>
+                          {drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
+                        </span>
                         {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
                         {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
                       </span>
@@ -288,6 +296,12 @@ function PreRacePhase() {
             </div>
           </Card>
         )}
+        <Card title="O circuito" padded={false}>
+          <div className="p-4">
+            <CircuitMap track={getTrack(event.trackId)} style={category.vehicle} detailed className="mx-auto max-h-56 w-full" />
+            <p className="mt-2 text-xs text-ink-400">Sentido {circuitDirection(getTrack(event.trackId), category.vehicle)} · a seta vermelha marca a largada · {VEHICLES[category.id].name} na pista.</p>
+          </div>
+        </Card>
         <Card title="Antes da largada">
           {mine && (
             <p className="text-sm text-ink-300">
@@ -361,4 +375,8 @@ function RaceStage() {
       <RaceView />
     </div>
   );
+}
+
+function circuitDirection(track: Parameters<typeof buildCircuit>[0], style: CircuitStyle): string {
+  return buildCircuit(track, style).clockwise ? 'horário' : 'anti-horário';
 }

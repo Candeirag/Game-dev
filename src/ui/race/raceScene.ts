@@ -8,9 +8,10 @@
  * efeitos de rodada e de abandono.
  */
 import type { Driver, Team } from '@/domain/schemas';
+import { vehicleFor, type VehicleDefinition } from '@/data/vehicles';
 import { CIRCUIT, eventsUntil, lapInfoAt, pitLateralAt, poseAt, racingLineAt, safetyCarAt, standingsAt, type Circuit, type RaceTimeline, type StandingRow } from '@/engine';
 import { accentFor, drawVectorCar, helmetFor, liveryFor, safetyCarSprite } from './liveries';
-import { drawTrack, gridLateral, type TrackArt } from './trackPainter';
+import { drawBridges, drawTrack, gridLateral, type TrackArt } from './trackPainter';
 
 export type CameraMode = 'overview' | 'follow';
 
@@ -47,11 +48,6 @@ export function createSceneMemory(): SceneMemory {
   return { lateral: new Map(), side: new Map(), shift: new Map(), camera: null, lastFrame: 0, hits: [] };
 }
 
-/** Medidas do carro desenhado, por tipo de veículo. */
-export const CAR_SIZE = {
-  formula: { length: CIRCUIT.CAR_LENGTH, width: CIRCUIT.CAR_WIDTH },
-  kart: { length: 15.5, width: 9.6 },
-} as const;
 const SAFETY_CAR_SIZE = { length: 22, width: 10.8 };
 
 /** Distância lateral de cada carro ao eixo quando dois andam lado a lado. */
@@ -68,6 +64,12 @@ function hash01(text: string): number {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
+  // Embaralha os bits: sem isto, textos que só diferem no último caractere dão valores vizinhos.
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
 }
 
@@ -211,8 +213,7 @@ function formation(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, l
  * (da formação), com as suavizações guardadas em `memory`. `dt` é o tempo real desde o quadro
  * anterior, em segundos. Sem dependência de canvas, para poder ser testada.
  */
-export function placeCars(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, dt: number, singleFile: boolean): Placed[] {
-  const size = CAR_SIZE[circuit.style];
+export function placeCars(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, dt: number, singleFile: boolean, size: Pick<VehicleDefinition, 'length' | 'width'>): Placed[] {
   const targets = formation(rows, circuit, memory, size.length, size.width, singleFile);
   const ease = 1 - Math.exp(-dt * 7);
   // O recuo muda mais devagar que o lado: quando o safety car entra, a fila se forma aos poucos.
@@ -371,13 +372,14 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const { timeline, circuit, art, time } = input;
   const dt = memory.lastFrame ? Math.min(0.1, (now - memory.lastFrame) / 1000) : 0.016;
   memory.lastFrame = now;
-  const size = CAR_SIZE[circuit.style];
+  // O veículo é o da categoria da corrida: do kart de entrada ao F1, cada um com o seu tamanho.
+  const size = vehicleFor(timeline.categoryId);
   const rows = standingsAt(timeline, circuit, time);
   const info = lapInfoAt(timeline, time);
   const wetness = info?.wetness ?? 0;
 
   /* ---------- Carros: posição na pista ---------- */
-  const placed = placeCars(rows, circuit, memory, dt, info?.flag === 'sc' && time < info.end);
+  const placed = placeCars(rows, circuit, memory, dt, info?.flag === 'sc' && time < info.end, size);
 
   /* ---------- Câmera ---------- */
   const portrait = height > width * 1.12;
@@ -385,7 +387,7 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const fit = portrait ? Math.min(width / circuit.height, height / circuit.width) : Math.min(width / circuit.width, height / circuit.height);
   const focus = placed.find((p) => p.row.driverId === input.focusId);
   const follow = input.camera === 'follow' && focus;
-  const goal = follow ? { x: focus.x, y: focus.y, scale: clamp(Math.min(width, height) / 250, 1.25, 2.9) } : { x: circuit.width / 2, y: circuit.height / 2, scale: fit };
+  const goal = follow ? { x: focus.x, y: focus.y, scale: clamp(Math.min(width, height) / (circuit.real ? 310 : 250), 1.2, 2.9) } : { x: circuit.width / 2, y: circuit.height / 2, scale: fit };
   const camera = memory.camera ?? goal;
   const pan = 1 - Math.exp(-dt * 5);
   camera.x += (goal.x - camera.x) * pan;
@@ -415,7 +417,7 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const flashing = new Set(recent.map((e) => e.driverId));
   // Abandonados por baixo, líderes por cima.
   const drawOrder = [...placed].sort((a, b) => Number(b.row.state === 'retired') - Number(a.row.state === 'retired') || b.row.position - a.row.position);
-  for (const car of drawOrder) {
+  const paintCar = (car: Placed) => {
     const { row } = car;
     const team = input.teams[row.teamId];
     const colour = team?.color ?? '#9aa3b2';
@@ -430,9 +432,9 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
     g.beginPath();
     g.roundRect(-length / 2 + 1.1, -breadth / 2 + 1.5, length, breadth, 3);
     g.fill();
-    const sprite = liveryFor(circuit.style, row.teamId, colour, row.driverId);
+    const sprite = liveryFor(size.categoryId, row.teamId, colour, row.driverId, row.number);
     if (sprite) g.drawImage(sprite, -length / 2, -breadth / 2, length, breadth);
-    else drawVectorCar(g, circuit.style, length, breadth, colour, accentFor(row.teamId, colour), helmetFor(row.driverId));
+    else drawVectorCar(g, size.kind, length, breadth, colour, accentFor(row.teamId, colour), helmetFor(row.driverId));
     g.restore();
 
     // Fumaça de rodada e de quebra.
@@ -457,7 +459,15 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
       g.arc(car.x, car.y, length * 0.72, 0, Math.PI * 2);
       g.stroke();
     }
-  }
+  };
+  // Viaduto: quem está no trecho de baixo é desenhado antes do tabuleiro e passa por baixo dele.
+  const below = (car: Placed) => {
+    const at = ((car.along % 1) + 1) % 1;
+    return circuit.bridges.some((b) => at > b.under[0] && at < b.under[1]);
+  };
+  for (const car of drawOrder) if (below(car)) paintCar(car);
+  drawBridges(g, art, wetness);
+  for (const car of drawOrder) if (!below(car)) paintCar(car);
 
   /* ---------- Safety car ---------- */
   const leader = rows.find((r) => r.state === 'racing' && !r.sample.inPitLane);

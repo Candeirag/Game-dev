@@ -109,6 +109,8 @@ export interface RaceTimeline {
   /** Tempo de volta de referência da pista na categoria (dá o ritmo da reprodução). */
   referenceLap: number;
   lengthMeters: number;
+  /** Comprimento do traçado desenhado, em unidades de mundo (define o ritmo da imagem). */
+  circuitLength: number;
   playerDriverId: string;
   /** Pilotos na ordem do grid. */
   order: string[];
@@ -146,13 +148,18 @@ export function circuitForRace(ctx: RaceContext): Circuit {
   return buildCircuit(ctx.track, ctx.category.vehicle);
 }
 
-/** Números dos carros: derivados do id do piloto, sem repetição no mesmo grid. */
-function assignNumbers(driverIds: readonly string[]): Record<string, number> {
+/**
+ * Números dos carros (2 a 99): derivados do id do piloto, sem repetição dentro do conjunto dado.
+ * O conjunto é ordenado antes, então o resultado não depende da ordem do grid: a garagem, a
+ * classificação e a corrida mostram o mesmo número para o mesmo piloto.
+ */
+export function assignCarNumbers(driverIds: readonly string[]): Record<string, number> {
   const taken = new Set<number>();
   const numbers: Record<string, number> = {};
-  for (const id of driverIds) {
+  for (const id of [...new Set(driverIds)].sort()) {
     let n = 2 + (hashSeed('car-number', id) % 98);
-    while (taken.has(n)) n = n >= 99 ? 2 : n + 1;
+    // Com mais de 98 pilotos não há número para todos: a partir daí aceita repetição.
+    for (let tries = 0; taken.has(n) && tries < 98; tries++) n = n >= 99 ? 2 : n + 1;
     taken.add(n);
     numbers[id] = n;
   }
@@ -161,7 +168,8 @@ function assignNumbers(driverIds: readonly string[]): Record<string, number> {
 
 /** Linha do tempo de uma corrida que ainda não largou. */
 export function createRaceTimeline(race: RaceSimState, ctx: RaceContext): RaceTimeline {
-  const numbers = assignNumbers(race.cars.map((c) => c.driverId));
+  // Todos os pilotos do campeonato entram na conta, não só os do grid, para o número de cada um ser o mesmo em toda etapa.
+  const numbers = assignCarNumbers([...Object.keys(ctx.drivers), ...race.cars.map((c) => c.driverId)]);
   const teams = [...new Set(race.cars.map((c) => c.teamId))];
   const cars: Record<string, CarTimeline> = {};
   for (const car of race.cars) {
@@ -184,6 +192,7 @@ export function createRaceTimeline(race: RaceSimState, ctx: RaceContext): RaceTi
     lapsBuilt: 0,
     referenceLap: referenceLapTime(ctx.track, ctx.category),
     lengthMeters: ctx.track.lengthMeters,
+    circuitLength: circuitForRace(ctx).length,
     playerDriverId: race.playerDriverId,
     order: race.cars.map((c) => c.driverId),
     cars,
