@@ -14,6 +14,7 @@ import { netWorth } from './economy';
 import { categoryRequirements, type Requirement } from './license';
 import { reachableCategories, targetInterest, teamsOfCategory } from './market';
 import { getPlayer, teamKey } from './selectors';
+import { renewSponsors } from './sponsors';
 
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
 const roundTo = (value: number, step: number) => Math.round(value / step) * step;
@@ -32,8 +33,15 @@ export const CONTRACT_RULES = {
   SALARY_STEP: 0.12,
   SEAT_STEP: 0.12,
   BONUS_STEP: 0.25,
-  /** Tolerância de crédito: a equipe aceita o piloto se faltar até 25% do custo líquido da vaga. */
-  CREDIT_TOLERANCE: 0.25,
+  /** Tolerância de crédito: a equipe aceita o piloto se a dívida projetada não passar de 30% do custo líquido da vaga. */
+  CREDIT_TOLERANCE: 0.3,
+  /**
+   * Bolsa de promoção: o campeão, o vice e o terceiro colocado ganham desconto
+   * na vaga da categoria de cima (60%, 35% e 20%). Somado ao desconto por
+   * interesse, o abatimento total não passa de 80%.
+   */
+  SCHOLARSHIP: [0.6, 0.35, 0.2],
+  MAX_TOTAL_DISCOUNT: 0.8,
   MAX_OFFERS_PER_GROUP: 3,
 } as const;
 
@@ -58,11 +66,12 @@ function expectedLeadLevel(category: CategoryDefinition, rank: number): number {
   return category.field.driverLevel + category.field.driverSpread * (0.5 - rank / 9) + 1.5;
 }
 
-function buildOffer(career: CareerState, category: CategoryDefinition, team: Team, rank: number, kind: Offer['kind'], interest: number): Offer {
+function buildOffer(career: CareerState, category: CategoryDefinition, team: Team, rank: number, kind: Offer['kind'], interest: number, scholarship = 0): Offer {
   const player = getPlayer(career);
   const t = rank / 9;
   const overall = overallRating(player.attributes);
-  const discount = Math.min(CONTRACT_RULES.MAX_SEAT_DISCOUNT, Math.max(0, (interest - 50) / 100));
+  const interestDiscount = Math.min(CONTRACT_RULES.MAX_SEAT_DISCOUNT, Math.max(0, (interest - 50) / 100));
+  const discount = Math.min(CONTRACT_RULES.MAX_TOTAL_DISCOUNT, interestDiscount + scholarship);
   const seatCost = roundTo(lerp(category.economy.seatCost, t) * (1 - discount), 500);
   const salary = roundTo(lerp(category.economy.salary, t) * (0.55 + interest / 220), 1000);
   const leadLevel = expectedLeadLevel(category, rank);
@@ -88,6 +97,7 @@ function buildOffer(career: CareerState, category: CategoryDefinition, team: Tea
     patience: CONTRACT_RULES.PATIENCE,
     status: 'open',
     firstDriverPossible: overall >= leadLevel - 3 || interest >= 80,
+    scholarship,
   };
 }
 
@@ -100,7 +110,7 @@ function buildOffer(career: CareerState, category: CategoryDefinition, team: Tea
  * - Rede de segurança: a equipe mais fraca do degrau abaixo (ou do primeiro
  *   degrau) sempre oferece uma vaga sem custo, para a carreira nunca travar.
  */
-export function generateOffers(career: CareerState, reputation: number, contractStatus: 'active' | 'expired' | 'terminated'): Offer[] {
+export function generateOffers(career: CareerState, reputation: number, contractStatus: 'active' | 'expired' | 'terminated', finalPosition = 99): Offer[] {
   const player = getPlayer(career);
   const current = getCategory(career.categoryId);
   const offers: Offer[] = [];
@@ -117,24 +127,26 @@ export function generateOffers(career: CareerState, reputation: number, contract
           offers.push({
             id: `offer-s${career.season}-continue`, teamId: team.id, teamName: team.name, categoryId: category.id, kind: 'continue', role: c.role,
             years: c.endSeason - career.season, salary: c.salary, seatCost: c.seatCost, bonuses: { ...c.bonuses }, clauses: { ...c.clauses },
-            interest: Math.round(interest), conceded: 0, patience: 0, status: 'open', firstDriverPossible: false,
+            interest: Math.round(interest), conceded: 0, patience: 0, status: 'open', firstDriverPossible: false, scholarship: 0,
           });
         } else if (contractStatus === 'expired' && interest >= CONTRACT_RULES.MIN_INTEREST.renewal) {
           offers.push(buildOffer(career, category, team, rank, 'renewal', interest));
         }
         return;
       }
-      if (interest >= CONTRACT_RULES.MIN_INTEREST[kind as 'transfer' | 'promotion' | 'demotion']) group.push(buildOffer(career, category, team, rank, kind, interest));
+      const scholarship = kind === 'promotion' ? (CONTRACT_RULES.SCHOLARSHIP[finalPosition - 1] ?? 0) : 0;
+      if (interest >= CONTRACT_RULES.MIN_INTEREST[kind as 'transfer' | 'promotion' | 'demotion']) group.push(buildOffer(career, category, team, rank, kind, interest, scholarship));
     });
     group.sort((a, b) => b.interest - a.interest);
     offers.push(...group.slice(0, CONTRACT_RULES.MAX_OFFERS_PER_GROUP));
   }
 
-  // Rede de segurança.
+  // Rede de segurança: a equipe mais fraca do degrau de baixo que ainda não fez proposta.
   const safetyCategory = reachableCategories(career)[0] ?? current;
-  const weakest = rankTeams(teamsOfCategory(career, safetyCategory.id)).slice(-1)[0];
-  if (weakest && !offers.some((o) => o.teamId === weakest.id && o.categoryId === safetyCategory.id)) {
-    const base = buildOffer(career, safetyCategory, weakest, 9, 'fallback', 40);
+  const candidates = rankTeams(teamsOfCategory(career, safetyCategory.id)).reverse();
+  const safetyTeam = candidates.find((t) => !offers.some((o) => o.teamId === t.id && o.categoryId === safetyCategory.id));
+  if (safetyTeam) {
+    const base = buildOffer(career, safetyCategory, safetyTeam, 9, 'fallback', 40);
     offers.push({ ...base, id: `offer-s${career.season}-fallback`, seatCost: 0, salary: 0, years: 1, role: 'second', firstDriverPossible: false, clauses: { releaseFee: 0, performanceTarget: null } });
   }
   return offers;
@@ -147,22 +159,30 @@ export function releaseFeeFor(career: CareerState, offer: Offer): number {
 }
 
 /**
- * Requisito financeiro: o piloto precisa conseguir pagar a temporada. Conta o
- * patrimônio, os patrocínios que continuam, o salário, o apoio da academia, o
- * custo de vida e a multa de rescisão; aceita um déficit de até 25% do custo
- * líquido da vaga.
+ * Requisito financeiro. A equipe quer saber se o piloto consegue bancar a
+ * temporada. Ele cumpre o requisito se:
+ * - a temporada se paga (patrocínios, salário e apoio da academia cobrem a
+ *   vaga, o custo de vida e o treino), mesmo que ele tenha dívidas; ou
+ * - o saldo projetado ao fim da temporada não fica abaixo do limite de
+ *   crédito (30% do custo líquido da vaga, ou um ano de custo de vida).
+ * Os patrocínios entram já no valor da nova categoria; a multa rescisória,
+ * se houver, sai do patrimônio.
  */
 export function financeRequirement(career: CareerState, offer: Offer): Requirement {
   const category = getCategory(offer.categoryId);
-  const nextSeason = career.season + 1;
-  const sponsors = career.sponsors.filter((s) => s.endSeason >= nextSeason).reduce((sum, s) => sum + s.perSeason, 0);
+  const sponsors = renewSponsors(career.sponsors, career.season, getCategory(career.categoryId), category).kept.reduce((sum, s) => sum + s.perSeason, 0);
   const netSeat = offer.seatCost * (1 - (career.academy?.supportShare ?? 0));
-  const projected = netWorth(career.finance) + sponsors + offer.salary - category.economy.living - netSeat - releaseFeeFor(career, offer);
-  const met = netSeat === 0 || projected >= -netSeat * CONTRACT_RULES.CREDIT_TOLERANCE;
+  const seasonFlow = sponsors + offer.salary - category.economy.living - category.economy.trainingCost * category.rounds - netSeat;
+  const projected = netWorth(career.finance) - releaseFeeFor(career, offer) + seasonFlow;
+  const creditLimit = Math.max(netSeat * CONTRACT_RULES.CREDIT_TOLERANCE, category.economy.living);
+  const met = seasonFlow >= 0 || projected >= -creditLimit;
+  const money = (v: number) => `€ ${Math.round(v).toLocaleString('pt-BR')}`;
   return {
     key: 'finance',
     label: 'Finanças',
-    detail: met ? `Saldo projetado ao fim da temporada: € ${Math.round(projected).toLocaleString('pt-BR')}` : `Faltam € ${Math.round(-projected - netSeat * CONTRACT_RULES.CREDIT_TOLERANCE).toLocaleString('pt-BR')} para bancar a vaga`,
+    detail: met
+      ? `Resultado previsto da temporada: ${money(seasonFlow)}; saldo projetado: ${money(projected)}`
+      : `A temporada custaria ${money(-seasonFlow)} a mais do que você arrecada, e o saldo projetado (${money(projected)}) passa do limite de crédito de ${money(creditLimit)}`,
     met,
   };
 }

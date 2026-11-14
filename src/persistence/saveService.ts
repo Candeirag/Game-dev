@@ -12,6 +12,7 @@
  * carregamento recorre ao backup automaticamente.
  */
 import { CAREER_SCHEMA_VERSION, CareerStateSchema, type CareerState } from '@/domain/schemas';
+import { getCategory } from '@/data/categories';
 import { getPlayer, getPlayerTeam, driverStandings } from '@/engine';
 import { checksumOf } from './checksum';
 import { validateCareerIntegrity } from './integrity';
@@ -25,6 +26,8 @@ export type SaveSlotId = (typeof SAVE_SLOTS)[number];
 export interface SaveSummary {
   playerName: string;
   teamName: string;
+  /** Ausente em saves gravados antes da Fase 2. */
+  categoryName?: string;
   season: number;
   year: number;
   roundsCompleted: number;
@@ -60,6 +63,7 @@ export function summarize(career: CareerState): SaveSummary {
   return {
     playerName: `${player.firstName} ${player.lastName}`,
     teamName: getPlayerTeam(career).name,
+    categoryName: getCategory(career.categoryId).shortName,
     season: career.season,
     year: career.year,
     roundsCompleted: career.rounds.length,

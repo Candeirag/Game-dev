@@ -48,7 +48,13 @@ export interface EventDefinition {
 /* ---------------- Construtores ---------------- */
 
 type Stat = Extract<Effect, { type: 'stat' }>['stat'];
-const stat = (name: Stat, value: number): Effect => ({ type: 'stat', stat: name, value });
+/**
+ * A reputação anda devagar (cerca de 10 pontos separam um degrau do seguinte),
+ * então os eventos mexem nela pela metade do valor nominal dos outros
+ * indicadores.
+ */
+const REPUTATION_SCALE = 0.5;
+const stat = (name: Stat, value: number): Effect => ({ type: 'stat', stat: name, value: name === 'reputation' ? value * REPUTATION_SCALE : value });
 const rivalry = (driverId: string, value: number): Effect => ({ type: 'rivalry', driverId, value });
 const sponsors = (value: number, sponsorId: string | null = null): Effect => ({ type: 'sponsorSatisfaction', sponsorId, value });
 const cash = (value: number, label: string): Effect => ({ type: 'cash', value, ledger: 'event', label });
@@ -340,19 +346,23 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
     id: 'sponsor-offer', category: 'sponsor', kind: 'random', maxPerSeason: 3, weight: 6,
     build(ctx) {
       const current = commercialSponsors(ctx.career.sponsors);
-      if (current.length >= SPONSOR_RULES.MAX_SPONSORS) return null;
-      // Sem resultados nem reputação, ninguém aparece; o primeiro patrocinador pequeno vem com facilidade.
-      const tier = sponsorTierFor(ctx.career.reputation, ctx.category);
-      if (current.length > 0 && ctx.career.reputation < ctx.category.requirements.minReputation + 4 * current.length) return null;
-      const sponsor = buildSponsor(ctx.career, tier, hashSeed(ctx.seed, 'sponsor'), ctx.team.driverTarget);
+      // Antes da segunda etapa ainda não há tabela: vale a posição da temporada anterior (ou o meio do grid).
+      const lastSeason = ctx.career.history[ctx.career.history.length - 1]?.playerPosition ?? 12;
+      const tier = sponsorTierFor(ctx.career.reputation, ctx.category, ctx.career.rounds.length >= 2 ? ctx.position : lastSeason);
+      // Com as três cotas ocupadas, só interessa um patrocinador maior que o menor atual, que seria substituído.
+      const weakest = [...current].sort((a, b) => a.tier - b.tier || a.perSeason - b.perSeason)[0];
+      const replaces = current.length >= SPONSOR_RULES.MAX_SPONSORS ? weakest : undefined;
+      if (current.length >= SPONSOR_RULES.MAX_SPONSORS && (!weakest || weakest.tier >= tier)) return null;
+      const sponsor = buildSponsor(ctx.career, tier, hashSeed(ctx.seed, 'sponsor'));
       const better = { ...sponsor, perSeason: Math.round((sponsor.perSeason * 1.2) / 100) * 100, targetPosition: Math.max(1, sponsor.targetPosition - 1) };
+      const swap: Effect[] = replaces ? [{ type: 'removeSponsor', sponsorId: replaces.id }] : [];
       return {
         title: `Proposta de patrocínio: ${sponsor.name}`,
-        body: `${sponsor.name} oferece ${euro(sponsor.perSeason)} por temporada, mais ${euro(sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.`,
+        body: `${sponsor.name} oferece ${euro(sponsor.perSeason)} por temporada, mais ${euro(sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.${replaces ? ` As suas três cotas estão ocupadas: para assinar, você precisa encerrar o contrato com ${replaces.name} (${euro(replaces.perSeason)} por temporada).` : ''}`,
         choices: [
-          choice('sign', 'Assinar', 'Receita garantida em parcelas por etapa.', sure(`${sponsor.name} estampa o seu macacão.`, { type: 'addSponsor', sponsor })),
-          choice('haggle', 'Pedir 20% a mais', 'Pode melhorar o contrato ou espantar o patrocinador.', odds([0.5, `${sponsor.name} aceita pagar mais, mas passa a exigir mais também.`, [{ type: 'addSponsor', sponsor: better }]], [0.5, `${sponsor.name} agradece e procura outro piloto.`, []])),
-          choice('decline', 'Recusar', 'Mantém a vaga livre para uma proposta melhor.', sure('Você recusa com educação.')),
+          choice('sign', replaces ? `Assinar e dispensar ${replaces.name}` : 'Assinar', 'Receita garantida em parcelas por etapa.', sure(`${sponsor.name} estampa o seu macacão.`, ...swap, { type: 'addSponsor', sponsor })),
+          choice('haggle', 'Pedir 20% a mais', 'Pode melhorar o contrato ou espantar o patrocinador.', odds([0.5, `${sponsor.name} aceita pagar mais, mas passa a exigir mais também.`, [...swap, { type: 'addSponsor', sponsor: better }]], [0.5, `${sponsor.name} agradece e procura outro piloto.`, []])),
+          choice('decline', 'Recusar', replaces ? `Mantém ${replaces.name}.` : 'Mantém a cota livre para uma proposta melhor.', sure('Você recusa com educação.')),
         ],
       };
     },

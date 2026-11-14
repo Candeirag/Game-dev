@@ -16,6 +16,8 @@ export const CONDITION_RULES = {
   FORM_MEMORY: 0.6,
   /** Cada posição acima ou abaixo da meta vale 6 pontos na nota da corrida. */
   FORM_PER_POSITION: 6,
+  /** A confiança volta 10% do caminho até 50 a cada etapa: ninguém vive de um resultado antigo. */
+  CONFIDENCE_REVERSION: 0.1,
   /** A moral volta 15% do caminho até 55 a cada etapa (o tempo cura). */
   MORALE_RECOVERY: 0.15,
   MORALE_BASELINE: 55,
@@ -25,7 +27,7 @@ export const CONDITION_RULES = {
  * Nova condição após uma corrida.
  * - Fase: nota = 50 + 6 × (meta − posição), limitada a 0–100; abandono por
  *   erro próprio vale 20.
- * - Confiança: vitória +10, pódio +6, dentro da meta +2, abaixo da meta −3,
+ * - Confiança: aproxima-se de 50 (10% por etapa) e reage ao resultado: vitória +10, pódio +6, dentro da meta +2, abaixo da meta −3,
  *   acidente por erro próprio −8; cada ultrapassagem +0,5 (até +3).
  * - Moral: aproxima-se da linha de base e reage ao resultado (+4 acima da
  *   meta, −3 abaixo, −5 em abandono).
@@ -40,7 +42,7 @@ export function conditionAfterRace(condition: Condition, entry: RaceEntryResult 
   const raceScore = finished ? Math.min(100, Math.max(0, 50 + CONDITION_RULES.FORM_PER_POSITION * (target - entry.position))) : ownFault ? 20 : 45;
   const form = condition.form * CONDITION_RULES.FORM_MEMORY + raceScore * (1 - CONDITION_RULES.FORM_MEMORY);
 
-  let confidence = condition.confidence + Math.min(3, entry.overtakes * 0.5);
+  let confidence = condition.confidence + (50 - condition.confidence) * CONDITION_RULES.CONFIDENCE_REVERSION + Math.min(3, entry.overtakes * 0.5);
   if (finished && entry.position === 1) confidence += 10;
   else if (finished && entry.position <= 3) confidence += 6;
   else if (finished && entry.position <= target) confidence += 2;

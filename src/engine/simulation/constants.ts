@@ -230,8 +230,8 @@ export const RACE = {
   VSC_LAPS: [1, 2] as const,
   /** Chance de neutralização por tipo de incidente: [safety car, safety car virtual, bandeira vermelha]. */
   NEUTRALIZATION_ODDS: {
-    crash: [0.5, 0.3, 0.02],
-    collision: [0.6, 0.25, 0.05],
+    crash: [0.4, 0.3, 0.02],
+    collision: [0.5, 0.25, 0.05],
     mechanical: [0.12, 0.4, 0],
     spin: [0, 0.06, 0],
   },
@@ -276,7 +276,9 @@ export const RACE = {
   /* ---------------- Ordens de equipe ---------------- */
 
   /** Distância máxima entre companheiros para a equipe pedir a troca de posições. */
-  TEAM_ORDER_GAP: 1.0,
+  TEAM_ORDER_GAP: 0.6,
+  /** Vantagem mínima de ritmo do primeiro piloto (fração da volta) para a equipe intervir. */
+  TEAM_ORDER_PACE_ADVANTAGE: 0.0015,
   /** Chance de um piloto da IA obedecer à ordem. */
   TEAM_ORDER_AI_OBEY: 0.85,
   TEAM_ORDER_SWAP_LOSS: 0.4,

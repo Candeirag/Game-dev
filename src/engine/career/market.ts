@@ -16,11 +16,11 @@ const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v))
 export const MARKET = {
   /** O interesse anda 35% do caminho até o alvo a cada etapa. */
   INTEREST_SPEED: 0.35,
-  /** As melhores equipes são mais exigentes: até 28 pontos a menos de interesse. */
-  TOP_TEAM_SELECTIVITY: 28,
-  /** Subir de categoria exige mais; descer, menos. */
-  PROMOTION_PENALTY: 8,
-  DEMOTION_BONUS: 15,
+  /**
+   * Equivalência entre categorias: uma posição no campeonato vale seis posições
+   * a menos no degrau de cima (ser 1º equivale a ser 7º) e seis a mais no de baixo.
+   */
+  TIER_POSITION_SHIFT: 6,
   /** Equipes ligadas à academia do piloto olham para ele com mais atenção. */
   ACADEMY_BONUS: 15,
 } as const;
@@ -30,31 +30,40 @@ export function teamsOfCategory(career: CareerState, categoryId: CategoryId): Te
   return categoryId === career.categoryId ? career.teams : initialTeams(categoryId);
 }
 
-/** Categorias vizinhas (um degrau abaixo, a atual e um degrau acima). */
+/**
+ * Categorias em que o jogador pode correr na próxima temporada: um degrau
+ * abaixo, o atual e um acima. Há um atalho, como na vida real: do kart
+ * nacional já se pode ir direto para a Fórmula 4, sem passar pelo kart
+ * internacional, desde que os requisitos da F4 sejam cumpridos.
+ */
 export function reachableCategories(career: CareerState): CategoryDefinition[] {
   const tier = getCategory(career.categoryId).tier;
-  return [tier - 1, tier, tier + 1].map(categoryByTier).filter((c): c is CategoryDefinition => c !== undefined);
+  const tiers = [tier - 1, tier, tier + 1];
+  if (career.categoryId === 'kart-national') tiers.push(tier + 2);
+  return tiers.map(categoryByTier).filter((c): c is CategoryDefinition => c !== undefined);
 }
 
 /**
- * Interesse-alvo de uma equipe no jogador (0 a 100):
- * 40% desempenho no campeonato, 30% adequação do nível ao da categoria,
- * 20% reputação e 10% juventude, menos a exigência da equipe. A equipe atual
- * pondera também a confiança que tem no piloto.
+ * Interesse-alvo de uma equipe no jogador (0 a 100). Cada equipe avalia o
+ * piloto em relação ao que ela mesma espera:
+ * - 45% desempenho: posição no campeonato comparada à meta da equipe (estar
+ *   duas posições abaixo da meta vale 50%; cada posição soma ou tira 10%);
+ * - 30% nível: nota geral comparada ao nível dos pilotos daquela equipe;
+ * - 15% reputação e 10% juventude.
+ * A equipe atual pondera também a confiança que tem no piloto.
  */
 export function targetInterest(career: CareerState, category: CategoryDefinition, team: Team, rank: number, reputation = career.reputation): number {
   const player = getPlayer(career);
   const current = getCategory(career.categoryId);
-  const standings = driverStandings(career);
-  const me = standings.find((s) => s.driverId === player.id);
-  const field = Math.max(2, standings.length);
-  const performance = career.rounds.length >= 2 && me ? (field - me.position) / (field - 1) : 0.45;
-  const fit = clamp(0.5 + (overallRating(player.attributes) - category.field.driverLevel) / 20, 0, 1);
+  const me = driverStandings(career).find((s) => s.driverId === player.id);
+  // No atalho do kart nacional para a F4, o salto conta como um degrau só.
+  const steps = Math.max(-1, Math.min(1, category.tier - current.tier));
+  const equivalentPosition = (me?.position ?? 12) + steps * MARKET.TIER_POSITION_SHIFT;
+  const performance = career.rounds.length >= 2 ? clamp(0.5 + (team.driverTarget + 2 - equivalentPosition) / 10, 0, 1) : 0.4;
+  const teamLevel = category.field.driverLevel + category.field.driverSpread * (0.5 - rank / 9);
+  const fit = clamp(0.5 + (overallRating(player.attributes) - teamLevel) / 12, 0, 1);
   const youth = clamp((category.field.maxAge - player.age) / Math.max(1, category.field.maxAge - category.field.minAge), 0, 1);
-  let value = 100 * (0.4 * performance + 0.3 * fit + 0.2 * (reputation / 100) + 0.1 * youth);
-  value -= ((9 - rank) / 9) * MARKET.TOP_TEAM_SELECTIVITY;
-  if (category.tier > current.tier) value -= MARKET.PROMOTION_PENALTY;
-  if (category.tier < current.tier) value += MARKET.DEMOTION_BONUS;
+  let value = 100 * (0.45 * performance + 0.3 * fit + 0.15 * (reputation / 100) + 0.1 * youth);
   if (career.academy && team.affiliation === career.academy.f1TeamId) value += MARKET.ACADEMY_BONUS;
   if (category.id === career.categoryId && team.id === player.teamId) value = 0.6 * value + 0.4 * career.relations.teamTrust;
   return clamp(value);

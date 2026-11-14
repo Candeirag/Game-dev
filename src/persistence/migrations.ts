@@ -1,20 +1,150 @@
 /**
  * Migrações de save entre versões do schema da carreira.
  *
- * Quando CAREER_SCHEMA_VERSION subir, registre aqui uma função que converte
- * os dados da versão N para a N+1. Saves antigos passam por todas as
- * migrações em sequência antes de serem validados.
+ * Quando CAREER_SCHEMA_VERSION sobe, registra-se aqui uma função que converte
+ * os dados da versão N para a N+1. Saves antigos passam por todas as migrações
+ * em sequência antes de serem validados.
+ *
+ * Versão 1 → 2 (Fase 2): a carreira deixa de ser um campeonato único e ganha
+ * categoria, contrato, finanças, licença, relações, eventos e fechamento de
+ * temporada. Um save da Fase 1 vira uma carreira no kart regional, com os
+ * novos sistemas no estado inicial e todo o histórico de resultados mantido.
  */
-import { CAREER_SCHEMA_VERSION } from '@/domain/schemas';
+import { CAREER_SCHEMA_VERSION, type CareerState, type Contract, type Driver, type Team } from '@/domain/schemas';
+import { getCategory } from '@/data/categories';
+import { NEUTRAL_CONDITION } from '@/data/drivers';
+import { initialTeams } from '@/data/teams';
+import { ECONOMY, emptyFinance } from '@/engine/career/economy';
+import { licensePointsFor } from '@/engine/career/license';
+import { updateMarketInterest } from '@/engine/career/market';
+import { closeSeason } from '@/engine/career/offseason';
+import { fullName } from '@/engine/career/selectors';
+import { familySupport } from '@/engine/career/sponsors';
+import { overallRating } from '@/engine/simulation/performance';
+import { generateReserve, rankTeams } from '@/engine/world/generation';
 
-type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
+type Loose = Record<string, unknown>;
+type Migration = (data: Loose) => Loose;
 
-/** Chave: versão de origem. Ainda não há migrações, porque a versão 1 é a primeira. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = {};
+const list = (value: unknown): Loose[] => (Array.isArray(value) ? (value as Loose[]) : []);
+const obj = (value: unknown): Loose => (value !== null && typeof value === 'object' ? (value as Loose) : {});
+
+function migrateRoundV1(round: Loose): Loose {
+  const qualifying = obj(round.qualifying);
+  const race = obj(round.race);
+  return {
+    ...round,
+    qualifying: { ...qualifying, entries: list(qualifying.entries).map((e) => ({ gridPenalty: 0, ...e })) },
+    race: {
+      safetyCars: 0,
+      virtualSafetyCars: 0,
+      redFlags: 0,
+      teamOrders: [],
+      ...race,
+      entries: list(race.entries).map((e) => ({ pitStops: 0, penaltySeconds: 0, penaltyPoints: 0, damage: 0, injured: false, ...e })),
+    },
+  };
+}
+
+function migrateV1(data: Loose): Loose {
+  const category = getCategory('kart-regional');
+  const season = typeof data.season === 'number' ? data.season : 1;
+  const seed = typeof data.seed === 'number' ? data.seed : 1;
+  const reference = initialTeams('kart-regional');
+
+  // Equipes: "kart" passa a se chamar "car"; equipe de box e afiliação vêm dos dados da categoria.
+  const teams = list(data.teams).map((t) => {
+    const { kart, ...rest } = t;
+    const ref = reference.find((r) => r.id === t.id);
+    return { ...rest, car: kart, crew: ref?.crew ?? 60, affiliation: null } as unknown as Team;
+  });
+
+  // Pilotos: em cada equipe, o de maior nível é o primeiro piloto.
+  const base = list(data.drivers).map((d) => ({ ...d, role: null, contractEnd: 0, condition: { ...NEUTRAL_CONDITION }, injury: null }) as unknown as Driver);
+  const drivers = base.map((d) => {
+    if (!d.teamId) return d;
+    const mates = base.filter((x) => x.teamId === d.teamId).sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes) || a.id.localeCompare(b.id));
+    return { ...d, role: mates[0]?.id === d.id ? ('first' as const) : ('second' as const), contractEnd: season };
+  });
+  const ranked = rankTeams(teams);
+  const usedNames = new Set(drivers.map(fullName));
+  for (const team of ranked) drivers.push(generateReserve(category, team, ranked.indexOf(team), seed, season, usedNames));
+
+  const player = drivers.find((d) => d.isPlayer);
+  const playerTeam = teams.find((t) => t.id === player?.teamId);
+  if (!player || !playerTeam) throw new Error('Save da versão 1 sem piloto do jogador ou sem equipe.');
+  const rank = ranked.findIndex((t) => t.id === playerTeam.id);
+  const [seatTop, seatBottom] = category.economy.seatCost;
+  const contract: Contract = {
+    teamId: playerTeam.id,
+    categoryId: category.id,
+    role: player.role === 'first' ? 'first' : 'second',
+    startSeason: season,
+    endSeason: season,
+    salary: 0,
+    seatCost: Math.round(((seatTop + (seatBottom - seatTop) * (rank / 9)) * 0.75) / 500) * 500,
+    bonuses: { win: 0, podium: 0, point: 0, title: 0 },
+    clauses: { releaseFee: 0, performanceTarget: null },
+  };
+
+  const teamName = (id: unknown) => teams.find((t) => t.id === id)?.name ?? String(id);
+  const history = list(data.history).map((h): Loose => ({
+    ...h,
+    categoryId: category.id,
+    playerTeamName: teamName(h.playerTeamId),
+    teamColors: Object.fromEntries(teams.map((t) => [t.id, t.color])),
+    rounds: list(h.rounds).map(migrateRoundV1),
+  }));
+
+  const weekendV1 = data.weekend === null || data.weekend === undefined ? null : obj(data.weekend);
+  const weekend = weekendV1 && {
+    ...weekendV1,
+    qualifying: weekendV1.qualifying ? { ...obj(weekendV1.qualifying), entries: list(obj(weekendV1.qualifying).entries).map((e) => ({ gridPenalty: 0, ...e })) } : null,
+    entrants: drivers.filter((d) => d.teamId && d.role !== 'reserve').map((d) => ({ driverId: d.id, teamId: d.teamId })),
+    playerParticipates: true,
+  };
+
+  const migrated = {
+    ...data,
+    schemaVersion: CAREER_SCHEMA_VERSION,
+    status: 'active',
+    categoryId: category.id,
+    drivers,
+    teams,
+    weekend,
+    rounds: list(data.rounds).map(migrateRoundV1),
+    adjustments: [],
+    gridPenalties: {},
+    trainingIntensity: 'normal',
+    contract,
+    finance: emptyFinance(ECONOMY.STARTING_CASH),
+    sponsors: season <= ECONOMY.FAMILY_SUPPORT_SEASONS ? [familySupport()] : [],
+    academy: null,
+    license: {
+      history: history.map((h) => ({ season: Number(h.season), categoryId: category.id, position: Number(h.playerPosition), points: licensePointsFor(category.id, Number(h.playerPosition)) })),
+      penaltyPoints: 0,
+      banRounds: 0,
+    },
+    relations: { teamTrust: 50, teammate: 50, rivalries: {} },
+    marketInterest: {},
+    pendingEvents: [],
+    eventLog: [],
+    offseason: null,
+    history,
+  } as unknown as CareerState;
+
+  let career: CareerState = { ...migrated, marketInterest: updateMarketInterest(migrated, 1) };
+  // Um save da versão 1 parado no fim da temporada precisa do fechamento, que antes não existia.
+  if (career.nextRoundIndex >= career.calendar.length && career.weekend === null) career = closeSeason(career);
+  return career as unknown as Loose;
+}
+
+/** Chave: versão de origem. */
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1 };
 
 export function migrateCareerData(raw: unknown): unknown {
   if (raw === null || typeof raw !== 'object') return raw;
-  let data = raw as Record<string, unknown>;
+  let data = raw as Loose;
   let version = typeof data.schemaVersion === 'number' ? data.schemaVersion : 0;
   if (version > CAREER_SCHEMA_VERSION) {
     throw new Error(`Save criado por uma versão mais nova do jogo (schema ${version}).`);

@@ -31,23 +31,48 @@ import { renewSponsors } from './sponsors';
 
 /** A pré-temporada equivale a 2 ciclos de treino. */
 const OFFSEASON_TRAINING_CYCLES = 2;
+/** Teto da dívida, como fração da vaga mais cara da categoria seguinte, e custo do acordo em reputação. */
+const DEBT_CEILING_SHARE = 0.5;
+const DEBT_SETTLEMENT_REPUTATION = 4;
 /** Confiança abaixo da qual a equipe rescinde um contrato vigente. */
 const TRUST_TERMINATION = 18;
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 /**
- * Variação de reputação na temporada: 3 pontos por posição acima ou abaixo da
- * meta, mais 2 por vitória e 1 por pódio (limitada entre −12 e +18); título
- * vale +5; terminar na metade de cima do grid vale um bônus que cresce com o
- * degrau da categoria (0,8 por degrau), porque resultado em categoria alta
- * repercute mais.
+ * Reputação: é o prestígio do piloto no automobilismo, de 0 a 100, e fica
+ * ancorada ao degrau em que ele compete. Cada temporada tem uma "nota de
+ * prestígio" = base da categoria + bônus pela posição final, e a reputação
+ * anda metade do caminho até essa nota, mais 0,5 por vitória.
+ *
+ * Bases: 5 (kart regional), 15, 27, 38, 50, 62 e 74 (Fórmula 1).
+ * Bônus: campeão +22, vice +18, 3º +15, até 5º +13, até 10º +6, até 15º 0,
+ * abaixo disso −5.
+ *
+ * Consequência: um campeão regional chega perto de 20, não de 100; só quem
+ * vence nas categorias de cima se aproxima do topo. Um piloto que termina
+ * sempre entre os cinco primeiros cumpre o requisito de reputação do degrau
+ * seguinte a cada temporada.
  */
-export function reputationDelta(position: number, target: number, wins: number, podiums: number, fieldSize: number, tier: number): number {
-  let delta = clamp(3 * (target - position) + 2 * wins + podiums, -12, 18);
-  if (position === 1) delta += 5;
-  if (position <= fieldSize / 2) delta += tier * 0.8;
-  return delta;
+export const REPUTATION = {
+  TIER_BASE: [0, 5, 15, 27, 38, 50, 62, 74],
+  SPEED: 0.5,
+  WIN_BONUS: 0.5,
+} as const;
+
+export function positionPrestige(position: number): number {
+  if (position === 1) return 22;
+  if (position === 2) return 18;
+  if (position === 3) return 15;
+  if (position <= 5) return 13;
+  if (position <= 10) return 6;
+  if (position <= 15) return 0;
+  return -5;
+}
+
+export function reputationAfterSeason(reputation: number, position: number, wins: number, tier: number): number {
+  const prestige = (REPUTATION.TIER_BASE[tier] ?? 0) + positionPrestige(position);
+  return Math.round(clamp(reputation + (prestige - reputation) * REPUTATION.SPEED + wins * REPUTATION.WIN_BONUS, 0, 100));
 }
 
 export function closeSeason(career: CareerState): CareerState {
@@ -63,7 +88,7 @@ export function closeSeason(career: CareerState): CareerState {
   const date = career.calendar[lastRound - 1]?.date ?? `${career.year}-12-01`;
   const notes: string[] = [];
 
-  const reputationAfter = Math.round(clamp(career.reputation + reputationDelta(me.position, team.driverTarget, me.wins, me.podiums, standings.length, category.tier), 0, 100));
+  const reputationAfter = reputationAfterSeason(career.reputation, me.position, me.wins, category.tier);
   const licensePointsEarned = licensePointsFor(category.id, me.position);
   const license = { ...career.license, history: [...career.license.history, { season: career.season, categoryId: category.id, position: me.position, points: licensePointsEarned }] };
 
@@ -104,7 +129,7 @@ export function closeSeason(career: CareerState): CareerState {
   }
 
   const base: CareerState = { ...career, reputation: reputationAfter, license, finance, academy };
-  const offers = generateOffers(base, reputationAfter, contractStatus);
+  const offers = generateOffers(base, reputationAfter, contractStatus, me.position);
   const champion = career.drivers.find((d) => d.id === standings[0]?.driverId);
   const message: InboxMessage = {
     id: `s${career.season}-end`,
@@ -212,7 +237,7 @@ function winter(driver: Driver, careerSeed: number, season: number): Driver {
 function enterCategory(career: CareerState, next: CategoryDefinition, offer: Offer, role: 'first' | 'second', nextSeason: number): { teams: Team[]; drivers: Driver[]; news: string[] } {
   const current = getCategory(career.categoryId);
   const player = getPlayer(career);
-  const rivals = next.tier === current.tier + 1 ? promotedRivals(career, next) : [];
+  const rivals = next.tier > current.tier ? promotedRivals(career, next) : [];
   const usedNames = new Set([fullName(player), ...rivals.map(fullName)]);
   const field = buildCategoryField(next.id, career.seed, nextSeason, usedNames);
   let drivers = field.drivers.filter((d) => !(d.teamId === offer.teamId && d.role === role));
@@ -254,7 +279,19 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     news.push(`Você pagou € ${fee.toLocaleString('pt-BR')} de multa para deixar o contrato anterior.`);
   }
 
-  const sponsors = renewSponsors(career.sponsors, career.season, next);
+  // Acordo com credores: uma dívida maior que metade da vaga mais cara da categoria em que o
+  // piloto vai correr é impagável naquele nível. Os credores aceitam reduzi-la a esse teto,
+  // e a notícia arranha a reputação.
+  let reputation = career.reputation;
+  const debtCeiling = Math.max(next.economy.seatCost[0] * DEBT_CEILING_SHARE, next.economy.living * 2);
+  if (finance.cash < -debtCeiling) {
+    const forgiven = Math.round(-finance.cash - debtCeiling);
+    finance = { ...finance, cash: -debtCeiling };
+    reputation = Math.max(0, reputation - DEBT_SETTLEMENT_REPUTATION);
+    news.push(`Acordo com credores: € ${forgiven.toLocaleString('pt-BR')} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
+  }
+
+  const sponsors = renewSponsors(career.sponsors, career.season, getCategory(career.categoryId), next);
   for (const s of sponsors.renewed) news.push(`${s.name} renovou o patrocínio por € ${s.perSeason.toLocaleString('pt-BR')} por temporada.`);
   for (const s of sponsors.left) news.push(s.tier === 0 ? 'O apoio financeiro da família chegou ao fim.' : `${s.name} não renovou o patrocínio.`);
 
@@ -295,6 +332,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     season: nextSeason,
     year: nextYear,
     categoryId: next.id,
+    reputation,
     drivers,
     teams,
     calendar,

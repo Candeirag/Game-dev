@@ -692,7 +692,8 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       if (front.teamId !== back.teamId || teamOrders.some((o) => o.teamId === front.teamId)) continue;
       if (back.totalTime - front.totalTime > RACE.TEAM_ORDER_GAP) continue;
       if (ctx.drivers[back.driverId]?.role !== 'first' || ctx.drivers[front.driverId]?.role === 'first') continue;
-      if ((paceOf.get(back.driverId) ?? Infinity) >= (paceOf.get(front.driverId) ?? 0)) continue;
+      const frontPace = paceOf.get(front.driverId) ?? 0;
+      if ((paceOf.get(back.driverId) ?? Infinity) > frontPace * (1 - RACE.TEAM_ORDER_PACE_ADVANTAGE)) continue;
 
       if (front.driverId === state.playerDriverId) {
         pendingTeamOrder = { teamId: front.teamId, favouredDriverId: back.driverId };

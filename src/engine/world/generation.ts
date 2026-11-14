@@ -100,7 +100,9 @@ export function generateDriver(o: GenerateDriverOptions): Driver {
   attributes.experience = Math.round(clamp(18 + tier * 8 + (age - field.minAge) * 3.5 + gaussian(rng) * 3, 5, 99));
 
   const best = Math.max(...TRAINABLE_ATTRIBUTES.map((k) => attributes[k]));
-  const headroom = Math.max(0, 25 - age) * 1.2 + rng.next() * 5;
+  // Margem de evolução: 0,6 ponto por ano abaixo de 24, mais até 3 pontos. Um jovem de 16 anos
+  // pode crescer de 5 a 8 pontos; um piloto de 24 ou mais já está perto do teto.
+  const headroom = Math.max(0, 24 - age) * 0.6 + rng.next() * 3;
   const potential = Math.round(clamp(best + headroom, best, 99));
 
   return {

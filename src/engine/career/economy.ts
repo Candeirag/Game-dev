@@ -12,9 +12,9 @@ import { createRng, gaussian, hashSeed } from '../rng';
 export const ECONOMY = {
   /** Dinheiro inicial do piloto (economias da família). */
   STARTING_CASH: 30_000,
-  /** Apoio anual da família nos três primeiros anos de carreira. */
-  FAMILY_SUPPORT: 22_000,
-  FAMILY_SUPPORT_SEASONS: 3,
+  /** Apoio anual da família nos cinco primeiros anos de carreira. */
+  FAMILY_SUPPORT: 24_000,
+  FAMILY_SUPPORT_SEASONS: 5,
   /**
    * Imposto de renda progressivo sobre a renda tributável da temporada
    * (salário + bônus + patrocínios − custo da vaga): faixas e alíquotas.

@@ -399,6 +399,8 @@ export const OfferSchema = z.object({
   status: z.enum(['open', 'withdrawn']),
   /** A equipe aceita dar o status de primeiro piloto, se pedido. */
   firstDriverPossible: z.boolean(),
+  /** Bolsa de promoção já descontada do custo da vaga (0 a 1), dada aos três primeiros do campeonato. */
+  scholarship: z.number().min(0).max(1),
 });
 export type Offer = z.infer<typeof OfferSchema>;
 

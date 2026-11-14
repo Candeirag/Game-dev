@@ -32,8 +32,13 @@ import { SPONSOR_RULES, satisfactionAfterRound } from './sponsors';
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
 
 export const RELATION_RULES = {
-  /** Confiança da equipe: 1 ponto por posição em relação à meta, de −5 a +6 por etapa. */
+  /**
+   * Confiança da equipe: 1 ponto por posição em relação à meta, de −5 a +6 por
+   * etapa. Além disso, ela volta 4% do caminho até 50 a cada etapa: a equipe
+   * cobra resultados recentes, não um crédito eterno.
+   */
   TRUST_PER_POSITION: 1,
+  TRUST_REVERSION: 0.04,
   TRUST_OWN_FAULT_DNF: -5,
   TRUST_ORDER_OBEYED: 5,
   TRUST_ORDER_IGNORED: -10,
@@ -117,6 +122,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
 
   /* 4. Relações */
   let { teamTrust, teammate } = career.relations;
+  teamTrust += (50 - teamTrust) * RELATION_RULES.TRUST_REVERSION;
   const rivalries: Record<string, number> = {};
   for (const [id, value] of Object.entries(career.relations.rivalries)) {
     if (value - RELATION_RULES.RIVALRY_DECAY > 0 && career.drivers.some((d) => d.id === id && d.teamId)) rivalries[id] = value - RELATION_RULES.RIVALRY_DECAY;

@@ -9,7 +9,8 @@
  *
  * - peso_do_foco: vem do programa de treino escolhido (ver training.ts).
  * - TAXA_NATURAL: competir já desenvolve um pouco de tudo.
- * - fator_idade: jovens aprendem mais rápido.
+ * - fator_idade: jovens aprendem mais rápido (1,15 até os 17 anos; 1,0 até os
+ *   21; 0,85 até os 25; 0,55 até os 29; 0,25 depois).
  * - fator_distância: quanto mais perto do potencial, mais lento o ganho
  *   (retorno decrescente); no potencial, o ganho é zero.
  * - variação: de 0,75 a 1,25, sorteada com a semente da carreira. Representa
@@ -23,20 +24,20 @@ import { createRng, hashSeed, uniform } from '../rng';
 import { TRAINABLE_ATTRIBUTES, TRAINING_GROUPS } from './training';
 
 export const DEVELOPMENT = {
-  /** Calibrado para dar de +5 a +8 por temporada no atributo principal de um jovem. */
-  TRAINING_RATE: 0.5,
+  /** Calibrado para dar de +6 a +9 por temporada no atributo principal de um jovem. */
+  TRAINING_RATE: 0.6,
   NATURAL_RATE: 0.08,
   /** Distância até o potencial a partir da qual o ganho é máximo. */
-  FULL_GAIN_GAP: 30,
+  FULL_GAIN_GAP: 20,
   EXPERIENCE_PER_ROUND: 1.6,
   VARIATION: [0.75, 1.25] as const,
 } as const;
 
 export function ageFactor(age: number): number {
-  if (age <= 15) return 1.15;
-  if (age <= 18) return 1.0;
-  if (age <= 22) return 0.8;
-  if (age <= 27) return 0.5;
+  if (age <= 17) return 1.15;
+  if (age <= 21) return 1.0;
+  if (age <= 25) return 0.85;
+  if (age <= 29) return 0.55;
   return 0.25;
 }
 
