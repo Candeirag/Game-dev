@@ -199,7 +199,7 @@ export function StakesPanel() {
           </TableWrap>
         </div>
         <p className="px-4 py-3 text-xs text-ink-400">
-          Uma participação paga dividendos no fim da temporada conforme a posição da equipe: a campeã distribui 10% do seu valor; a última pede aporte aos sócios. O valor da fatia acompanha a posição no campeonato. Participações minoritárias vão até 49%.
+          Uma participação paga dividendos no fim da temporada conforme a posição da equipe: a campeã distribui {pct(ASSET_RULES.STAKE_DIVIDEND_TOP)} do seu valor, cada posição abaixo paga {pct(ASSET_RULES.STAKE_DIVIDEND_STEP, 1)} a menos e a última pede aporte aos sócios. O valor da fatia acompanha a posição no campeonato. Participações minoritárias vão até 49%.
         </p>
       </Card>
     </div>

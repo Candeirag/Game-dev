@@ -343,7 +343,7 @@ export function ExecutiveCareerScreen() {
 
           <Card title={m.position === 'owner' ? 'Vender a equipe' : 'Deixar o cargo'}>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="max-w-2xl text-sm text-ink-300">{m.position === 'owner' ? `Valor de mercado da ${team?.name}: ${formatMoney(ownedTeamValue(career))} (inclui o caixa e as instalações). Há imposto de 15% sobre o ganho em relação aos ${formatMoney(m.purchasePrice)} pagos.` : 'Você pode pedir demissão para aceitar outra proposta, comprar uma equipe ou ficar um ano fora.'}</p>
+              <p className="max-w-2xl text-sm text-ink-300">{m.position === 'owner' ? `Valor de mercado da ${team?.name}: ${formatMoney(ownedTeamValue(career))} (inclui o caixa e parte do custo das instalações; sobe com a posição e a reputação da equipe). Há imposto de 15% sobre o ganho em relação aos ${formatMoney(m.purchasePrice)} pagos.` : 'Você pode pedir demissão para aceitar outra proposta, comprar uma equipe ou ficar um ano fora.'}</p>
               <Button variant="danger" onClick={() => store.leaveTeam()}>{m.position === 'owner' ? 'Vender' : 'Pedir demissão'}</Button>
             </div>
           </Card>

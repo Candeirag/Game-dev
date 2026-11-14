@@ -131,7 +131,7 @@ A corrida em andamento não é salva. Se a página for recarregada no meio da pr
 
 `completeWeekend` escolhe o caminho pelo modo. `retireFromDriving` passa de `driver` a `executive`: no fechamento, converte o fechamento de piloto no de dirigente; no meio da temporada, o reserva assume o carro (`vacatePlayerSeat`) e o jogador acompanha o resto do ano.
 
-A equipe administrada é uma das equipes do campeonato. A gestão nunca toca o motor de corrida: ela muda `team.car` (melhorias de pesquisa) e `team.crew` (mecânicos e chefias) por regras, e o motor lê esses números como os de qualquer equipe. As rivais evoluem um pouco a cada etapa; na virada do ano, a evolução média do grid é descontada de todos.
+A equipe administrada é uma das equipes do campeonato. A gestão nunca toca o motor de corrida: ela muda `team.car` (melhorias de pesquisa) e `team.crew` (mecânicos e chefias) por regras, e o motor lê esses números como os de qualquer equipe. As rivais evoluem o mesmo a cada etapa; na virada do ano (ou quando o jogador deixa a equipe), essa evolução é descontada de todos (`normalizeFieldDevelopment`). Entre as temporadas, `evolveTeams` puxa cada equipe para o carro de referência da posição em que ela terminou, soma a variação de projeto do ano e, a cada cinco temporadas, a mudança de regulamento: a escada de carros fica estável por décadas.
 
 ### Fechamento de um ano, nos dois modos
 
@@ -139,6 +139,8 @@ A equipe administrada é uma das equipes do campeonato. A gestão nunca toca o m
 closeSeason / closeExecutiveSeason
   ├ closeAssetsYear       dividendos, imóveis, empresas, participações, empréstimos
   ├ closeSeasonFinance    imposto de renda, fundos, juros do caixa negativo
+  ├ acerto de dívidas     execução de bens, venda forçada da equipe, perdão
+  │                       (dirigente: aqui; piloto: em startNextSeason)
   ├ closeFamilyYear       temporada dos filhos, aniversários, relação do casal
   ├ touchLineage          registro do personagem na linhagem
   └ checkMortality        sorteio anual; se morrer, abre a sucessão
@@ -186,7 +188,7 @@ As temporadas arquivadas em `history` são compactadas (`compactRound`): ficam r
 3. **Migração** (`migrations.ts`): converte saves antigos, versão a versão. Saves de versões futuras são recusados.
 4. **Validação**: schema Zod mais `validateCareerIntegrity` (referências, dois titulares e no máximo um reserva por equipe, contrato coerente com equipe, categoria e papel quando o jogador corre, calendário do tamanho da categoria, resultados batendo com o progresso, fechamento do modo certo presente exatamente quando a temporada acabou, probabilidades dos eventos somando 1, equipe administrada existente e da categoria atual, pesquisa somando 100%, linhagem terminando no personagem atual, sucessão com herdeiro possível).
 
-Toda gravação faz antes a ida e volta (serializa e valida) e guarda a versão anterior do slot como backup, na mesma transação.
+Toda gravação valida antes a carreira (integridade e o mesmo schema usado na leitura) e guarda a versão anterior do slot como backup, na mesma transação. A validação não passa mais pela ida e volta completa por JSON, que dobrava o tempo de cada gravação automática em saves longos (174 ms → 74 ms em um save de 2,5 MB) sem detectar nada a mais.
 
 **Compatibilidade com a Fase 2.** O schema subiu da versão 2 para a 3. A migração `2 → 3` só acrescenta dados: patrimônio vazio com as cotações iniciais, família vazia, linhagem de uma geração, modo `driver`, sem gestão nem sucessão, e tutorial dispensado para quem já tinha carreira. Ela não chama o motor do jogo, então não muda com o balanceamento. `tests/fixtures/v2/` contém quatro saves gravados pelo código da Fase 2 (no meio de um fim de semana, entre etapas, no fechamento de temporada e em um monoposto no meio do ano); os testes conferem que pilotos, equipes, resultados, contrato, caixa e histórico saem iguais da migração e que a carreira continua jogável. Um save da Fase 2 com a carreira "encerrada" pode voltar como dirigente.
 
@@ -206,16 +208,16 @@ Toda gravação faz antes a ida e volta (serializa e valida) e guarda a versão 
 
 **Nova decisão de dirigente.** Acrescente a função em `management/team.ts` ou `executive.ts`, exporte pela API do motor, exponha na store com `action(...)` e use na tela. Se for um evento, acrescente um construtor em `management/events.ts`.
 
-**Rebalanceamento.** Ajuste constantes ou dados e rode `npm run calibrate`. Ele imprime três relatórios: 12 carreiras de 14 temporadas com um robô (trajetórias, estatísticas de corrida por categoria e desvio do nível dos grids); 4 vidas de 70 temporadas (piloto, dirigente, família e sucessões, com verificação de integridade a cada passo); e o resultado previsto das equipes por categoria e força. Roda também um teste de estresse (`fuzz.calib.ts`): 12 vidas de 45 temporadas com políticas variadas, aposentadorias no meio do ano, acidentes fatais e passagens de comando, conferindo schema, integridade e ida e volta do save.
+**Rebalanceamento.** Ajuste constantes ou dados e rode `npm run calibrate`. Ele imprime os relatórios de balanceamento: 12 carreiras de 14 temporadas com um robô (trajetórias, estatísticas de corrida por categoria e desvio do nível dos grids); 4 vidas de 70 temporadas (piloto, dirigente, família e sucessões, com verificação de integridade a cada passo); o resultado previsto e o ritmo de desenvolvimento das equipes por categoria e força (`teams.calib.ts`); o destino de € 100 milhões em 40 temporadas por estratégia de investimento (`economy.calib.ts`); e a saúde do mundo em 60 temporadas por categoria (`world.calib.ts`: nível e idade dos pilotos, carros e variedade de campeões). Roda também dois testes de estresse: `fuzz.calib.ts` (12 vidas de 45 temporadas com políticas variadas, aposentadorias no meio do ano, acidentes fatais e passagens de comando) e `monkey.calib.ts` (16 jogadores que chamam ações do motor ao acaso por 1.500 passos cada, com argumentos válidos e inválidos). Os dois conferem schema, integridade e ida e volta do save a cada passo. Foi com essas ferramentas que a auditoria do MVP achou os problemas de economia de longo prazo, de evolução das equipes e de sucessão.
 
 ## Qualidade
 
 - `npm run typecheck`: TypeScript estrito (`strict`, `noUncheckedIndexedAccess`), sem `any`.
-- `npm test`: 173 testes.
+- `npm test`: 187 testes.
   - `raceEngine.test.ts`: pneus, combustível, clima, estratégia, boxes, safety car, safety car virtual, bandeira vermelha, punições, regra dos dois compostos, ordens de equipe, classificação eliminatória, todas as categorias.
   - `simulation.test.ts`, `championship.test.ts`: modelo de desempenho, sessões, pontuação por categoria, ajustes.
   - `systems.test.ts`: economia, impostos, investimentos, condição, lesões, suspensão, licença, reputação, contratos, negociação, patrocinadores, mercado, eventos e cada tipo de efeito.
   - `career.test.ts`, `multiSeason.test.ts`: temporada completa, virada de ano, e carreiras de 12 a 14 temporadas com verificação de integridade em todo fechamento, determinismo, faixas de equilíbrio e nível dos grids.
   - `save.test.ts`: ida e volta, IndexedDB, adulteração, backup, e os saves reais da Fase 1.
-  - `phase3.test.ts`: patrimônio (ações, imóveis, empresas, participações, empréstimos, impostos), família (herança de talento, casamento, divórcio, formação e carreira dos filhos), aposentadoria, gestão (compra, fundação, cargo, demissão, equipe técnica, instalações, caixa), desenvolvimento técnico e regulamento, escalação de pilotos (inclusive filhos), morte e sucessão por todos os caminhos, saves reais da Fase 2, saves no modo dirigente, uma vida de 60 temporadas com várias gerações e o tutorial.
+  - `phase3.test.ts`: patrimônio (ações, imóveis, empresas, participações, empréstimos, impostos), família (herança de talento, casamento, divórcio, formação e carreira dos filhos), aposentadoria, gestão (compra, fundação, cargo, demissão, equipe técnica, instalações, caixa), desenvolvimento técnico e regulamento, escalação de pilotos (inclusive filhos), morte e sucessão por todos os caminhos, saves reais da Fase 2, saves no modo dirigente, uma vida de 60 temporadas com várias gerações e o tutorial; e os casos da auditoria: dívida e execução de bens, insolvência do dirigente, empréstimo no meio do ano, revenda de equipes sem lucro, participações, salários da equipe técnica, mortalidade e gravação.
 - `npm run build`: checagem de tipos e build de produção.

@@ -206,7 +206,7 @@ function Staff({ m }: { m: ManagedTeam }) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="font-semibold">{department === 'engineers' ? 'Engenharia' : 'Mecânicos'}</div>
-                  <div className="text-xs text-ink-400">{department === 'engineers' ? 'Cada nível soma um ponto-base de pesquisa por etapa (e aumenta o custo da pesquisa).' : 'Cada nível melhora os boxes em 7 pontos: paradas mais rápidas e menos erros.'}</div>
+                  <div className="text-xs text-ink-400">{department === 'engineers' ? `A capacidade de pesquisa parte de ${MANAGEMENT.ENGINEERING_BASE} pontos por etapa e ganha ${number(MANAGEMENT.ENGINEERING_PER_LEVEL)} por nível; o custo da pesquisa cresce junto.` : 'Cada nível melhora os boxes em 7 pontos: paradas mais rápidas e menos erros.'}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button disabled={m[department] <= 1} onClick={() => setDepartment(department, m[department] - 1)} aria-label="Reduzir">−</Button>
@@ -273,7 +273,7 @@ function Development({ m }: { m: ManagedTeam }) {
         <Card title="Ritmo da pesquisa">
           <div className="grid gap-2">
             {RESEARCH_SPENDS.map((spend) => (
-              <ChoiceCard key={spend} selected={m.development.spend === spend} onSelect={() => setDevelopment({ spend })} title={RESEARCH_SPEND_LABELS[spend]} description={`${number(MANAGEMENT.SPEND[spend].points)} ponto(s) por nível de engenharia, a ${number(MANAGEMENT.SPEND[spend].cost)}× o custo.`} />
+              <ChoiceCard key={spend} selected={m.development.spend === spend} onSelect={() => setDevelopment({ spend })} title={RESEARCH_SPEND_LABELS[spend]} description={`Rende ${number(MANAGEMENT.SPEND[spend].points)}× a pesquisa do ritmo normal, a ${number(MANAGEMENT.SPEND[spend].cost)}× o custo.`} />
             ))}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4">
@@ -319,7 +319,7 @@ function Development({ m }: { m: ManagedTeam }) {
           })}
         </div>
         <p className="mt-4 text-xs text-ink-400">
-          Ao mexer em uma área, as demais são reajustadas para a soma dar 100%. Cada melhoria seguinte de uma mesma área custa {Math.round(MANAGEMENT.RESEARCH_GROWTH * 100)}% mais pesquisa. As rivais também evoluem durante o ano: na virada da temporada, a evolução média do grid é descontada de todos, e o que a sua equipe ganhou acima da média perde {Math.round((1 - MANAGEMENT.CARRY_OVER) * 100)}%.
+          Ao mexer em uma área, as demais são reajustadas para a soma dar 100%. A primeira melhoria de uma área no ano pede {MANAGEMENT.RESEARCH_BASE} pontos, e cada seguinte, {Math.round(MANAGEMENT.RESEARCH_GROWTH * 100)}% a mais. A pesquisa em andamento não se perde na virada do ano. As rivais também evoluem durante o ano: na virada da temporada, a evolução média do grid é descontada de todos, e o que a sua equipe ganhou acima da média perde {Math.round((1 - MANAGEMENT.CARRY_OVER) * 100)}%.
         </p>
       </Card>
     </div>
