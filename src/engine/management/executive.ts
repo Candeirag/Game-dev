@@ -25,8 +25,8 @@ import { developAfterRound, developDriver } from '../career/development';
 import { closeSeasonFinance, post } from '../career/economy';
 import { pushMessages } from '../career/inbox';
 import { runAiMarket, teamsOfCategory } from '../career/market';
-import { REPUTATION, archiveSeason, compactRound, evolveTeams, positionPrestige, winter } from '../career/offseason';
-import { fullName, getPlayer } from '../career/selectors';
+import { REPUTATION, archiveSeason, compactRound, evolveTeams, positionPrestige, trimHistory, winter } from '../career/offseason';
+import { familyDriverIds, fullName, getPlayer } from '../career/selectors';
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality } from '../dynasty/succession';
@@ -690,7 +690,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     offseason: null,
     executiveOffseason: null,
     management: null,
-    history: [...career.history, off.summary],
+    history: trimHistory([...career.history, off.summary], familyDriverIds(career)),
   };
 
   // Gestão: continua (com a virada de ano), começa em outra equipe ou não existe.

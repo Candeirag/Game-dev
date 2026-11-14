@@ -70,6 +70,18 @@ export function teamStandings(career: CareerState) {
   return computeTeamStandings(career.rounds, career.teams, career.adjustments);
 }
 
+/**
+ * Pilotos da família: todos os personagens que o jogador já controlou e os
+ * filhos que correm. O arquivo de temporadas antigas guarda os resultados
+ * deles por inteiro.
+ */
+export function familyDriverIds(career: CareerState): Set<string> {
+  const ids = new Set(career.dynasty.lineage.map((l) => l.driverId));
+  ids.add(career.playerDriverId);
+  for (const child of career.family.children) if (child.driver) ids.add(child.driver.id);
+  return ids;
+}
+
 export function fullName(driver: Pick<Driver, 'firstName' | 'lastName'>): string {
   return `${driver.firstName} ${driver.lastName}`;
 }

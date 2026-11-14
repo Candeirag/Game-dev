@@ -24,8 +24,8 @@ import { buildCalendar } from '../career/createCareer';
 import { netWorth, post } from '../career/economy';
 import { pushMessages } from '../career/inbox';
 import { updateMarketInterest } from '../career/market';
-import { archiveSeason } from '../career/offseason';
-import { fullName, getPlayer } from '../career/selectors';
+import { archiveSeason, trimHistory } from '../career/offseason';
+import { familyDriverIds, fullName, getPlayer } from '../career/selectors';
 import { instantiateEvent } from '../events/engine';
 import { buildJobOffers, convertToExecutive, executiveSummary, vacatePlayerSeat } from '../management/executive';
 import { ownedTeamValue } from '../management/team';
@@ -300,7 +300,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     executiveOffseason: null,
     executiveLog: [],
     management: null,
-    history: [...state.history, summary],
+    history: trimHistory([...state.history, summary], familyDriverIds(state)),
     family,
     dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(player.id, fullName(player), player.age)] },
   };

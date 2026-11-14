@@ -33,7 +33,7 @@ import { closeSeasonFinance, post } from './economy';
 import { pushMessages } from './inbox';
 import { licensePointsFor } from './license';
 import { promotedRivals, runAiMarket, updateMarketInterest } from './market';
-import { fullName, getPlayer, getTeam } from './selectors';
+import { familyDriverIds, fullName, getPlayer, getTeam } from './selectors';
 import { renewSponsors } from './sponsors';
 
 /** A pré-temporada equivale a 2 ciclos de treino. */
@@ -226,6 +226,30 @@ export function compactRound(record: RoundRecord): RoundRecord {
   };
 }
 
+/** Temporadas mais recentes guardadas com o resultado completo de cada etapa. */
+export const FULL_HISTORY_SEASONS = 6;
+
+/**
+ * Enxuga o arquivo: nas temporadas mais antigas que as seis últimas, cada
+ * etapa fica só com o pódio e com os resultados dos pilotos da família. A
+ * classificação final do campeonato continua completa. Sem isso, um save de
+ * várias gerações passaria de 15 MB.
+ */
+export function trimHistory(history: readonly SeasonSummary[], familyIds: ReadonlySet<string>): SeasonSummary[] {
+  const cut = history.length - FULL_HISTORY_SEASONS;
+  return history.map((summary, index) => {
+    if (index >= cut) return summary;
+    return {
+      ...summary,
+      rounds: summary.rounds.map((r) => ({
+        ...r,
+        qualifying: { ...r.qualifying, entries: r.qualifying.entries.filter((e) => familyIds.has(e.driverId)) },
+        race: { ...r.race, entries: r.race.entries.filter((e) => e.position <= 3 || familyIds.has(e.driverId)), teamOrders: [] },
+      })),
+    };
+  });
+}
+
 export function archiveSeason(career: CareerState): SeasonSummary {
   const offseason = career.offseason;
   if (!offseason) throw new Error('A temporada ainda não foi fechada.');
@@ -389,7 +413,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     marketInterest: {},
     pendingEvents: [],
     offseason: null,
-    history: [...career.history, summary],
+    history: trimHistory([...career.history, summary], familyDriverIds(career)),
   };
   state = { ...state, marketInterest: updateMarketInterest(state, 1) };
 
