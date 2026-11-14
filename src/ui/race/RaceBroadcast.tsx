@@ -210,7 +210,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   // Cabeçalho da transmissão: volta, bandeira, clima e os comandos da reprodução. No formato largo ele
   // ocupa a barra superior do jogo, para a pista ficar com toda a altura da tela.
   const header = (
-    <div className="flex min-w-0 flex-1 items-center gap-3">
+    <div className={cx('flex min-w-0 flex-1 items-center gap-x-3', !topSlot && 'flex-wrap py-1')}>
       <div className="flex shrink-0 items-baseline gap-1.5 leading-none">
         <span className="text-[11px] font-medium text-ink-400">Volta</span>
         <span className="font-display text-2xl font-bold leading-none">
