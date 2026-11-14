@@ -7,6 +7,7 @@ import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
 import { Card, Meter, PageHeader, Pill, RatingBar, Stat, cx } from '../components/ui';
 import { formatRating, signed } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { counted } from '@/domain/text';
 
 export function DriverScreen() {
   const { career, player, team } = useCareerView();
@@ -63,7 +64,7 @@ export function DriverScreen() {
             </div>
             {player.injury && (
               <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-200">
-                {player.injury.description}: {player.injury.severity === 'serious' ? 'você não pode correr' : 'você pode correr, 0,3% mais lento e com 30% mais erros'}. Recuperação em {player.injury.roundsRemaining} etapa(s).
+                {player.injury.description}: {player.injury.severity === 'serious' ? 'você não pode correr' : 'você pode correr, 0,3% mais lento e com 30% mais erros'}. Recuperação em {counted(player.injury.roundsRemaining, 'etapa', 'etapas')}.
               </p>
             )}
             {player.age >= 31 && <p className="mt-4 text-xs text-gold-400">Aos {player.age} anos, a velocidade, a concentração e a ultrapassagem caem um pouco a cada temporada.</p>}

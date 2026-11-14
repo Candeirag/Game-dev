@@ -37,6 +37,7 @@ import { buildCategoryField, generateDriver, generateReserve, rankTeams } from '
 import { managementRoundEvent } from './events';
 import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, fieldRatings, staffSalary, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
 import { money } from '../career/selectors';
+import { counted } from '@/domain/text';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -183,7 +184,7 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
     const position = computeTeamStandings(career.rounds, career.teams, career.adjustments).find((s) => s.teamId === result.management.teamId)?.position ?? 10;
     const lines = mine.map((e) => {
       const d = career.drivers.find((x) => x.id === e.driverId);
-      return `${d ? fullName(d) : 'Piloto'}: ${e.status === 'finished' ? `${e.position}º (largou em ${e.grid}º), ${e.points} ponto(s)` : 'abandonou'}`;
+      return `${d ? fullName(d) : 'Piloto'}: ${e.status === 'finished' ? `${e.position}º (largou em ${e.grid}º), ${counted(e.points, 'ponto', 'pontos')}` : 'abandonou'}`;
     });
     msg('race', 'race', `Etapa ${round}: resultado da ${team?.name ?? 'equipe'}`, `${lines.join('. ')}. Vencedor: ${winner ? fullName(winner) : '-'}. A equipe é a ${position}ª no campeonato (meta: ${result.management.boardTarget}ª). Caixa: ${money(career, result.management.budget)}.`);
   } else {

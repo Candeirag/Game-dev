@@ -61,7 +61,7 @@ export function SuccessionScreen() {
                   Piloto: nota geral <b className="text-ink-100">{Math.floor(overallRating(driver.attributes))}</b>, potencial <b className="text-ink-100">{Math.floor(driver.potential)}</b>, {getCategory(racing.categoryId).shortName}, reputação {Math.floor(racing.reputation)}.
                 </p>
               )}
-              {heir.kind === 'child' && siblings > 0 && <p className="mt-1 text-xs text-ink-400">Os {siblings} irmão(s) recebem a parte deles e saem do seu acompanhamento.</p>}
+              {heir.kind === 'child' && siblings > 0 && <p className="mt-1 text-xs text-ink-400">{siblings === 1 ? 'O irmão recebe a parte dele e sai do seu acompanhamento.' : `Os ${siblings} irmãos recebem a parte deles e saem do seu acompanhamento.`}</p>}
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button variant="primary" disabled={!heir.canDrive} onClick={() => resolve(heir.id, 'driver')}>Continuar nas pistas</Button>
                 <Button disabled={!heir.canManage} onClick={() => resolve(heir.id, 'executive')}>Assumir os negócios</Button>

@@ -9,6 +9,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button, Card, ChoiceCard, Pill, Stat, TableWrap, TeamSwatch, cx, td, th } from '../../components/ui';
 import { currencySymbol, formatMoney } from '../../format';
 import { useCareer } from '../../hooks/useCareer';
+import { counted } from '@/domain/text';
 
 const input = 'w-28 rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none';
 const pct = (v: number, digits = 0) => `${(v * 100).toFixed(digits).replace('.', ',')}%`;
@@ -238,7 +239,7 @@ export function CreditPanel() {
               <div key={loan.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink-800 p-3 text-sm">
                 <div>
                   <div className="font-semibold">{loan.label}</div>
-                  <div className="text-xs text-ink-400">Saldo {formatMoney(loan.balance)} · parcela anual {formatMoney(loan.annualPayment)} · faltam {loan.seasonsRemaining} temporada(s)</div>
+                  <div className="text-xs text-ink-400">Saldo {formatMoney(loan.balance)} · parcela anual {formatMoney(loan.annualPayment)} · {loan.seasonsRemaining === 1 ? 'falta' : 'faltam'} {counted(loan.seasonsRemaining, 'temporada', 'temporadas')}</div>
                 </div>
                 <Button disabled={loanPayoff(career, loan) > f.cash} onClick={() => repayLoan(loan.id)}>Quitar ({formatMoney(loanPayoff(career, loan))})</Button>
               </div>

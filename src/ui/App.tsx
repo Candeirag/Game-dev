@@ -34,10 +34,10 @@ function ByMode({ driver, executive }: { driver: ReactNode; executive: ReactNode
 }
 
 export function App() {
-  const refreshSlots = useGameStore((s) => s.refreshSlots);
+  const initStorage = useGameStore((s) => s.initStorage);
   useEffect(() => {
-    void refreshSlots();
-  }, [refreshSlots]);
+    void initStorage();
+  }, [initStorage]);
 
   return (
     <HashRouter>

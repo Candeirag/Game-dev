@@ -7,6 +7,7 @@ import { currencySymbol, formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { SuccessionScreen } from '../screens/SuccessionScreen';
 import { Button } from '../components/ui';
+import { StorageWarning } from '../components/SaveNotices';
 import { ChromeContext } from './chrome';
 
 const NAV = [
@@ -80,6 +81,8 @@ function CareerShell() {
   const chrome = useMemo(() => ({ setRaceBar }), []);
   const [moreOpen, setMoreOpen] = useState(false);
   useEffect(() => { setMoreOpen(false); }, [location.pathname]);
+  // Cada tela abre do começo (a navegação por abas não zera a rolagem sozinha).
+  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
   useEffect(() => {
     if (!moreOpen) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMoreOpen(false); };
@@ -154,6 +157,7 @@ function CareerShell() {
           <span className="md:hidden"><SaveIndicator compact /></span>
           <span className="hidden md:inline"><SaveIndicator /></span>
         </header>
+        <StorageWarning className="mx-4 mt-4 sm:mx-8" />
         {notice && (
           <div role="status" className="mx-4 mt-4 flex items-start justify-between gap-3 rounded-lg border border-gold-400/30 bg-gold-400/10 px-4 py-3 text-sm text-gold-400 sm:mx-8">
             <span>{notice}</span>

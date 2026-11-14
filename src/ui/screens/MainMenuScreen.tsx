@@ -5,6 +5,7 @@ import type { SaveSlotId, SlotInfo } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
 import { Button, cx } from '../components/ui';
 import { formatDateTime } from '../format';
+import { StorageWarning } from '../components/SaveNotices';
 
 const SLOT_LABELS: Record<SaveSlotId, string> = { auto: 'Save automático', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
 
@@ -50,7 +51,8 @@ export function MainMenuScreen() {
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-apex-500/40 bg-apex-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-apex-400">
             Fase 2 · Carreira completa
           </div>
-          <h1 className="font-display text-6xl font-bold uppercase leading-[0.9] tracking-tight sm:text-7xl">
+          {/* O tamanho acompanha a largura da tela: "Motorsport" cabe numa linha mesmo com a fonte reserva, que é mais larga. */}
+          <h1 className="font-display text-[clamp(2rem,11.5vw,3.75rem)] font-bold uppercase leading-[0.9] tracking-tight [overflow-wrap:anywhere] sm:text-7xl">
             Apex
             <br />
             <span className="text-apex-500">Motorsport</span>
@@ -63,6 +65,7 @@ export function MainMenuScreen() {
         </div>
 
         <div className="space-y-4">
+          <StorageWarning link={false} />
           <div className="grid gap-3">
             <Button variant="primary" className="h-14 text-base" onClick={() => navigate('/new')}>
               Nova carreira

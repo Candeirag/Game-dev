@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { lapInfoAt, type RaceTimeline } from '@/engine';
+import { readPreference, writePreference } from '@/persistence/preferences';
 import { useGameStore } from '@/store/gameStore';
 
 /**
@@ -46,6 +47,10 @@ export interface RacePlayback {
   /** Volta a mostrar a corrida desde a largada, sem simular nada de novo. */
   restart(): void;
   goLive(): void;
+  /** Leva a imagem ao começo de uma volta já simulada (0 = grid), parada. Usado ao retomar uma corrida interrompida. */
+  seekLap(lap: number): void;
+  /** O mesmo, para um instante exato da corrida. */
+  seekTime(time: number): void;
   /** Avança até o fim da volta do líder. */
   skipLap(): void;
   /** Simula o que falta (engenheiro automático) e vai para o fim. */
@@ -63,14 +68,20 @@ function openSuspension(timeline: RaceTimeline) {
   return last && !last.final && last.lap === timeline.lapsBuilt ? last : null;
 }
 
+/** Velocidade preferida do jogador, lembrada entre corridas e depois de uma recarga. */
+function preferredSpeed(): number {
+  const saved = Number(readPreference('raceSpeed'));
+  return SPEEDS.some((s) => s === saved) ? saved : 1;
+}
+
 export function useRacePlayback(): RacePlayback {
   const timeRef = useRef(0);
   const playingRef = useRef(false);
-  const speedRef = useRef(1);
+  const speedRef = useRef(preferredSpeed());
   const lightsRef = useRef<{ elapsed: number } | null>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlayingState] = useState(false);
-  const [speed, setSpeedState] = useState(1);
+  const [speed, setSpeedState] = useState(() => speedRef.current);
   const [lights, setLights] = useState<number | null>(null);
   const [waitingOrder, setWaitingOrder] = useState(false);
   const timeline = useGameStore((s) => s.raceTimeline);
@@ -189,6 +200,7 @@ export function useRacePlayback(): RacePlayback {
   const setSpeed = useCallback((value: number) => {
     speedRef.current = value;
     setSpeedState(value);
+    writePreference('raceSpeed', String(value));
   }, []);
 
   const restart = useCallback(() => {
@@ -201,6 +213,25 @@ export function useRacePlayback(): RacePlayback {
     const tl = useGameStore.getState().raceTimeline;
     if (tl) jump(tl.finished ? endOfBroadcast(tl) : tl.horizon);
   }, [jump]);
+
+  const seekLap = useCallback((lap: number) => {
+    const tl = useGameStore.getState().raceTimeline;
+    if (!tl) return;
+    lightsRef.current = null;
+    setLights(null);
+    setPlaying(false);
+    const live = tl.finished ? endOfBroadcast(tl) : tl.horizon;
+    jump(lap <= 0 ? 0 : Math.min(live, tl.laps[lap - 1]?.start ?? live));
+  }, [jump, setPlaying]);
+
+  const seekTime = useCallback((time: number) => {
+    const tl = useGameStore.getState().raceTimeline;
+    if (!tl) return;
+    lightsRef.current = null;
+    setLights(null);
+    setPlaying(false);
+    jump(Math.max(0, Math.min(tl.finished ? endOfBroadcast(tl) : tl.horizon, time)));
+  }, [jump, setPlaying]);
 
   const skipLap = useCallback(() => {
     const store = useGameStore.getState();
@@ -258,6 +289,8 @@ export function useRacePlayback(): RacePlayback {
     setSpeed,
     restart,
     goLive,
+    seekLap,
+    seekTime,
     skipLap,
     finish,
   };

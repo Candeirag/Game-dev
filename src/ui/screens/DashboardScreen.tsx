@@ -9,6 +9,7 @@ import { Button, Card, Meter, PageHeader, Pill, PositionBadge, Stat, TeamSwatch,
 import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { TutorialCard } from './HelpScreen';
+import { counted, pluralWord } from '@/domain/text';
 
 const CATEGORY_TONE = { team: 'bg-sky-400', race: 'bg-apex-500', training: 'bg-go-400', season: 'bg-gold-400', finance: 'bg-emerald-300', contract: 'bg-purple-400', health: 'bg-rose-400', media: 'bg-sky-300', family: 'bg-pink-300', business: 'bg-amber-300' } as const;
 
@@ -46,7 +47,7 @@ export function DashboardScreen() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="text-sm text-ink-300">
                   Você terminou em <b className="text-ink-100">{career.offseason.playerPosition}º</b> (meta: {career.offseason.target}º). Há{' '}
-                  <b className="text-ink-100">{career.offseason.offers.filter((o) => o.status === 'open').length}</b> proposta(s) para {career.year + 1}.
+                  <b className="text-ink-100">{career.offseason.offers.filter((o) => o.status === 'open').length}</b> {pluralWord(career.offseason.offers.filter((o) => o.status === 'open').length, 'proposta', 'propostas')} para {career.year + 1}.
                 </div>
                 <Button variant="primary" onClick={() => navigate('/career')}>Ver propostas</Button>
               </div>
@@ -56,7 +57,7 @@ export function DashboardScreen() {
 
           {!availability.available && !seasonOver && (
             <div className="rounded-xl border border-rose-400/40 bg-rose-400/10 px-4 py-3 text-sm text-rose-200">
-              {availability.reason === 'ban' ? 'Você está suspenso da próxima etapa por pontos na licença.' : `Você está lesionado (${player.injury?.description}) e fora por ${player.injury?.roundsRemaining} etapa(s).`} O piloto reserva corre no seu lugar.
+              {availability.reason === 'ban' ? 'Você está suspenso da próxima etapa por pontos na licença.' : `Você está lesionado (${player.injury?.description}) e fora por ${counted(player.injury?.roundsRemaining ?? 0, 'etapa', 'etapas')}.`} O piloto reserva corre no seu lugar.
             </div>
           )}
 
@@ -98,7 +99,7 @@ export function DashboardScreen() {
               <Meter label="Confiança" value={player.condition.confidence} hint="Menos erros e mais sucesso nas disputas." />
               <Meter label="Moral" value={player.condition.morale} hint="Regularidade e rendimento do treino." />
             </div>
-            {player.injury && <p className="mt-4 text-sm text-rose-200">{player.injury.description}: {player.injury.severity === 'serious' ? 'fora' : 'rendimento reduzido'} por {player.injury.roundsRemaining} etapa(s).</p>}
+            {player.injury && <p className="mt-4 text-sm text-rose-200">{player.injury.description}: {player.injury.severity === 'serious' ? 'fora' : 'rendimento reduzido'} por {counted(player.injury.roundsRemaining, 'etapa', 'etapas')}.</p>}
           </Card>
 
           <Card title="Programa de treino">

@@ -8,6 +8,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button, Card, EmptyState, Meter, PageHeader, Pill, Stat, TableWrap, cx, td, th } from '../components/ui';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { counted } from '@/domain/text';
 
 function SupportPicker({ value, onChange, label }: { value: SupportLevel; onChange: (v: SupportLevel) => void; label: string }) {
   return (
@@ -53,7 +54,7 @@ function ChildCard({ child }: { child: Child }) {
         <div className="mt-4 rounded-lg border border-ink-800 p-3">
           <SupportPicker label="Investimento no kart:" value={child.kartFunding} onChange={(v) => setKartFunding(child.id, v)} />
           <p className="mt-2 text-xs text-ink-400">
-            Parcial: {formatMoney(FAMILY.KART_COST.basic)} por ano (rende 60%). Total: {formatMoney(FAMILY.KART_COST.full)} por ano. Formação acumulada: <b className="text-ink-100">{child.kartYears.toFixed(1)} ano(s)</b>; cada ano vale cerca de {FAMILY.START_PER_KART_YEAR} pontos em todos os atributos na estreia.
+            Parcial: {formatMoney(FAMILY.KART_COST.basic)} por ano (rende 60%). Total: {formatMoney(FAMILY.KART_COST.full)} por ano. Formação acumulada: <b className="text-ink-100">{counted(child.kartYears.toFixed(1), 'ano', 'anos')}</b>; cada ano vale cerca de {FAMILY.START_PER_KART_YEAR} pontos em todos os atributos na estreia.
           </p>
         </div>
       )}

@@ -19,6 +19,7 @@ import { formatDate, formatMoney, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { RaceBroadcast } from '../race/RaceBroadcast';
 import { TutorialCard } from './HelpScreen';
+import { ExportReminder } from '../components/SaveNotices';
 
 const input = 'rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
 
@@ -291,6 +292,8 @@ export function ExecutiveCareerScreen() {
         )}
       </PageHeader>
       {pending && <p className="rounded-lg border border-gold-400/30 bg-gold-400/10 px-4 py-3 text-sm text-gold-400">Resolva as decisões pendentes no painel antes de começar a temporada. <button type="button" className="underline" onClick={() => navigate('/dashboard')}>Ir para o painel</button></p>}
+
+      <ExportReminder />
 
       <Card title="Balanço do ano">
         {off.teamPosition !== null && (

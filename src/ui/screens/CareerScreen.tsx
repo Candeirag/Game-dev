@@ -22,6 +22,8 @@ import { CarSprite } from '../components/CarSprite';
 import { Button, Card, Check, Meter, PageHeader, Pill, Stat, TeamSwatch, cx } from '../components/ui';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { counted } from '@/domain/text';
+import { ExportReminder } from '../components/SaveNotices';
 
 const DEMANDS: { id: NegotiationDemand; label: string; available: (o: Offer) => boolean }[] = [
   { id: 'seat', label: 'Reduzir o custo da vaga', available: (o) => o.seatCost > 0 },
@@ -53,7 +55,7 @@ export function CareerScreen() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
             <Stat label="Sua posição" value={`${career.offseason.playerPosition}º`} accent />
             <Stat label="Meta" value={`${career.offseason.target}º`} hint={career.offseason.objectiveMet ? 'Cumprida' : 'Não cumprida'} />
-            <Stat label="Pontos" value={career.offseason.playerPoints} hint={`${career.offseason.wins} vitória(s) · ${career.offseason.podiums} pódio(s)`} />
+            <Stat label="Pontos" value={career.offseason.playerPoints} hint={`${counted(career.offseason.wins, 'vitória', 'vitórias')} · ${counted(career.offseason.podiums, 'pódio', 'pódios')}`} />
             <Stat label="Reputação" value={`${Math.floor(career.offseason.reputationBefore)} → ${career.offseason.reputationAfter}`} />
             <Stat label="Licença" value={`+${career.offseason.licensePointsEarned}`} hint="Pontos ganhos" />
           </div>
@@ -63,6 +65,7 @@ export function CareerScreen() {
               {career.offseason.notes.map((note) => <li key={note}>• {note}</li>)}
             </ul>
           )}
+          <ExportReminder className="mt-4" />
           <h3 className="mt-6 mb-3 font-display text-sm font-semibold uppercase tracking-wider text-ink-300">Propostas para {career.year + 1}</h3>
           <div className="grid gap-4 xl:grid-cols-2">
             {career.offseason.offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
@@ -85,7 +88,7 @@ export function CareerScreen() {
                   <CarSprite categoryId={c.id} teamId={state === 'current' ? team.id : 'escada'} color={state === 'current' ? team.color : '#aab3c2'} driverId={state === 'current' ? player.id : undefined} style={{ width: `${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 100)}%` }} />
                 </div>
                 <div className="text-[11px] text-ink-300">{VEHICLES[c.id].name}</div>
-                <div className="mt-1 text-xs text-ink-400">{seasons > 0 ? `${seasons} temporada(s)` : `Vaga: ${formatMoney(c.economy.seatCost[1])} a ${formatMoney(c.economy.seatCost[0])}`}</div>
+                <div className="mt-1 text-xs text-ink-400">{seasons > 0 ? `${counted(seasons, 'temporada', 'temporadas')}` : `Vaga: ${formatMoney(c.economy.seatCost[1])} a ${formatMoney(c.economy.seatCost[0])}`}</div>
               </li>
             );
           })}
@@ -183,7 +186,7 @@ function OfferCard({ offer }: { offer: Offer }) {
 
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
         <div className="flex justify-between"><dt className="text-ink-400">Papel</dt><dd className="font-semibold">{ROLE_LABELS[offer.role]}</dd></div>
-        <div className="flex justify-between"><dt className="text-ink-400">Duração</dt><dd>{offer.years} ano(s)</dd></div>
+        <div className="flex justify-between"><dt className="text-ink-400">Duração</dt><dd>{counted(offer.years, 'ano', 'anos')}</dd></div>
         <div className="flex justify-between"><dt className="text-ink-400">Vaga/ano</dt><dd className="tabular">{formatMoney(offer.seatCost)}</dd></div>
         <div className="flex justify-between"><dt className="text-ink-400">Salário/ano</dt><dd className="tabular">{formatMoney(offer.salary)}</dd></div>
         <div className="flex justify-between"><dt className="text-ink-400">Bônus vitória</dt><dd className="tabular">{formatMoney(offer.bonuses.win)}</dd></div>
@@ -193,7 +196,7 @@ function OfferCard({ offer }: { offer: Offer }) {
       {fee > 0 && <p className="mt-2 text-xs text-gold-400">Aceitar esta proposta rompe o contrato vigente: multa de {formatMoney(fee)}.</p>}
 
       {offer.kind !== 'continue' && offer.kind !== 'fallback' && (
-        <div className="mt-3"><Meter label="Interesse da equipe" value={offer.interest} hint={negotiable ? `Margem de negociação: ${margin >= 16 ? 'alta' : margin >= 8 ? 'média' : margin > 0 ? 'baixa' : 'nenhuma'} · paciência: ${offer.patience} recusa(s)` : undefined} /></div>
+        <div className="mt-3"><Meter label="Interesse da equipe" value={offer.interest} hint={negotiable ? `Margem de negociação: ${margin >= 16 ? 'alta' : margin >= 8 ? 'média' : margin > 0 ? 'baixa' : 'nenhuma'} · paciência: ${counted(offer.patience, 'recusa', 'recusas')}` : undefined} /></div>
       )}
 
       {requirements.length > 0 && (

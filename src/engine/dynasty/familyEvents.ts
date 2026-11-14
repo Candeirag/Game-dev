@@ -15,6 +15,7 @@ import { createRng, hashSeed } from '../rng';
 import { livingCostBase } from '../management/executive';
 import { generateChild, generatePartner } from './family';
 import { money } from '../career/selectors';
+import { counted } from '@/domain/text';
 
 const stat = (name: Extract<Effect, { type: 'stat' }>['stat'], value: number): Effect => ({ type: 'stat', stat: name, value });
 const cash = (value: number, label: string): Effect => ({ type: 'cash', value, ledger: 'family', label });
@@ -44,7 +45,7 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
 
   if (partner && !partner.married && partner.relationship >= FAMILY.MARRIAGE_RELATIONSHIP && career.season > partner.sinceSeason) {
     const party = Math.round(living * FAMILY.WEDDING_COST);
-    add('wedding', 'Casamento em pauta', `Você e ${partner.firstName} estão juntos há ${career.season - partner.sinceSeason} temporada(s) e o assunto casamento apareceu. O casamento dá estabilidade (a relação se desgasta menos), mas, em um divórcio, o cônjuge fica com ${Math.round(FAMILY.DIVORCE_SHARE * 100)}% do patrimônio.`, [
+    add('wedding', 'Casamento em pauta', `Você e ${partner.firstName} estão juntos há ${counted(career.season - partner.sinceSeason, 'temporada', 'temporadas')} e o assunto casamento apareceu. O casamento dá estabilidade (a relação se desgasta menos), mas, em um divórcio, o cônjuge fica com ${Math.round(FAMILY.DIVORCE_SHARE * 100)}% do patrimônio.`, [
       choice('party', 'Casar com festa', `Custa ${money(career, party)}.`, sure(`Você e ${partner.firstName} se casaram em uma grande festa.`, { type: 'marry' }, cash(-party, 'Festa de casamento'), { type: 'relationship', value: 10 }, stat('morale', 8))),
       choice('simple', 'Cerimônia simples', `Custa ${money(career, party * 0.2)}.`, sure(`Você e ${partner.firstName} se casaram em uma cerimônia íntima.`, { type: 'marry' }, cash(-party * 0.2, 'Casamento'), { type: 'relationship', value: 4 }, stat('morale', 5))),
       choice('wait', 'Adiar', 'A relação esfria um pouco.', sure(`${partner.firstName} entendeu, mas ficou frustrado(a).`, { type: 'relationship', value: -8 })),
@@ -84,7 +85,7 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
     if ((child.stage === 'child' || child.stage === 'karting') && child.age >= FAMILY.CAREER_START_AGE && child.interest >= FAMILY.CAREER_INTEREST) {
       const traits = child.traits.map((t) => getTrait(t).name.toLowerCase()).join(' e ');
       const seat = getCategory('kart-regional').economy.seatCost;
-      add(`career-${child.id}`, `${child.firstName} quer ser piloto`, `${child.firstName} tem ${child.age} anos, é ${traits} e quer disputar o kart regional. A formação no kart rendeu ${child.kartYears.toFixed(1)} ano(s) de base. Uma vaga custa de ${money(career, seat[1])} a ${money(career, seat[0])} por temporada, e o custo sobe muito nos degraus seguintes. O apoio da família define em que equipe ele começa e se consegue pagar as promoções.`, [
+      add(`career-${child.id}`, `${child.firstName} quer ser piloto`, `${child.firstName} tem ${child.age} anos, é ${traits} e quer disputar o kart regional. A formação no kart rendeu ${counted(child.kartYears.toFixed(1), 'ano', 'anos')} de base. Uma vaga custa de ${money(career, seat[1])} a ${money(career, seat[0])} por temporada, e o custo sobe muito nos degraus seguintes. O apoio da família define em que equipe ele começa e se consegue pagar as promoções.`, [
         choice('full', 'Bancar a carreira', 'A família paga o que os patrocinadores dele não cobrirem.', sure(`${child.firstName} estreia no kart regional com apoio total.`, { type: 'childCareer', childId: child.id, support: 'full' }, { type: 'childStat', childId: child.id, stat: 'bond', value: 8 })),
         choice('basic', 'Ajudar com metade', 'A família paga até metade da vaga.', sure(`${child.firstName} estreia no kart regional com ajuda parcial.`, { type: 'childCareer', childId: child.id, support: 'basic' }, { type: 'childStat', childId: child.id, stat: 'bond', value: 3 })),
         choice('none', 'Que conquiste sozinho', 'Sem dinheiro da família: depende de bolsas e patrocinadores.', sure(`${child.firstName} vai tentar a sorte por conta própria.`, { type: 'childCareer', childId: child.id, support: 'none' }, { type: 'childStat', childId: child.id, stat: 'bond', value: -6 })),

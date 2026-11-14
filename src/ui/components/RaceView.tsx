@@ -9,6 +9,7 @@ import { Button, Card, Pill, TableWrap, TeamSwatch, cx, td, th } from './ui';
 import { formatGap, formatLap } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { RaceControlBar } from '../race/RaceControlBar';
+import { counted } from '@/domain/text';
 
 /** Duração de cada volta na reprodução, por velocidade. */
 const SPEEDS = [
@@ -71,13 +72,13 @@ export function RaceResultPanel({ race, result, extra }: { race: RaceSimState; r
             </div>
             {!mine && (
               <div className="text-sm text-ink-400">
-                {team.map((e) => `${nameOf(e.driverId)}: largou em ${e.grid}º, ${e.points} ponto(s)`).join(' · ')}{team.length > 0 ? ' · ' : ''}Vencedor: {nameOf(result.entries[0]?.driverId ?? '')}
+                {team.map((e) => `${nameOf(e.driverId)}: largou em ${e.grid}º, ${counted(e.points, 'ponto', 'pontos')}`).join(' · ')}{team.length > 0 ? ' · ' : ''}Vencedor: {nameOf(result.entries[0]?.driverId ?? '')}
               </div>
             )}
             {mine && (
               <div className="text-sm text-ink-400">
-                Largou em {mine.grid}º · {mine.points} ponto(s) · {mine.overtakes} ultrapassagem(ns)
-                {mine.pitStops > 0 && ` · ${mine.pitStops} parada(s)`}
+                Largou em {mine.grid}º · {counted(mine.points, 'ponto', 'pontos')} · {counted(mine.overtakes, 'ultrapassagem', 'ultrapassagens')}
+                {mine.pitStops > 0 && ` · ${counted(mine.pitStops, 'parada', 'paradas')}`}
                 {mine.penaltySeconds > 0 && ` · ${mine.penaltySeconds}s de punição`} · Vencedor: {nameOf(result.entries[0]?.driverId ?? '')}
               </div>
             )}
@@ -115,6 +116,12 @@ export function RaceView() {
   }, [playing, finished, awaitingOrder, speed, stepRace]);
 
   const result = useMemo(() => (race && finished ? finalizeRace(race, category) : null), [race, finished, category]);
+
+  // No modo de cronometragem a "volta na tela" é a última simulada (ver a retomada de corrida interrompida).
+  const currentLap = race?.currentLap ?? 0;
+  useEffect(() => {
+    useGameStore.getState().noteLapShown(currentLap);
+  }, [currentLap]);
 
   if (!race) return null;
   const rules = category.race;
@@ -179,7 +186,7 @@ export function RaceView() {
 
       {race.neutralization.type !== 'none' && (
         <div role="status" className="rounded-xl border border-gold-400/50 bg-gold-400/15 px-4 py-3 text-sm font-semibold text-gold-400">
-          {race.neutralization.type === 'sc' ? 'SAFETY CAR NA PISTA' : 'SAFETY CAR VIRTUAL'} · mais {race.neutralization.lapsLeft} volta(s). Ultrapassagens proibidas{rules.pitStops ? '; parar agora custa menos tempo.' : '.'}
+          {race.neutralization.type === 'sc' ? 'SAFETY CAR NA PISTA' : 'SAFETY CAR VIRTUAL'} · mais {counted(race.neutralization.lapsLeft, 'volta', 'voltas')}. Ultrapassagens proibidas{rules.pitStops ? '; parar agora custa menos tempo.' : '.'}
         </div>
       )}
       {redFlagRestart && (

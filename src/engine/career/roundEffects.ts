@@ -35,6 +35,7 @@ import { updateMarketInterest } from './market';
 import { fullName, getPlayer, getTeam, getTeammate } from './selectors';
 import { SPONSOR_RULES, satisfactionAfterRound } from './sponsors';
 import { money } from './selectors';
+import { counted } from '@/domain/text';
 
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
 
@@ -118,8 +119,8 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   const player = getPlayer(career);
   if (player.injury && (!playerBefore.injury || entry?.injured)) {
     msg('injury', 'health', `Lesão: ${player.injury.description}`, player.injury.severity === 'serious'
-      ? `Os médicos vetam a sua participação nas próximas ${player.injury.roundsRemaining} etapa(s). O piloto reserva assume o ${category.machine}.`
-      : `Recuperação prevista: ${player.injury.roundsRemaining} etapa(s). Você pode correr, com perda de rendimento, ou ceder a vaga ao reserva para se recuperar.`);
+      ? `Os médicos vetam a sua participação ${player.injury.roundsRemaining === 1 ? 'na próxima etapa' : `nas próximas ${player.injury.roundsRemaining} etapas`}. O piloto reserva assume o ${category.machine}.`
+      : `Recuperação prevista: ${counted(player.injury.roundsRemaining, 'etapa', 'etapas')}. Você pode correr, com perda de rendimento, ou ceder a vaga ao reserva para se recuperar.`);
   } else if (playerBefore.injury && !player.injury) {
     msg('recovered', 'health', 'Alta médica', 'Você está totalmente recuperado.');
   }
@@ -208,7 +209,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   const winner = career.drivers.find((d) => d.id === record.race.entries[0]?.driverId);
   if (entry) {
     const result = entry.status === 'finished'
-      ? `Você terminou em ${entry.position}º, largando de ${entry.grid}º, e somou ${entry.points} ponto(s).${entry.penaltySeconds > 0 ? ` Punições: ${entry.penaltySeconds}s.` : ''}`
+      ? `Você terminou em ${entry.position}º, largando de ${entry.grid}º, e somou ${counted(entry.points, 'ponto', 'pontos')}.${entry.penaltySeconds > 0 ? ` Punições: ${entry.penaltySeconds}s.` : ''}`
       : `Você abandonou (${DNF_LABELS[entry.dnfReason ?? 'crash'].toLowerCase()}) depois de largar em ${entry.grid}º.`;
     msg('race', 'race', `Etapa ${round}: ${track.name}`, `${result} Vencedor: ${winner ? fullName(winner) : '-'}. No campeonato, você é o ${me?.position ?? '-'}º, com ${me?.points ?? 0} pontos.`);
     let reaction: string;

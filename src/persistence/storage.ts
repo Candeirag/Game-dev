@@ -137,6 +137,46 @@ export class MemoryStorage implements StorageAdapter {
   }
 }
 
+const PROBE_KEY = '__teste_de_gravacao';
+/** Quanto esperar por um armazenamento que não responde (há navegadores em que o IndexedDB fica pendurado). */
+const PROBE_TIMEOUT_MS = 2500;
+
+/** Grava, lê e apaga um valor: só assim se sabe que o armazenamento funciona de verdade. */
+async function works(storage: StorageAdapter): Promise<boolean> {
+  const probe = (async () => {
+    await storage.setMany({ [PROBE_KEY]: 1 });
+    const read = await storage.get(PROBE_KEY);
+    await storage.delete([PROBE_KEY]);
+    return read === 1;
+  })();
+  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), PROBE_TIMEOUT_MS));
+  try {
+    return await Promise.race([probe, timeout]);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Escolhe o armazenamento testando cada um, do melhor para o pior. Navegação anônima, páginas
+ * embutidas e bloqueio de dados podem derrubar o IndexedDB ou o localStorage mesmo quando eles
+ * existem; nesse caso o jogo cai para a memória, e a interface avisa que nada fica guardado.
+ */
+export async function probeStorage(): Promise<StorageAdapter> {
+  const candidates: (() => StorageAdapter)[] = [];
+  if (typeof indexedDB !== 'undefined') candidates.push(() => new IndexedDbStorage());
+  candidates.push(() => new LocalStorageAdapter());
+  for (const make of candidates) {
+    try {
+      const storage = make();
+      if (await works(storage)) return storage;
+    } catch {
+      // O próprio acesso ao armazenamento pode ser bloqueado; tenta o seguinte.
+    }
+  }
+  return new MemoryStorage();
+}
+
 export function createDefaultStorage(): StorageAdapter {
   if (typeof indexedDB !== 'undefined') return new IndexedDbStorage();
   if (typeof localStorage !== 'undefined') return new LocalStorageAdapter();

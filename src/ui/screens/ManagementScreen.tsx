@@ -24,6 +24,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button, Card, ChoiceCard, EmptyState, Meter, PageHeader, Pill, RatingBar, Stat, TableWrap, Tabs, cx, td, th } from '../components/ui';
 import { currencySymbol, formatMoney } from '../format';
 import { useCareer } from '../hooks/useCareer';
+import { counted } from '@/domain/text';
 
 type Tab = 'overview' | 'staff' | 'facilities' | 'development' | 'drivers';
 const TABS: { value: Tab; label: string }[] = [
@@ -307,7 +308,7 @@ function Development({ m }: { m: ManagedTeam }) {
                       <span className="w-12 text-right text-sm font-semibold tabular">{Math.round(share * 100)}%</span>
                     </div>
                     <div className="mt-3">
-                      <div className="mb-1 flex justify-between text-xs text-ink-400"><span>{maxed ? 'Limite do regulamento atingido nesta temporada' : `Próxima melhoria: ${number(m.development.progress[area])} de ${number(needed)} pontos`}</span>{!maxed && share > 0 && <span>cerca de {Math.max(1, Math.ceil((needed - m.development.progress[area]) / Math.max(0.01, rate * share)))} etapa(s)</span>}</div>
+                      <div className="mb-1 flex justify-between text-xs text-ink-400"><span>{maxed ? 'Limite do regulamento atingido nesta temporada' : `Próxima melhoria: ${number(m.development.progress[area])} de ${number(needed)} pontos`}</span>{!maxed && share > 0 && <span>cerca de {counted(Math.max(1, Math.ceil((needed - m.development.progress[area]) / Math.max(0.01, rate * share))), 'etapa', 'etapas')}</span>}</div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-800"><div className="h-full rounded-full bg-sky-400" style={{ width: `${maxed ? 100 : Math.min(100, (m.development.progress[area] / needed) * 100)}%` }} /></div>
                     </div>
                   </>

@@ -6,8 +6,10 @@
 import { create } from 'zustand';
 import type { CareerState, CategoryId, DevArea, DevValues, FacilityKey, Lifestyle, PracticeProgram, Property, QualifyingApproach, RaceMode, ResearchSpend, StaffRole, SupportLevel, TrainingFocus, TrainingIntensity, TyreCompound } from '@/domain/schemas';
 import * as engine from '@/engine';
-import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, RaceSimState, RaceTimeline, StrategyPlan } from '@/engine';
-import { createDefaultStorage, type StorageAdapter } from '@/persistence/storage';
+import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, PlayerRaceInput, RaceSimState, RaceTimeline, StrategyPlan } from '@/engine';
+import { readLastExport, writeLastExport } from '@/persistence/preferences';
+import { clearRaceResume, loadRaceResume, raceResumeKey, saveRaceResume, type RaceResume } from '@/persistence/raceResume';
+import { createDefaultStorage, probeStorage, type StorageAdapter } from '@/persistence/storage';
 import {
   SaveError,
   deleteSave,
@@ -42,13 +44,31 @@ export interface GameStore {
   skipPlannedStop: boolean;
   /** Engenheiro automático: decide paradas e protege o combustível. */
   autoEngineer: boolean;
+  /** Comandos de cada volta já simulada e a estratégia da largada: é o que permite refazer a corrida depois de uma recarga. */
+  raceSteps: PlayerRaceInput[];
+  racePlan: StrategyPlan | null;
+  /** Volta que a transmissão está mostrando (anotada pela tela). */
+  raceShownLap: number;
+  /** Instante exato da imagem, anotado quando a página é fechada ou escondida. */
+  raceShownTime: number | null;
+  /** Corrida desta etapa que foi interrompida por uma recarga da página, à espera da decisão do jogador. */
+  raceResume: RaceResume | null;
+  /** Depois de retomar a corrida: volta (e, se anotado, instante) em que a transmissão deve reabrir. A tela consome e limpa. */
+  raceSeekLap: number | null;
+  raceSeekTime: number | null;
+  /** Data da última exportação da carreira para fora do navegador. */
+  lastExportAt: string | null;
   saveStatus: SaveStatus;
   slots: SlotInfo[];
   notice: string | null;
   /** Desfecho do último evento resolvido, para mostrar ao jogador. */
   lastOutcome: { title: string; text: string } | null;
 
+  /** Testa o armazenamento do navegador e escolhe o que funciona (chamado uma vez, na abertura). */
+  initStorage(): Promise<void>;
   refreshSlots(): Promise<void>;
+  /** Anota que a carreira acabou de ser exportada. */
+  markExported(): void;
   newCareer(input: NewCareerInput): Promise<void>;
   loadSlot(slot: SaveSlotId): Promise<void>;
   importJson(json: string): Promise<void>;
@@ -81,6 +101,11 @@ export interface GameStore {
   setAutoEngineer(auto: boolean): void;
   /** Avança uma volta. `teamOrder` responde a uma ordem de equipe pendente. */
   stepRace(teamOrder?: 'obey' | 'ignore'): void;
+  /** Refaz a corrida interrompida com os mesmos comandos; `toEnd` simula também o que faltava. */
+  resumeRace(toEnd: boolean): void;
+  noteLapShown(lap: number): void;
+  noteTimeShown(time: number): void;
+  clearRaceSeek(): void;
   simulateRestOfRace(): void;
   completeWeekend(): void;
 
@@ -182,7 +207,20 @@ export const useGameStore = create<GameStore>((set, get) => {
   /** Ação simples: chama uma função do motor com os argumentos dados e salva. */
   const action = <A extends unknown[]>(fn: (career: CareerState, ...args: A) => CareerState) => (...args: A) => apply((c) => fn(c, ...args), { save: true });
 
-  const RACE_RESET = { liveRace: null, raceTimeline: null, raceMode: 'balanced' as RaceMode, pitRequest: null, skipPlannedStop: false };
+  const RACE_RESET = { liveRace: null, raceTimeline: null, raceMode: 'balanced' as RaceMode, pitRequest: null, skipPlannedStop: false, raceSteps: [] as PlayerRaceInput[], racePlan: null, raceShownLap: 0, raceShownTime: null, raceResume: null, raceSeekLap: null, raceSeekTime: null };
+
+  /** Guarda no navegador os comandos da corrida em andamento, para ela sobreviver a uma recarga. */
+  function rememberRace(): void {
+    const { career, liveRace, raceSteps, racePlan, raceMode, autoEngineer, raceShownLap, raceShownTime } = get();
+    const key = career ? raceResumeKey(career) : null;
+    if (!key || !liveRace || raceSteps.length === 0) return;
+    saveRaceResume({ key, plan: racePlan, steps: raceSteps, mode: raceMode, autoEngineer, shownLap: Math.min(raceShownLap, raceSteps.length), shownTime: raceShownTime, totalLaps: liveRace.totalLaps });
+  }
+
+  /** Corrida interrompida da carreira recém-aberta, se o save está na hora da corrida. */
+  function pendingResume(career: CareerState): RaceResume | null {
+    return career.weekend && career.weekend.qualifying !== null ? loadRaceResume(career) : null;
+  }
 
   return {
     storage: createDefaultStorage(),
@@ -193,6 +231,20 @@ export const useGameStore = create<GameStore>((set, get) => {
     slots: [],
     notice: null,
     lastOutcome: null,
+    lastExportAt: readLastExport(),
+
+    async initStorage() {
+      const storage = await probeStorage();
+      // Só troca se a carreira ainda não começou a ser gravada em outro lugar nesta sessão.
+      if (storage.kind !== get().storage.kind) set({ storage });
+      await get().refreshSlots();
+    },
+
+    markExported() {
+      const at = now();
+      writeLastExport(at);
+      set({ lastExportAt: at });
+    },
 
     async refreshSlots() {
       set({ slots: await listSaves(get().storage) });
@@ -210,6 +262,7 @@ export const useGameStore = create<GameStore>((set, get) => {
         set({
           career,
           ...RACE_RESET,
+          raceResume: pendingResume(career),
           lastOutcome: null,
           saveStatus: { kind: 'idle' },
           notice: recoveredFromBackup ? 'O save principal estava danificado; a cópia de segurança foi carregada.' : null,
@@ -222,7 +275,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     async importJson(json) {
       const career = importCareer(json);
-      set({ career, ...RACE_RESET, lastOutcome: null, notice: 'Carreira importada com sucesso.' });
+      set({ career, ...RACE_RESET, raceResume: pendingResume(career), lastOutcome: null, notice: 'Carreira importada com sucesso.' });
       await autosave(career);
     },
 
@@ -328,7 +381,9 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (!career) return;
       try {
         const race = engine.createWeekendRace(career, plan);
-        set({ ...RACE_RESET, liveRace: race, raceTimeline: engine.createRaceTimeline(race, engine.buildRaceContext(career)), notice: null });
+        // Uma largada nova substitui qualquer corrida interrompida desta etapa.
+        clearRaceResume();
+        set({ ...RACE_RESET, liveRace: race, raceTimeline: engine.createRaceTimeline(race, engine.buildRaceContext(career)), racePlan: plan ?? null, notice: null });
       } catch (error) {
         set({ notice: errorMessage(error) });
       }
@@ -336,6 +391,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     setRaceMode(mode) {
       set({ raceMode: mode });
+      rememberRace();
     },
 
     requestPit(compound) {
@@ -348,6 +404,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     setAutoEngineer(auto) {
       set({ autoEngineer: auto });
+      rememberRace();
     },
 
     stepRace(teamOrder) {
@@ -356,14 +413,72 @@ export const useGameStore = create<GameStore>((set, get) => {
       // Uma ordem de equipe pendente exige resposta antes da próxima volta.
       if (liveRace.pendingTeamOrder && !teamOrder) return;
       const context = engine.buildRaceContext(career);
-      const next = engine.stepRaceLap(liveRace, context, {
+      const input: PlayerRaceInput = {
         mode: raceMode,
         pit: pitRequest,
         skipPlannedStop,
         auto: autoEngineer,
         ...(teamOrder ? { teamOrder } : {}),
-      });
-      set({ liveRace: next, raceTimeline: raceTimeline && engine.appendRaceLap(raceTimeline, liveRace, next, context), pitRequest: null, skipPlannedStop: false });
+      };
+      const next = engine.stepRaceLap(liveRace, context, input);
+      set({ liveRace: next, raceTimeline: raceTimeline && engine.appendRaceLap(raceTimeline, liveRace, next, context), pitRequest: null, skipPlannedStop: false, raceSteps: [...get().raceSteps, input] });
+      rememberRace();
+    },
+
+    resumeRace(toEnd) {
+      const { career, raceResume } = get();
+      if (!career || !raceResume) return;
+      try {
+        // O motor é determinístico: a mesma largada com os mesmos comandos devolve a mesma corrida.
+        const context = engine.buildRaceContext(career);
+        let race = engine.createWeekendRace(career, raceResume.plan ?? undefined);
+        let timeline = engine.createRaceTimeline(race, context);
+        const steps: PlayerRaceInput[] = [];
+        const advance = (input: PlayerRaceInput) => {
+          const next = engine.stepRaceLap(race, context, input);
+          timeline = engine.appendRaceLap(timeline, race, next, context);
+          race = next;
+          steps.push(input);
+        };
+        for (const input of raceResume.steps) {
+          if (engine.isRaceFinished(race)) break;
+          advance(input);
+        }
+        while (toEnd && !engine.isRaceFinished(race)) advance({ mode: raceResume.mode, auto: true, pit: null });
+        set({
+          ...RACE_RESET,
+          liveRace: race,
+          raceTimeline: timeline,
+          raceMode: raceResume.mode,
+          autoEngineer: raceResume.autoEngineer,
+          raceSteps: steps,
+          racePlan: raceResume.plan,
+          raceShownLap: toEnd ? race.currentLap : raceResume.shownLap,
+          raceSeekLap: toEnd ? null : raceResume.shownLap,
+          raceSeekTime: toEnd ? null : raceResume.shownTime,
+          notice: null,
+        });
+        rememberRace();
+      } catch (error) {
+        clearRaceResume();
+        set({ raceResume: null, notice: `Não foi possível retomar a corrida interrompida (${errorMessage(error)}). Ela recomeça da largada.` });
+      }
+    },
+
+    noteLapShown(lap) {
+      if (lap === get().raceShownLap) return;
+      // O instante anotado valia para a volta anterior.
+      set({ raceShownLap: lap, raceShownTime: null });
+      rememberRace();
+    },
+
+    noteTimeShown(time) {
+      set({ raceShownTime: time });
+      rememberRace();
+    },
+
+    clearRaceSeek() {
+      if (get().raceSeekLap !== null || get().raceSeekTime !== null) set({ raceSeekLap: null, raceSeekTime: null });
     },
 
     simulateRestOfRace() {
@@ -373,19 +488,26 @@ export const useGameStore = create<GameStore>((set, get) => {
       const context = engine.buildRaceContext(career);
       let race = liveRace;
       let timeline = get().raceTimeline;
+      const steps = [...get().raceSteps];
       while (!engine.isRaceFinished(race)) {
-        const next = engine.stepRaceLap(race, context, { mode: raceMode, auto: true, pit: null });
+        const input: PlayerRaceInput = { mode: raceMode, auto: true, pit: null };
+        const next = engine.stepRaceLap(race, context, input);
         timeline = timeline && engine.appendRaceLap(timeline, race, next, context);
         race = next;
+        steps.push(input);
       }
-      set({ liveRace: race, raceTimeline: timeline, pitRequest: null, skipPlannedStop: false });
+      set({ liveRace: race, raceTimeline: timeline, pitRequest: null, skipPlannedStop: false, raceSteps: steps, raceShownLap: race.currentLap });
+      rememberRace();
     },
 
     completeWeekend() {
       const race = get().liveRace;
       if (!race) return;
       apply((c) => engine.completeWeekend(c, race), { save: true });
-      if (!get().notice) set({ ...RACE_RESET });
+      if (!get().notice) {
+        clearRaceResume();
+        set({ ...RACE_RESET });
+      }
     },
 
     negotiateOffer(offerId, demand) {

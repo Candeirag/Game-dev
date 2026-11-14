@@ -4,6 +4,7 @@ import { fullName } from '@/engine';
 import { PositionBadge, TableWrap, TeamSwatch, cx, td, th } from './ui';
 import { formatLap, formatRaceTime } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { counted } from '@/domain/text';
 
 /**
  * Resultado oficial de uma corrida. Em temporadas arquivadas, nomes e cores
@@ -71,7 +72,7 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
       </table>
       {(result.safetyCars > 0 || result.virtualSafetyCars > 0 || result.redFlags > 0) && (
         <p className="border-t border-ink-800 py-2 text-xs text-ink-400">
-          Neutralizações: {result.safetyCars} safety car, {result.virtualSafetyCars} safety car virtual, {result.redFlags} bandeira(s) vermelha(s).
+          Neutralizações: {result.safetyCars} safety car, {result.virtualSafetyCars} safety car virtual, {counted(result.redFlags, 'bandeira vermelha', 'bandeiras vermelhas')}.
         </p>
       )}
     </TableWrap>

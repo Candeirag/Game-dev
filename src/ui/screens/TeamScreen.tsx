@@ -6,6 +6,7 @@ import { CarSprite } from '../components/CarSprite';
 import { Card, Meter, PageHeader, Pill, Stat, TeamSwatch } from '../components/ui';
 import { formatMoney, formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { counted } from '@/domain/text';
 
 export function TeamScreen() {
   const { career, player, team, teammate, category, drivers, driverStandings, teamStandings, carNumbers } = useCareerView();
@@ -84,7 +85,7 @@ export function TeamScreen() {
                 <div className="font-semibold">{fullName(d)} {d.isPlayer && <span className="text-xs text-apex-400">(você)</span>}</div>
                 <Pill tone={d.role === 'first' ? 'accent' : 'neutral'}>{ROLE_LABELS[d.role ?? 'second']}</Pill>
               </div>
-              <div className="mt-1 text-sm text-ink-400">{d.age} anos · geral {formatRating(overallRating(d.attributes))}{d.injury ? ` · lesionado (${d.injury.roundsRemaining} etapa(s))` : ''}</div>
+              <div className="mt-1 text-sm text-ink-400">{d.age} anos · geral {formatRating(overallRating(d.attributes))}{d.injury ? ` · lesionado (${counted(d.injury.roundsRemaining, 'etapa', 'etapas')})` : ''}</div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
                 <div><div className="text-[11px] uppercase tracking-wider text-ink-400">Camp.</div><div className="font-semibold tabular">{career.rounds.length ? `${standing(d.id)?.position ?? '-'}º` : '-'}</div></div>
                 <div><div className="text-[11px] uppercase tracking-wider text-ink-400">Pontos</div><div className="font-semibold tabular">{standing(d.id)?.points ?? 0}</div></div>
@@ -136,7 +137,7 @@ export function TeamScreen() {
             <Stat label="Exigência" value={`até ${career.academy.targetPosition}º`} hint="Posição final em cada temporada" />
             <Stat label="Avisos" value={`${career.academy.strikes} de 2`} hint="Com 2, você é dispensado" />
           </div>
-          <p className="mt-3 text-sm text-ink-400">A academia paga parte da vaga, aumenta em 10% o rendimento do treino e chama a atenção das equipes ligadas a ela. Você tem {playerStats.starts} largada(s) na carreira.</p>
+          <p className="mt-3 text-sm text-ink-400">A academia paga parte da vaga, aumenta em 10% o rendimento do treino e chama a atenção das equipes ligadas a ela. Você tem {counted(playerStats.starts, 'largada', 'largadas')} na carreira.</p>
         </Card>
       )}
     </div>

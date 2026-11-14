@@ -39,6 +39,8 @@ O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer serv
 - **Piloto:** nove atributos, treino com foco e intensidade, fase, confiança e moral, lesões e recuperação, envelhecimento e declínio.
 - **Corrida:** classificação (eliminatória na F1), largada, ultrapassagens e defesa, erros e acidentes, danos, quebras, safety car, safety car virtual, bandeira vermelha, punições, clima que muda durante a prova, compostos de pneu, desgaste, paradas, estratégia e combustível.
 - **Corrida visual:** a corrida acontece num circuito visto de cima, com os carros (pintura de cada equipe, capacete e número de cada piloto) andando no tempo real da simulação: largada com luzes, disputas lado a lado, ultrapassagens, paradas no pit lane, rodadas, abandonos, safety car, bandeira vermelha com relargada e chuva. Há torre de tempos, câmera geral ou acompanhando um carro, pausa e velocidades de 1× a 8×.
+- **Feito para o celular:** durante a corrida, uma barra fixa no rodapé traz o ritmo de pilotagem, pausa, velocidade e a posição do piloto, sempre à mão. Abaixo de 768 px a navegação fica numa barra inferior (Painel, Fim de semana, Piloto, Carreira e "Mais").
+- **Moeda pelo país do piloto:** piloto brasileiro vê os valores em reais (R$); os demais, em euros. É só o símbolo: os números da economia são os mesmos.
 - **Um veículo por categoria:** kart 4 tempos de chassi tubular (Regional), kart 125 cc carenado (Nacional), kart 125 cc com câmbio (Internacional), Fórmula 4, Fórmula 3, Fórmula 2 e Fórmula 1. O mesmo veículo aparece na corrida, na garagem (tela Equipe), no grid e na escada da tela Carreira.
 - **Circuitos reais com nomes fictícios:** os 14 autódromos reproduzem o traçado da pista real que inspira cada um (curvas, retas, sentido da corrida, largada e, no Circuito do Oito, o viaduto). Dos 20 kartódromos, 19 reproduzem o traçado de um kartódromo real mapeado no OpenStreetMap (10 no Brasil, 9 na Europa; a pista inglesa tem até a ponte), e a cidade de cada pista é a do kartódromo de referência; só o Circuito do Oásis continua com traçado gerado por regras. O mapa de cada pista aparece no calendário, no painel e antes da largada.
 - **Equipes:** primeiro piloto, segundo e reserva; ordens de equipe; confiança, relação com o companheiro e rivalidades; academias das equipes de F1.
@@ -80,7 +82,8 @@ Dicas:
 - **Três slots manuais**, mais exportação e importação de arquivo `.json`.
 - Cada save é validado (estrutura, consistência e checksum) ao ser gravado e ao ser carregado, e a versão anterior do slot fica como cópia de segurança.
 - **Saves das fases anteriores continuam funcionando:** são convertidos ao abrir, mantendo o piloto, os resultados, o dinheiro, o contrato e o histórico, com os sistemas novos no estado inicial. Uma carreira encerrada na Fase 2 pode voltar como dirigente.
-- A corrida em andamento não é salva: recarregar a página durante a prova faz a corrida recomeçar da largada, com a mesma sorte.
+- **Corrida interrompida:** a corrida ao vivo não entra no save, mas o navegador guarda os comandos dados a cada volta. Se a página recarrega no meio da prova, o jogo oferece "Continuar de onde parou" ou "Ver resultado"; a corrida é refeita com os mesmos comandos e dá no mesmo.
+- Os saves moram no navegador, que pode apagá-los: a tela Saves e o fechamento de cada temporada lembram de exportar o `.json` e mostram a data da última exportação. Se o navegador bloquear a gravação, o jogo segue na memória e avisa que o progresso será perdido ao fechar.
 
 ## Estrutura do projeto
 

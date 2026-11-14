@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type PracticeProgram, type QualifyingApproach, type RoundRecord } from '@/domain/schemas';
 import {
@@ -21,6 +21,7 @@ import { RaceBroadcast } from '../race/RaceBroadcast';
 import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
 import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { counted, pluralWord } from '@/domain/text';
 
 const STEPS = [
   { key: 'practice', label: 'Treino livre' },
@@ -233,6 +234,8 @@ function QualifyingPhase() {
 function PreRacePhase() {
   const { career, player, drivers, teams, category, carNumbers } = useCareerView();
   const beginRace = useGameStore((s) => s.beginRace);
+  const resume = useGameStore((s) => s.raceResume);
+  const resumeRace = useGameStore((s) => s.resumeRace);
   const options = useMemo(() => playerStrategyOptions(career), [career]);
   const [selected, setSelected] = useState(0);
   const qualifying = career.weekend?.qualifying;
@@ -250,6 +253,20 @@ function PreRacePhase() {
   const plan = options[selected]?.plan;
 
   return (
+    <div className="space-y-6">
+      {/* Fica no alto: no celular o grid ocupa várias telas antes do botão de largada. */}
+      {resume && (
+        <div role="status" className="rounded-xl border border-gold-400/50 bg-gold-400/10 p-4">
+          <div className="text-sm font-semibold text-gold-400">Corrida interrompida</div>
+          <p className="mt-1 text-sm text-ink-200">
+            A página foi fechada ou recarregada com a corrida em andamento: {resume.steps.length >= resume.totalLaps ? 'todas as voltas já tinham sido disputadas' : `a corrida estava na volta ${Math.max(1, Math.min(resume.shownLap, resume.totalLaps))} de ${resume.totalLaps}`}. Os seus comandos ficaram guardados; a corrida é a mesma.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Button variant="primary" className="h-12 text-base" onClick={() => resumeRace(false)}>Continuar de onde parou</Button>
+            <Button className="h-12 text-base" onClick={() => resumeRace(true)} title="O engenheiro assume paradas e combustível nas voltas que faltam">Ver resultado</Button>
+          </div>
+        </div>
+      )}
     <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
       <Card title="Grid de largada" padded={false}>
         <div className="px-4">
@@ -307,7 +324,7 @@ function PreRacePhase() {
           {mine && (
             <p className="text-sm text-ink-300">
               Você larga em <b className="text-ink-100">{mine.position}º</b>
-              {mine.attempts.some((t) => t === null) && `, com ${mine.attempts.filter((t) => t === null).length} tentativa(s) invalidada(s)`}.
+              {mine.attempts.some((t) => t === null) && `, com ${counted(mine.attempts.filter((t) => t === null).length, 'tentativa invalidada', 'tentativas invalidadas')}`}.
             </p>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-400">
@@ -321,9 +338,14 @@ function PreRacePhase() {
             {rules.safetyCar && <li>Acidentes podem trazer safety car{rules.virtualSafetyCar ? ', safety car virtual' : ''}{rules.redFlag ? ' ou bandeira vermelha' : ''}.</li>}
             {rules.teamOrders && <li>A equipe pode pedir que você ceda a posição ao companheiro.</li>}
           </ul>
-          <Button variant="primary" className="mt-5 h-12 w-full text-base" onClick={() => beginRace(plan)}>Ir para a largada</Button>
+          {resume ? (
+            <p className="mt-5 text-sm text-gold-400">Há uma corrida interrompida nesta etapa: use os botões no alto da tela.</p>
+          ) : (
+            <Button variant="primary" className="mt-5 h-12 w-full text-base" onClick={() => beginRace(plan)}>Ir para a largada</Button>
+          )}
         </Card>
       </div>
+    </div>
     </div>
   );
 }
@@ -335,7 +357,7 @@ function RoundSummary({ record }: { record: RoundRecord }) {
     <Card title={`Resultado da etapa ${record.round} · ${getTrack(record.trackId).name}`} padded={false}>
       <div className="border-b border-ink-800 p-4 text-sm text-ink-300">
         {mine ? (
-          <>Você {mine.status === 'finished' ? <>terminou em <b className="text-ink-100">{mine.position}º</b></> : 'abandonou'}, largando em {mine.grid}º, e somou <b className="text-ink-100">{mine.points}</b> ponto(s).</>
+          <>Você {mine.status === 'finished' ? <>terminou em <b className="text-ink-100">{mine.position}º</b></> : 'abandonou'}, largando em {mine.grid}º, e somou <b className="text-ink-100">{mine.points}</b> {pluralWord(mine.points, 'ponto', 'pontos')}.</>
         ) : (
           'Você não disputou esta etapa.'
         )}
@@ -356,6 +378,10 @@ function RaceStage() {
       return 'broadcast';
     }
   });
+  // A corrida abre com a pista na tela, mesmo que o jogador tenha rolado a página antes da largada.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const choose = (next: 'broadcast' | 'timing') => {
     setView(next);
     try {

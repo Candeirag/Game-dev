@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { SAVE_SLOTS, type SaveSlotId } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, PageHeader, cx } from '../components/ui';
+import { ExportReminder, StorageWarning } from '../components/SaveNotices';
 import { formatDateTime } from '../format';
 
 const SLOT_LABELS: Record<SaveSlotId, string> = { auto: 'Save automático', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
 const STORAGE_LABELS = { indexeddb: 'IndexedDB do navegador', localstorage: 'localStorage do navegador', memory: 'Memória (não persistente)' };
 
 export function SavesScreen() {
-  const { slots, storage, refreshSlots, saveToSlot, loadSlot, removeSlot, exportJson, importJson, career } = useGameStore();
+  const { slots, storage, refreshSlots, saveToSlot, loadSlot, removeSlot, exportJson, importJson, markExported, career } = useGameStore();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
@@ -42,6 +43,7 @@ export function SavesScreen() {
     a.download = `apex-carreira-${career.year}-etapa-${career.rounds.length}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    markExported();
   }
 
   /** Alternativa ao download: há páginas e aplicativos que bloqueiam arquivos baixados. */
@@ -51,6 +53,7 @@ export function SavesScreen() {
     setMessage(null);
     try {
       await navigator.clipboard.writeText(json);
+      markExported();
       setTransfer(null);
       setMessage({ tone: 'ok', text: 'Carreira copiada. Cole o texto em uma nota ou em um arquivo para guardar.' });
     } catch {
@@ -63,6 +66,8 @@ export function SavesScreen() {
       <PageHeader eyebrow="Persistência" title="Saves">
         <span className="text-sm text-ink-400">Armazenamento: {STORAGE_LABELS[storage.kind]}</span>
       </PageHeader>
+
+      <StorageWarning link={false} />
 
       {message && (
         <div role="status" className={cx('rounded-lg border px-4 py-3 text-sm', message.tone === 'ok' ? 'border-go-400/30 bg-go-400/10 text-go-400' : 'border-apex-600/50 bg-apex-600/10 text-apex-400')}>
@@ -108,6 +113,7 @@ export function SavesScreen() {
       </Card>
 
       <Card title="Exportar e importar">
+        <ExportReminder link={false} className="mb-3" />
         <div className="flex flex-wrap gap-2">
           <Button onClick={download}>Exportar carreira (.json)</Button>
           <input ref={fileInput} type="file" accept="application/json,.json" className="hidden" onChange={(e) => {

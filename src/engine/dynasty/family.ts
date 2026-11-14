@@ -26,6 +26,7 @@ import { hasPersonalProperty } from '../economy/assets';
 import { createRng, gaussian, hashSeed, type Rng } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
+import { counted } from '@/domain/text';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const pick = <T,>(rng: Rng, list: readonly T[]): T => list[Math.floor(rng.next() * list.length)] as T;
@@ -301,7 +302,7 @@ export function closeChildSeason(child: Child, career: CareerState, world: { pos
   const points = licensePointsFor(category.id, position);
   const reputation = reputationAfterSeason(racing.reputation, position, wins, category.tier);
   const season: ChildSeason = { season: career.season, year: career.year, categoryId: category.id, teamName, position, wins, inWorld: world !== null };
-  const note = `${child.firstName} terminou a ${category.shortName} em ${position}º${wins > 0 ? `, com ${wins} vitória(s)` : ''}.`;
+  const note = `${child.firstName} terminou a ${category.shortName} em ${position}º${wins > 0 ? `, com ${counted(wins, 'vitória', 'vitórias')}` : ''}.`;
   return {
     child: { ...child, driver, racing: { ...racing, reputation, license: [...racing.license, { season: career.season, categoryId: category.id, position, points }], seasons: [...racing.seasons, season].slice(-30) } },
     note,

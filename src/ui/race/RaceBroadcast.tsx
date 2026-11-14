@@ -95,10 +95,38 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
 
   // Ao voltar para a transmissão com a corrida em andamento, a imagem retoma do ponto mais recente.
   // Quem só assiste começa sempre do grid: a corrida inteira já está simulada.
-  const { goLive } = playback;
+  // Depois de uma recarga da página, reabre na volta em que a imagem estava.
+  const { goLive, seekLap, seekTime, timeRef } = playback;
   useEffect(() => {
-    if (!spectator && (useGameStore.getState().raceTimeline?.lapsBuilt ?? 0) > 0) goLive();
-  }, [goLive, spectator]);
+    const store = useGameStore.getState();
+    if (spectator || (store.raceTimeline?.lapsBuilt ?? 0) === 0) return;
+    if (store.raceSeekTime !== null) seekTime(store.raceSeekTime);
+    else if (store.raceSeekLap !== null) seekLap(store.raceSeekLap);
+    else goLive();
+    store.clearRaceSeek();
+  }, [goLive, seekLap, seekTime, spectator]);
+
+  // Ao fechar, recarregar ou esconder a página, anota o instante exato da imagem.
+  useEffect(() => {
+    if (spectator) return;
+    const note = () => {
+      const store = useGameStore.getState();
+      if (store.liveRace && store.raceSteps.length > 0 && timeRef.current > 0) store.noteTimeShown(timeRef.current);
+    };
+    const onVisibility = () => { if (document.visibilityState === 'hidden') note(); };
+    window.addEventListener('pagehide', note);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', note);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [spectator, timeRef]);
+
+  // A volta que está na tela fica anotada: é dela que a corrida recomeça se a página for recarregada.
+  const shownLap = timeline && rows[0] && time > 0 ? Math.min(timeline.totalLaps, rows[0].sample.lap) : 0;
+  useEffect(() => {
+    if (!spectator) useGameStore.getState().noteLapShown(shownLap);
+  }, [shownLap, spectator]);
 
   if (!race || !timeline || !circuit) return null;
 
@@ -174,10 +202,11 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={playback.playing ? 'secondary' : 'primary'} onClick={playback.toggle} disabled={orderDue} className="min-w-28">
+          {/* Com a barra fixa aberta, pausa e velocidade ficam nela; no celular não se repetem aqui. */}
+          <Button variant={playback.playing ? 'secondary' : 'primary'} onClick={playback.toggle} disabled={orderDue} className={cx('min-w-28', showBar && 'max-md:hidden')}>
             <Icon path={playback.playing ? ICONS.pause : ICONS.play} />{playLabel}
           </Button>
-          <div className="flex rounded-lg border border-ink-700 p-0.5" role="group" aria-label="Velocidade da corrida">
+          <div className={cx('flex rounded-lg border border-ink-700 p-0.5', showBar && 'max-md:hidden')} role="group" aria-label="Velocidade da corrida">
             {SPEEDS.map((s) => (
               <button key={s} type="button" onClick={() => playback.setSpeed(s)} aria-pressed={playback.speed === s} className={cx('rounded-md px-2.5 py-1 text-xs font-semibold tabular', playback.speed === s ? 'bg-apex-500 text-white' : 'text-ink-400 hover:text-ink-100')}>{s}×</button>
             ))}

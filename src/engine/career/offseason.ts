@@ -36,6 +36,7 @@ import { promotedRivals, runAiMarket, updateMarketInterest } from './market';
 import { familyDriverIds, fullName, getPlayer, getTeam } from './selectors';
 import { renewSponsors } from './sponsors';
 import { money } from './selectors';
+import { counted } from '@/domain/text';
 
 /** A pré-temporada equivale a 2 ciclos de treino. */
 const OFFSEASON_TRAINING_CYCLES = 2;
@@ -151,7 +152,7 @@ export function closeSeason(career: CareerState): CareerState {
     date,
     category: 'season',
     title: `Fim da temporada ${career.year}`,
-    body: `${champion ? fullName(champion) : 'O campeão'} é o campeão. Você terminou em ${me.position}º (meta: ${team.driverTarget}º) e ganhou ${licensePointsEarned} ponto(s) de licença. Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as propostas para a próxima temporada na tela Carreira.`,
+    body: `${champion ? fullName(champion) : 'O campeão'} é o campeão. Você terminou em ${me.position}º (meta: ${team.driverTarget}º) e ganhou ${counted(licensePointsEarned, 'ponto', 'pontos')} de licença. Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as propostas para a próxima temporada na tela Carreira.`,
   };
 
   const messages: InboxMessage[] = [message];
@@ -419,7 +420,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     const after = teams.find((t) => t.id === offer.teamId);
     if (before && after) {
       const change = teamStrength(after) - teamStrength(before);
-      if (Math.abs(change) >= 1) news.push(`A ${after.name} ${change > 0 ? 'acertou' : 'errou'} o projeto do ano: o ${next.machine} ficou ${Math.abs(change).toFixed(1).replace('.', ',')} ponto(s) ${change > 0 ? 'melhor' : 'pior'}.`);
+      if (Math.abs(change) >= 1) news.push(`A ${after.name} ${change > 0 ? 'acertou' : 'errou'} o projeto do ano: o ${next.machine} ficou ${counted(Math.abs(change).toFixed(1).replace('.', ','), 'ponto', 'pontos')} ${change > 0 ? 'melhor' : 'pior'}.`);
     }
     const market = runAiMarket(career, career.drivers, teams, { teamId: offer.teamId, role: contract.role }, nextSeason);
     others = market.drivers;

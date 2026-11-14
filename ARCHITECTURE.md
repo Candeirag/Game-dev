@@ -37,6 +37,7 @@ As dependências só apontam para baixo. `engine` não conhece React nem Zustand
 | --- | --- |
 | `src/domain/schemas.ts` | Schemas Zod e tipos de todo o modelo: piloto, equipe, sessões, resultados, contrato, propostas, finanças, patrocinadores, licença, relações, eventos e efeitos, carreira. Versão do schema do save. |
 | `src/domain/labels.ts` | Textos em português compartilhados pelo motor (mensagens) e pela UI. |
+| `src/domain/money.ts`, `text.ts` | Formatação de dinheiro (a única do jogo: símbolo pela nacionalidade do piloto, sem conversão de valores) e plurais. O motor escreve os valores com `money(career, valor)`; a interface, com `formatMoney` de `src/ui/format.ts`, que segue a moeda da carreira aberta. |
 | `src/data/categories.ts` | As sete categorias: regras de corrida, nível do grid, economia, requisitos e pontos de licença. |
 | `src/data/teams.ts`, `drivers.ts`, `tracks.ts`, `names.ts`, `rules.ts` | Equipes de todas as categorias, elenco inicial do kart regional, 34 pistas, nomes para pilotos gerados, perfis iniciais do jogador. |
 | `src/data/assets.ts` | Catálogo do patrimônio: ações, imóveis, empresas, padrão de vida e as regras de crédito, impostos sobre ganho e herança. |
@@ -58,8 +59,9 @@ As dependências só apontam para baixo. `engine` não conhece React nem Zustand
 | `src/engine/management/` | Gestão de equipe (`team.ts`: estrutura, equipe técnica, instalações, pesquisa, caixa), modo dirigente (`executive.ts`: aposentadoria, etapa, fechamento, mercado de pilotos, propostas, nova temporada) e eventos de gestão (`events.ts`). |
 | `src/engine/tutorial.ts` | Passos do tutorial, deduzidos do estado da carreira. |
 | `src/engine/index.ts` | API pública do motor; a UI e a store importam só daqui. |
-| `src/persistence/` | Armazenamento (IndexedDB, localStorage, memória), checksum, integridade, migrações e serviço de saves. |
-| `src/store/gameStore.ts` | Store Zustand: camada fina sobre o motor. |
+| `src/persistence/` | Armazenamento (IndexedDB, localStorage, memória; `probeStorage` testa cada um na abertura e cai para o seguinte), checksum, integridade, migrações e serviço de saves. Ao abrir um save, os textos gravados por versões anteriores têm o símbolo de moeda e os plurais acertados. `preferences.ts` guarda anotações do navegador fora dos saves (velocidade da corrida, data da última exportação) e `raceResume.ts`, os comandos da corrida em andamento. |
+| `src/store/gameStore.ts` | Store Zustand: camada fina sobre o motor. Registra os comandos de cada volta da corrida (`raceSteps`) e, depois de uma recarga, refaz a corrida com eles (`resumeRace`): o motor é determinístico, então o resultado é o mesmo. |
+| `src/ui/layout/` | Moldura da carreira: barra lateral no computador; no celular, cabeçalho de uma linha, navegação inferior e a folha "Mais". `chrome.tsx` deixa a tela de corrida avisar que a barra fixa de comandos (`src/ui/race/RaceControlBar.tsx`) está aberta. |
 | `src/ui/` | Layout, telas, componentes e formatação. |
 | `src/ui/race/` | Corrida visual: canvas (`RaceCanvas`, `raceScene`, `trackPainter`), pintura dos carros (`liveries`), relógio da reprodução (`useRacePlayback`), tela (`RaceBroadcast`) e comandos do jogador (`RaceCommands`). |
 | `src/assets/race/` | Sprites vistos de cima, gerados no Higgsfield: `vehicles/` (um veículo por categoria e o safety car) e `scenery/` (arquibancada e árvore). `docs/assets/referencia-circuito.jpg` é a referência visual usada para o desenho das pistas. |

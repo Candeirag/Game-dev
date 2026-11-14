@@ -135,6 +135,8 @@ A corrida é mostrada num circuito visto de cima. O que se vê é a simulação,
 - **Ritmo da reprodução.** Em 1×, uma volta de referência dura 24 segundos na tela num kartódromo e de 24 a 40 segundos num autódromo (quanto mais longo o circuito, mais longa a volta na tela); em 8×, um oitavo disso. O relógio da corrida, as diferenças e a velocidade em km/h são os reais.
 - **Decisões.** O motor simula a volta seguinte quando o líder termina a atual. Ritmo e pedido de parada valem para a próxima volta a ser simulada; a tela diz qual é ("Entrar nos boxes no fim da volta N").
 - **Eventos.** Largada parada com cinco luzes; parada com o carro entrando no pit lane e parando no box da equipe pelo tempo do serviço; rodada (o carro gira e perde o tempo que perdeu); abandono (o carro sai da pista e é recolhido); safety car à frente do líder com o pelotão em fila única; bandeira vermelha (a corrida para, os carros voltam ao grid e há relargada parada, com troca de pneus livre); chuva e pista molhada.
+- **Comandos à mão.** Enquanto a corrida do jogador está valendo, uma barra fixa no rodapé traz os três ritmos de pilotagem, pausar ou continuar, a velocidade (1× a 8×) e a posição e a volta do piloto; some na bandeirada. São os mesmos comandos dos cartões da tela, que continuam lá com as explicações e a estratégia de boxes.
+- **Corrida interrompida.** Se a página é recarregada durante a prova, a tela do fim de semana oferece continuar da volta que estava na tela ou ir direto ao resultado. A corrida é refeita com os comandos que o jogador já tinha dado; o que faltava, no caso de "Ver resultado", fica com o engenheiro automático.
 - **Classificação.** A torre de tempos mostra a ordem e as diferenças no instante exibido. No fim, vale o resultado oficial, que soma as punições em tempo.
 - **Fora do carro.** O dirigente (e o piloto que não disputa a etapa) pode assistir à corrida com os carros da equipe em destaque. Não há comandos: a corrida já foi simulada, e assistir ou simular dá o mesmo resultado.
 
@@ -250,6 +252,8 @@ Contrato no fim: a equipe propõe renovar se ainda confia no piloto. Contrato vi
 Entre as temporadas: os três melhores da IA sobem de categoria (na F1, os veteranos se aposentam); quem saiu de contrato, os reservas e o segundo piloto que superou o primeiro (insatisfeito) ficam livres; chegam estreantes; e as equipes escolhem, da mais forte para a mais fraca, o melhor piloto livre. Quando o jogador sobe, os melhores rivais sobem junto.
 
 ## Economia
+
+Os valores deste documento estão em euros, a moeda de referência do balanceamento. No jogo, o símbolo segue o país do piloto: brasileiros veem R$ e os demais, €, com os mesmos números (não há conversão).
 
 | Receitas | Despesas |
 | --- | --- |

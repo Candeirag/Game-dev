@@ -17,6 +17,7 @@ import { createRng, gaussian, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
 import { money } from '../career/selectors';
+import { counted } from '@/domain/text';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
@@ -508,7 +509,7 @@ export function settleTeamRound(career: CareerState, record: RoundRecord): TeamR
     if (car && research.delivered.length > 0) {
       const updated = research.car;
       teams = teams.map((t) => (t.id === m.teamId ? { ...t, car: updated } : t));
-      messages.push({ id: 'upgrade', category: 'business', title: 'Atualização entregue pela fábrica', body: `O departamento técnico entregou ${research.delivered.length} melhoria(s) nesta etapa. O carro agora tem motor ${updated.engine}, chassi ${updated.chassis} e confiabilidade ${updated.reliability}.` });
+      messages.push({ id: 'upgrade', category: 'business', title: 'Atualização entregue pela fábrica', body: `O departamento técnico entregou ${counted(research.delivered.length, 'melhoria', 'melhorias')} nesta etapa. O carro agora tem motor ${updated.engine}, chassi ${updated.chassis} e confiabilidade ${updated.reliability}.` });
     }
   }
 
