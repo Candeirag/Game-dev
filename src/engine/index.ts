@@ -1,23 +1,24 @@
 /** API pública do motor do jogo. A UI e a store importam apenas daqui. */
 export * from './career/createCareer';
 export * from './career/weekend';
-export * from './career/season';
+export * from './career/offseason';
 export * from './career/selectors';
 export * from './career/stats';
 export * from './career/development';
+export * from './career/condition';
+export * from './career/contracts';
+export * from './career/license';
+export * from './career/sponsors';
+export { ECONOMY, netWorth, incomeTax, type InvestmentMove, type InvestmentProduct } from './career/economy';
+export { MARKET, reachableCategories, teamsOfCategory, updateMarketInterest, targetInterest } from './career/market';
+export { RELATION_RULES } from './career/roundEffects';
 export { TRAINING_GROUPS, TRAINABLE_ATTRIBUTES } from './career/training';
 export * from './championship/points';
 export * from './championship/standings';
-export {
-  createRaceSim,
-  stepRaceLap,
-  simulateRemainingRace,
-  finalizeRace,
-  isRaceFinished,
-  gapToLeader,
-  type RaceCar,
-  type RaceSimState,
-  type RaceContext,
-} from './simulation/race';
-export { overallRating, driverPaceRating, kartRating } from './simulation/performance';
+export { generateEvents, resolveEvent, EVENT_RULES } from './events/engine';
+export { EVENT_DEFINITIONS } from './events/definitions';
+export * from './simulation/race';
+export { TYRES, RACE } from './simulation/constants';
+export { overallRating, driverPaceRating, carRating, conditionEffects } from './simulation/performance';
+export { rankTeams, buildCategoryField } from './world/generation';
 export { createRng, hashSeed } from './rng';

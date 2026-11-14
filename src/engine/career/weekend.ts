@@ -5,32 +5,44 @@
  */
 import type {
   CareerState,
-  InboxMessage,
   PracticeProgram,
   QualifyingApproach,
-  RaceResult,
   RoundRecord,
   TrainingFocus,
+  TrainingIntensity,
+  WeekendState,
 } from '@/domain/schemas';
-import { ATTRIBUTE_LABELS, TRAINING_FOCUS_LABELS } from '@/domain/labels';
-import { getTrack } from '@/data/tracks';
+import { getCategory } from '@/data/categories';
+import { getTrack, raceLaps, referenceLapTime } from '@/data/tracks';
 import { chooseAiPracticeProgram, chooseAiQualifyingApproach } from '../ai/decisions';
-import { computeDriverStandings } from '../championship/standings';
 import { hashSeed } from '../rng';
 import { simulatePractice } from '../simulation/practice';
 import { simulateQualifying } from '../simulation/qualifying';
-import { createRaceSim, finalizeRace, isRaceFinished, type RaceContext, type RaceSimState } from '../simulation/race';
-import { developAfterRound, type AttributeDelta } from './development';
-import { pushMessages } from './inbox';
-import { driverMap, fullName, getActiveDrivers, getPlayer, getTeam, teamMap } from './selectors';
+import {
+  buildStrategyOptions,
+  createRaceSim,
+  finalizeRace,
+  gridDropsFromRace,
+  isRaceFinished,
+  simulateRemainingRace,
+  type RaceContext,
+  type RaceSimState,
+  type StrategyOption,
+  type StrategyPlan,
+} from '../simulation/race';
+import { isUnavailable } from './condition';
+import { moveInvestment, type InvestmentMove } from './economy';
+import { closeSeason } from './offseason';
+import { applyRoundEffects } from './roundEffects';
+import { driverMap, getPlayer, getTeam, teamMap } from './selectors';
 
-function requireWeekend(career: CareerState, phase: 'practice' | 'qualifying' | 'race') {
+function requireWeekend(career: CareerState, phase: WeekendState['phase']) {
   const weekend = career.weekend;
   if (!weekend) throw new Error('Nenhum fim de semana em andamento.');
   if (weekend.phase !== phase) throw new Error(`Fase atual é "${weekend.phase}", esperado "${phase}".`);
   const event = career.calendar.find((e) => e.round === weekend.round);
   if (!event) throw new Error(`Etapa ${weekend.round} não está no calendário.`);
-  return { weekend, event, track: getTrack(event.trackId) };
+  return { weekend, event, track: getTrack(event.trackId), category: getCategory(career.categoryId) };
 }
 
 export function sessionSeed(career: CareerState, round: number, session: string): number {
@@ -38,164 +50,139 @@ export function sessionSeed(career: CareerState, round: number, session: string)
 }
 
 export function setTrainingFocus(career: CareerState, focus: TrainingFocus): CareerState {
-  return {
-    ...career,
-    drivers: career.drivers.map((d) => (d.id === career.playerDriverId ? { ...d, trainingFocus: focus } : d)),
-  };
+  return { ...career, drivers: career.drivers.map((d) => (d.id === career.playerDriverId ? { ...d, trainingFocus: focus } : d)) };
 }
 
-export function startWeekend(career: CareerState): CareerState {
+export function setTrainingIntensity(career: CareerState, intensity: TrainingIntensity): CareerState {
+  return { ...career, trainingIntensity: intensity };
+}
+
+/** Aplica ou resgata dinheiro de um investimento. */
+export function invest(career: CareerState, move: InvestmentMove): CareerState {
+  return { ...career, finance: moveInvestment(career.finance, move.product, move.amount) };
+}
+
+/** O jogador pode disputar a próxima etapa? Se não, por quê. */
+export function playerAvailability(career: CareerState): { available: boolean; reason: 'injury' | 'ban' | null; canRest: boolean } {
+  const player = getPlayer(career);
+  if (career.license.banRounds > 0) return { available: false, reason: 'ban', canRest: false };
+  if (isUnavailable(player)) return { available: false, reason: 'injury', canRest: false };
+  return { available: true, reason: null, canRest: player.injury !== null };
+}
+
+/**
+ * Abre o fim de semana e define quem corre: os titulares disponíveis e, no
+ * lugar de quem está lesionado ou suspenso, o reserva da equipe. Com lesão
+ * leve, o jogador pode escolher descansar (`rest`) e ceder a vaga.
+ */
+export function startWeekend(career: CareerState, options: { rest?: boolean } = {}): CareerState {
+  if (career.status !== 'active') throw new Error('A carreira está encerrada.');
   if (career.weekend) throw new Error('Já existe um fim de semana em andamento.');
+  if (career.pendingEvents.length > 0) throw new Error('Resolva as decisões pendentes antes do fim de semana.');
   const event = career.calendar[career.nextRoundIndex];
   if (!event) throw new Error('A temporada já terminou.');
-  return { ...career, weekend: { round: event.round, phase: 'practice', practice: null, qualifying: null } };
+
+  const availability = playerAvailability(career);
+  const playerParticipates = availability.available && !(options.rest && availability.canRest);
+  const entrants: WeekendState['entrants'] = [];
+  for (const team of career.teams) {
+    const reserve = career.drivers.find((d) => d.teamId === team.id && d.role === 'reserve');
+    let reserveUsed = false;
+    for (const driver of career.drivers.filter((d) => d.teamId === team.id && d.role !== 'reserve')) {
+      const out = driver.isPlayer ? !playerParticipates : isUnavailable(driver);
+      if (!out) entrants.push({ driverId: driver.id, teamId: team.id });
+      else if (reserve && !reserveUsed && !isUnavailable(reserve)) {
+        entrants.push({ driverId: reserve.id, teamId: team.id });
+        reserveUsed = true;
+      }
+    }
+  }
+  return { ...career, weekend: { round: event.round, phase: 'practice', practice: null, qualifying: null, entrants, playerParticipates } };
+}
+
+function entrantDrivers(career: CareerState, weekend: WeekendState) {
+  const drivers = driverMap(career);
+  return weekend.entrants.map((e) => {
+    const driver = drivers[e.driverId];
+    if (!driver) throw new Error(`Piloto ${e.driverId} não existe.`);
+    return { driver, team: getTeam(career, e.teamId) };
+  });
 }
 
 export function runPractice(career: CareerState, playerProgram: PracticeProgram): CareerState {
-  const { weekend, event, track } = requireWeekend(career, 'practice');
-  const participants = getActiveDrivers(career).map((driver) => ({
+  const { weekend, event, track, category } = requireWeekend(career, 'practice');
+  const participants = entrantDrivers(career, weekend).map(({ driver, team }) => ({
     driver,
-    team: getTeam(career, driver.teamId ?? ''),
+    team,
     program: driver.isPlayer ? playerProgram : chooseAiPracticeProgram(driver.attributes, track),
   }));
-  const practice = simulatePractice(participants, track, event.weather.practice, sessionSeed(career, weekend.round, 'practice'));
+  const practice = simulatePractice(participants, track, event.weather.practice, sessionSeed(career, weekend.round, 'practice'), category);
   return { ...career, weekend: { ...weekend, phase: 'qualifying', practice } };
 }
 
 export function runQualifying(career: CareerState, playerApproach: QualifyingApproach): CareerState {
-  const { weekend, event, track } = requireWeekend(career, 'qualifying');
+  const { weekend, event, track, category } = requireWeekend(career, 'qualifying');
   const practice = weekend.practice;
   if (!practice) throw new Error('Treino livre não foi disputado.');
   const weather = event.weather.qualifying;
-  const participants = getActiveDrivers(career).map((driver) => {
+  const participants = entrantDrivers(career, weekend).map(({ driver, team }) => {
     const entry = practice.entries.find((e) => e.driverId === driver.id);
     if (!entry) throw new Error(`Piloto ${driver.id} sem resultado de treino.`);
-    return {
-      driver,
-      team: getTeam(career, driver.teamId ?? ''),
-      approach: driver.isPlayer ? playerApproach : chooseAiQualifyingApproach(driver.attributes, weather),
-      modifiers: entry.modifiers,
-    };
+    return { driver, team, approach: driver.isPlayer ? playerApproach : chooseAiQualifyingApproach(driver.attributes, weather), modifiers: entry.modifiers };
   });
-  const qualifying = simulateQualifying(participants, track, weather, sessionSeed(career, weekend.round, 'qualifying'));
+  const qualifying = simulateQualifying(participants, track, weather, sessionSeed(career, weekend.round, 'qualifying'), category, career.gridPenalties);
   return { ...career, weekend: { ...weekend, phase: 'race', qualifying } };
 }
 
 export function buildRaceContext(career: CareerState): RaceContext {
   const event = career.calendar.find((e) => e.round === career.weekend?.round);
   if (!event) throw new Error('Nenhuma etapa em andamento.');
-  return { track: getTrack(event.trackId), drivers: driverMap(career), teams: teamMap(career) };
+  return { track: getTrack(event.trackId), category: getCategory(career.categoryId), drivers: driverMap(career), teams: teamMap(career), rivalries: career.relations.rivalries };
 }
 
-export function createWeekendRace(career: CareerState): RaceSimState {
-  const { weekend, event, track } = requireWeekend(career, 'race');
+/** Estratégias de pneus disponíveis para o jogador nesta corrida. */
+export function playerStrategyOptions(career: CareerState): StrategyOption[] {
+  const { event, track, category } = requireWeekend(career, 'race');
+  const player = getPlayer(career);
+  return buildStrategyOptions(category.race, track, raceLaps(track, category), referenceLapTime(track, category), player.attributes, event.weather.race.wetness);
+}
+
+export function createWeekendRace(career: CareerState, playerPlan?: StrategyPlan): RaceSimState {
+  const { weekend, event } = requireWeekend(career, 'race');
   const { practice, qualifying } = weekend;
   if (!practice || !qualifying) throw new Error('Treino e classificação precisam ser disputados antes da corrida.');
   const grid = qualifying.entries.map((q) => {
     const p = practice.entries.find((e) => e.driverId === q.driverId);
     if (!p) throw new Error(`Piloto ${q.driverId} sem resultado de treino.`);
-    return { driverId: q.driverId, teamId: q.teamId, modifiers: p.modifiers };
+    return { driverId: q.driverId, teamId: q.teamId, modifiers: p.modifiers, ...(q.driverId === career.playerDriverId && playerPlan ? { plan: playerPlan } : {}) };
   });
-  return createRaceSim(grid, track, event.weather.race, sessionSeed(career, weekend.round, 'race'), career.playerDriverId);
-}
-
-function formatDelta(delta: AttributeDelta): string {
-  return Object.entries(delta)
-    .filter(([, v]) => (v ?? 0) >= 0.05)
-    .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
-    .map(([k, v]) => `${ATTRIBUTE_LABELS[k as keyof typeof ATTRIBUTE_LABELS]} +${(v ?? 0).toFixed(1)}`)
-    .join(', ');
-}
-
-function raceMessages(career: CareerState, record: RoundRecord, delta: AttributeDelta | undefined): InboxMessage[] {
-  const player = getPlayer(career);
-  const team = getTeam(career, player.teamId ?? '');
-  const track = getTrack(record.trackId);
-  const entry = record.race.entries.find((e) => e.driverId === player.id);
-  const winner = record.race.entries[0];
-  const winnerDriver = career.drivers.find((d) => d.id === winner?.driverId);
-  const standings = computeDriverStandings(career.rounds, career.drivers);
-  const playerStanding = standings.find((s) => s.driverId === player.id);
-  const messages: InboxMessage[] = [];
-
-  if (entry) {
-    const result =
-      entry.status === 'finished'
-        ? `Você terminou em ${entry.position}º, largando de ${entry.grid}º, e somou ${entry.points} ponto(s).`
-        : `Você abandonou na volta ${entry.lapsCompleted + 1}, depois de largar em ${entry.grid}º.`;
-    messages.push({
-      id: `s${record.season}-r${record.round}-race`,
-      date: record.date,
-      category: 'race',
-      title: `Etapa ${record.round}: ${track.name}`,
-      body: `${result} Vencedor: ${winnerDriver ? fullName(winnerDriver) : '-'}. No campeonato, você é o ${playerStanding?.position ?? '-'}º, com ${playerStanding?.points ?? 0} pontos.`,
-    });
-
-    // Reação da equipe: comparação com a meta da temporada.
-    const target = team.driverTarget;
-    let reaction: string;
-    if (entry.status === 'dnf' && entry.dnfReason !== 'mechanical') {
-      reaction = 'O chefe de equipe lembra que só pontua quem termina a corrida. Erros custam caro no campeonato.';
-    } else if (entry.status === 'dnf') {
-      reaction = 'A equipe assume a culpa pela quebra e promete revisar o motor antes da próxima etapa.';
-    } else if (entry.position <= Math.max(1, target - 2)) {
-      reaction = 'A equipe está empolgada: um resultado acima do que o kart costuma entregar.';
-    } else if (entry.position <= target) {
-      reaction = 'Um resultado sólido, dentro do que a equipe espera.';
-    } else {
-      reaction = `A equipe esperava mais. A meta é terminar a temporada entre os ${target} primeiros.`;
-    }
-    messages.push({ id: `s${record.season}-r${record.round}-team`, date: record.date, category: 'team', title: `${team.name}: avaliação da etapa`, body: reaction });
-  }
-
-  if (delta) {
-    const summary = formatDelta(delta);
-    messages.push({
-      id: `s${record.season}-r${record.round}-training`,
-      date: record.date,
-      category: 'training',
-      title: `Relatório de evolução (${TRAINING_FOCUS_LABELS[player.trainingFocus]})`,
-      body: summary ? `Evolução após a etapa: ${summary}.` : 'Você está perto do seu potencial nos atributos treinados; os ganhos foram mínimos.',
-    });
-  }
-  return messages;
+  return createRaceSim(grid, buildRaceContext(career), event.weather.race, sessionSeed(career, weekend.round, 'race'), career.playerDriverId);
 }
 
 /**
- * Encerra o fim de semana: grava o resultado oficial, aplica a evolução dos
- * pilotos, gera as mensagens e avança o calendário.
+ * Encerra o fim de semana: grava o resultado oficial, aplica os efeitos da
+ * etapa sobre todos os sistemas e avança o calendário. Na última etapa, faz
+ * também o fechamento da temporada.
  */
 export function completeWeekend(career: CareerState, race: RaceSimState): CareerState {
-  const { weekend, event } = requireWeekend(career, 'race');
+  const { weekend, event, category } = requireWeekend(career, 'race');
   if (!isRaceFinished(race)) throw new Error('A corrida ainda não terminou.');
   if (race.seed !== sessionSeed(career, weekend.round, 'race')) throw new Error('A corrida não pertence a esta etapa.');
   const { practice, qualifying } = weekend;
   if (!practice || !qualifying) throw new Error('Fim de semana incompleto.');
 
-  const result: RaceResult = finalizeRace(race);
-  const record: RoundRecord = {
-    season: career.season,
-    round: weekend.round,
-    trackId: event.trackId,
-    date: event.date,
-    practice,
-    qualifying,
-    race: result,
-  };
-
+  const record: RoundRecord = { season: career.season, round: weekend.round, trackId: event.trackId, date: event.date, practice, qualifying, race: finalizeRace(race, category) };
   const withResult: CareerState = { ...career, rounds: [...career.rounds, record], weekend: null, nextRoundIndex: career.nextRoundIndex + 1 };
-  const { drivers, deltas } = developAfterRound(withResult.drivers, career.seed, career.season, weekend.round);
-  const developed: CareerState = { ...withResult, drivers };
-  const messages = raceMessages(developed, record, deltas[career.playerDriverId]);
+  const next = applyRoundEffects(withResult, record, gridDropsFromRace(race));
+  return next.nextRoundIndex >= next.calendar.length ? closeSeason(next) : next;
+}
 
-  if (developed.nextRoundIndex >= developed.calendar.length) {
-    messages.push({
-      id: `s${career.season}-end`,
-      date: event.date,
-      category: 'season',
-      title: 'Fim de temporada',
-      body: 'A temporada terminou. Veja o resumo no painel, avalie as propostas das equipes e comece a próxima temporada.',
-    });
-  }
-  return { ...developed, inbox: pushMessages(developed.inbox, messages) };
+/** Simula a etapa inteira sem o jogador (lesionado, suspenso ou descansando). */
+export function simulateAbsentWeekend(career: CareerState): CareerState {
+  if (!career.weekend || career.weekend.playerParticipates) throw new Error('O jogador participa desta etapa.');
+  let c = career;
+  if (c.weekend?.phase === 'practice') c = runPractice(c, 'setup');
+  if (c.weekend?.phase === 'qualifying') c = runQualifying(c, 'balanced');
+  const race = simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), { mode: 'balanced', auto: true });
+  return completeWeekend(c, race);
 }

@@ -97,8 +97,64 @@ export const DNF_LABELS: Record<DnfReason, string> = {
   crash: 'Acidente',
   mechanical: 'Mecânico',
   collision: 'Toque',
+  fuel: 'Sem combustível',
+  damage: 'Danos',
 };
 
 export function ordinal(n: number): string {
   return `${n}º`;
 }
+
+export const TRAINING_INTENSITY_LABELS: Record<import('./schemas').TrainingIntensity, string> = {
+  light: 'Leve',
+  normal: 'Normal',
+  intense: 'Intenso',
+};
+
+export const TRAINING_INTENSITY_DESCRIPTIONS: Record<import('./schemas').TrainingIntensity, string> = {
+  light: 'Ganho de 60% e custo baixo. Recupera a fase (+2 por etapa).',
+  normal: 'Ganho e custo normais.',
+  intense: 'Ganho de 140%, mas custa mais que o dobro, desgasta a fase (−2 por etapa) e traz 1,5% de risco de lesão leve por etapa.',
+};
+
+export const EVENT_CATEGORY_LABELS: Record<import('./schemas').EventCategory, string> = {
+  interview: 'Entrevista',
+  controversy: 'Polêmica',
+  rivalry: 'Rivalidade',
+  investigation: 'Investigação',
+  protest: 'Protesto',
+  contract: 'Contrato',
+  sponsor: 'Patrocínio',
+  unexpected: 'Inesperado',
+};
+
+export const OFFER_KIND_LABELS: Record<import('./schemas').Offer['kind'], string> = {
+  continue: 'Contrato vigente',
+  renewal: 'Renovação',
+  transfer: 'Transferência',
+  promotion: 'Promoção',
+  demotion: 'Categoria abaixo',
+  fallback: 'Vaga garantida',
+};
+
+export const LEDGER_LABELS: Record<import('./schemas').LedgerKey, string> = {
+  salary: 'Salário',
+  sponsors: 'Patrocínios',
+  bonus: 'Bônus',
+  academy: 'Apoio da academia',
+  investment: 'Rendimento de investimentos',
+  seat: 'Custo da vaga',
+  living: 'Custo de vida e estrutura',
+  training: 'Treino',
+  damage: 'Danos',
+  tax: 'Impostos',
+  interest: 'Juros',
+  release: 'Multas rescisórias',
+  event: 'Eventos',
+};
+
+export const ROLE_LABELS: Record<import('./schemas').DriverRole, string> = {
+  first: 'Primeiro piloto',
+  second: 'Segundo piloto',
+  reserve: 'Reserva',
+};

@@ -1,5 +1,6 @@
 /** Consultas puras sobre o estado da carreira. Usadas pela UI e pelo próprio motor. */
 import type { CareerState, ChampionshipEvent, Driver, Team } from '@/domain/schemas';
+import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { getTrack } from '@/data/tracks';
 import { computeDriverStandings, computeTeamStandings } from '../championship/standings';
 
@@ -21,6 +22,20 @@ export function getPlayerTeam(career: CareerState): Team {
   return getTeam(career, player.teamId);
 }
 
+export function getCareerCategory(career: CareerState): CategoryDefinition {
+  return getCategory(career.categoryId);
+}
+
+/** Companheiro de equipe titular do jogador (null se a vaga estiver vazia). */
+export function getTeammate(career: CareerState): Driver | null {
+  const player = getPlayer(career);
+  return career.drivers.find((d) => d.teamId === player.teamId && d.id !== player.id && d.role !== 'reserve') ?? null;
+}
+
+export function getReserve(career: CareerState, teamId: string): Driver | null {
+  return career.drivers.find((d) => d.teamId === teamId && d.role === 'reserve') ?? null;
+}
+
 export function getNextEvent(career: CareerState): ChampionshipEvent | null {
   return career.calendar[career.nextRoundIndex] ?? null;
 }
@@ -30,8 +45,9 @@ export function getCurrentEvent(career: CareerState): ChampionshipEvent | null {
   return career.calendar.find((e) => e.round === career.weekend?.round) ?? null;
 }
 
-export function getActiveDrivers(career: CareerState): Driver[] {
-  return career.drivers.filter((d) => d.teamId !== null);
+/** Pilotos titulares (com vaga de corrida) da categoria atual. */
+export function getRaceDrivers(career: CareerState): Driver[] {
+  return career.drivers.filter((d) => d.teamId !== null && d.role !== 'reserve');
 }
 
 export function driverMap(career: CareerState): Record<string, Driver> {
@@ -47,11 +63,11 @@ export function isSeasonComplete(career: CareerState): boolean {
 }
 
 export function driverStandings(career: CareerState) {
-  return computeDriverStandings(career.rounds, career.drivers);
+  return computeDriverStandings(career.rounds, career.drivers, career.adjustments);
 }
 
 export function teamStandings(career: CareerState) {
-  return computeTeamStandings(career.rounds, career.teams);
+  return computeTeamStandings(career.rounds, career.teams, career.adjustments);
 }
 
 export function fullName(driver: Pick<Driver, 'firstName' | 'lastName'>): string {
@@ -60,4 +76,8 @@ export function fullName(driver: Pick<Driver, 'firstName' | 'lastName'>): string
 
 export function trackName(trackId: string): string {
   return getTrack(trackId).name;
+}
+
+export function teamKey(categoryId: string, teamId: string): string {
+  return `${categoryId}:${teamId}`;
 }

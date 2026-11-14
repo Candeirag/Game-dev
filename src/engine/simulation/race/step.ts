@@ -157,6 +157,7 @@ interface LapWork {
 }
 
 type Incident = 'crash' | 'collision' | 'mechanical' | 'spin';
+type RaceControlCall = 'none' | 'vsc' | 'sc' | 'red';
 
 /** Simula uma volta com as decisões do jogador. */
 export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: PlayerRaceInput): RaceSimState {
@@ -625,13 +626,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
 
   if (incidents.length > 0 && lap < state.totalLaps && runningCars.length > 1) {
     const rng = createRng(hashSeed(state.seed, lap, 'race-control'));
-    let call: 'none' | 'vsc' | 'sc' | 'red' = 'none';
+    let call = 'none' as RaceControlCall;
     const rank = { none: 0, vsc: 1, sc: 2, red: 3 } as const;
     for (const incident of incidents) {
       const [sc, vsc, red] = RACE.NEUTRALIZATION_ODDS[incident];
       const roll = rng.next();
       const heavyRainRoll = rng.next();
-      let outcome: typeof call = 'none';
+      let outcome: RaceControlCall = 'none';
       if (rules.redFlag && (roll < red || (wetness >= 0.9 && incident !== 'mechanical' && incident !== 'spin' && heavyRainRoll < RACE.RED_FLAG_HEAVY_RAIN_CHANCE))) outcome = 'red';
       else if (rules.safetyCar && roll < red + sc) outcome = 'sc';
       else if (roll < red + sc + vsc) outcome = rules.virtualSafetyCar ? 'vsc' : 'none';

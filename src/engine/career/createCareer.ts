@@ -1,7 +1,7 @@
-import { CAREER_SCHEMA_VERSION, type AttributeKey, type CareerState, type ChampionshipEvent, type Driver } from '@/domain/schemas';
-import { AI_DRIVERS, ROOKIE_SEAT_DRIVER } from '@/data/drivers';
+import { CAREER_SCHEMA_VERSION, type AttributeKey, type CareerState, type ChampionshipEvent, type Contract, type Driver } from '@/domain/schemas';
+import { getCategory, type CategoryDefinition } from '@/data/categories';
+import { AI_DRIVERS, NEUTRAL_CONDITION, ROOKIE_SEAT_DRIVER } from '@/data/drivers';
 import {
-  CHAMPIONSHIP_NAME,
   FIRST_SEASON_YEAR,
   NATIONALITIES,
   PLAYER_BACKGROUNDS,
@@ -12,11 +12,16 @@ import {
   STARTING_REPUTATION,
   type PlayerBackground,
 } from '@/data/rules';
-import { ROOKIE_TEAM_IDS, TEAMS } from '@/data/teams';
-import { CALENDAR_DATES, TRACKS } from '@/data/tracks';
+import { ROOKIE_TEAM_IDS, initialTeams } from '@/data/teams';
+import { calendarDates, getTrack } from '@/data/tracks';
 import { chooseAiTrainingFocus } from '../ai/decisions';
 import { hashSeed } from '../rng';
 import { generateEventWeather } from '../simulation/weather';
+import { generateReserve, rankTeams } from '../world/generation';
+import { ECONOMY, emptyFinance } from './economy';
+import { updateMarketInterest } from './market';
+import { fullName } from './selectors';
+import { familySupport } from './sponsors';
 import { TRAINABLE_ATTRIBUTES } from './training';
 
 export const PLAYER_DRIVER_ID = 'player';
@@ -55,14 +60,18 @@ export function validateNewCareerInput(input: NewCareerInput): string[] {
   return problems;
 }
 
-export function buildCalendar(careerSeed: number, season: number, year: number): ChampionshipEvent[] {
-  return TRACKS.map((track, index) => ({
+export function buildCalendar(careerSeed: number, season: number, year: number, category: CategoryDefinition = getCategory('kart-regional')): ChampionshipEvent[] {
+  const dates = calendarDates(year, category.rounds);
+  return category.trackIds.slice(0, category.rounds).map((trackId, index) => ({
     round: index + 1,
-    trackId: track.id,
-    date: `${year}-${CALENDAR_DATES[index] ?? '01-01'}`,
-    weather: generateEventWeather(hashSeed(careerSeed, season, index + 1, 'weather'), track),
+    trackId,
+    date: dates[index] ?? `${year}-01-01`,
+    weather: generateEventWeather(hashSeed(careerSeed, season, index + 1, 'weather'), getTrack(trackId)),
   }));
 }
+
+/** Desconto no custo da vaga para o estreante: as equipes de entrada apostam em jovens. */
+const ROOKIE_SEAT_DISCOUNT = 0.25;
 
 export function createCareer(input: NewCareerInput, seed: number, now: string): CareerState {
   const problems = validateNewCareerInput(input);
@@ -70,6 +79,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
 
   const background = PLAYER_BACKGROUNDS.find((b) => b.id === input.background);
   if (!background) throw new Error('Perfil inválido.');
+  const category = getCategory('kart-regional');
 
   const attributes = { ...background.attributes };
   for (const key of TRAINABLE_ATTRIBUTES) attributes[key] += input.bonus[key] ?? 0;
@@ -81,27 +91,55 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     nationality: input.nationality,
     age: input.age,
     teamId: input.teamId,
+    role: 'second',
+    contractEnd: 1,
     isPlayer: true,
     attributes,
     potential: background.potential,
     trainingFocus: 'balanced',
+    condition: { ...NEUTRAL_CONDITION },
+    injury: null,
   };
 
+  // O estreante que cede a vaga ao jogador vira o reserva da equipe.
   const displacedId = ROOKIE_SEAT_DRIVER[input.teamId];
   const aiDrivers: Driver[] = AI_DRIVERS.map((d) => ({
     ...d,
     attributes: { ...d.attributes },
-    teamId: d.id === displacedId ? null : d.teamId,
+    condition: { ...d.condition },
+    role: d.id === displacedId ? 'reserve' : d.role,
     trainingFocus: chooseAiTrainingFocus(d.attributes),
   }));
 
-  const team = TEAMS.find((t) => t.id === input.teamId);
+  const teams = initialTeams('kart-regional');
+  const team = teams.find((t) => t.id === input.teamId);
   if (!team) throw new Error('Equipe inválida.');
+  const ranked = rankTeams(teams);
+  const usedNames = new Set([fullName(player), ...aiDrivers.map(fullName)]);
+  const reserves = ranked
+    .filter((t) => t.id !== input.teamId)
+    .map((t) => generateReserve(category, t, ranked.indexOf(t), seed, 1, usedNames));
+
+  const rank = ranked.findIndex((t) => t.id === team.id);
+  const [seatTop, seatBottom] = category.economy.seatCost;
+  const seatCost = Math.round(((seatTop + (seatBottom - seatTop) * (rank / 9)) * (1 - ROOKIE_SEAT_DISCOUNT)) / 500) * 500;
+  const contract: Contract = {
+    teamId: team.id,
+    categoryId: category.id,
+    role: 'second',
+    startSeason: 1,
+    endSeason: 1,
+    salary: 0,
+    seatCost,
+    bonuses: { win: 0, podium: 0, point: 0, title: 0 },
+    clauses: { releaseFee: 0, performanceTarget: null },
+  };
+
   const year = FIRST_SEASON_YEAR;
-  const calendar = buildCalendar(seed, 1, year);
+  const calendar = buildCalendar(seed, 1, year, category);
   const firstDate = calendar[0]?.date ?? `${year}-01-01`;
 
-  return {
+  const career: CareerState = {
     schemaVersion: CAREER_SCHEMA_VERSION,
     id: `career-${seed.toString(16)}`,
     createdAt: now,
@@ -109,15 +147,30 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     seed,
     season: 1,
     year,
+    status: 'active',
+    categoryId: category.id,
     playerDriverId: PLAYER_DRIVER_ID,
     reputation: STARTING_REPUTATION,
-    drivers: [player, ...aiDrivers],
-    teams: TEAMS.map((t) => ({ ...t, kart: { ...t.kart } })),
+    drivers: [player, ...aiDrivers, ...reserves],
+    teams,
     calendar,
     nextRoundIndex: 0,
     weekend: null,
     rounds: [],
+    adjustments: [],
+    gridPenalties: {},
     playerSeasonStartAttributes: { ...attributes },
+    trainingIntensity: 'normal',
+    contract,
+    finance: emptyFinance(ECONOMY.STARTING_CASH),
+    sponsors: [familySupport()],
+    academy: null,
+    license: { history: [], penaltyPoints: 0, banRounds: 0 },
+    relations: { teamTrust: 50, teammate: 50, rivalries: {} },
+    marketInterest: {},
+    pendingEvents: [],
+    eventLog: [],
+    offseason: null,
     history: [],
     inbox: [
       {
@@ -125,8 +178,9 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
         date: firstDate,
         category: 'team',
         title: `Bem-vindo à ${team.name}`,
-        body: `Você é o novo piloto da ${team.name} no ${CHAMPIONSHIP_NAME} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. Escolha um programa de treino no painel e prepare-se para a etapa de abertura.`,
+        body: `Você é o novo piloto da ${team.name} no ${category.name} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. A vaga custa € ${seatCost.toLocaleString('pt-BR')} por temporada, pagos em parcelas por etapa; a família ajuda nos três primeiros anos. Escolha o programa de treino no painel e prepare-se para a etapa de abertura.`,
       },
     ],
   };
+  return { ...career, marketInterest: updateMarketInterest(career, 1) };
 }

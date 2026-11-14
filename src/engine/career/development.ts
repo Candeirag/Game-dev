@@ -45,7 +45,7 @@ const round2 = (v: number) => Math.round(v * 100) / 100;
 export type AttributeDelta = Partial<Record<AttributeKey, number>>;
 
 /** Aplica um ciclo de desenvolvimento a um piloto. A semente define a variação. */
-export function developDriver(driver: Driver, seed: number, cycles = 1): { driver: Driver; delta: AttributeDelta } {
+export function developDriver(driver: Driver, seed: number, cycles = 1, multiplier = 1): { driver: Driver; delta: AttributeDelta } {
   const rng = createRng(seed);
   const weights = TRAINING_GROUPS[driver.trainingFocus];
   const factor = ageFactor(driver.age);
@@ -59,7 +59,7 @@ export function developDriver(driver: Driver, seed: number, cycles = 1): { drive
     if (gap <= 0) continue;
     const gapFactor = Math.min(1, gap / DEVELOPMENT.FULL_GAIN_GAP);
     const rate = DEVELOPMENT.TRAINING_RATE * (weights[key] ?? 0) + DEVELOPMENT.NATURAL_RATE;
-    const gain = Math.min(gap, rate * factor * gapFactor * variation * cycles);
+    const gain = Math.min(gap, rate * factor * gapFactor * variation * cycles * multiplier);
     attributes[key] = round2(current + gain);
     delta[key] = round2(attributes[key] - current);
   }
@@ -72,19 +72,60 @@ export function developDriver(driver: Driver, seed: number, cycles = 1): { drive
   return { driver: { ...driver, attributes }, delta };
 }
 
-/** Desenvolve todos os pilotos com vaga após uma etapa. */
+/** Ganho de treino por intensidade. O treino intenso rende mais, mas custa caro e desgasta. */
+export const INTENSITY_GAIN = { light: 0.6, normal: 1, intense: 1.4 } as const;
+
+/**
+ * Multiplicador do aproveitamento do treino pela moral: 0,8 com moral 0,
+ * 1,0 com moral 50 e 1,2 com moral 100.
+ */
+export function moraleTrainingFactor(morale: number): number {
+  return 0.8 + morale / 250;
+}
+
+/**
+ * Desenvolve todos os pilotos com vaga após uma etapa. Reservas treinam, mas
+ * rendem metade (não competem). `playerMultiplier` reúne a intensidade do
+ * treino e o apoio da academia do jogador.
+ */
 export function developAfterRound(
   drivers: readonly Driver[],
   careerSeed: number,
   season: number,
   round: number,
+  playerMultiplier = 1,
 ): { drivers: Driver[]; deltas: Record<string, AttributeDelta> } {
   const deltas: Record<string, AttributeDelta> = {};
   const next = drivers.map((d) => {
     if (!d.teamId) return d;
-    const result = developDriver(d, hashSeed(careerSeed, season, round, 'development', d.id));
+    const multiplier = moraleTrainingFactor(d.condition.morale) * (d.isPlayer ? playerMultiplier : 1) * (d.role === 'reserve' ? 0.5 : 1) * (d.injury?.severity === 'serious' ? 0.3 : 1);
+    const result = developDriver(d, hashSeed(careerSeed, season, round, 'development', d.id), 1, multiplier);
     deltas[d.id] = result.delta;
     return result.driver;
   });
   return { drivers: next, deltas };
+}
+
+/**
+ * Envelhecimento. A partir dos 31 anos, os atributos físicos e de reflexo
+ * (velocidade, concentração, ultrapassagem e chuva) caem a cada temporada:
+ * 0,25 ponto por ano de idade acima de 30, com variação de ±30%. Aos 34, a
+ * perda é de cerca de 1 ponto por ano; aos 38, de 2. Leitura de corrida,
+ * gestão de pneus e experiência não caem: é por isso que veteranos ainda
+ * rendem em corrida mesmo perdendo velocidade pura.
+ */
+export const DECLINE_START_AGE = 31;
+const DECLINING: readonly (keyof Driver['attributes'])[] = ['pace', 'focus', 'overtaking', 'wetSkill'];
+
+export function applyAging(driver: Driver, seed: number): Driver {
+  if (driver.age < DECLINE_START_AGE) return driver;
+  const rng = createRng(seed);
+  const attributes = { ...driver.attributes };
+  for (const key of DECLINING) {
+    const loss = (driver.age - 30) * 0.25 * uniform(rng, 0.7, 1.3) * (key === 'pace' ? 1 : 0.7);
+    attributes[key] = round2(Math.max(30, attributes[key] - loss));
+  }
+  // O potencial acompanha a queda (0,4 ponto por ano acima de 30): o treino não devolve o que a idade levou.
+  const potential = round2(Math.max(attributes.pace, driver.potential - (driver.age - 30) * 0.4));
+  return { ...driver, attributes, potential };
 }

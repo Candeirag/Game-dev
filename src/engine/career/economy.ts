@@ -131,6 +131,12 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
 
 export type InvestmentProduct = 'fixedIncome' | 'equityFund';
 
+export interface InvestmentMove {
+  product: InvestmentProduct;
+  /** Positivo aplica; negativo resgata. */
+  amount: number;
+}
+
 /** Aplica (valor positivo) ou resgata (valor negativo) de um investimento. */
 export function moveInvestment(finance: Finance, product: InvestmentProduct, amount: number): Finance {
   const value = Math.round(amount);
