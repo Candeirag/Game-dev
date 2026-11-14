@@ -209,10 +209,10 @@ export function StakesPanel() {
 export function CreditPanel() {
   const career = useCareer();
   const { takeLoan, repayLoan, setLifestyle } = useGameStore.getState();
-  const [amount, setAmount] = useState('50000');
+  const limit = loanLimit(career);
+  const [amount, setAmount] = useState(String(Math.min(50_000, limit)));
   const [term, setTerm] = useState<number>(ASSET_RULES.LOAN_TERMS[1]);
   const f = career.finance;
-  const limit = loanLimit(career);
   const value = Math.max(0, Math.round(Number(amount) || 0));
   const living = getCategory(career.categoryId).economy.living;
   return (

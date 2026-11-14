@@ -11,7 +11,8 @@ import { MANAGEMENT, REGULATIONS, TEAM_ECONOMY } from '@/data/management';
 import { closeSeasonFinance } from '@/engine/career/economy';
 import { applyEffects } from '@/engine/events/effects';
 import { validateCareerIntegrity } from '@/persistence/integrity';
-import { exportCareer, importCareer } from '@/persistence/saveService';
+import { exportCareer, importCareer, loadCareer, saveCareer, summarize } from '@/persistence/saveService';
+import { MemoryStorage } from '@/persistence/storage';
 import * as engine from './engineApi';
 import { NOW, botCareer, botExecutiveOffseason, newCareer, pickBestOffer, playExecutiveRound, playLifeSeason, playRound, playSeason, resolvePending } from './helpers';
 
@@ -907,6 +908,22 @@ describe('compatibilidade com saves da Fase 2', () => {
 });
 
 /* ------------------------------------------------------------------ */
+
+describe('saves no modo dirigente', () => {
+  it('salvar e carregar funciona fora das pistas: sem equipe, como dono e com sucessão aberta', async () => {
+    const storage = new MemoryStorage();
+    const spectator = engine.startExecutiveSeason(retiredCareer(83), { kind: 'spectate' });
+    const owner = playExecutiveRound(ownerCareer('f3', 8, 83));
+    const succession = engine.beginSuccession(resolvePending(owner), 'death');
+    for (const [slot, state] of [['slot1', spectator], ['slot2', owner], ['slot3', succession]] as const) {
+      const envelope = await saveCareer(storage, slot, state, NOW);
+      expect(envelope.summary.playerName).toBe('Ana Teste');
+      expect((await loadCareer(storage, slot)).career).toEqual(state);
+    }
+    expect(summarize(spectator)).toMatchObject({ teamName: 'Sem equipe', championshipPosition: null });
+    expect(summarize(owner)).toMatchObject({ teamName: engine.managedTeam(owner)!.name, championshipPosition: engine.managedTeamPosition(owner) });
+  });
+});
 
 describe('uma vida inteira e além', () => {
   it('piloto, dirigente, morte e herdeiro: o save continua válido por 60 temporadas e atravessa gerações', () => {

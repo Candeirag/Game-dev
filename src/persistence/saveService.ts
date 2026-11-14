@@ -13,7 +13,7 @@
  */
 import { CAREER_SCHEMA_VERSION, CareerStateSchema, type CareerState } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
-import { getPlayer, getPlayerTeam, driverStandings } from '@/engine';
+import { getPlayer, driverStandings, teamStandings } from '@/engine';
 import { checksumOf } from './checksum';
 import { validateCareerIntegrity } from './integrity';
 import { migrateCareerData } from './migrations';
@@ -59,10 +59,15 @@ const backupKey = (slot: SaveSlotId) => `${slot}.backup`;
 
 export function summarize(career: CareerState): SaveSummary {
   const player = getPlayer(career);
-  const standing = driverStandings(career).find((s) => s.driverId === player.id);
+  // Como piloto, vale a posição dele no campeonato; como dirigente, a da equipe que ele comanda.
+  const driving = player.teamId !== null;
+  const team = career.teams.find((t) => t.id === (driving ? player.teamId : career.management?.teamId));
+  const standing = driving
+    ? driverStandings(career).find((s) => s.driverId === player.id)
+    : team ? teamStandings(career).find((s) => s.teamId === team.id) : undefined;
   return {
     playerName: `${player.firstName} ${player.lastName}`,
-    teamName: getPlayerTeam(career).name,
+    teamName: team?.name ?? 'Sem equipe',
     categoryName: getCategory(career.categoryId).shortName,
     season: career.season,
     year: career.year,

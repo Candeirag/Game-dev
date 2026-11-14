@@ -160,19 +160,36 @@ export function buildSponsorOffers(careerSeed: number, season: number, m: Pick<M
  * Na F1, a equipe paga: o salário pedido cresce com a nota do piloto. Nas
  * categorias de base, é o piloto que paga pela vaga, e quanto melhor ele é,
  * menos paga: de 105% do preço de tabela (o mais fraco do grid) a 65% (o
- * melhor). A ambição diz que tamanho de equipe ele aceita.
+ * melhor). A ambição diz que tamanho de equipe ele aceita: é comparada com a
+ * reputação da equipe (mais um bônus de quem já corre por ela).
  */
-export function driverTerms(categoryId: ManagedTeam['categoryId'], teamRank: number, driver: Pick<Driver, 'attributes'>): { rating: number; salary: number; seatFee: number; ambition: number } {
+export function driverTerms(
+  categoryId: ManagedTeam['categoryId'],
+  teamRank: number,
+  driver: Pick<Driver, 'attributes'>,
+  /** Notas dos titulares do grid atual. Com elas, o piloto é medido contra os rivais de verdade. */
+  fieldRatings?: readonly number[],
+): { rating: number; quality: number; salary: number; seatFee: number; ambition: number } {
   const category = getCategory(categoryId);
   const rating = overallRating(driver.attributes);
-  const q = clamp((rating - (category.field.driverLevel - category.field.driverSpread / 2 - 2)) / (category.field.driverSpread + 4), 0, 1);
+  // Qualidade de 0 a 1: a fração do grid que ele supera. Sem o grid à mão, vale o nível nominal da categoria.
+  const q = fieldRatings && fieldRatings.length > 0
+    ? fieldRatings.filter((r) => r < rating).length / fieldRatings.length
+    : clamp((rating - (category.field.driverLevel - category.field.driverSpread / 2 - 2)) / (category.field.driverSpread + 4), 0, 1);
   const [top, bottom] = category.economy.salary;
   return {
     rating: round1(rating),
+    quality: q,
     salary: Math.round((bottom + (top - bottom) * Math.pow(q, 1.5)) / 1000) * 1000,
     seatFee: Math.round((lerp(category.economy.seatCost, teamRank / 9) * (1.05 - 0.4 * q)) / 500) * 500,
-    ambition: 50 + (rating - category.field.driverLevel) * 5,
+    // Um piloto mediano aceita uma equipe mediana; o melhor do grid só as de ponta.
+    ambition: 100 * q,
   };
+}
+
+/** Notas gerais dos pilotos titulares do campeonato atual. */
+export function fieldRatings(career: CareerState): number[] {
+  return career.drivers.filter((d) => d.teamId !== null && d.role !== 'reserve').map((d) => overallRating(d.attributes));
 }
 
 /* ------------------------------------------------------------------ */
@@ -206,9 +223,10 @@ export function createManagedTeam(career: CareerState, teamId: string, options: 
   const departments = options.founded ? 1 : clamp(Math.round(4.5 - rank * 0.35), 1, 5);
 
   const deals: ManagedTeam['deals'] = {};
+  const grid = fieldRatings(career);
   for (const driver of career.drivers.filter((d) => d.teamId === teamId)) {
     const race = driver.role !== 'reserve';
-    const terms = driverTerms(categoryId, rank, driver);
+    const terms = driverTerms(categoryId, rank, driver, grid);
     deals[driver.id] = { salary: race ? terms.salary : 0, seatFee: race ? terms.seatFee : 0, endSeason: Math.max(season, driver.contractEnd) };
   }
 

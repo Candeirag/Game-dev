@@ -35,7 +35,7 @@ import { createRng, gaussian, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, generateReserve, rankTeams } from '../world/generation';
 import { managementRoundEvent } from './events';
-import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
+import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, fieldRatings, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -275,10 +275,11 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
   const rank = Math.max(0, ranked.findIndex((t) => t.id === m.teamId));
   const nextSeason = career.season + 1;
   const attractiveness = m.reputation + (staffRating(m, 'sportingDirector') - 60) * 0.3;
+  const grid = fieldRatings(career);
   // Idade-limite: na F1, quem chega aos 38 se aposenta; nas outras, vale a idade máxima da categoria.
   const tooOld = (ageNextSeason: number) => (category.tier === 7 ? ageNextSeason >= 38 : ageNextSeason > category.field.maxAge + 1);
   const candidate = (driver: Driver, origin: DriverCandidate['origin'], inWorld: boolean, childId: string | null): DriverCandidate => {
-    const t = driverTerms(m.categoryId, rank, driver);
+    const t = driverTerms(m.categoryId, rank, driver, grid);
     const family = origin === 'child';
     const age = driver.age + (inWorld ? 1 : 0);
     const willing = !tooOld(age) && (family || origin === 'rookie' || attractiveness + (origin === 'current' ? 18 : 8) >= t.ambition);
