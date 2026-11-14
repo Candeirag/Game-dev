@@ -15,7 +15,7 @@ export function EventsPanel() {
   return (
     <div className="space-y-3">
       {lastOutcome && (
-        <div role="status" className="chamfer bg-ink-600 p-px">
+        <div role="status" className="enter chamfer bg-ink-600 p-px">
           <div className="chamfer flex items-start justify-between gap-3 bg-ink-800 py-3 pl-4 pr-2 text-sm">
             <div>
               <div className="font-display text-base font-semibold uppercase tracking-wide text-ink-100">{lastOutcome.title}</div>

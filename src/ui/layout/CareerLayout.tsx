@@ -30,6 +30,7 @@ import { Button, cx } from '../components/ui';
 import { StorageWarning } from '../components/SaveNotices';
 import { formatDate, formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { scrollToElement, usePresence } from '../motion';
 import { SuccessionScreen } from '../screens/SuccessionScreen';
 import { ChromeContext, WIDE_QUERY, primaryAction, useMediaQuery, type PrimaryAction } from './chrome';
 
@@ -113,7 +114,7 @@ function AdvanceButton({ action, className }: { action: PrimaryAction; className
   const go = () => {
     if (location.pathname !== action.to) navigate(action.to);
     const anchor = action.anchor;
-    if (anchor) window.setTimeout(() => document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    if (anchor) window.setTimeout(() => scrollToElement(anchor), 60);
   };
   return (
     <button
@@ -173,6 +174,8 @@ function CareerShell() {
   const [raceBar, setRaceBar] = useState(false);
   const chrome = useMemo(() => ({ setRaceBar, wide }), [wide]);
   const [moreOpen, setMoreOpen] = useState(false);
+  // O "Mais" entra e sai com transição; fica montado só enquanto aparece.
+  const more = usePresence(moreOpen);
   // biome-ignore lint/correctness/useExhaustiveDependencies: fecha o "Mais" a cada troca de tela ou de formato
   useEffect(() => {
     setMoreOpen(false);
@@ -267,7 +270,7 @@ function CareerShell() {
       {notice && (
         <div
           role="status"
-          className="mx-4 mt-4 flex items-start justify-between gap-3 border border-gold-400/40 bg-gold-400/10 px-4 py-3 text-sm text-gold-400 lg:mx-6"
+          className="enter mx-4 mt-4 flex items-start justify-between gap-3 border border-gold-400/40 bg-gold-400/10 px-4 py-3 text-sm text-gold-400 lg:mx-6"
         >
           <span>{notice}</span>
           <button
@@ -353,10 +356,25 @@ function CareerShell() {
               </button>
             </div>
           </nav>
-          {moreOpen && (
-            <div className="fixed inset-0 z-30" role="dialog" aria-modal="true" aria-label="Mais telas">
-              <button type="button" aria-label="Fechar" className="absolute inset-0 h-full w-full bg-black/50" onClick={() => setMoreOpen(false)} />
-              <div className="absolute bottom-0 left-[var(--rail-w)] top-0 flex w-[min(26rem,calc(100vw-var(--rail-w)))] flex-col gap-3 overflow-y-auto border-r border-ink-700 bg-ink-900 p-4 pt-[calc(1rem+env(safe-area-inset-top))]">
+          {more.mounted && (
+            <div
+              className={cx('fixed inset-0 z-30', !moreOpen && 'pointer-events-none')}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Mais telas"
+              inert={!moreOpen}
+            >
+              <button
+                type="button"
+                aria-label="Fechar"
+                data-shown={more.shown}
+                className="absolute inset-0 h-full w-full bg-black/50 opacity-0 transition-opacity duration-(--motion-base) data-[shown=true]:opacity-100"
+                onClick={() => setMoreOpen(false)}
+              />
+              <div
+                data-shown={more.shown}
+                className="absolute bottom-0 left-[var(--rail-w)] top-0 -translate-x-4 opacity-0 transition-[translate,opacity] duration-(--motion-base) ease-(--ease-out) data-[shown=true]:translate-x-0 data-[shown=true]:opacity-100 flex w-[min(26rem,calc(100vw-var(--rail-w)))] flex-col gap-3 overflow-y-auto border-r border-ink-700 bg-ink-900 p-4 pt-[calc(1rem+env(safe-area-inset-top))]"
+              >
                 <div className="flex items-start justify-between gap-3">
                   {who}
                   <button
@@ -458,10 +476,25 @@ function CareerShell() {
             </button>
           </nav>
         )}
-        {moreOpen && (
-          <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Mais telas">
-            <button type="button" aria-label="Fechar" className="absolute inset-0 h-full w-full bg-black/60" onClick={() => setMoreOpen(false)} />
-            <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto border-t border-ink-700 bg-ink-900 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        {more.mounted && (
+          <div
+            className={cx('fixed inset-0 z-50', !moreOpen && 'pointer-events-none')}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mais telas"
+            inert={!moreOpen}
+          >
+            <button
+              type="button"
+              aria-label="Fechar"
+              data-shown={more.shown}
+              className="absolute inset-0 h-full w-full bg-black/60 opacity-0 transition-opacity duration-(--motion-base) data-[shown=true]:opacity-100"
+              onClick={() => setMoreOpen(false)}
+            />
+            <div
+              data-shown={more.shown}
+              className="absolute inset-x-0 bottom-0 max-h-[85vh] translate-y-full transition-[translate] duration-(--motion-base) ease-(--ease-out) data-[shown=true]:translate-y-0 overflow-y-auto border-t border-ink-700 bg-ink-900 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+            >
               <div className="mb-2 flex items-start justify-between gap-3">
                 {who}
                 <button

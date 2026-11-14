@@ -35,6 +35,7 @@ import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
 import { cx } from '../components/ui';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { scrollToElement } from '../motion';
 import { Panel, Tag, type Tone } from '../kit/Panel';
 import { Ring } from '../kit/Ring';
 import { Gauge, NumberPlate, ResultChips, WeatherTag, type RecentResult } from '../kit/bits';
@@ -501,7 +502,7 @@ function AdvanceInPlace() {
     <button
       type="button"
       onClick={() => {
-        if (action.anchor) document.getElementById(action.anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (action.anchor) scrollToElement(action.anchor);
         else navigate(action.to);
       }}
       className={cx(

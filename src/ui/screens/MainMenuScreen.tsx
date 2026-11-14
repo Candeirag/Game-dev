@@ -6,6 +6,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button, cx } from '../components/ui';
 import { formatDateTime } from '../format';
 import { StorageWarning } from '../components/SaveNotices';
+import { LoaderCircle } from 'lucide-react';
 
 const SLOT_LABELS: Record<SaveSlotId, string> = { auto: 'Save automático', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
 
@@ -18,27 +19,37 @@ export function MainMenuScreen() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Abrir um save é espera de verdade (leitura do armazenamento, validação e migração): o botão
+  // mostra o progresso e os outros ficam travados até terminar.
+  const [opening, setOpening] = useState<SaveSlotId | 'file' | null>(null);
+
   if (career) return <Navigate to="/dashboard" replace />;
 
   const auto = slots.find((s) => s.slot === 'auto' && s.status === 'ok');
 
   async function load(slot: SaveSlotId) {
     setError(null);
+    setOpening(slot);
     try {
       await loadSlot(slot);
       navigate('/dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOpening(null);
     }
   }
 
   async function onImport(file: File) {
     setError(null);
+    setOpening('file');
     try {
       await importJson(await file.text());
       navigate('/dashboard');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOpening(null);
     }
   }
 
@@ -78,7 +89,8 @@ export function MainMenuScreen() {
               Nova carreira
             </Button>
             {auto && (
-              <Button className="h-14 text-base" onClick={() => void load('auto')}>
+              <Button className="h-14 text-base" disabled={opening !== null} aria-busy={opening === 'auto'} onClick={() => void load('auto')}>
+                {opening === 'auto' && <LoaderCircle size={18} aria-hidden className="animate-spin" />}
                 Continuar: {auto.summary?.playerName} · {auto.summary?.categoryName ?? 'Kart Regional'} {auto.summary?.year} · Etapa{' '}
                 {auto.summary?.roundsCompleted}/{auto.summary?.totalRounds}
               </Button>
@@ -89,7 +101,7 @@ export function MainMenuScreen() {
             <div className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-ink-300">Carregar carreira</div>
             <ul className="space-y-2">
               {slots.map((slot) => (
-                <SlotRow key={slot.slot} slot={slot} onLoad={() => void load(slot.slot)} />
+                <SlotRow key={slot.slot} slot={slot} busy={opening === slot.slot} disabled={opening !== null} onLoad={() => void load(slot.slot)} />
               ))}
               {slots.length === 0 && <li className="text-sm text-ink-400">Verificando saves…</li>}
             </ul>
@@ -101,8 +113,9 @@ export function MainMenuScreen() {
                 className="hidden"
                 onChange={(e) => e.target.files?.[0] && void onImport(e.target.files[0])}
               />
-              <Button variant="ghost" className="w-full" onClick={() => fileInput.current?.click()}>
-                Importar save (.json)
+              <Button variant="ghost" className="w-full" disabled={opening !== null} aria-busy={opening === 'file'} onClick={() => fileInput.current?.click()}>
+                {opening === 'file' && <LoaderCircle size={16} aria-hidden className="animate-spin" />}
+                {opening === 'file' ? 'Abrindo o save…' : 'Importar save (.json)'}
               </Button>
             </div>
           </div>
@@ -117,7 +130,7 @@ export function MainMenuScreen() {
   );
 }
 
-function SlotRow({ slot, onLoad }: { slot: SlotInfo; onLoad: () => void }) {
+function SlotRow({ slot, busy, disabled, onLoad }: { slot: SlotInfo; busy: boolean; disabled: boolean; onLoad: () => void }) {
   return (
     <li
       className={cx(
@@ -136,8 +149,9 @@ function SlotRow({ slot, onLoad }: { slot: SlotInfo; onLoad: () => void }) {
         {slot.status === 'empty' && <div className="text-xs text-ink-500">Vazio</div>}
         {slot.status === 'corrupted' && <div className="text-xs text-apex-400">Danificado: tentaremos a cópia de segurança</div>}
       </div>
-      <Button className="px-3 py-1.5" disabled={slot.status === 'empty'} onClick={onLoad}>
-        Carregar
+      <Button className="min-h-11 px-3 py-1.5" disabled={slot.status === 'empty' || disabled} aria-busy={busy} onClick={onLoad}>
+        {busy && <LoaderCircle size={16} aria-hidden className="animate-spin" />}
+        {busy ? 'Abrindo…' : 'Carregar'}
       </Button>
     </li>
   );

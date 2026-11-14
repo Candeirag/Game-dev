@@ -184,6 +184,36 @@
   background-size: 28px 28px;
 }
 
+/*
+ * Movimento. Entradas e saídas duram de 150 a 300 ms e são transições (interrompíveis); ver
+ * src/ui/motion.ts. `enter` anima a entrada de um elemento que acabou de aparecer, só com CSS.
+ */
+@theme {
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 300ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@utility enter {
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    translate var(--motion-base) var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+/* Entrada de quem sobe do rodapé (a barra de comandos da corrida). */
+@utility enter-up {
+  transition: translate var(--motion-base) var(--ease-out);
+  @starting-style {
+    translate: 0 100%;
+  }
+}
+
+/* Destaque rápido de uma linha que acabou de entrar (um evento novo na corrida). */
 @keyframes flash-in {
   from {
     background-color: color-mix(in oklab, var(--color-apex-500) 22%, transparent);
@@ -194,7 +224,23 @@
 }
 
 .animate-flash {
-  animation: flash-in 1.2s ease-out;
+  animation: flash-in var(--motion-slow) ease-out;
+}
+
+/* Quem pede menos movimento ao sistema não vê transições nem animações de interface. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: precisa vencer qualquer transição definida nas telas */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: idem */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: idem */
+    transition-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: idem */
+    scroll-behavior: auto !important;
+  }
 }
 
 /*

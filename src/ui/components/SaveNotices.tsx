@@ -31,8 +31,8 @@ export function StorageWarning({ className, link = true }: { className?: string;
   const kind = useGameStore((s) => s.storage.kind);
   if (kind !== 'memory') return null;
   return (
-    <div role="alert" className={cx('rounded-lg border border-apex-500/60 bg-apex-500/15 px-4 py-3 text-sm text-ink-100', className)}>
-      <b className="text-apex-400">O navegador não está deixando o jogo gravar.</b> A carreira está só na memória desta página: ao fechar ou recarregar, o
+    <div role="alert" className={cx('enter border border-gold-400/60 bg-gold-400/10 px-4 py-3 text-sm text-ink-100', className)}>
+      <b className="text-gold-400">O navegador não está deixando o jogo gravar.</b> A carreira está só na memória desta página: ao fechar ou recarregar, o
       progresso será perdido. Exporte a carreira (.json) antes de sair
       {link ? (
         <>
