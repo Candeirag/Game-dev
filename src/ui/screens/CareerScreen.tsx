@@ -75,20 +75,20 @@ export function CareerScreen() {
       )}
 
       <Card title="Escada do automobilismo">
-        <ol className="grid gap-2 md:grid-cols-7">
+        <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
           {CATEGORIES.map((c) => {
             const state = c.tier < category.tier ? 'done' : c.tier === category.tier ? 'current' : 'ahead';
             const seasons = career.history.filter((h) => h.categoryId === c.id).length + (c.id === category.id ? 1 : 0);
             return (
               <li key={c.id} className={cx('rounded-lg border p-3', state === 'current' ? 'border-apex-500 bg-apex-500/10' : state === 'done' ? 'border-ink-700 bg-ink-900' : 'border-ink-800 opacity-70')}>
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Degrau {c.tier}</div>
-                <div className="font-display text-lg font-bold uppercase leading-tight">{c.shortName}</div>
+                <div className="font-display text-lg font-bold uppercase leading-tight [overflow-wrap:anywhere]">{c.shortName}</div>
                 {/* O veículo de cada degrau, em proporção: do kart de entrada ao F1. Na categoria atual, com a pintura da equipe. */}
-                <div className="flex h-12 items-center" title={VEHICLES[c.id].description}>
-                  <CarSprite categoryId={c.id} teamId={state === 'current' ? team.id : 'escada'} color={state === 'current' ? team.color : '#aab3c2'} driverId={state === 'current' ? player.id : undefined} style={{ width: `${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 100)}%` }} />
+                <div className="flex h-14 items-center" title={VEHICLES[c.id].description}>
+                  <CarSprite categoryId={c.id} teamId={state === 'current' ? team.id : 'escada'} color={state === 'current' ? team.color : '#aab3c2'} driverId={state === 'current' ? player.id : undefined} style={{ width: `min(${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 100)}%, ${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 104)}px)` }} />
                 </div>
                 <div className="text-[11px] text-ink-300">{VEHICLES[c.id].name}</div>
-                <div className="mt-1 text-xs text-ink-400">{seasons > 0 ? `${counted(seasons, 'temporada', 'temporadas')}` : `Vaga: ${formatMoney(c.economy.seatCost[1])} a ${formatMoney(c.economy.seatCost[0])}`}</div>
+                <div className="mt-1 text-xs text-ink-400">{seasons > 0 ? `${counted(seasons, 'temporada', 'temporadas')}` : c.economy.seatCost[0] > 0 ? `Vaga: ${formatMoney(c.economy.seatCost[1])} a ${formatMoney(c.economy.seatCost[0])}` : 'A equipe paga salário'}</div>
               </li>
             );
           })}

@@ -274,7 +274,8 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
 
         {/* Pista */}
         <div className="order-1 min-w-0 lg:order-2">
-          <div className="relative overflow-hidden rounded-xl border border-ink-700/70">
+          {/* Na transmissão, placares e nomes ficam sobre a pista de propósito (o teste visual pula esta área). */}
+          <div data-overlay-ok className="relative overflow-hidden rounded-xl border border-ink-700/70">
             <RaceCanvas timeline={timeline} circuit={circuit} teams={teams} drivers={drivers} timeRef={playback.timeRef} camera={camera} focusId={focus?.driverId ?? ''} mineIds={mineIds} lights={playback.lights} onSelect={setFocusId} className="aspect-[4/5] w-full sm:aspect-[25/16]" />
             <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-wrap items-start justify-end gap-2 p-2">
               <div className="pointer-events-auto flex flex-wrap justify-end gap-1" role="group" aria-label="Câmera">

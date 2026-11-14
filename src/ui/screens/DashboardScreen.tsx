@@ -287,7 +287,7 @@ function NextEventPanel() {
         {/* O traçado ocupa o lado direito, sobre uma grade de prancheta. */}
         <div aria-hidden className="gridlines absolute inset-y-0 right-0 w-[58%] [mask-image:linear-gradient(to_right,transparent,black_35%)]" />
         <div aria-hidden className="stripes absolute -right-8 top-0 h-full w-24 -skew-x-12 opacity-70" />
-        <CircuitMap track={track} style={category.vehicle} className="pointer-events-none absolute bottom-12 right-3 top-3 h-[calc(100%-3.75rem)] w-[44%]" />
+        <CircuitMap track={track} style={category.vehicle} className="pointer-events-none absolute right-3 top-3 h-[calc(100%-5.25rem)] w-[44%]" />
 
         <div className="relative flex min-h-0 flex-1 flex-col p-4 pr-[48%]">
           <div className="flex items-center gap-2 whitespace-nowrap text-xs font-semibold text-ink-300">
@@ -317,7 +317,7 @@ function NextEventPanel() {
           <Fact label="Desgaste" value={describeTyreWear(track.tyreWear)} />
           <Fact label="Favorece" value={describePower(track.powerSensitivity).replace('favorece o ', '')} />
         </dl>
-        {credit && <span className="pointer-events-none absolute bottom-11 right-3 text-[9px] text-ink-500">Traçado: {credit}</span>}
+        {credit && <span className="pointer-events-none absolute bottom-[3.25rem] right-3 text-[9px] leading-none text-ink-500">Traçado: {credit}</span>}
       </div>
     </section>
   );
