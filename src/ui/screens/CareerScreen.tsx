@@ -53,7 +53,7 @@ export function CareerScreen() {
       </PageHeader>
 
       {career.offseason && career.status === 'active' && (
-        <Card title={`Fechamento da temporada ${career.year}`} className="border-gold-400/40">
+        <Card title={`Fechamento da temporada ${career.year}`} tone="attention">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
             <Stat label="Sua posição" value={`${career.offseason.playerPosition}º`} accent />
             <Stat label="Meta" value={`${career.offseason.target}º`} hint={career.offseason.objectiveMet ? 'Cumprida' : 'Não cumprida'} />

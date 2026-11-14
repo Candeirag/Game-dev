@@ -31,7 +31,7 @@ export function SuccessionScreen() {
         )}
       </PageHeader>
 
-      <Card className="border-gold-400/30">
+      <Card tone="attention">
         <p className="max-w-3xl text-sm leading-relaxed text-ink-300">
           {handover
             ? `${succession.formerName} decidiu passar o comando. `

@@ -68,7 +68,7 @@ export function ExecutiveDashboardScreen() {
           <EventsPanel />
 
           {seasonOver && career.executiveOffseason && (
-            <Card title={`Fim da temporada ${career.year}`} className="border-gold-400/30">
+            <Card title={`Fim da temporada ${career.year}`} tone="attention">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <p className="max-w-xl text-sm text-ink-300">
                   {career.executiveOffseason.teamPosition !== null
