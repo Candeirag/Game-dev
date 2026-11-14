@@ -5,10 +5,11 @@
  * gestão de pneus) que o programa escolhido produz.
  */
 import type { Driver, PracticeEntry, PracticeProgram, PracticeResult, SessionWeather, Team, Track, WeekendModifiers } from '@/domain/schemas';
+import type { CategoryDefinition } from '@/data/categories';
 import { PRACTICE_LAPS } from '@/data/rules';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { PRACTICE_PROGRAM_EFFECTS } from './constants';
-import { errorProbability, expectedLapTime, lapNoiseSigma, tyreWearPerLap } from './performance';
+import { conditionEffects, errorProbability, expectedLapTime, lapNoiseSigma, tyreWearPerLap } from './performance';
 
 export interface PracticeParticipant {
   driver: Driver;
@@ -33,7 +34,7 @@ const round3 = (v: number) => Math.round(v * 1000) / 1000;
  */
 export function computeSetupScore(driver: Driver, team: Team, program: PracticeProgram, noise: number): number {
   const a = driver.attributes;
-  const feedback = (a.experience * 0.45 + a.racecraft * 0.35 + team.kart.chassis * 0.2) / 100;
+  const feedback = (a.experience * 0.45 + a.racecraft * 0.35 + team.car.chassis * 0.2) / 100;
   // Base fixa de 0,2: qualquer equipe chega a um acerto razoável. O retorno do piloto
   // vale até 0,35 e define a diferença entre um acerto bom e um ótimo.
   const raw = 0.2 + feedback * 0.35 + PRACTICE_PROGRAM_EFFECTS[program].setupBonus + noise * SETUP_NOISE;
@@ -45,11 +46,13 @@ export function simulatePractice(
   track: Track,
   weather: SessionWeather,
   sessionSeed: number,
+  category: Pick<CategoryDefinition, 'lapTimeFactor' | 'carFactor'> = { lapTimeFactor: 1, carFactor: 1 },
 ): PracticeResult {
   const entries: PracticeEntry[] = participants.map(({ driver, team, program }) => {
     // Cada piloto tem a própria sequência de sorte: a escolha de um não altera a dos outros.
     const rng = createRng(hashSeed(sessionSeed, driver.id));
     const effects = PRACTICE_PROGRAM_EFFECTS[program];
+    const cond = conditionEffects(driver.condition, driver.injury);
     const setupScore = computeSetupScore(driver, team, program, gaussian(rng));
     const modifiers: WeekendModifiers = {
       setupScore,
@@ -64,22 +67,23 @@ export function simulatePractice(
       const sessionSetup = setupScore * ((lap + 1) / PRACTICE_LAPS);
       const expected = expectedLapTime({
         attributes: driver.attributes,
-        kart: team.kart,
+        car: team.car,
         track,
         weather,
         setupScore: sessionSetup,
         tyreWear,
-        paceModifier: 0,
+        paceModifier: cond.pace,
+        ...category,
       });
-      const sigma = lapNoiseSigma(driver.attributes, weather, 0);
+      const sigma = lapNoiseSigma(driver.attributes, weather, 0) * cond.noise;
       const lapTime = expected * (1 + gaussian(rng) * sigma);
-      const aborted = rng.next() < errorProbability(driver.attributes, weather, 0);
+      const aborted = rng.next() < errorProbability(driver.attributes, weather, 0) * cond.error;
       if (!aborted) bestLap = Math.min(bestLap, lapTime);
       tyreWear += tyreWearPerLap(driver.attributes, track, weather, 1, modifiers.tyreWearFactor);
     }
     // Garantia: se todas as voltas foram abortadas (praticamente impossível), usa a volta esperada.
     if (!Number.isFinite(bestLap)) {
-      bestLap = expectedLapTime({ attributes: driver.attributes, kart: team.kart, track, weather, setupScore, tyreWear: 0, paceModifier: 0 });
+      bestLap = expectedLapTime({ attributes: driver.attributes, car: team.car, track, weather, setupScore, tyreWear: 0, paceModifier: 0, ...category });
     }
     return { driverId: driver.id, teamId: team.id, program, bestLap: round3(bestLap), lapsCompleted: PRACTICE_LAPS, modifiers };
   });

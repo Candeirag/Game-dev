@@ -3,8 +3,8 @@
  * volta, chance de erro e desgaste de pneus. São funções puras, sem sorte; o
  * ruído é aplicado por quem chama, usando o RNG da sessão.
  */
-import type { DriverAttributes, KartPerformance, SessionWeather, Track } from '@/domain/schemas';
-import { SIM } from './constants';
+import type { CarPerformance, Condition, DriverAttributes, Injury, SessionWeather, Track, TyreCompound } from '@/domain/schemas';
+import { CONDITION, RACE, SIM, TYRES } from './constants';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -23,16 +23,20 @@ export function driverPaceRating(a: DriverAttributes, weather: SessionWeather): 
   return dry * (1 - wetShare) + a.wetSkill * wetShare;
 }
 
-/** Nota do kart na pista: média de motor e chassi, ponderada pelo traçado. */
-export function kartRating(kart: KartPerformance, track: Track): number {
-  return kart.engine * track.powerSensitivity + kart.chassis * (1 - track.powerSensitivity);
+/** Nota do equipamento na pista: média de motor e chassi, ponderada pelo traçado. */
+export function carRating(car: CarPerformance, track: Track): number {
+  return car.engine * track.powerSensitivity + car.chassis * (1 - track.powerSensitivity);
 }
 
 export interface LapContext {
   attributes: DriverAttributes;
-  kart: KartPerformance;
+  car: CarPerformance;
   track: Track;
   weather: SessionWeather;
+  /** Fator da categoria sobre o tempo de referência da pista (padrão 1). */
+  lapTimeFactor?: number;
+  /** Peso do equipamento na categoria (padrão 1). */
+  carFactor?: number;
   /** Qualidade do acerto do fim de semana, de 0 a 1. */
   setupScore: number;
   /** Desgaste atual dos pneus, de 0 a 1. */
@@ -43,9 +47,9 @@ export interface LapContext {
 
 /** Tempo de volta esperado, sem ruído, em segundos. */
 export function expectedLapTime(ctx: LapContext): number {
-  const base = ctx.track.baseLapTime * (1 + SIM.WET_LAP_PENALTY * ctx.weather.wetness);
+  const base = ctx.track.baseLapTime * (ctx.lapTimeFactor ?? 1) * (1 + SIM.WET_LAP_PENALTY * ctx.weather.wetness);
   const driverLoss = (100 - driverPaceRating(ctx.attributes, ctx.weather)) * SIM.DRIVER_RATING_TIME_FACTOR;
-  const kartLoss = (100 - kartRating(ctx.kart, ctx.track)) * SIM.KART_RATING_TIME_FACTOR;
+  const kartLoss = (100 - carRating(ctx.car, ctx.track)) * SIM.KART_RATING_TIME_FACTOR * (ctx.carFactor ?? 1);
   const setupGain = clamp(ctx.setupScore, 0, 1) * SIM.SETUP_MAX_GAIN;
   const tyreLoss = SIM.TYRE_WEAR_TIME_PENALTY * clamp(ctx.tyreWear, 0, 1) ** 2;
   return base * (1 + driverLoss + kartLoss - setupGain + tyreLoss + ctx.paceModifier);
@@ -71,8 +75,8 @@ export function errorProbability(a: DriverAttributes, weather: SessionWeather, r
 }
 
 /** Chance de quebra mecânica por volta. */
-export function mechanicalFailureProbability(kart: KartPerformance): number {
-  return (100 - kart.reliability) ** 2 * SIM.MECHANICAL_FAILURE_FACTOR;
+export function mechanicalFailureProbability(car: CarPerformance): number {
+  return (100 - car.reliability) ** 2 * SIM.MECHANICAL_FAILURE_FACTOR;
 }
 
 /**
@@ -104,4 +108,76 @@ export function overallRating(a: DriverAttributes): number {
     a.wetSkill * 0.05 +
     a.experience * 0.1
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Fase 2: condição do piloto, compostos, combustível e dano           */
+/* ------------------------------------------------------------------ */
+
+export interface ConditionEffects {
+  /** Ajuste percentual no tempo de volta (negativo = mais rápido). */
+  pace: number;
+  /** Multiplicador do ruído de volta. */
+  noise: number;
+  /** Multiplicador da chance de erro. */
+  error: number;
+  /** Ajuste no logit das disputas de posição. */
+  attack: number;
+}
+
+/**
+ * Converte fase, confiança, moral e lesão em efeitos na pista. Com tudo em 50
+ * e sem lesão, os efeitos são neutros: o piloto rende exatamente o que os
+ * atributos dizem.
+ */
+export function conditionEffects(condition: Condition, injury: Injury | null): ConditionEffects {
+  const racingInjured = injury !== null;
+  return {
+    pace: ((50 - condition.form) / 50) * CONDITION.FORM_PACE + (racingInjured ? CONDITION.INJURY_PACE : 0),
+    noise: 1 + ((50 - condition.morale) / 50) * CONDITION.MORALE_NOISE,
+    error: (1 + ((50 - condition.confidence) / 50) * CONDITION.CONFIDENCE_ERROR) * (racingInjured ? CONDITION.INJURY_ERROR : 1),
+    attack: ((condition.confidence - 50) / 50) * CONDITION.CONFIDENCE_ATTACK,
+  };
+}
+
+/**
+ * Perda de tempo (fração da volta) e risco extra por usar o pneu errado para a
+ * umidade da pista. É somada à perda-base da pista molhada, que vale para todos.
+ *
+ * - Pneus de pista seca: perdem aderência rapidamente a partir de 8% de umidade
+ *   (6% de perda com 30%, 18% com 60%) e multiplicam o risco de erro.
+ * - Intermediário: ideal entre 15% e 65%; superaquece no seco e não escoa água
+ *   suficiente na chuva forte.
+ * - Chuva: ideal acima de 50%; no seco, é lento e se desmancha.
+ * - Kart: o pneu é escolhido antes da largada e não há troca; o efeito da
+ *   pista molhada já está na perda-base.
+ */
+export function tyreConditionEffect(compound: TyreCompound, wetness: number): { pace: number; error: number; wear: number } {
+  if (compound === 'kart') return { pace: 0, error: 1, wear: 1 };
+  if (!TYRES[compound].rain) {
+    const excess = Math.max(0, wetness - 0.08);
+    return { pace: excess * 0.22 + excess ** 2 * 0.25, error: 1 + 5 * excess, wear: 1 };
+  }
+  if (compound === 'intermediate') {
+    if (wetness < 0.15) return { pace: 0.025, error: 1, wear: 3 };
+    if (wetness > 0.65) return { pace: (wetness - 0.65) * 0.2, error: 1 + (wetness - 0.65) * 2, wear: 1 };
+    return { pace: 0, error: 1, wear: 1 };
+  }
+  const dryness = Math.max(0, 0.5 - wetness);
+  return { pace: dryness * 0.09, error: 1, wear: 1 + dryness * 3 };
+}
+
+/** Perda extra de um pneu além do penhasco (não se aplica ao kart, que não troca pneus). */
+export function tyreCliffPenalty(compound: TyreCompound, wear: number): number {
+  if (compound === 'kart') return 0;
+  return Math.max(0, wear - RACE.TYRE_CLIFF) * RACE.TYRE_CLIFF_PENALTY;
+}
+
+/** Perda pelo peso do combustível: proporcional ao que resta no tanque. */
+export function fuelPenalty(fuelLaps: number, totalLaps: number): number {
+  return RACE.FUEL_FULL_TANK_PENALTY * Math.max(0, fuelLaps) / totalLaps;
+}
+
+export function damagePenalty(damage: number): number {
+  return Math.min(1, damage) * RACE.DAMAGE_TIME_PENALTY;
 }

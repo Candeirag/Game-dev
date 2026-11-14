@@ -72,10 +72,20 @@ const ROWS: readonly Row[] = [
   ['batista', 'João', 'Batista', 'BR', 15, 'garagem', 60, 58, 60, 58, 56, 56, 58, 58, 28, 80],
 ];
 
-export const AI_DRIVERS: readonly Driver[] = ROWS.map((row) => {
+/** Condição neutra: não ajuda nem atrapalha. */
+export const NEUTRAL_CONDITION = { form: 50, confidence: 50, morale: 55 } as const;
+
+export const AI_DRIVERS: readonly Driver[] = ROWS.map((row, index) => {
   const [id, firstName, lastName, nationality, age, teamId, pace, consistency, overtaking, defending, focus, racecraft, tyreManagement, wetSkill, experience, potential] = row;
   const attributes: DriverAttributes = { pace, consistency, overtaking, defending, focus, racecraft, tyreManagement, wetSkill, experience };
-  return { id, firstName, lastName, nationality, age, teamId, isPlayer: false, attributes, potential, trainingFocus: 'balanced' };
+  return {
+    id, firstName, lastName, nationality, age, teamId, isPlayer: false, attributes, potential, trainingFocus: 'balanced',
+    // O primeiro piloto listado de cada equipe é o primeiro piloto; os contratos vencem em anos alternados.
+    role: index % 2 === 0 ? 'first' : 'second',
+    contractEnd: index % 2 === 0 ? 2 : 1,
+    condition: { ...NEUTRAL_CONDITION },
+    injury: null,
+  };
 });
 
 /** Piloto que cede a vaga quando o jogador assina com cada equipe de entrada. */

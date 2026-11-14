@@ -153,3 +153,146 @@ export const PRACTICE_PROGRAM_EFFECTS = {
   /** Ritmo de corrida: 15% menos desgaste, decisivo em pistas abrasivas. */
   longRun: { setupBonus: 0.06, qualifyingBonus: 0, tyreWearFactor: 0.85 },
 } as const;
+
+/* ================================================================== */
+/* Fase 2: pneus, combustível, boxes, neutralizações, punições, danos  */
+/* ================================================================== */
+
+/**
+ * Compostos de pneu. "pace" é o ajuste no tempo de volta (negativo = mais
+ * rápido) e "wear" multiplica o desgaste por volta.
+ *
+ * Calibragem: com desgaste-base de 3,2% por volta, o médio chega ao "penhasco"
+ * (80% de desgaste) em cerca de 26 voltas, o macio em 15 e o duro em 37. Numa
+ * corrida de F1 de 58 voltas, uma parada (médio + duro) e duas paradas (macio +
+ * médio + médio) custam quase o mesmo tempo total; a escolha depende da pista,
+ * do piloto e das neutralizações.
+ */
+export const TYRES = {
+  kart: { pace: 0, wear: 1, rain: false, label: 'Kart' },
+  soft: { pace: -0.006, wear: 1.7, rain: false, label: 'Macio' },
+  medium: { pace: 0, wear: 1, rain: false, label: 'Médio' },
+  hard: { pace: 0.005, wear: 0.68, rain: false, label: 'Duro' },
+  intermediate: { pace: 0, wear: 1, rain: true, label: 'Intermediário' },
+  wet: { pace: 0, wear: 0.8, rain: true, label: 'Chuva' },
+} as const;
+
+export const RACE = {
+  /* ---------------- Pneus ---------------- */
+
+  /** Desgaste a partir do qual o pneu "cai do penhasco". */
+  TYRE_CLIFF: 0.8,
+  /** Perda extra por ponto de desgaste além do penhasco (8% por unidade). */
+  TYRE_CLIFF_PENALTY: 0.08,
+
+  /* ---------------- Combustível ---------------- */
+
+  /** Um tanque cheio (combustível para a corrida toda) deixa a volta 2,5% mais lenta. */
+  FUEL_FULL_TANK_PENALTY: 0.025,
+  /** Margem de combustível embarcada além da distância da corrida. */
+  FUEL_MARGIN: 0.03,
+  /** Consumo relativo por modo de pilotagem. */
+  FUEL_USE: { conservative: 0.93, balanced: 1, aggressive: 1.06 },
+  /** Consumo relativo atrás do safety car e sob safety car virtual. */
+  FUEL_USE_SC: 0.5,
+  FUEL_USE_VSC: 0.65,
+
+  /* ---------------- Boxes ---------------- */
+
+  /** Tempo de serviço de uma parada perfeita, em segundos. */
+  PIT_SERVICE: 2.8,
+  /** Segundos extras por ponto de qualidade da equipe de box abaixo de 100. */
+  PIT_SERVICE_PER_CREW_POINT: 0.035,
+  /** Chance de parada lenta para uma equipe de box nota 0 (cai em proporção à nota). */
+  PIT_SLOW_STOP_CHANCE: 0.12,
+  PIT_SLOW_STOP_LOSS: [3, 9] as const,
+  /** Tempo extra para reparar danos (troca de asa dianteira). */
+  PIT_REPAIR_TIME: 9,
+  /** O segundo carro da equipe espera quando os dois param na mesma volta. */
+  PIT_DOUBLE_STACK_LOSS: 3,
+  /** Parar sob neutralização custa menos, porque o pelotão anda devagar. */
+  PIT_LOSS_FACTOR_SC: 0.5,
+  PIT_LOSS_FACTOR_VSC: 0.65,
+  /** Chance-base de excesso de velocidade no pit lane e de liberação insegura. */
+  PIT_SPEEDING_CHANCE: 0.012,
+  UNSAFE_RELEASE_CHANCE: 0.008,
+
+  /* ---------------- Neutralizações ---------------- */
+
+  /** Volta atrás do safety car, em relação à volta de referência. */
+  SC_LAP_FACTOR: 1.45,
+  /** Ritmo de quem ainda está alcançando a fila do safety car. */
+  SC_CATCHUP_FACTOR: 1.12,
+  /** Distância entre carros na fila do safety car, em segundos. */
+  SC_GAP: 0.5,
+  SC_LAPS: [3, 5] as const,
+  VSC_LAP_FACTOR: 1.32,
+  VSC_LAPS: [1, 2] as const,
+  /** Chance de neutralização por tipo de incidente: [safety car, safety car virtual, bandeira vermelha]. */
+  NEUTRALIZATION_ODDS: {
+    crash: [0.5, 0.3, 0.02],
+    collision: [0.6, 0.25, 0.05],
+    mechanical: [0.12, 0.4, 0],
+    spin: [0, 0.06, 0],
+  },
+  /** Com a pista encharcada (umidade ≥ 0,9), um acidente tem chance extra de bandeira vermelha. */
+  RED_FLAG_HEAVY_RAIN_CHANCE: 0.25,
+  /** Se a bandeira vermelha sai depois de 75% da prova, a corrida não é retomada. */
+  RED_FLAG_END_PROGRESS: 0.75,
+  /** Na relargada, o pelotão compacto facilita as ultrapassagens. */
+  RESTART_DIFFICULTY_FACTOR: 0.75,
+
+  /* ---------------- Punições ---------------- */
+
+  /** Reação tão adiantada (em desvios-padrão) que configura queima de largada. */
+  JUMP_START_THRESHOLD: -2.2,
+  JUMP_START_PENALTY: 5,
+  /** Erros leves a partir dos quais os comissários punem por limites de pista. */
+  TRACK_LIMITS_STRIKES: 3,
+  TRACK_LIMITS_PENALTY: 5,
+  /** Chance de o atacante ser considerado culpado por um toque. */
+  COLLISION_FAULT_CHANCE: 0.6,
+  COLLISION_PENALTY: 5,
+  /** Toque que tira um rival da corrida: 10 s, 2 pontos na licença e 3 posições no próximo grid. */
+  COLLISION_DNF_PENALTY: 10,
+  COLLISION_DNF_GRID_DROP: 3,
+  PIT_PENALTY: 5,
+  /** Punição por não usar dois compostos em corrida seca, quando a regra exige. */
+  COMPOUND_RULE_PENALTY: 30,
+
+  /* ---------------- Danos e lesões ---------------- */
+
+  /** Um carro com dano 1,0 fica 1,2% mais lento. */
+  DAMAGE_TIME_PENALTY: 0.012,
+  /** Dano a partir do qual o carro não consegue continuar. */
+  DAMAGE_RETIRE: 1,
+  DAMAGE_COLLISION_ATTACKER: [0.25, 0.6] as const,
+  DAMAGE_COLLISION_DEFENDER: [0.1, 0.4] as const,
+  DAMAGE_SPIN_CHANCE: 0.2,
+  DAMAGE_SPIN: [0.1, 0.3] as const,
+  /** Chance de lesão em um acidente que tira o piloto da corrida. */
+  INJURY_CHANCE: { kart: 0.05, formula: 0.04, f1: 0.02 },
+
+  /* ---------------- Ordens de equipe ---------------- */
+
+  /** Distância máxima entre companheiros para a equipe pedir a troca de posições. */
+  TEAM_ORDER_GAP: 1.0,
+  /** Chance de um piloto da IA obedecer à ordem. */
+  TEAM_ORDER_AI_OBEY: 0.85,
+  TEAM_ORDER_SWAP_LOSS: 0.4,
+} as const;
+
+/** Efeitos da condição do piloto. Em 50, todos os efeitos são neutros. */
+export const CONDITION = {
+  /** Fase: ±0,12% no tempo de volta entre 0 e 100. */
+  FORM_PACE: 0.0012,
+  /** Confiança: multiplicador de erro de 1,25 (em 0) a 0,75 (em 100). */
+  CONFIDENCE_ERROR: 0.25,
+  /** Confiança: ajuste no logit das disputas, de -0,8 a +0,8. */
+  CONFIDENCE_ATTACK: 0.8,
+  /** Moral: multiplicador do ruído de volta de 1,1 (em 0) a 0,9 (em 100). */
+  MORALE_NOISE: 0.1,
+  /** Correr com lesão leve: 0,3% mais lento e 30% mais erros. */
+  INJURY_PACE: 0.003,
+  INJURY_ERROR: 1.3,
+} as const;
