@@ -404,7 +404,7 @@ describe('gestão de equipe', () => {
     expect(m.budget).toBe(TEAM_ECONOMY['kart-national'].operations * MANAGEMENT.STARTING_BUDGET);
     expect(m.staff.map((s) => s.role).sort()).toEqual(['chiefEngineer', 'chiefMechanic', 'sportingDirector', 'technicalDirector']);
     expect(Object.keys(m.deals)).toHaveLength(3);
-    expect(m.sponsors).toHaveLength(2);
+    expect(m.sponsors).toHaveLength(3);
     expect(engine.ownedTeamValue(c)).toBeGreaterThan(0);
     expectValid(c);
     expect(() => engine.startExecutiveSeason(withCash(retired, 1_000), { kind: 'buy', listingId: listing.id })).toThrow(/insuficiente/);
@@ -492,7 +492,7 @@ describe('gestão de equipe', () => {
     expect(hired.management!.budget).toBeLessThan(m.budget);
     // Mais engenheiros e simulador.
     const bigger = engine.setDepartment(c, 'engineers', 5);
-    expect(engine.researchRate(bigger.management!)).toBeCloseTo((rate * 5) / m.engineers, 5);
+    expect(engine.researchRate(bigger.management!)).toBeCloseTo((rate * engine.engineeringCapacity({ engineers: 5 })) / engine.engineeringCapacity(m), 5);
     const rich = { ...c, management: { ...m, budget: 100_000_000 } };
     const simulator = engine.upgradeFacility(rich, 'simulator');
     expect(simulator.management!.facilities.simulator).toBe(m.facilities.simulator + 1);

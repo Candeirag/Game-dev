@@ -773,7 +773,8 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
         ...previous,
         boardTarget: Math.min(10, rank + 2),
         baseCar: { ...car },
-        development: { ...previous.development, allocation: normalizeAllocation(previous.categoryId, previous.development.allocation), progress: zero, gains: zero, spent: 0 },
+        // O contador de melhorias e o gasto do ano zeram; a pesquisa em andamento continua de onde parou.
+        development: { ...previous.development, allocation: normalizeAllocation(previous.categoryId, previous.development.allocation), gains: zero, spent: 0 },
         fieldGains: {},
         ledger: {},
         deals,

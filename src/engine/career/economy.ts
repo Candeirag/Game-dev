@@ -29,11 +29,13 @@ export const ECONOMY = {
   ],
   /**
    * Retornos reais (o jogo não tem inflação). Renda fixa: 2,5% ao ano, sem
-   * risco. Fundo de ações: média de 5% ao ano, desvio de 16% (pode perder).
+   * risco. Fundo de ações: média de 4% ao ano, desvio de 15% (pode perder);
+   * por causa da oscilação, o resultado típico de longo prazo fica perto do da
+   * renda fixa, com chance de bem mais e de bem menos.
    */
   FIXED_INCOME_RETURN: 0.025,
-  EQUITY_MEAN: 0.05,
-  EQUITY_SD: 0.16,
+  EQUITY_MEAN: 0.04,
+  EQUITY_SD: 0.15,
   /** Juros anuais sobre o saldo negativo. */
   LOAN_INTEREST: 0.14,
   /** Multiplicadores do custo de treino por intensidade. */
