@@ -27,8 +27,15 @@ export function HistoryScreen() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Carreira" title="Histórico de resultados">
-        {seasons.length > 1 && (
+        {seasons.length > 1 && seasons.length <= 6 && (
           <Tabs value={selected} onChange={(v) => { setSelected(v); setOpen(null); }} options={seasons.map((s) => ({ value: String(s.season), label: `${s.year} · ${getCategory(s.categoryId).shortName}` }))} />
+        )}
+        {seasons.length > 6 && (
+          <label className="text-sm text-ink-300">Temporada{' '}
+            <select value={selected} onChange={(e) => { setSelected(e.target.value); setOpen(null); }} className="rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100 focus:border-apex-500 focus:outline-none">
+              {[...seasons].reverse().map((s) => <option key={s.season} value={String(s.season)}>{s.year} · {getCategory(s.categoryId).shortName}</option>)}
+            </select>
+          </label>
         )}
       </PageHeader>
 
@@ -54,11 +61,11 @@ export function HistoryScreen() {
         <Card title={`Temporada ${current.year} · ${getCategory(current.categoryId).name}`}>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Campeão" value={<span className="text-lg">{current.summary.driverNames[current.summary.championDriverId] ?? '-'}</span>} />
-            <Stat label="Sua posição" value={`${current.summary.playerPosition}º`} accent />
-            <Stat label="Seus pontos" value={current.summary.playerPoints} />
+            <Stat label={current.summary.mode === 'executive' ? 'Posição da equipe' : 'Sua posição'} value={current.summary.mode === 'executive' && !current.summary.playerTeamId ? '-' : `${current.summary.playerPosition}º`} accent />
+            <Stat label={current.summary.mode === 'executive' ? 'Pontos da equipe' : 'Seus pontos'} value={current.summary.playerPoints} />
             <Stat label="Meta" value={`${current.summary.objectiveTarget}º`} hint={current.summary.objectiveMet ? 'Cumprida' : 'Não cumprida'} />
           </div>
-          <div className="mt-2 text-sm text-ink-400">Equipe: {current.summary.playerTeamName}</div>
+          <div className="mt-2 text-sm text-ink-400">{current.summary.mode === 'executive' ? 'Temporada como dirigente' : 'Temporada como piloto'} · Equipe: {current.summary.playerTeamName}{current.rounds.some((r) => r.race.entries.length < 10) ? ' · Temporada antiga: o arquivo guarda o pódio e os resultados da família em cada etapa.' : ''}</div>
         </Card>
       )}
 
@@ -76,8 +83,10 @@ export function HistoryScreen() {
 }
 
 function RoundRow({ record, names, colors, expanded, onToggle }: { record: RoundRecord; names?: Record<string, string>; colors?: Record<string, string>; expanded: boolean; onToggle: () => void }) {
-  const { player, drivers } = useCareerView();
-  const mine = record.race.entries.find((e) => e.driverId === player.id);
+  const { career, player, drivers } = useCareerView();
+  // Em temporadas de gerações anteriores, o "seu" resultado é o do personagem da época.
+  const lineage = career.dynasty.lineage.map((l) => l.driverId);
+  const mine = record.race.entries.find((e) => e.driverId === player.id) ?? record.race.entries.find((e) => lineage.includes(e.driverId));
   const winner = record.race.entries[0];
   const track = getTrack(record.trackId);
   return (

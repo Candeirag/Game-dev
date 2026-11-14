@@ -4,9 +4,9 @@
  * regra de jogo vive aqui nem nos componentes React.
  */
 import { create } from 'zustand';
-import type { CareerState, PracticeProgram, QualifyingApproach, RaceMode, TrainingFocus, TrainingIntensity, TyreCompound } from '@/domain/schemas';
+import type { CareerState, CategoryId, DevArea, DevValues, FacilityKey, Lifestyle, PracticeProgram, Property, QualifyingApproach, RaceMode, ResearchSpend, StaffRole, SupportLevel, TrainingFocus, TrainingIntensity, TyreCompound } from '@/domain/schemas';
 import * as engine from '@/engine';
-import type { InvestmentProduct, NegotiationDemand, NewCareerInput, RaceSimState, StrategyPlan } from '@/engine';
+import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, RaceSimState, StrategyPlan } from '@/engine';
 import { createDefaultStorage, type StorageAdapter } from '@/persistence/storage';
 import {
   SaveError,
@@ -62,7 +62,7 @@ export interface GameStore {
   startWeekend(options?: { rest?: boolean }): void;
   runPractice(program: PracticeProgram): void;
   runQualifying(approach: QualifyingApproach): void;
-  simulateAbsentWeekend(): void;
+  simulateAbsentWeekend(choices?: { program?: PracticeProgram; approach?: QualifyingApproach }): void;
   beginRace(plan?: StrategyPlan): void;
   setRaceMode(mode: RaceMode): void;
   requestPit(compound: TyreCompound | null): void;
@@ -76,6 +76,47 @@ export interface GameStore {
   negotiateOffer(offerId: string, demand: NegotiationDemand): void;
   startNextSeason(offerId: string): void;
   retire(): void;
+
+  /* Patrimônio pessoal */
+  buyStock(stockId: string, shares: number): void;
+  sellStock(stockId: string, shares: number): void;
+  buyProperty(catalogId: string, use: Property['use']): void;
+  setPropertyUse(propertyId: string, use: Property['use']): void;
+  sellProperty(propertyId: string): void;
+  openBusiness(catalogId: string): void;
+  upgradeBusiness(businessId: string): void;
+  sellBusiness(businessId: string): void;
+  buyStake(teamId: string, share: number): void;
+  sellStake(stakeId: string): void;
+  takeLoan(amount: number, seasons: number): void;
+  repayLoan(loanId: string): void;
+  setLifestyle(lifestyle: Lifestyle): void;
+
+  /* Família e sucessão */
+  setKartFunding(childId: string, funding: SupportLevel): void;
+  setChildSupport(childId: string, support: SupportLevel): void;
+  beginHandover(): void;
+  cancelHandover(): void;
+  resolveSuccession(heirId: string, path: 'driver' | 'executive'): void;
+
+  /* Gestão de equipe */
+  hireStaff(staffId: string): void;
+  dismissStaff(role: StaffRole): void;
+  setDepartment(department: 'engineers' | 'mechanics', level: number): void;
+  upgradeFacility(key: FacilityKey): void;
+  setDevelopment(change: { allocation?: DevValues; spend?: ResearchSpend }): void;
+  setAreaShare(area: DevArea, share: number): void;
+  ownerTransfer(amount: number): void;
+  setLineup(driverIds: string[]): void;
+  acceptTeamSponsor(sponsorId: string): void;
+  dropTeamSponsor(sponsorId: string): void;
+  leaveTeam(): void;
+  startExecutiveSeason(plan: ExecutivePlan): void;
+  foundTeam(categoryId: CategoryId, name: string, color: string): void;
+
+  /* Tutorial */
+  visit(route: string): void;
+  dismissTutorial(): void;
 }
 
 const now = () => new Date().toISOString();
@@ -126,6 +167,9 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ notice: errorMessage(error) });
     }
   }
+
+  /** Ação simples: chama uma função do motor com os argumentos dados e salva. */
+  const action = <A extends unknown[]>(fn: (career: CareerState, ...args: A) => CareerState) => (...args: A) => apply((c) => fn(c, ...args), { save: true });
 
   const RACE_RESET = { liveRace: null, raceMode: 'balanced' as RaceMode, pitRequest: null, skipPlannedStop: false };
 
@@ -244,8 +288,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       apply((c) => engine.runQualifying(c, approach), { save: true });
     },
 
-    simulateAbsentWeekend() {
-      apply(engine.simulateAbsentWeekend, { save: true });
+    simulateAbsentWeekend(choices) {
+      apply((c) => engine.simulateAbsentWeekend(c, choices), { save: true });
     },
 
     beginRace(plan) {
@@ -321,5 +365,55 @@ export const useGameStore = create<GameStore>((set, get) => {
     retire() {
       apply(engine.retireFromDriving, { save: true });
     },
+
+    buyStock: action(engine.buyStock),
+    sellStock: action(engine.sellStock),
+    buyProperty: action(engine.buyProperty),
+    setPropertyUse: action(engine.setPropertyUse),
+    sellProperty: action(engine.sellProperty),
+    openBusiness: action(engine.openBusiness),
+    upgradeBusiness: action(engine.upgradeBusiness),
+    sellBusiness: action(engine.sellBusiness),
+    buyStake: action(engine.buyStake),
+    sellStake: action(engine.sellStake),
+    takeLoan: action(engine.takeLoan),
+    repayLoan: action(engine.repayLoan),
+    setLifestyle: action(engine.setLifestyle),
+
+    setKartFunding: action(engine.setKartFunding),
+    setChildSupport: action(engine.setChildSupport),
+    beginHandover: action(engine.beginHandover),
+    cancelHandover: action(engine.cancelHandover),
+    resolveSuccession(heirId, path) {
+      apply((c) => engine.resolveSuccession(c, heirId, path), { save: true });
+      if (!get().notice) set({ ...RACE_RESET, lastOutcome: null });
+    },
+
+    hireStaff: action(engine.hireStaff),
+    dismissStaff: action(engine.dismissStaff),
+    setDepartment: action(engine.setDepartment),
+    upgradeFacility: action(engine.upgradeFacility),
+    setDevelopment: action(engine.setDevelopment),
+    setAreaShare: action(engine.setAreaShare),
+    ownerTransfer: action(engine.ownerTransfer),
+    setLineup: action(engine.setLineup),
+    acceptTeamSponsor: action(engine.acceptTeamSponsor),
+    dropTeamSponsor: action(engine.dropTeamSponsor),
+    leaveTeam: action(engine.leaveTeam),
+    startExecutiveSeason: action(engine.startExecutiveSeason),
+    foundTeam(categoryId, name, color) {
+      apply((c) => engine.startExecutiveSeason(c, { kind: 'found', categoryId, name, color }), { save: true });
+    },
+
+    visit(route) {
+      const career = get().career;
+      if (!career) return;
+      const next = engine.visitTutorialRoute(career, route);
+      if (next !== career) {
+        set({ career: next });
+        void autosave(next);
+      }
+    },
+    dismissTutorial: action(engine.dismissTutorial),
   };
 });

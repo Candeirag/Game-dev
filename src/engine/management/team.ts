@@ -316,6 +316,23 @@ export function setDevelopment(career: CareerState, change: { allocation?: DevVa
   return { ...career, management: { ...m, development: { ...m.development, allocation, spend: change.spend ?? m.development.spend } } };
 }
 
+/**
+ * Define a fatia do esforço de pesquisa de uma área; as demais áreas abertas
+ * são reescaladas na mesma proporção para a soma continuar em 100%.
+ */
+export function setAreaShare(career: CareerState, area: DevArea, share: number): CareerState {
+  const m = requireManagement(career);
+  const open = REGULATIONS[m.categoryId].open;
+  if (!open[area]) throw new Error('O regulamento não permite desenvolver esta área.');
+  const others = DEV_AREAS.filter((a) => a !== area && open[a]);
+  const target = others.length === 0 ? 1 : Math.min(1, Math.max(0, share));
+  const rest = others.reduce((sum, a) => sum + m.development.allocation[a], 0);
+  const allocation = zeroDev();
+  allocation[area] = target;
+  for (const a of others) allocation[a] = rest > 0 ? (m.development.allocation[a] * (1 - target)) / rest : (1 - target) / others.length;
+  return { ...career, management: { ...m, development: { ...m.development, allocation } } };
+}
+
 /** Aporte (valor positivo) ou retirada (negativo) do dono. A retirada é renda tributável. */
 export function ownerTransfer(career: CareerState, amount: number): CareerState {
   const m = requireManagement(career);

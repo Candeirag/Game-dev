@@ -1,22 +1,28 @@
-import { NavLink, Navigate, Outlet } from 'react-router-dom';
-import { getNextEvent, isSeasonComplete, trackName } from '@/engine';
+import { useEffect } from 'react';
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { getNextEvent, isSeasonComplete, managedTeam, trackName } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { cx } from '../components/ui';
 import { formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { SuccessionScreen } from '../screens/SuccessionScreen';
+import { Button } from '../components/ui';
 
 const NAV = [
-  { to: '/dashboard', label: 'Painel', icon: '◧' },
-  { to: '/weekend', label: 'Fim de semana', icon: '⚑' },
-  { to: '/driver', label: 'Piloto', icon: '◉' },
-  { to: '/team', label: 'Equipe', icon: '⛭' },
-  { to: '/career', label: 'Carreira', icon: '▲' },
-  { to: '/finance', label: 'Finanças', icon: '€' },
-  { to: '/calendar', label: 'Calendário', icon: '▦' },
-  { to: '/standings', label: 'Classificação', icon: '≡' },
-  { to: '/history', label: 'Histórico', icon: '↺' },
-  { to: '/saves', label: 'Saves', icon: '⛁' },
-];
+  { to: '/dashboard', label: 'Painel', icon: '◧', modes: 'both' },
+  { to: '/weekend', label: 'Fim de semana', icon: '⚑', modes: 'both' },
+  { to: '/driver', label: 'Piloto', icon: '◉', modes: 'driver' },
+  { to: '/team', label: 'Equipe', icon: '⛭', modes: 'driver' },
+  { to: '/team', label: 'Gestão', icon: '⛭', modes: 'executive' },
+  { to: '/career', label: 'Carreira', icon: '▲', modes: 'both' },
+  { to: '/finance', label: 'Finanças', icon: '€', modes: 'both' },
+  { to: '/family', label: 'Família', icon: '♥', modes: 'both' },
+  { to: '/calendar', label: 'Calendário', icon: '▦', modes: 'both' },
+  { to: '/standings', label: 'Classificação', icon: '≡', modes: 'both' },
+  { to: '/history', label: 'Histórico', icon: '↺', modes: 'both' },
+  { to: '/saves', label: 'Saves', icon: '⛁', modes: 'both' },
+  { to: '/help', label: 'Como jogar', icon: '?', modes: 'both' },
+] as const;
 
 export function CareerLayout() {
   const hasCareer = useGameStore((s) => s.career !== null);
@@ -34,8 +40,15 @@ function SaveIndicator() {
 
 function CareerShell() {
   const { career, player, team, category } = useCareerView();
+  const location = useLocation();
+  const visit = useGameStore((s) => s.visit);
+  const retire = useGameStore((s) => s.retire);
+  // O tutorial marca as telas que o jogador já conheceu.
+  useEffect(() => { visit(location.pathname); }, [location.pathname, visit]);
+  const executive = career.mode === 'executive';
+  const teamLabel = executive ? (managedTeam(career)?.name ?? 'Sem equipe') : team.name;
   const pending = career.pendingEvents.length;
-  const offers = career.offseason !== null;
+  const offers = career.offseason !== null || career.executiveOffseason !== null;
   const notice = useGameStore((s) => s.notice);
   const dismissNotice = useGameStore((s) => s.dismissNotice);
   const next = getNextEvent(career);
@@ -58,9 +71,9 @@ function CareerShell() {
           </div>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-visible lg:pb-0" aria-label="Navegação principal">
-          {NAV.map((item) => (
+          {NAV.filter((item) => item.modes === 'both' || item.modes === career.mode).map((item) => (
             <NavLink
-              key={item.to}
+              key={item.label}
               to={item.to}
               className={({ isActive }) =>
                 cx(
@@ -78,7 +91,7 @@ function CareerShell() {
         </nav>
         <div className="hidden border-t border-ink-800 p-4 lg:block">
           <div className="text-sm font-semibold">{player.firstName} {player.lastName}</div>
-          <div className="text-xs text-ink-400">{team.name}</div>
+          <div className="text-xs text-ink-400">{teamLabel}{career.dynasty.generation > 1 ? ` · ${career.dynasty.generation}ª geração` : ''}</div>
           <button type="button" onClick={() => useGameStore.getState().exitToMenu()} className="mt-3 text-xs font-semibold text-ink-400 hover:text-apex-400">
             ← Menu principal
           </button>
@@ -91,7 +104,7 @@ function CareerShell() {
             <span className="text-ink-600">|</span>
             <span>Temporada {career.season}</span>
             <span className="text-ink-600">|</span>
-            <span>{career.status === 'retired' ? 'Carreira encerrada' : status}</span>
+            <span>{career.succession ? 'Sucessão em aberto' : career.status === 'retired' ? 'Carreira encerrada' : status}</span>
             <span className="text-ink-600">|</span>
             <span className={career.finance.cash < 0 ? 'text-apex-400' : ''}>Caixa {formatMoney(career.finance.cash)}</span>
           </div>
@@ -104,7 +117,13 @@ function CareerShell() {
           </div>
         )}
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-8 sm:py-8">
-          <Outlet />
+          {career.status === 'retired' && !career.succession && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold-400/30 bg-gold-400/10 px-4 py-3 text-sm text-ink-100">
+              <span>Esta carreira foi encerrada em uma versão anterior do jogo. Agora a aposentadoria das pistas não é o fim: você pode continuar como dirigente.</span>
+              <Button variant="primary" disabled={career.weekend !== null} onClick={retire}>Continuar como dirigente</Button>
+            </div>
+          )}
+          {career.succession ? <SuccessionScreen /> : <Outlet />}
         </main>
       </div>
     </div>

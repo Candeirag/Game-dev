@@ -126,12 +126,12 @@ export function CareerScreen() {
       <MarketCard />
 
       {career.status === 'active' && (
-        <Card title="Aposentadoria">
-          <p className="text-sm text-ink-400">Encerrar a carreira é definitivo. O save continua disponível para consulta.</p>
+        <Card title="Aposentadoria das pistas">
+          <p className="max-w-3xl text-sm text-ink-400">Pendurar o capacete é definitivo para este personagem, mas a carreira continua: você passa a atuar como dirigente (investidor, chefe de equipe ou dono) e acompanha os filhos. {career.offseason ? 'Como a temporada já acabou, as propostas de cargo e as equipes à venda aparecem em seguida.' : 'No meio da temporada, o reserva assume o seu carro e você acompanha o resto do campeonato de fora.'}</p>
           <div className="mt-3 flex gap-2">
             {confirmRetire ? (
               <>
-                <Button variant="danger" disabled={career.weekend !== null} onClick={retire}>Confirmar aposentadoria</Button>
+                <Button variant="danger" disabled={career.weekend !== null} onClick={retire}>Confirmar: parar de correr</Button>
                 <Button variant="ghost" onClick={() => setConfirmRetire(false)}>Cancelar</Button>
               </>
             ) : (

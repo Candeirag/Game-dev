@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { LEDGER_KEYS } from '@/domain/schemas';
 import { LEDGER_LABELS } from '@/domain/labels';
-import { ECONOMY, SPONSOR_RULES, commercialSponsors, netWorth, type InvestmentProduct } from '@/engine';
+import { ECONOMY, SPONSOR_RULES, commercialSponsors, netWorth, ownedTeamValue, stocksValue, type InvestmentProduct } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, Meter, PageHeader, Pill, Stat, TableWrap, cx, td, th } from '../components/ui';
+import { Button, Card, Meter, PageHeader, Pill, Stat, TableWrap, Tabs, cx, td, th } from '../components/ui';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { CreditPanel, PropertyPanel, StakesPanel, StocksPanel } from './finance/AssetPanels';
+
+type FinanceTab = 'summary' | 'stocks' | 'property' | 'stakes' | 'credit';
+const TABS: { value: FinanceTab; label: string }[] = [
+  { value: 'summary', label: 'Resumo' },
+  { value: 'stocks', label: 'Ações' },
+  { value: 'property', label: 'Imóveis e empresas' },
+  { value: 'stakes', label: 'Equipes' },
+  { value: 'credit', label: 'Crédito e padrão de vida' },
+];
 
 const PRODUCTS: { id: InvestmentProduct; name: string; description: string }[] = [
   { id: 'fixedIncome', name: 'Renda fixa', description: `Rende ${ECONOMY.FIXED_INCOME_RETURN * 100}% ao ano, sem risco.` },
@@ -16,7 +26,12 @@ export function FinanceScreen() {
   const { career, category } = useCareerView();
   const invest = useGameStore((s) => s.invest);
   const [amount, setAmount] = useState('10000');
+  const [tab, setTab] = useState<FinanceTab>('summary');
   const f = career.finance;
+  const driving = career.mode === 'driver';
+  const teamValue = ownedTeamValue(career);
+  const assets = stocksValue(f) + [...f.properties, ...f.businesses, ...f.stakes].reduce((total, item) => total + item.value, 0);
+  const debt = f.loans.reduce((total, loan) => total + loan.balance, 0);
   const totals = f.seasonTotals;
   const income = LEDGER_KEYS.filter((k) => (totals[k] ?? 0) > 0);
   const expenses = LEDGER_KEYS.filter((k) => (totals[k] ?? 0) < 0);
@@ -33,16 +48,24 @@ export function FinanceScreen() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow={`Temporada ${career.year}`} title="Finanças">
-        <span className="text-sm text-ink-400">Resultado previsto por etapa: <b className={cx('tabular', nextRound < 0 ? 'text-apex-400' : 'text-go-400')}>{formatMoney(nextRound, { sign: true })}</b></span>
+        {driving && <span className="text-sm text-ink-400">Resultado previsto por etapa: <b className={cx('tabular', nextRound < 0 ? 'text-apex-400' : 'text-go-400')}>{formatMoney(nextRound, { sign: true })}</b></span>}
       </PageHeader>
+
+      <div className="overflow-x-auto"><Tabs value={tab} options={TABS} onChange={setTab} /></div>
 
       <div className="grid gap-6 lg:grid-cols-4">
         <Card><Stat label="Caixa" value={<span className={f.cash < 0 ? 'text-apex-400' : ''}>{formatMoney(f.cash)}</span>} hint={f.cash < 0 ? `Dívida: juros de ${ECONOMY.LOAN_INTEREST * 100}% no fim do ano` : 'Disponível'} /></Card>
-        <Card><Stat label="Investimentos" value={formatMoney(f.fixedIncome + f.equityFund)} hint="Renda fixa + fundo de ações" /></Card>
-        <Card><Stat label="Patrimônio" value={<span className={netWorth(f) < 0 ? 'text-apex-400' : ''}>{formatMoney(netWorth(f))}</span>} accent /></Card>
+        <Card><Stat label="Aplicações e bens" value={formatMoney(f.fixedIncome + f.equityFund + assets)} hint={debt > 0 ? `Empréstimos: ${formatMoney(debt)}` : 'Renda fixa, fundo, ações, imóveis, empresas e participações'} /></Card>
+        <Card><Stat label="Patrimônio líquido" value={<span className={netWorth(f) + teamValue < 0 ? 'text-apex-400' : ''}>{formatMoney(netWorth(f) + teamValue)}</span>} hint={teamValue > 0 ? `Inclui a sua equipe: ${formatMoney(teamValue)}` : undefined} accent /></Card>
         <Card><Stat label="Temporada até aqui" value={formatMoney(sum(LEDGER_KEYS), { sign: true })} hint="Receitas menos despesas" /></Card>
       </div>
 
+      {tab === 'stocks' && <StocksPanel />}
+      {tab === 'property' && <PropertyPanel />}
+      {tab === 'stakes' && <StakesPanel />}
+      {tab === 'credit' && <CreditPanel />}
+
+      {tab === 'summary' && (<>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Receitas e despesas da temporada" padded={false}>
           <div className="px-4">
@@ -59,11 +82,11 @@ export function FinanceScreen() {
             </table>
           </div>
           <p className="px-4 py-3 text-xs text-ink-400">
-            Salário, patrocínios e a vaga são pagos em parcelas por etapa. No fim do ano vêm o imposto de renda (progressivo, sobre salário, bônus e patrocínios menos o custo da vaga), o rendimento dos investimentos e os juros de eventual dívida.
+            Salário, patrocínios e a vaga são pagos em parcelas por etapa. No fim do ano vêm os dividendos, o resultado das empresas, o imposto de renda (progressivo, sobre a renda do trabalho menos o custo da vaga, mais dividendos, aluguéis e lucros), o rendimento dos investimentos e os juros de eventual dívida.
           </p>
         </Card>
 
-        <Card title="Patrocinadores" action={<span className="text-xs text-ink-400">{sponsors.length} de {SPONSOR_RULES.MAX_SPONSORS} cotas</span>}>
+        {driving && <Card title="Patrocinadores" action={<span className="text-xs text-ink-400">{sponsors.length} de {SPONSOR_RULES.MAX_SPONSORS} cotas</span>}>
           {family && <p className="mb-4 text-sm text-ink-300">Apoio da família: <b className="tabular text-ink-100">{formatMoney(family.perSeason)}</b> por ano, até o fim de {career.year + (family.endSeason - career.season)}.</p>}
           {sponsors.length === 0 ? (
             <p className="text-sm text-ink-400">Nenhum patrocinador. As propostas aparecem como decisões no painel; o porte de quem procura você depende da sua posição no campeonato e da sua reputação.</p>
@@ -80,7 +103,7 @@ export function FinanceScreen() {
               ))}
             </div>
           )}
-        </Card>
+        </Card>}
       </div>
 
       <Card title="Investimentos">
@@ -148,6 +171,7 @@ export function FinanceScreen() {
           </div>
         </Card>
       </div>
+      </>)}
     </div>
   );
 }

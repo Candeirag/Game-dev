@@ -116,7 +116,7 @@ export function WeekendScreen() {
       {!weekend.playerParticipates ? (
         <Card title="Você não disputa esta etapa">
           <p className="text-sm text-ink-300">O piloto reserva da equipe corre no seu lugar. A etapa será simulada por inteiro, e você acompanha o resultado.</p>
-          <Button variant="primary" className="mt-4" onClick={simulateAbsentWeekend}>Simular a etapa</Button>
+          <Button variant="primary" className="mt-4" onClick={() => simulateAbsentWeekend()}>Simular a etapa</Button>
         </Card>
       ) : (
         <>

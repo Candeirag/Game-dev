@@ -1,12 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { DNF_LABELS } from '@/domain/labels';
 import { getTrack, raceLaps } from '@/data/tracks';
-import { fullName, getNextEvent, isSeasonComplete, netWorth, overallRating, playerAvailability } from '@/engine';
+import { fullName, getNextEvent, isSeasonComplete, netWorth, overallRating, playerAvailability, tutorialActive } from '@/engine';
 import { EventsPanel } from '../components/EventsPanel';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
 import { Button, Card, Meter, PageHeader, Pill, PositionBadge, Stat, TeamSwatch, WeatherBadge, cx } from '../components/ui';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { TutorialCard } from './HelpScreen';
 
 const CATEGORY_TONE = { team: 'bg-sky-400', race: 'bg-apex-500', training: 'bg-go-400', season: 'bg-gold-400', finance: 'bg-emerald-300', contract: 'bg-purple-400', health: 'bg-rose-400', media: 'bg-sky-300', family: 'bg-pink-300', business: 'bg-amber-300' } as const;
 
@@ -36,6 +37,7 @@ export function DashboardScreen() {
           {career.status === 'retired' && (
             <Card title="Carreira encerrada"><p className="text-sm text-ink-300">Você se aposentou. O histórico, as estatísticas e as finanças continuam disponíveis para consulta.</p></Card>
           )}
+          {tutorialActive(career) && <TutorialCard />}
           <EventsPanel />
 
           {career.status === 'active' && seasonOver && career.offseason && (
