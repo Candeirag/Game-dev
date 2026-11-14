@@ -29,5 +29,5 @@ export * from './simulation/race';
 export * from './broadcast';
 export { TYRES, RACE } from './simulation/constants';
 export { overallRating, driverPaceRating, carRating, conditionEffects } from './simulation/performance';
-export { rankTeams, buildCategoryField } from './world/generation';
+export { rankTeams, teamStrength, buildCategoryField } from './world/generation';
 export { createRng, hashSeed } from './rng';

@@ -61,3 +61,20 @@ Paulo), Joinville, José Carlos Pace (Uberlândia), Tarumã (Viamão), Speed Par
 International, Zuera, Prokart Raceland (Wackersdorf), Åsum Ring
 (Kristianstad), PF International, Kartódromo Internacional do Algarve
 (Portimão) e Franciacorta Karting Track.
+
+## Fontes: Barlow Condensed e Inter
+
+As fontes do jogo ficam embutidas em `src/assets/fonts/` (arquivos `.woff2`,
+subconjuntos latino e latino estendido), para o jogo funcionar sem internet.
+
+- **Barlow Condensed** (pesos 500, 600 e 700), © 2017 The Barlow Project Authors.
+- **Inter** (variável), © 2016 The Inter Project Authors.
+
+Ambas sob a SIL Open Font License 1.1; o texto da licença acompanha os
+arquivos (`OFL-BarlowCondensed.txt` e `OFL-Inter.txt`).
+
+## Ícones: Lucide
+
+Os ícones da interface vêm do conjunto [Lucide](https://lucide.dev)
+(pacote `lucide-react`), sob a licença ISC, © Lucide Contributors; parte dos
+ícones deriva do Feather (licença MIT, © Cole Bemis).
