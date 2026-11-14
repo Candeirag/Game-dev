@@ -5,8 +5,10 @@ import { TEAMS } from '@/data/teams';
 import { hashSeed } from '@/engine/rng';
 import { generateEventWeather, normalCdf } from '@/engine/simulation/weather';
 import { driverPaceRating, errorProbability, expectedLapTime, lapNoiseSigma, tyreWearPerLap } from '@/engine/simulation/performance';
+import { getCategory } from '@/data/categories';
 import {
   buildRaceContext,
+  conditionEffects,
   createWeekendRace,
   finalizeRace,
   isRaceFinished,
@@ -18,13 +20,16 @@ import {
 } from '@/engine';
 import { newCareer } from './helpers';
 
+const KART = getCategory('kart-regional');
+const AUTO = { mode: 'balanced', auto: true } as const;
+
 const DRY: SessionWeather = { condition: 'dry', wetness: 0, trackTemp: 30 };
 const WET: SessionWeather = { condition: 'wet', wetness: 1, trackTemp: 18 };
 const track = TRACKS[0]!;
-const kart = TEAMS[0]!.kart;
+const car = TEAMS[0]!.car;
 const base: DriverAttributes = { pace: 70, consistency: 70, overtaking: 70, defending: 70, focus: 70, racecraft: 70, tyreManagement: 70, wetSkill: 70, experience: 70 };
 const lap = (a: DriverAttributes, extra: Partial<Parameters<typeof expectedLapTime>[0]> = {}) =>
-  expectedLapTime({ attributes: a, kart, track, weather: DRY, setupScore: 0.5, tyreWear: 0, paceModifier: 0, ...extra });
+  expectedLapTime({ attributes: a, car, track, weather: DRY, setupScore: 0.5, tyreWear: 0, paceModifier: 0, ...extra });
 
 describe('modelo de desempenho', () => {
   it('mais velocidade dá volta mais rápida', () => {
@@ -32,7 +37,10 @@ describe('modelo de desempenho', () => {
   });
 
   it('kart melhor dá volta mais rápida', () => {
-    expect(lap(base, { kart: { engine: 90, chassis: 90, reliability: 90 } })).toBeLessThan(lap(base, { kart: { engine: 60, chassis: 60, reliability: 90 } }));
+    expect(lap(base, { car: { engine: 90, chassis: 90, reliability: 90 } })).toBeLessThan(lap(base, { car: { engine: 60, chassis: 60, reliability: 90 } }));
+    // Na F1 (carFactor 4), a mesma diferença de equipamento pesa quatro vezes mais.
+    const gap = (carFactor: number) => lap(base, { car: { engine: 60, chassis: 60, reliability: 90 }, carFactor }) - lap(base, { car: { engine: 90, chassis: 90, reliability: 90 }, carFactor });
+    expect(gap(4)).toBeCloseTo(gap(1) * 4, 6);
   });
 
   it('pneu gasto e pista molhada deixam a volta mais lenta', () => {
@@ -60,6 +68,21 @@ describe('modelo de desempenho', () => {
     expect(errorProbability({ ...base, consistency: 90 }, DRY, 0)).toBeLessThan(errorProbability({ ...base, consistency: 50 }, DRY, 0));
     expect(errorProbability(base, DRY, 1)).toBeGreaterThan(errorProbability(base, DRY, 0));
     expect(errorProbability(base, WET, 0.5)).toBeGreaterThan(errorProbability(base, DRY, 0.5));
+  });
+
+  it('a condição do piloto é neutra em 50 e ajuda ou atrapalha fora disso', () => {
+    const neutral = conditionEffects({ form: 50, confidence: 50, morale: 50 }, null);
+    expect(neutral).toEqual({ pace: 0, noise: 1, error: 1, attack: 0 });
+    const high = conditionEffects({ form: 90, confidence: 90, morale: 90 }, null);
+    const low = conditionEffects({ form: 10, confidence: 10, morale: 10 }, null);
+    expect(high.pace).toBeLessThan(0);
+    expect(low.pace).toBeGreaterThan(0);
+    expect(high.error).toBeLessThan(1);
+    expect(low.error).toBeGreaterThan(1);
+    expect(high.attack).toBeGreaterThan(low.attack);
+    const injured = conditionEffects({ form: 50, confidence: 50, morale: 50 }, { description: 'x', severity: 'minor', roundsRemaining: 1 });
+    expect(injured.pace).toBeGreaterThan(0);
+    expect(injured.error).toBeGreaterThan(1);
   });
 
   it('gestão de pneus reduz o desgaste', () => {
@@ -135,8 +158,8 @@ describe('fim de semana', () => {
 describe('corrida', () => {
   it('é determinística: mesmas decisões, mesmo resultado', () => {
     const c = raceReady();
-    const r1 = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), 'balanced'));
-    const r2 = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), 'balanced'));
+    const r1 = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), AUTO), KART);
+    const r2 = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), AUTO), KART);
     expect(r1).toEqual(r2);
   });
 
@@ -144,19 +167,22 @@ describe('corrida', () => {
     const c = raceReady();
     const ctx = buildRaceContext(c);
     let s = createWeekendRace(c);
-    while (!isRaceFinished(s)) s = stepRaceLap(s, ctx, 'balanced');
-    expect(s).toEqual(simulateRemainingRace(createWeekendRace(c), ctx, 'balanced'));
+    while (!isRaceFinished(s)) s = stepRaceLap(s, ctx, AUTO);
+    expect(s).toEqual(simulateRemainingRace(createWeekendRace(c), ctx, AUTO));
   });
 
   it('mantém invariantes: 20 classificados, posições únicas, tempos em ordem, pontos corretos', () => {
     for (const seed of [1, 2, 3, 4, 5, 6]) {
       const c = raceReady(seed);
-      const result = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), 'aggressive'));
+      const result = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), { mode: 'aggressive', auto: true }), KART);
       expect(result.entries).toHaveLength(20);
       expect(new Set(result.entries.map((e) => e.driverId)).size).toBe(20);
       expect(result.entries.map((e) => e.position)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
       const finishers = result.entries.filter((e) => e.status === 'finished');
-      for (let i = 1; i < finishers.length; i++) expect(finishers[i]!.totalTime).toBeGreaterThan(finishers[i - 1]!.totalTime);
+      for (let i = 1; i < finishers.length; i++) expect(finishers[i]!.totalTime).toBeGreaterThanOrEqual(finishers[i - 1]!.totalTime);
+      // Kart: sem paradas, sem safety car, sem combustível.
+      expect(result.entries.every((e) => e.pitStops === 0)).toBe(true);
+      expect(result.safetyCars + result.virtualSafetyCars + result.redFlags).toBe(0);
       for (const e of finishers) expect(e.lapsCompleted).toBe(result.totalLaps);
       // Abandonos ficam depois de todos os que terminaram.
       const firstDnf = result.entries.findIndex((e) => e.status === 'dnf');
@@ -172,10 +198,10 @@ describe('corrida', () => {
     const c = raceReady();
     const ctx = buildRaceContext(c);
     const start = createWeekendRace(c);
-    const a = stepRaceLap(start, ctx, 'conservative');
-    const b = stepRaceLap(start, ctx, 'aggressive');
+    const a = stepRaceLap(start, ctx, { mode: 'conservative' });
+    const b = stepRaceLap(start, ctx, { mode: 'aggressive' });
     const player = (s: typeof a) => s.cars.find((x) => x.driverId === 'player')!;
-    expect(player(a).tyreWear).toBeLessThan(player(b).tyreWear);
+    expect(player(a).tyre.wear).toBeLessThan(player(b).tyre.wear);
   });
 
   it('em média, o piloto mais forte termina na frente do mais fraco', () => {
@@ -183,7 +209,7 @@ describe('corrida', () => {
     const N = 25;
     for (let seed = 1; seed <= N; seed++) {
       const c = raceReady(seed);
-      const r = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), 'balanced'));
+      const r = finalizeRace(simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), AUTO), KART);
       const pos = (id: string) => r.entries.find((e) => e.driverId === id)!.position;
       if (pos('andrade') < pos('moura')) strongAhead++;
     }

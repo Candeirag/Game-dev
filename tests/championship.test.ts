@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { RaceEntryResult, RoundRecord } from '@/domain/schemas';
 import { TEAMS } from '@/data/teams';
-import { computeDriverStandings, computeTeamStandings, pointsFor } from '@/engine';
+import { getCategory } from '@/data/categories';
+import { computeDriverStandings, computeTeamStandings, pointsFor as pointsForRules } from '@/engine';
+
+const KART = getCategory('kart-regional');
+const F1 = getCategory('f1');
+const pointsFor = (e: Omit<RaceEntryResult, 'points'>, fastest: string | null) => pointsForRules(e, fastest, KART);
 
 const entry = (driverId: string, teamId: string, position: number, grid: number, status: 'finished' | 'dnf' = 'finished'): Omit<RaceEntryResult, 'points'> => ({
   driverId, teamId, position, grid, status, lapsCompleted: 20, totalTime: 1000 + position, bestLap: 50, overtakes: 0, errors: 0,
+  pitStops: 0, penaltySeconds: 0, penaltyPoints: 0, damage: 0, injured: false,
 });
 
 describe('pontuação', () => {
@@ -21,6 +27,15 @@ describe('pontuação', () => {
     expect(pointsFor(entry('x', 't', 12, 5), 'x')).toBe(1);
     expect(pointsFor(entry('x', 't', 20, 5, 'dnf'), 'x')).toBe(0);
   });
+
+  it('cada categoria aplica as próprias regras de bônus', () => {
+    // F1: sem ponto de pole; a volta mais rápida só vale para quem chega entre os dez primeiros.
+    expect(pointsForRules(entry('x', 't', 1, 1), null, F1)).toBe(25);
+    expect(pointsForRules(entry('x', 't', 10, 5), 'x', F1)).toBe(2);
+    expect(pointsForRules(entry('x', 't', 12, 5), 'x', F1)).toBe(0);
+    // F2: a pole vale 2 pontos.
+    expect(pointsForRules(entry('x', 't', 1, 1), null, getCategory('f2'))).toBe(27);
+  });
 });
 
 function round(n: number, results: [string, string, number, number][]): RoundRecord {
@@ -30,7 +45,7 @@ function round(n: number, results: [string, string, number, number][]): RoundRec
     practice: { weather, entries: [] },
     qualifying: { weather, entries: [] },
     race: {
-      weather, totalLaps: 20, fastestLap: null, events: [],
+      weather, totalLaps: 20, fastestLap: null, events: [], safetyCars: 0, virtualSafetyCars: 0, redFlags: 0, teamOrders: [],
       entries: results.map(([d, t, pos, grid]) => ({ ...entry(d, t, pos, grid), points: pointsFor(entry(d, t, pos, grid), null) })),
     },
   };
@@ -61,6 +76,14 @@ describe('classificação do campeonato', () => {
     );
     // x: 25+2+1 = 28; y: 15+18+18 = 51. Sem empate, y lidera.
     expect(tie[0]!.driverId).toBe('y');
+  });
+
+  it('ajustes de pontos (comissários, protestos) entram na classificação', () => {
+    const adjusted = computeDriverStandings(rounds, [], [{ driverId: 'a', teamId: 'vortex', points: -30, reason: 'teste', round: 2 }]);
+    expect(adjusted.find((x) => x.driverId === 'a')!.points).toBe(44 - 30);
+    expect(adjusted[0]!.driverId).toBe('b');
+    const teams = computeTeamStandings(rounds, TEAMS, [{ driverId: 'a', teamId: 'vortex', points: -30, reason: 'teste', round: 2 }]);
+    expect(teams.find((x) => x.teamId === 'vortex')!.points).toBe(25 + 15 + 18 + 1 + 15 - 30);
   });
 
   it('a pontuação das equipes soma seus pilotos', () => {
