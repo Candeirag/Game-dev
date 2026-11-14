@@ -451,8 +451,12 @@ Se o tempo for curto, a etapa 0 sozinha já resolve o gargalo mais visível hoje
 
 ## 9. Como reproduzir as medições
 
-- **Dependências:** um script percorre `src/`, resolve as importações (`@/` e relativas), agrupa por área e procura ciclos (componentes fortemente conexos).
-- **Desempenho:** um teste temporário do Vitest mede, com `performance.now()` e média de 10 a 200 repetições, cada linha da tabela 3.3. A carreira usada é a do robô com semente 2 e talento 8 (`tests/helpers.ts`), jogada até completar uma temporada de F1.
-- **Escala da classificação:** resultados sintéticos de 20 a 400 pilotos e 14 a 30 etapas passados a `computeDriverStandings`.
+| Medição | Comando | O que faz |
+| --- | --- | --- |
+| Dependências (seção 3.2) | `python3 tools/dependencias.py` | Percorre `src/`, resolve as importações, agrupa por área, lista os pares bidirecionais e procura ciclos entre arquivos. |
+| Desempenho (seção 3.3) | `npm run bench` | Mede corrida, temporada, gravação, sistemas pós-etapa e a classificação com resultados sintéticos de 20 a 400 pilotos. Leva cerca de 10 segundos. |
+| Equilíbrio | `npm run calibrate` | Simula 12 carreiras de 14 temporadas. |
 
-Os dois scripts não estão no repositório. A primeira tarefa da etapa 0 é transformá-los em um conjunto permanente de medições.
+A carreira usada nas medições é a do robô com semente 2 e talento 8 (`tests/helpers.ts`), jogada até completar uma temporada de F1. Os tempos variam com a máquina; o que importa é a proporção entre eles e a evolução de uma etapa do plano para a outra.
+
+Os dois scripts são o ponto de partida da etapa 0, que os transforma em um conjunto de medições com orçamentos verificados automaticamente.

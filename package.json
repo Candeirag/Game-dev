@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
-    "calibrate": "CALIBRATE=1 vitest run --reporter=verbose"
+    "calibrate": "CALIBRATE=1 vitest run --reporter=verbose",
+    "bench": "BENCH=1 vitest run --reporter=verbose"
   },
   "dependencies": {
     "react": "^19.3.1",

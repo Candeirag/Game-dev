@@ -12,7 +12,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    // `npm run calibrate` define CALIBRATE=1 para rodar o relatório de balanceamento.
-    include: process.env.CALIBRATE ? ['tests/calibration/**/*.calib.ts'] : ['tests/**/*.test.ts'],
+    // `npm run calibrate` (CALIBRATE=1) roda o relatório de balanceamento;
+    // `npm run bench` (BENCH=1) roda as medições de desempenho.
+    include: process.env.BENCH ? ['tests/bench/**/*.bench.ts'] : process.env.CALIBRATE ? ['tests/calibration/**/*.calib.ts'] : ['tests/**/*.test.ts'],
   },
 });
