@@ -142,7 +142,7 @@ export function normalizeAllocation(categoryId: ManagedTeam['categoryId'], alloc
 /** Salário de mercado de um profissional: cresce com a nota (elevada a 2,5); diretor técnico e chefe de equipe ganham 40% a mais. */
 export function staffSalary(categoryId: ManagedTeam['categoryId'], rating: number, role: StaffRole): number {
   const base = TEAM_ECONOMY[categoryId].staffSalary * (role === 'principal' || role === 'technicalDirector' ? 1.4 : 1);
-  return Math.round((base * Math.pow(rating / 70, 2.5)) / 100) * 100;
+  return Math.round((base * (rating / 70) ** 2.5) / 100) * 100;
 }
 
 export function generateStaff(seed: number, role: StaffRole, level: number, categoryId: ManagedTeam['categoryId'], season: number): StaffMember {
@@ -245,7 +245,7 @@ export function driverTerms(
   return {
     rating: round1(rating),
     quality: q,
-    salary: Math.round((bottom + (top - bottom) * Math.pow(q, 1.5)) / 1000) * 1000,
+    salary: Math.round((bottom + (top - bottom) * q ** 1.5) / 1000) * 1000,
     seatFee: Math.round((lerp(category.economy.seatCost, teamRank / 9) * (1.05 - 0.4 * q)) / 500) * 500,
     // Um piloto mediano aceita uma equipe mediana; o melhor do grid só as de ponta.
     ambition: 100 * q,
@@ -346,7 +346,7 @@ export function syncManagedTeam(career: CareerState): CareerState {
 /** Valor de mercado da equipe do jogador (zero se ele é só o chefe contratado). */
 export function ownedTeamValue(career: CareerState): number {
   const m = career.management;
-  if (!m || m.position !== 'owner') return 0;
+  if (m?.position !== 'owner') return 0;
   const rank = rankTeams(career.teams).findIndex((t) => t.id === m.teamId);
   const facilities =
     (m.facilities.simulator + m.facilities.windTunnel + m.facilities.factory) * TEAM_ECONOMY[m.categoryId].facilityCost * MANAGEMENT.RESALE_FACILITIES;

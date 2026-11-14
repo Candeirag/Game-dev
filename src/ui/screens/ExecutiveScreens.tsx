@@ -457,6 +457,7 @@ export function ExecutiveCareerScreen() {
         {off.notes.length > 0 ? (
           <ul className="list-disc space-y-1 pl-5 text-sm text-ink-300">
             {off.notes.map((note, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: notas de texto sem id, lista só de leitura
               <li key={i}>{note}</li>
             ))}
           </ul>

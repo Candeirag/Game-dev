@@ -469,6 +469,7 @@ export function RaceView() {
               {recentEvents.length === 0 && <li className="px-4 py-3 text-sm text-ink-400">Os carros estão alinhados no grid.</li>}
               {recentEvents.map((e, i) => (
                 <li
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a chave é a posição do evento na corrida, que não muda
                   key={`${race.events.length - i}`}
                   className={cx(
                     'flex gap-3 border-t border-ink-800 px-4 py-2 text-sm first:border-t-0',

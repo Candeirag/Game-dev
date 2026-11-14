@@ -41,6 +41,7 @@ export function StandingsScreen() {
       {career.adjustments.length > 0 && (
         <ul className="mb-4 space-y-1 rounded-lg border border-gold-400/30 bg-gold-400/5 px-4 py-3 text-sm text-gold-400">
           {career.adjustments.map((a, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a lista só cresce no fim e os ajustes não têm id
             <li key={i}>
               {drivers[a.driverId] ? fullName(drivers[a.driverId]!) : a.driverId}: {a.points > 0 ? '+' : ''}
               {a.points} pontos ({a.reason}).

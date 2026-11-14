@@ -788,7 +788,7 @@ export interface SafetyCarSample {
 /** Posição do safety car (à frente do líder) enquanto a prova está neutralizada. */
 export function safetyCarAt(timeline: RaceTimeline, circuit: Circuit, t: number, leaderDistance: number): SafetyCarSample | null {
   const info = lapInfoAt(timeline, t);
-  if (!info || info.flag !== 'sc' || t >= info.end) return null;
+  if (info?.flag !== 'sc' || t >= info.end) return null;
   const lead = 46 / circuit.length;
   const raw = leaderDistance - Math.floor(leaderDistance) + lead;
   // Na volta em que recolhe, o safety car já saiu da pista quando chega à linha.
@@ -796,7 +796,7 @@ export function safetyCarAt(timeline: RaceTimeline, circuit: Circuit, t: number,
   const s = wrap01(raw);
   const progress = (t - info.start) / Math.max(1, info.end - info.start);
   const previous = timeline.laps[info.lap - 2];
-  const entering = !previous || previous.flag !== 'sc';
+  const entering = previous?.flag !== 'sc';
   const inPitLane = info.safetyCarIn && s >= circuit.pit.entry;
   const presence = Math.min(entering ? clamp(progress / 0.06, 0, 1) : 1, info.safetyCarIn ? clamp((1 - s) / 0.02, 0, 1) : 1);
   return { s, inPitLane, presence };

@@ -132,7 +132,7 @@ export function runAiMarket(
   if (category.tier < 7) {
     for (const s of standings.filter((x) => x.driverId !== career.playerDriverId).slice(0, 3)) {
       const d = ai.find((x) => x.id === s.driverId);
-      if (d && d.teamId && s.position <= 5) {
+      if (d?.teamId && s.position <= 5) {
         leaving.add(d.id);
         news.push(`${fullName(d)} (${s.position}º) sobe de categoria.`);
       }
@@ -208,18 +208,20 @@ export function runAiMarket(
   for (const team of ranked) {
     const list = [...(seats.get(team.id) ?? [])].sort((a, b) => value(b) - value(a));
     if (team.id === reserved?.teamId) {
-      reserved.drivers
-        .slice(0, 2)
-        .forEach((d, i) => result.push({ ...d, teamId: team.id, role: i === 0 ? 'first' : 'second', contractEnd: Math.max(nextSeason, d.contractEnd) }));
+      reserved.drivers.slice(0, 2).forEach((d, i) => {
+        result.push({ ...d, teamId: team.id, role: i === 0 ? 'first' : 'second', contractEnd: Math.max(nextSeason, d.contractEnd) });
+      });
     } else if (team.id === player.teamId) {
       const mate = list[0];
       if (mate) result.push({ ...mate, role: player.role === 'first' ? 'second' : 'first' });
     } else {
-      list.forEach((d, i) => result.push({ ...d, role: i === 0 ? 'first' : 'second' }));
+      list.forEach((d, i) => {
+        result.push({ ...d, role: i === 0 ? 'first' : 'second' });
+      });
     }
     // Reserva: o piloto livre mais jovem entre os melhores que sobraram.
     const reserveIndex = free.findIndex((d) => d.age <= category.field.minAge + Math.ceil((category.field.maxAge - category.field.minAge) * 0.6));
-    const reserve = free.splice(reserveIndex >= 0 ? reserveIndex : 0, 1)[0];
+    const reserve = free.splice(Math.max(reserveIndex, 0), 1)[0];
     if (reserve) result.push({ ...reserve, teamId: team.id, role: 'reserve', contractEnd: nextSeason });
   }
   return { drivers: result, news: news.slice(0, 8) };

@@ -173,10 +173,12 @@ function CareerShell() {
   const [raceBar, setRaceBar] = useState(false);
   const chrome = useMemo(() => ({ setRaceBar, wide }), [wide]);
   const [moreOpen, setMoreOpen] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fecha o "Mais" a cada troca de tela ou de formato
   useEffect(() => {
     setMoreOpen(false);
   }, [location.pathname, wide]);
   // Cada tela abre do começo (a navegação por áreas não zera a rolagem sozinha).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a rolagem volta ao topo a cada troca de tela
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
@@ -208,13 +210,14 @@ function CareerShell() {
     <>
       {to === '/dashboard' && pending > 0 && (
         <span
+          role="img"
           className="grid h-4 min-w-4 place-items-center bg-gold-400 px-1 font-display text-xs font-bold leading-none text-ink-950"
           aria-label={`${pending} pendentes`}
         >
           {pending}
         </span>
       )}
-      {to === '/career' && offers && <span className="h-2 w-2 bg-apex-500" aria-label="Há propostas" />}
+      {to === '/career' && offers && <span role="img" className="h-2 w-2 bg-apex-500" aria-label="Há propostas" />}
     </>
   );
   const who = (
@@ -309,6 +312,7 @@ function CareerShell() {
           >
             <div className="flex h-12 shrink-0 items-center justify-center border-b border-ink-700">
               <span
+                role="img"
                 aria-label="Apex Motorsport Dynasty"
                 className="chamfer grid h-8 w-8 place-items-center bg-apex-500 font-display text-xl font-bold italic text-white [--chamfer:7px]"
               >

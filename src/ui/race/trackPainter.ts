@@ -113,7 +113,10 @@ function slab(circuit: Circuit, s: number, lateral: number, along: number, acros
   const path = new Path2D();
   const corner = (a: number, b: number): [number, number] => [p.x + cos * a - sin * b, p.y + sin * a + cos * b];
   const points = [corner(-along / 2, -across / 2), corner(along / 2, -across / 2), corner(along / 2, across / 2), corner(-along / 2, across / 2)];
-  points.forEach(([x, y], i) => (i === 0 ? path.moveTo(x, y) : path.lineTo(x, y)));
+  points.forEach(([x, y], i) => {
+    if (i === 0) path.moveTo(x, y);
+    else path.lineTo(x, y);
+  });
   path.closePath();
   return path;
 }

@@ -101,7 +101,7 @@ export function simulateQualifying(
     ordered.sort(byLapTimes);
   } else {
     const cut = Math.floor(participants.length / 4);
-    let active: Row[] = participants.map((p) => ({ p, attempts: [], valid: [] }));
+    const active: Row[] = participants.map((p) => ({ p, attempts: [], valid: [] }));
     const eliminated: Row[] = [];
     (['Q1', 'Q2', 'Q3'] as const).forEach((segment, segmentIndex) => {
       for (const row of active) {

@@ -342,7 +342,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
     weight: 0,
     build(ctx) {
       const incident = incidentWithPlayer(ctx);
-      if (!incident || !incident.playerAttacked) return null;
+      if (!incident?.playerAttacked) return null;
       const other = nameOf(ctx, incident.otherId);
       return {
         title: 'Convocado pelos comissários',
@@ -452,7 +452,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
     build(ctx) {
       const entries = ctx.record?.race.entries ?? [];
       const mine = ctx.entry;
-      if (!mine || mine.status !== 'finished' || mine.position < 2) return null;
+      if (mine?.status !== 'finished' || mine.position < 2) return null;
       const ahead = entries[mine.position - 2];
       if (!ahead || ahead.points <= 0 || ahead.teamId === mine.teamId) return null;
       const other = nameOf(ctx, ahead.driverId);
@@ -501,7 +501,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
     weight: 3,
     build(ctx) {
       const mine = ctx.entry;
-      if (!mine || mine.status !== 'finished' || mine.position > 3) return null;
+      if (mine?.status !== 'finished' || mine.position > 3) return null;
       const behind = ctx.record?.race.entries[mine.position];
       if (!behind) return null;
       const other = nameOf(ctx, behind.driverId);

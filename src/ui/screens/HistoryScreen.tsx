@@ -84,7 +84,7 @@ export function HistoryScreen() {
           <Stat label="Títulos" value={stats.titles} />
         </div>
         {all.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-1" aria-label="Sequência de resultados">
+          <div className="mt-4 flex flex-wrap gap-1" role="group" aria-label="Sequência de resultados">
             {all.map((r) => (
               <span
                 key={`${r.season}-${r.record.round}`}

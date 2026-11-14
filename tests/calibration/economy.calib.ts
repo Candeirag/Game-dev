@@ -169,7 +169,7 @@ test('economia pessoal: € 100 milhões em 40 temporadas, por estratégia', () 
     const median = results[Math.floor(results.length / 2)] ?? 0;
     const income = incomes.reduce((a, b) => a + b, 0) / Math.max(1, incomes.length);
     console.log(
-      `${strategy.name.padEnd(42)} ${median.toFixed(2).padStart(6)}× ${(results[0] ?? 0).toFixed(2).padStart(6)}× ${(results[results.length - 1] ?? 0).toFixed(2).padStart(6)}×   ${((Math.pow(Math.max(0.0001, median), 1 / SEASONS) - 1) * 100).toFixed(1).padStart(5)}%            € ${Math.round(income / 1000).toLocaleString('pt-BR')} mil${teamYields.length ? `   lucro médio da equipe: ${(teamYields.reduce((a, b) => a + b, 0) / teamYields.length).toFixed(1)}% do preço ao ano` : ''}`,
+      `${strategy.name.padEnd(42)} ${median.toFixed(2).padStart(6)}× ${(results[0] ?? 0).toFixed(2).padStart(6)}× ${(results[results.length - 1] ?? 0).toFixed(2).padStart(6)}×   ${((Math.max(0.0001, median) ** (1 / SEASONS) - 1) * 100).toFixed(1).padStart(5)}%            € ${Math.round(income / 1000).toLocaleString('pt-BR')} mil${teamYields.length ? `   lucro médio da equipe: ${(teamYields.reduce((a, b) => a + b, 0) / teamYields.length).toFixed(1)}% do preço ao ano` : ''}`,
     );
   }
 }, 3_600_000);

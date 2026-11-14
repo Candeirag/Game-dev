@@ -249,7 +249,7 @@ export function setKartFunding(career: CareerState, childId: string, funding: Su
 /** Muda o apoio à carreira de um filho. O custo da temporada em curso é recalculado. */
 export function setChildSupport(career: CareerState, childId: string, support: SupportLevel): CareerState {
   const child = career.family.children.find((c) => c.id === childId);
-  if (!child || !child.racing || child.stage !== 'racing') throw new Error('Este filho não tem carreira em andamento.');
+  if (!child?.racing || child.stage !== 'racing') throw new Error('Este filho não tem carreira em andamento.');
   const next: Child = { ...child, support };
   const category = getCategory(child.racing.categoryId);
   const inWorld = career.drivers.some((d) => d.id === child.driver?.id);

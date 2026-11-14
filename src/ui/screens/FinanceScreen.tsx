@@ -224,6 +224,7 @@ export function FinanceScreen() {
                     </thead>
                     <tbody>
                       {f.transactions.map((t, i) => (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: os lançamentos não têm id; a lista é só de leitura
                         <tr key={i} className="border-t border-ink-800">
                           <td className={cx(td, 'tabular text-ink-400')}>
                             T{t.season} · E{t.round}

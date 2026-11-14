@@ -80,6 +80,7 @@ export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera,
   }, [timeRef]);
 
   // Nova corrida: a câmera e as suavizações recomeçam.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dispara quando a pista ou o circuito mudam, mesmo sem usá-los no corpo
   useEffect(() => {
     memory.current = createSceneMemory();
   }, [timeline.trackId, circuit]);

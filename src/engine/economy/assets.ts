@@ -318,7 +318,7 @@ export function loanLimit(career: CareerState): number {
 
 /** Parcela anual de um financiamento pelo sistema de parcelas iguais. */
 export function annualPayment(amount: number, rate: number, seasons: number): number {
-  return Math.round((amount * rate) / (1 - Math.pow(1 + rate, -seasons)));
+  return Math.round((amount * rate) / (1 - (1 + rate) ** -seasons));
 }
 
 /**

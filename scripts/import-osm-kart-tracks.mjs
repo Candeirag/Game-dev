@@ -202,7 +202,7 @@ function longestStraight(points) {
     for (let k = 0; k < steps; k++) dense.push([a[0] + ((b[0] - a[0]) * k) / steps, a[1] + ((b[1] - a[1]) * k) / steps]);
   }
   const m = dense.length;
-  const heading = dense.map((p, i) => Math.atan2(dense[(i + 3) % m][1] - dense[(i - 3 + m) % m][1], dense[(i + 3) % m][0] - dense[(i - 3 + m) % m][0]));
+  const heading = dense.map((_p, i) => Math.atan2(dense[(i + 3) % m][1] - dense[(i - 3 + m) % m][1], dense[(i + 3) % m][0] - dense[(i - 3 + m) % m][0]));
   const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
   let best = { from: 0, samples: 0 };
   for (let i = 0; i < m; i++) {
@@ -241,14 +241,12 @@ for (const track of TRACKS) {
     note = `${loops.length} percursos, ${chosen.arcs} trechos`;
     if (debugFile)
       debug[track.id] = {
-        candidates: loops
-          .slice(0, 12)
-          .map((loop) => ({
-            length: Math.round(loop.length),
-            arcs: loop.arcs,
-            drawn: Math.round(loop.drawn),
-            points: loop.nodes.map((node) => position.get(node).map((v) => Math.round(v * 10) / 10)),
-          })),
+        candidates: loops.slice(0, 12).map((loop) => ({
+          length: Math.round(loop.length),
+          arcs: loop.arcs,
+          drawn: Math.round(loop.drawn),
+          points: loop.nodes.map((node) => position.get(node).map((v) => Math.round(v * 10) / 10)),
+        })),
       };
   }
   let points = nodes.map((node) => position.get(node));
