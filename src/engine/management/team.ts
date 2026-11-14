@@ -16,6 +16,7 @@ import { post } from '../career/economy';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
+import { money } from '../career/selectors';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
@@ -378,7 +379,7 @@ export function ownerTransfer(career: CareerState, amount: number): CareerState 
     return { ...career, finance: post(career.finance, career.season, round, 'team', -value, 'Aporte na equipe'), management: spend(m, 'owner', value) };
   }
   const reserve = TEAM_ECONOMY[m.categoryId].operations * MANAGEMENT.RESERVE;
-  if (m.budget + value < reserve) throw new Error(`A equipe precisa manter uma reserva de € ${Math.round(reserve).toLocaleString('pt-BR')}.`);
+  if (m.budget + value < reserve) throw new Error(`A equipe precisa manter uma reserva de ${money(career, reserve)}.`);
   return { ...career, finance: post(career.finance, career.season, round, 'dividends', -value, 'Retirada de lucros da equipe'), management: spend(m, 'owner', value) };
 }
 
@@ -497,7 +498,7 @@ export function settleTeamRound(career: CareerState, record: RoundRecord): TeamR
     const cap = economy.budgetCap ?? 0;
     if (m.development.spent < cap) {
       m = { ...m, development: { ...m.development, spent: cap } };
-      messages.push({ id: 'budget-cap', category: 'business', title: 'Teto de gastos atingido', body: `A equipe chegou ao teto de gastos com desenvolvimento (€ ${cap.toLocaleString('pt-BR')}). A pesquisa só volta na próxima temporada.` });
+      messages.push({ id: 'budget-cap', category: 'business', title: 'Teto de gastos atingido', body: `A equipe chegou ao teto de gastos com desenvolvimento (${money(career, cap)}). A pesquisa só volta na próxima temporada.` });
     }
   } else {
     m = spend(m, 'research', -cost);

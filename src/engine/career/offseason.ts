@@ -35,6 +35,7 @@ import { licensePointsFor } from './license';
 import { promotedRivals, runAiMarket, updateMarketInterest } from './market';
 import { familyDriverIds, fullName, getPlayer, getTeam } from './selectors';
 import { renewSponsors } from './sponsors';
+import { money } from './selectors';
 
 /** A pré-temporada equivale a 2 ciclos de treino. */
 const OFFSEASON_TRAINING_CYCLES = 2;
@@ -150,7 +151,7 @@ export function closeSeason(career: CareerState): CareerState {
     date,
     category: 'season',
     title: `Fim da temporada ${career.year}`,
-    body: `${champion ? fullName(champion) : 'O campeão'} é o campeão. Você terminou em ${me.position}º (meta: ${team.driverTarget}º) e ganhou ${licensePointsEarned} ponto(s) de licença. Imposto de renda do ano: € ${closed.report.tax.toLocaleString('pt-BR')}. Veja as propostas para a próxima temporada na tela Carreira.`,
+    body: `${champion ? fullName(champion) : 'O campeão'} é o campeão. Você terminou em ${me.position}º (meta: ${team.driverTarget}º) e ganhou ${licensePointsEarned} ponto(s) de licença. Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as propostas para a próxima temporada na tela Carreira.`,
   };
 
   const messages: InboxMessage[] = [message];
@@ -376,7 +377,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
   const fee = releaseFeeFor(career, offer);
   if (fee > 0) {
     finance = post(finance, career.season, career.calendar.length, 'release', -fee, 'Multa rescisória');
-    news.push(`Você pagou € ${fee.toLocaleString('pt-BR')} de multa para deixar o contrato anterior.`);
+    news.push(`Você pagou ${money(career, fee)} de multa para deixar o contrato anterior.`);
   }
 
   // Acerto com credores: uma dívida maior que metade da vaga mais cara da categoria em que o
@@ -387,14 +388,14 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
   const debtCeiling = Math.max(next.economy.seatCost[0] * DEBT_CEILING_SHARE, next.economy.living * 2);
   const settlement = settleDebts(finance, career.season, career.calendar.length, debtCeiling);
   finance = settlement.finance;
-  if (settlement.raised > 0) news.push(`Para cobrir a dívida, os credores executaram € ${settlement.raised.toLocaleString('pt-BR')} do seu patrimônio (${settlement.sold.join(', ')}).`);
+  if (settlement.raised > 0) news.push(`Para cobrir a dívida, os credores executaram ${money(career, settlement.raised)} do seu patrimônio (${settlement.sold.join(', ')}).`);
   if (settlement.forgiven > 0) {
     reputation = Math.max(0, reputation - DEBT_SETTLEMENT_REPUTATION);
-    news.push(`Acordo com credores: € ${settlement.forgiven.toLocaleString('pt-BR')} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
+    news.push(`Acordo com credores: ${money(career, settlement.forgiven)} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
   }
 
   const sponsors = renewSponsors(career.sponsors, career.season, getCategory(career.categoryId), next);
-  for (const s of sponsors.renewed) news.push(`${s.name} renovou o patrocínio por € ${s.perSeason.toLocaleString('pt-BR')} por temporada.`);
+  for (const s of sponsors.renewed) news.push(`${s.name} renovou o patrocínio por ${money(career, s.perSeason)} por temporada.`);
   for (const s of sponsors.left) news.push(s.tier === 0 ? 'O apoio financeiro da família chegou ao fim.' : `${s.name} não renovou o patrocínio.`);
 
   let academy = career.academy;
@@ -479,7 +480,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
       date,
       category: 'season',
       title: `Temporada ${nextYear}: ${next.shortName}`,
-      body: `${kindText}, pela ${newTeam.name}, como ${contract.role === 'first' ? 'primeiro' : 'segundo'} piloto. A meta é terminar entre os ${newTeam.driverTarget} primeiros. Custo da vaga: € ${contract.seatCost.toLocaleString('pt-BR')}; salário: € ${contract.salary.toLocaleString('pt-BR')}.`,
+      body: `${kindText}, pela ${newTeam.name}, como ${contract.role === 'first' ? 'primeiro' : 'segundo'} piloto. A meta é terminar entre os ${newTeam.driverTarget} primeiros. Custo da vaga: ${money(career, contract.seatCost)}; salário: ${money(career, contract.salary)}.`,
     },
   ];
   if (news.length > 0) messages.push({ id: `s${nextSeason}-market`, date, category: 'contract', title: 'Mercado de pilotos', body: news.join(' ') });

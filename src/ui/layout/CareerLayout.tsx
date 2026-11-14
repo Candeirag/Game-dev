@@ -3,7 +3,7 @@ import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { getNextEvent, isSeasonComplete, managedTeam, trackName } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { cx } from '../components/ui';
-import { formatDateTime, formatMoney } from '../format';
+import { currencySymbol, formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { SuccessionScreen } from '../screens/SuccessionScreen';
 import { Button } from '../components/ui';
@@ -30,6 +30,9 @@ const PRIMARY: Record<'driver' | 'executive', readonly string[]> = {
   driver: ['/dashboard', '/weekend', '/driver', '/career'],
   executive: ['/dashboard', '/weekend', '/team', '/career'],
 };
+
+/** O ícone de Finanças acompanha a moeda da carreira. */
+const iconOf = (item: (typeof NAV)[number]) => (item.to === '/finance' ? (currencySymbol() === '€' ? '€' : '$') : item.icon);
 
 export function CareerLayout() {
   const hasCareer = useGameStore((s) => s.career !== null);
@@ -120,7 +123,7 @@ function CareerShell() {
                 )
               }
             >
-              <span aria-hidden className="w-4 text-center text-base">{item.icon}</span>
+              <span aria-hidden className="w-4 text-center text-base">{iconOf(item)}</span>
               {item.label}
               <span className="ml-auto flex items-center">{badge(item.to)}</span>
             </NavLink>
@@ -182,7 +185,7 @@ function CareerShell() {
               to={item.to}
               className={({ isActive }) => cx('relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-semibold', isActive ? 'text-ink-100 shadow-[inset_0_3px_0_0_var(--color-apex-500)]' : 'text-ink-400')}
             >
-              <span aria-hidden className="text-lg leading-none">{item.icon}</span>
+              <span aria-hidden className="text-lg leading-none">{iconOf(item)}</span>
               <span className="text-center leading-[1.05]">{item.label}</span>
               <span className="absolute right-[calc(50%-1.6rem)] top-1.5 flex items-center">{badge(item.to)}</span>
             </NavLink>
@@ -219,7 +222,7 @@ function CareerShell() {
                   onClick={() => setMoreOpen(false)}
                   className={({ isActive }) => cx('flex min-h-12 items-center gap-3 rounded-lg border px-3 text-sm font-semibold', isActive ? 'border-apex-500 bg-apex-500/15 text-ink-100' : 'border-ink-700 text-ink-200')}
                 >
-                  <span aria-hidden className="w-5 text-center text-base">{item.icon}</span>
+                  <span aria-hidden className="w-5 text-center text-base">{iconOf(item)}</span>
                   {item.label}
                 </NavLink>
               ))}

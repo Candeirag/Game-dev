@@ -18,6 +18,7 @@ import { checksumOf } from './checksum';
 import { validateCareerIntegrity } from './integrity';
 import { migrateCareerData } from './migrations';
 import type { StorageAdapter } from './storage';
+import { currencyForNationality, relabelMoney } from '@/domain/money';
 
 export const SAVE_FORMAT = 'apex-motorsport-dynasty-save';
 export const SAVE_SLOTS = ['auto', 'slot1', 'slot2', 'slot3'] as const;
@@ -119,7 +120,23 @@ export function parseEnvelope(raw: unknown): CareerState {
   }
   const problems = validateCareerIntegrity(parsed.data);
   if (problems.length) throw new SaveError('O save tem dados inconsistentes.', problems);
-  return parsed.data;
+  return relabelStoredMoney(parsed.data);
+}
+
+/**
+ * Mensagens, notícias e eventos ficam gravados já por extenso. Saves de versões anteriores trazem
+ * todos os valores com "€"; ao abrir, o símbolo desses textos passa a ser o da moeda da carreira
+ * (a do país do piloto). Só o símbolo muda: os números e o resto do save ficam como estavam.
+ */
+function relabelStoredMoney(career: CareerState): CareerState {
+  const currency = currencyForNationality(getPlayer(career).nationality);
+  const walk = (value: unknown): unknown => {
+    if (typeof value === 'string') return relabelMoney(value, currency);
+    if (Array.isArray(value)) return value.map(walk);
+    if (value !== null && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, walk(inner)]));
+    return value;
+  };
+  return walk(career) as CareerState;
 }
 
 export async function saveCareer(storage: StorageAdapter, slot: SaveSlotId, career: CareerState, now: string): Promise<SaveEnvelope> {

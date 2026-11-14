@@ -24,6 +24,7 @@ import { updateMarketInterest } from './market';
 import { fullName } from './selectors';
 import { familySupport } from './sponsors';
 import { TRAINABLE_ATTRIBUTES } from './training';
+import { currencyForNationality, formatMoney } from '@/domain/money';
 
 export const PLAYER_DRIVER_ID = 'player';
 
@@ -191,7 +192,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
         date: firstDate,
         category: 'team',
         title: `Bem-vindo à ${team.name}`,
-        body: `Você é o novo piloto da ${team.name} no ${category.name} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. A vaga custa € ${seatCost.toLocaleString('pt-BR')} por temporada, pagos em parcelas por etapa; a família ajuda nos cinco primeiros anos. Escolha o programa de treino no painel e prepare-se para a etapa de abertura.`,
+        body: `Você é o novo piloto da ${team.name} no ${category.name} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. A vaga custa ${formatMoney(seatCost, currencyForNationality(input.nationality))} por temporada, pagos em parcelas por etapa; a família ajuda nos cinco primeiros anos. Escolha o programa de treino no painel e prepare-se para a etapa de abertura.`,
       },
     ],
   };

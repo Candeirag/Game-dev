@@ -17,6 +17,7 @@ import { buildSponsor, commercialSponsors, sponsorTierFor, SPONSOR_RULES } from 
 import { fullName, teamKey } from '../career/selectors';
 import { hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
+import { money } from '../career/selectors';
 
 export interface EventContext {
   career: CareerState;
@@ -61,7 +62,6 @@ const cash = (value: number, label: string): Effect => ({ type: 'cash', value, l
 const sure = (text: string, ...effects: Effect[]): EventChoice['outcomes'] => [{ probability: 1, text, effects }];
 const odds = (...items: [probability: number, text: string, effects: Effect[]][]): EventChoice['outcomes'] => items.map(([probability, text, effects]) => ({ probability, text, effects }));
 const choice = (id: string, label: string, description: string, outcomes: EventChoice['outcomes']): EventChoice => ({ id, label, description, outcomes });
-const euro = (value: number) => `€ ${Math.round(value).toLocaleString('pt-BR')}`;
 
 const nameOf = (ctx: EventContext, id: string) => {
   const d = ctx.career.drivers.find((x) => x.id === id);
@@ -168,7 +168,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
         title: `${other} provoca`,
         body: `${other} declarou à imprensa que você "só anda bem quando ninguém aperta". A rivalidade entre vocês já afeta as disputas na pista.`,
         choices: [
-          choice('reply', 'Responder na mesma moeda', 'Aumenta a tensão. Pode render multa.', odds([0.7, 'A troca de farpas esquenta o campeonato.', [rivalry(rival.id, 12), stat('confidence', 4), sponsors(-4)]], [0.3, `Os comissários multam os dois em ${euro(fine)} por conduta antidesportiva.`, [rivalry(rival.id, 15), stat('reputation', -3), cash(-fine, 'Multa por conduta antidesportiva')]])),
+          choice('reply', 'Responder na mesma moeda', 'Aumenta a tensão. Pode render multa.', odds([0.7, 'A troca de farpas esquenta o campeonato.', [rivalry(rival.id, 12), stat('confidence', 4), sponsors(-4)]], [0.3, `Os comissários multam os dois em ${money(ctx.career, fine)} por conduta antidesportiva.`, [rivalry(rival.id, 15), stat('reputation', -3), cash(-fine, 'Multa por conduta antidesportiva')]])),
           choice('track', 'Responder na pista', 'Usa a provocação como combustível.', sure('Você guarda a resposta para a próxima largada.', stat('confidence', 2), stat('morale', 3), rivalry(rival.id, 4))),
           choice('truce', 'Propor uma trégua', 'Reduz o risco de toques entre vocês.', sure('Vocês apertam as mãos diante das câmeras.', rivalry(rival.id, -25), stat('reputation', 2), stat('confidence', -2))),
         ],
@@ -241,9 +241,9 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       const fee = Math.round(ctx.category.economy.living * 0.12);
       return {
         title: 'Protesto contra um rival',
-        body: `A equipe desconfia do ${ctx.category.machine} de ${other}, que terminou logo à sua frente, e quer protestar o resultado. A taxa do protesto, de ${euro(fee)}, seria dividida com você.`,
+        body: `A equipe desconfia do ${ctx.category.machine} de ${other}, que terminou logo à sua frente, e quer protestar o resultado. A taxa do protesto, de ${money(ctx.career, fee)}, seria dividida com você.`,
         choices: [
-          choice('support', 'Apoiar o protesto', `Custa ${euro(fee)}. Se for aceito, ${other} perde os pontos da etapa.`, odds(
+          choice('support', 'Apoiar o protesto', `Custa ${money(ctx.career, fee)}. Se for aceito, ${other} perde os pontos da etapa.`, odds(
             [0.35, `Protesto aceito: ${other} perde ${ahead.points} pontos.`, [cash(-fee, 'Taxa de protesto'), { type: 'pointsAdjustment', driverId: ahead.driverId, points: -ahead.points, reason: `Protesto aceito na etapa ${ctx.round}` }, rivalry(ahead.driverId, 20), stat('teamTrust', 3)]],
             [0.65, 'Protesto rejeitado. A taxa não é devolvida e o paddock não gostou.', [cash(-fee, 'Taxa de protesto'), stat('reputation', -3), rivalry(ahead.driverId, 12)]],
           )),
@@ -267,7 +267,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
         body: `A equipe de ${other} protestou o seu ${mine.position}º lugar, alegando irregularidade no ${ctx.category.machine}. O resultado fica sob análise.`,
         choices: [
           choice('quiet', 'Confiar na equipe', 'Sem custo. A decisão fica com os comissários.', odds([0.8, 'Protesto rejeitado: o resultado está mantido.', [stat('confidence', 2)]], [0.2, `Protesto aceito: você perde os ${mine.points} pontos da etapa.`, [loss, stat('morale', -6)]])),
-          choice('expert', 'Contratar um perito independente', `Custa ${euro(expert)}, mas reduz muito o risco.`, odds([0.94, 'O laudo do perito encerra o caso a seu favor.', [cash(-expert, 'Perito técnico')]], [0.06, `Mesmo com o laudo, o protesto é aceito: você perde os ${mine.points} pontos.`, [cash(-expert, 'Perito técnico'), loss, stat('morale', -6)]])),
+          choice('expert', 'Contratar um perito independente', `Custa ${money(ctx.career, expert)}, mas reduz muito o risco.`, odds([0.94, 'O laudo do perito encerra o caso a seu favor.', [cash(-expert, 'Perito técnico')]], [0.06, `Mesmo com o laudo, o protesto é aceito: você perde os ${mine.points} pontos.`, [cash(-expert, 'Perito técnico'), loss, stat('morale', -6)]])),
           choice('press', 'Rebater na imprensa', 'Não muda a análise, mas marca posição.', odds([0.8, 'Protesto rejeitado, e a troca de acusações fica registrada.', [rivalry(behind.driverId, 12), stat('reputation', 1)]], [0.2, `Protesto aceito: você perde os ${mine.points} pontos e sai mal na foto.`, [loss, rivalry(behind.driverId, 12), stat('reputation', -3)]])),
         ],
       };
@@ -283,9 +283,9 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       const extra = Math.round((seat * 0.12) / 100) * 100;
       return {
         title: 'A equipe pede um aporte extra',
-        body: `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe pede ${euro(extra)} a mais para manter o programa de desenvolvimento até o fim do ano.`,
+        body: `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe pede ${money(ctx.career, extra)} a mais para manter o programa de desenvolvimento até o fim do ano.`,
         choices: [
-          choice('pay', `Pagar ${euro(extra)}`, 'A equipe mantém o desenvolvimento e fica em dívida com você.', sure('O aporte garante as atualizações previstas.', cash(-extra, 'Aporte extra à equipe'), stat('teamTrust', 7))),
+          choice('pay', `Pagar ${money(ctx.career, extra)}`, 'A equipe mantém o desenvolvimento e fica em dívida com você.', sure('O aporte garante as atualizações previstas.', cash(-extra, 'Aporte extra à equipe'), stat('teamTrust', 7))),
           choice('refuse', 'Recusar', 'Sem custo agora, mas a equipe pode cortar o desenvolvimento.', odds([0.6, 'A equipe aperta o cinto e segue como dá.', [stat('teamTrust', -8)]], [0.4, `Sem dinheiro, a equipe cancela as atualizações: o ${ctx.category.machine} perde rendimento.`, [stat('teamTrust', -8), { type: 'carUpgrade', value: -1.5 }]])),
           choice('split', 'Propor parcelar no contrato', 'O custo anual da vaga sobe 8%.', sure('A equipe aceita diluir o valor nas próximas parcelas.', { type: 'seatCost', value: seat * 0.08 }, stat('teamTrust', 1))),
         ],
@@ -333,7 +333,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       if (!unhappy) return null;
       return {
         title: `${unhappy.name} cobra resultados`,
-        body: `O patrocinador ${unhappy.name} esperava ver você entre os ${unhappy.targetPosition} primeiros do campeonato e ameaça rescindir o contrato de ${euro(unhappy.perSeason)} por ano.`,
+        body: `O patrocinador ${unhappy.name} esperava ver você entre os ${unhappy.targetPosition} primeiros do campeonato e ameaça rescindir o contrato de ${money(ctx.career, unhappy.perSeason)} por ano.`,
         choices: [
           choice('promise', 'Prometer uma reação', 'Ganha tempo, mas aumenta a pressão sobre você.', sure('O patrocinador aceita esperar mais algumas etapas.', sponsors(15, unhappy.id), stat('morale', -4))),
           choice('pr', 'Fazer ações extras de marketing', 'Recupera a satisfação, à custa de descanso e treino.', sure('Uma semana de eventos e gravações deixa o patrocinador satisfeito e você, cansado.', sponsors(24, unhappy.id), stat('form', -6))),
@@ -358,7 +358,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       const swap: Effect[] = replaces ? [{ type: 'removeSponsor', sponsorId: replaces.id }] : [];
       return {
         title: `Proposta de patrocínio: ${sponsor.name}`,
-        body: `${sponsor.name} oferece ${euro(sponsor.perSeason)} por temporada, mais ${euro(sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.${replaces ? ` As suas três cotas estão ocupadas: para assinar, você precisa encerrar o contrato com ${replaces.name} (${euro(replaces.perSeason)} por temporada).` : ''}`,
+        body: `${sponsor.name} oferece ${money(ctx.career, sponsor.perSeason)} por temporada, mais ${money(ctx.career, sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.${replaces ? ` As suas três cotas estão ocupadas: para assinar, você precisa encerrar o contrato com ${replaces.name} (${money(ctx.career, replaces.perSeason)} por temporada).` : ''}`,
         choices: [
           choice('sign', replaces ? `Assinar e dispensar ${replaces.name}` : 'Assinar', 'Receita garantida em parcelas por etapa.', sure(`${sponsor.name} estampa o seu macacão.`, ...swap, { type: 'addSponsor', sponsor })),
           choice('haggle', 'Pedir 20% a mais', 'Pode melhorar o contrato ou espantar o patrocinador.', odds([0.5, `${sponsor.name} aceita pagar mais, mas passa a exigir mais também.`, [...swap, { type: 'addSponsor', sponsor: better }]], [0.5, `${sponsor.name} agradece e procura outro piloto.`, []])),
@@ -392,7 +392,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       const interest: Effect[] = nextKeys.slice(0, 6).map((key) => ({ type: 'interest', teamKey: key, value: 4 }));
       return {
         title: 'Convite para uma prova de exibição',
-        body: `Você foi convidado para uma corrida de exibição com pilotos de várias categorias. A viagem custa ${euro(cost)} e toma uma semana de preparação.`,
+        body: `Você foi convidado para uma corrida de exibição com pilotos de várias categorias. A viagem custa ${money(ctx.career, cost)} e toma uma semana de preparação.`,
         choices: [
           choice('go', 'Participar', 'Vitrine para outras equipes, com algum risco.', odds(
             [0.65, 'Boa exibição: chefes de equipe de outras categorias anotam o seu nome.', [cash(-cost, 'Viagem para prova de exibição'), stat('reputation', 4), { type: 'attribute', key: 'experience', value: 0.8 }, ...interest]],

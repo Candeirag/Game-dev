@@ -1,5 +1,6 @@
 /** Formatação para exibição. Não contém regras de jogo. */
 import { KART_LAYOUTS, KART_LAYOUTS_CREDIT } from '@/data/kartLayouts';
+import { CURRENCY_SYMBOL, formatMoney as formatAmount, type Currency } from '@/domain/money';
 
 export function formatLap(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '-';
@@ -57,13 +58,26 @@ export function describePower(powerSensitivity: number): string {
   return powerSensitivity >= 0.6 ? 'favorece o motor' : powerSensitivity <= 0.4 ? 'favorece o chassi' : 'equilibrada';
 }
 
-/** Valor em euros, abreviado acima de 100 mil (€ 1,25 mi) e completo abaixo disso. */
-export function formatMoney(value: number, options: { compact?: boolean; sign?: boolean } = {}): string {
-  const abs = Math.abs(value);
-  const sign = value < 0 ? '−' : options.sign && value > 0 ? '+' : '';
-  if (options.compact !== false && abs >= 1_000_000) return `${sign}€ ${(abs / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} mi`;
-  if (options.compact !== false && abs >= 100_000) return `${sign}€ ${Math.round(abs / 1000).toLocaleString('pt-BR')} mil`;
-  return `${sign}€ ${Math.round(abs).toLocaleString('pt-BR')}`;
+let displayCurrency: Currency = 'BRL';
+
+/** Moeda em que a interface escreve os valores: a da carreira aberta (definida em App.tsx a cada mudança). */
+export function setDisplayCurrency(currency: Currency): void {
+  displayCurrency = currency;
+}
+
+/** Símbolo da moeda em uso, para rótulos como "Valor (R$)". */
+export function currencySymbol(): string {
+  return CURRENCY_SYMBOL[displayCurrency];
+}
+
+/** Valor na moeda da carreira, abreviado acima de 100 mil (R$ 1,25 mi) e completo abaixo disso. */
+export function formatMoney(value: number, options: { compact?: boolean; sign?: boolean; decimals?: number } = {}): string {
+  return formatMoneyAs(value, displayCurrency, options);
+}
+
+/** O mesmo, numa moeda dada (a tela de nova carreira ainda não tem carreira aberta). */
+export function formatMoneyAs(value: number, currency: Currency, options: { compact?: boolean; sign?: boolean; decimals?: number } = {}): string {
+  return formatAmount(value, currency, { ...options, compact: options.compact !== false });
 }
 
 export function trackLocation(track: { city: string; state: string; country: string }): string {

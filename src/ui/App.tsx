@@ -1,6 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useGameStore } from '@/store/gameStore';
+import { careerCurrency } from '@/engine';
+import { setDisplayCurrency } from './format';
 import { CareerLayout } from './layout/CareerLayout';
 import { CalendarScreen } from './screens/CalendarScreen';
 import { CareerScreen } from './screens/CareerScreen';
@@ -18,6 +20,12 @@ import { SavesScreen } from './screens/SavesScreen';
 import { StandingsScreen } from './screens/StandingsScreen';
 import { TeamScreen } from './screens/TeamScreen';
 import { WeekendScreen } from './screens/WeekendScreen';
+
+// A interface escreve os valores na moeda da carreira aberta. A assinatura é feita antes de qualquer
+// componente, então a moeda já está certa quando as telas redesenham.
+const syncCurrency = (career: ReturnType<typeof useGameStore.getState>['career']) => setDisplayCurrency(career ? careerCurrency(career) : 'BRL');
+syncCurrency(useGameStore.getState().career);
+useGameStore.subscribe((state) => syncCurrency(state.career));
 
 /** Escolhe a tela pelo modo da carreira: piloto ou dirigente. */
 function ByMode({ driver, executive }: { driver: ReactNode; executive: ReactNode }) {

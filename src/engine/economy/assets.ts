@@ -23,6 +23,7 @@ import { computeTeamStandings } from '../championship/standings';
 import { netWorth, post } from '../career/economy';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { rankTeams } from '../world/generation';
+import { money } from '../career/selectors';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -280,7 +281,7 @@ function seasonProgress(career: CareerState): number {
 export function takeLoan(career: CareerState, amount: number, seasons: number): CareerState {
   const value = Math.round(amount);
   if (!ASSET_RULES.LOAN_TERMS.includes(seasons as 2)) throw new Error('Prazo inválido.');
-  if (value < 1000) throw new Error('O valor mínimo de um empréstimo é € 1.000.');
+  if (value < 1000) throw new Error(`O valor mínimo de um empréstimo é ${money(career, 1000)}.`);
   if (value > loanLimit(career)) throw new Error('O banco não aprova este valor: ele passa do seu limite de crédito.');
   const loan: Loan = { id: `loan-s${career.season}-${career.finance.loans.length}-${value}`, label: `Empréstimo de ${seasons} temporadas`, principal: value, balance: value, rate: ASSET_RULES.LOAN_RATE, annualPayment: annualPayment(value, ASSET_RULES.LOAN_RATE, seasons), seasonsRemaining: seasons,
     // Contratado no meio do ano, só paga juros pela parte que falta: o crédito abaixo anula os juros do trecho já disputado.
@@ -440,7 +441,6 @@ export function closeAssetsYear(career: CareerState): AssetsYearResult {
   const rounds = career.calendar.length;
   const notes: string[] = [];
   let f = career.finance;
-  const money = (v: number) => `€ ${Math.round(v).toLocaleString('pt-BR')}`;
 
   // Ações: dividendos sobre a cotação de fechamento.
   let dividends = 0;
@@ -465,7 +465,7 @@ export function closeAssetsYear(career: CareerState): AssetsYearResult {
     const profit = businessProfit(business, career.reputation, hashSeed(career.seed, season, 'business', business.id), partnerBoost);
     f = post(f, season, rounds, 'business', profit, `Resultado: ${business.name}`);
     businesses.push({ ...business, lastProfit: profit, value: businessValue({ invested: business.invested, lastProfit: profit }) });
-    notes.push(`${business.name}: ${profit >= 0 ? 'lucro' : 'prejuízo'} de ${money(Math.abs(profit))}.`);
+    notes.push(`${business.name}: ${profit >= 0 ? 'lucro' : 'prejuízo'} de ${money(career, Math.abs(profit))}.`);
   }
   f = { ...f, businesses };
 
@@ -479,7 +479,7 @@ export function closeAssetsYear(career: CareerState): AssetsYearResult {
     const dividend = stakeDividend(stake, position);
     f = post(f, season, rounds, 'dividends', dividend, dividend >= 0 ? `Dividendos: ${stake.teamName}` : `Aporte de sócio: ${stake.teamName}`);
     stakes.push({ ...stake, lastPosition: position, lastDividend: dividend, value: Math.round(teamValue(stake.categoryId, position - 1) * stake.share) });
-    notes.push(`${stake.teamName} terminou em ${position}º: ${dividend >= 0 ? `dividendos de ${money(dividend)}` : `aporte de ${money(-dividend)}`}.`);
+    notes.push(`${stake.teamName} terminou em ${position}º: ${dividend >= 0 ? `dividendos de ${money(career, dividend)}` : `aporte de ${money(career, -dividend)}`}.`);
   }
   f = { ...f, stakes };
 

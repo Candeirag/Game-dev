@@ -15,6 +15,7 @@ import { categoryRequirements, type Requirement } from './license';
 import { reachableCategories, targetInterest, teamsOfCategory } from './market';
 import { getPlayer, teamKey } from './selectors';
 import { renewSponsors } from './sponsors';
+import { money } from './selectors';
 
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
 const roundTo = (value: number, step: number) => Math.round(value / step) * step;
@@ -184,13 +185,12 @@ export function financeRequirement(career: CareerState, offer: Offer): Requireme
   const projected = netWorth(career.finance) - releaseFeeFor(career, offer) + seasonFlow;
   const creditLimit = Math.max(netSeat * CONTRACT_RULES.CREDIT_TOLERANCE, category.economy.living);
   const met = seasonFlow >= 0 || projected >= -creditLimit;
-  const money = (v: number) => `€ ${Math.round(v).toLocaleString('pt-BR')}`;
   return {
     key: 'finance',
     label: 'Finanças',
     detail: met
-      ? `Resultado previsto da temporada: ${money(seasonFlow)}; saldo projetado: ${money(projected)}`
-      : `A temporada custaria ${money(-seasonFlow)} a mais do que você arrecada, e o saldo projetado (${money(projected)}) passa do limite de crédito de ${money(creditLimit)}`,
+      ? `Resultado previsto da temporada: ${money(career, seasonFlow)}; saldo projetado: ${money(career, projected)}`
+      : `A temporada custaria ${money(career, -seasonFlow)} a mais do que você arrecada, e o saldo projetado (${money(career, projected)}) passa do limite de crédito de ${money(career, creditLimit)}`,
     met,
   };
 }

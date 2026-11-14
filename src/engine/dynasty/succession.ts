@@ -34,9 +34,9 @@ import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, rankTeams } from '../world/generation';
 import { childSummary, closeFamilyYear, emptyFamily } from './family';
 import { beginSeasonFamily } from './familyEvents';
+import { money } from '../career/selectors';
 
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
-const money = (v: number) => `€ ${Math.round(v).toLocaleString('pt-BR')}`;
 
 export function mortalityRisk(age: number): number {
   return FAMILY.MORTALITY.find((band) => age <= band.upTo)?.risk ?? 0.3;
@@ -203,7 +203,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
   const generation = state.dynasty.generation + 1;
   const newEntry = (driverId: string, name: string, age: number, year: number): LineageEntry => ({ generation, driverId, name, bornYear: year - age, fromSeason: state.season + 1, toSeason: null, endReason: null, bestCategoryId: null, titles: 0, wins: 0, peakReputation: 0, netWorthPassed: null });
   const family = option.kind === 'child' ? emptyFamily() : { ...state.family, partner: option.kind === 'partner' ? null : state.family.partner };
-  const inheritedNote = `Patrimônio recebido: ${money(succession.estate - succession.tax - siblingsShare)} (imposto de ${money(succession.tax)}${siblingsShare > 0 ? `; ${money(siblingsShare)} para os irmãos` : ''}).`;
+  const inheritedNote = `Patrimônio recebido: ${money(career, succession.estate - succession.tax - siblingsShare)} (imposto de ${money(career, succession.tax)}${siblingsShare > 0 ? `; ${money(career, siblingsShare)} para os irmãos` : ''}).`;
 
   if (path === 'executive') {
     state = convertToExecutive(state);
@@ -320,6 +320,6 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
   next = { ...next, marketInterest: updateMarketInterest(next, 1) };
   const sponsorOffer = instantiateEvent(next, 'sponsor-offer', 0);
   if (sponsorOffer) next = { ...next, pendingEvents: [sponsorOffer] };
-  const message: InboxMessage = { id: `s${nextSeason}-heir-g${generation}`, date, category: 'family', title: `${fullName(player)} continua a história`, body: `${fullName(player)}, ${player.age} anos, é agora o piloto da família ${former.lastName}: corre a ${category.name} pela ${team.name}, como ${role === 'first' ? 'primeiro' : 'segundo'} piloto. A vaga custa ${money(seatCost)} por temporada. ${notes.join(' ')}` };
+  const message: InboxMessage = { id: `s${nextSeason}-heir-g${generation}`, date, category: 'family', title: `${fullName(player)} continua a história`, body: `${fullName(player)}, ${player.age} anos, é agora o piloto da família ${former.lastName}: corre a ${category.name} pela ${team.name}, como ${role === 'first' ? 'primeiro' : 'segundo'} piloto. A vaga custa ${money(career, seatCost)} por temporada. ${notes.join(' ')}` };
   return beginSeasonFamily({ ...next, inbox: pushMessages(state.inbox, [message]) });
 }

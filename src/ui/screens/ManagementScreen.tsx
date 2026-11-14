@@ -22,7 +22,7 @@ import {
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, ChoiceCard, EmptyState, Meter, PageHeader, Pill, RatingBar, Stat, TableWrap, Tabs, cx, td, th } from '../components/ui';
-import { formatMoney } from '../format';
+import { currencySymbol, formatMoney } from '../format';
 import { useCareer } from '../hooks/useCareer';
 
 type Tab = 'overview' | 'staff' | 'facilities' | 'development' | 'drivers';
@@ -149,7 +149,7 @@ function Overview({ m }: { m: ManagedTeam }) {
         {m.position === 'owner' && (
           <Card title="Caixa do dono">
             <div className="flex flex-wrap items-end gap-3">
-              <label className="text-sm text-ink-300">Valor (€)<br /><input type="number" min={0} step={10000} value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 w-40 rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none" /></label>
+              <label className="text-sm text-ink-300">Valor ({currencySymbol()})<br /><input type="number" min={0} step={10000} value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 w-40 rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none" /></label>
               <Button disabled={value <= 0 || value > career.finance.cash} onClick={() => ownerTransfer(value)}>Aportar na equipe</Button>
               <Button variant="ghost" disabled={value <= 0} onClick={() => ownerTransfer(-value)}>Retirar lucros</Button>
             </div>

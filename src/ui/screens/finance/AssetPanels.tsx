@@ -7,7 +7,7 @@ import { getCategory } from '@/data/categories';
 import { livingCostBase, loanLimit, loanPayoff, annualPayment, rankTeams, stakePrice, stockPrice, stocksValue, teamStandings } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, ChoiceCard, Pill, Stat, TableWrap, TeamSwatch, cx, td, th } from '../../components/ui';
-import { formatMoney } from '../../format';
+import { currencySymbol, formatMoney } from '../../format';
 import { useCareer } from '../../hooks/useCareer';
 
 const input = 'w-28 rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none';
@@ -45,7 +45,7 @@ export function StocksPanel() {
                   return (
                     <tr key={stock.id} className="border-t border-ink-800">
                       <td className={td}><div className="font-semibold">{stock.name}</div><div className="text-xs text-ink-400">{stock.sector}</div></td>
-                      <td className={cx(td, 'text-right tabular')}>€ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className={cx(td, 'text-right tabular')}>{formatMoney(price, { compact: false, decimals: 2 })}</td>
                       <td className={cx(td, 'hidden text-right text-xs text-ink-400 md:table-cell')}>{pct(stock.drift)} ao ano · ±{pct(stock.volatility)}</td>
                       <td className={cx(td, 'hidden text-right tabular sm:table-cell')}>{pct(stock.dividendYield)}</td>
                       <td className={cx(td, 'text-right tabular')}>{held ? `${held.shares} (${formatMoney(held.shares * price)})` : '-'}</td>
@@ -223,7 +223,7 @@ export function CreditPanel() {
           <Stat label="Juros" value={`${pct(ASSET_RULES.LOAN_RATE)} ao ano`} hint="Parcelas iguais, pagas a cada etapa" />
         </div>
         <div className="mt-4 flex flex-wrap items-end gap-3">
-          <label className="text-sm text-ink-300">Valor (€)<br /><input type="number" min={1000} step={1000} value={amount} onChange={(e) => setAmount(e.target.value)} className={cx(input, 'mt-1 w-36')} /></label>
+          <label className="text-sm text-ink-300">Valor ({currencySymbol()})<br /><input type="number" min={1000} step={1000} value={amount} onChange={(e) => setAmount(e.target.value)} className={cx(input, 'mt-1 w-36')} /></label>
           <label className="text-sm text-ink-300">Prazo<br />
             <select value={term} onChange={(e) => setTerm(Number(e.target.value))} className={cx(input, 'mt-1 w-40')}>
               {ASSET_RULES.LOAN_TERMS.map((t) => <option key={t} value={t}>{t} temporadas</option>)}

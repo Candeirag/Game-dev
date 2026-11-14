@@ -1,5 +1,6 @@
 /** Consultas puras sobre o estado da carreira. Usadas pela UI e pelo próprio motor. */
 import type { CareerState, ChampionshipEvent, Driver, Team } from '@/domain/schemas';
+import { currencyForNationality, formatMoney, type Currency } from '@/domain/money';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { getTrack } from '@/data/tracks';
 import { computeDriverStandings, computeTeamStandings } from '../championship/standings';
@@ -8,6 +9,16 @@ export function getPlayer(career: CareerState): Driver {
   const player = career.drivers.find((d) => d.id === career.playerDriverId);
   if (!player) throw new Error('Piloto do jogador não encontrado no save.');
   return player;
+}
+
+/** Moeda em que a carreira é exibida: a do país do piloto (os herdeiros mantêm a nacionalidade da família). */
+export function careerCurrency(career: CareerState): Currency {
+  return currencyForNationality(career.drivers.find((d) => d.id === career.playerDriverId)?.nationality ?? 'BR');
+}
+
+/** Valor por extenso na moeda da carreira, para os textos que o motor escreve (mensagens, eventos, notícias). */
+export function money(career: CareerState, value: number): string {
+  return formatMoney(value, careerCurrency(career));
 }
 
 export function getTeam(career: CareerState, teamId: string): Team {

@@ -4,7 +4,7 @@ import { LEDGER_LABELS } from '@/domain/labels';
 import { ECONOMY, SPONSOR_RULES, commercialSponsors, netWorth, ownedTeamValue, stocksValue, type InvestmentProduct } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, Meter, PageHeader, Pill, Stat, TableWrap, Tabs, cx, td, th } from '../components/ui';
-import { formatMoney } from '../format';
+import { currencySymbol, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { CreditPanel, PropertyPanel, StakesPanel, StocksPanel } from './finance/AssetPanels';
 
@@ -123,7 +123,7 @@ export function FinanceScreen() {
           ))}
         </div>
         <label className="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink-300">
-          Valor da operação (€)
+          Valor da operação ({currencySymbol()})
           <input type="number" min={0} step={1000} value={amount} onChange={(e) => setAmount(e.target.value)} className="w-40 rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none" />
           <span className="text-xs text-ink-400">O rendimento é creditado no fechamento de cada temporada.</span>
         </label>

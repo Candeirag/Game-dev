@@ -6,6 +6,7 @@
 import type { CareerState, Effect, EventChoice, PendingEvent, RoundRecord } from '@/domain/schemas';
 import { TEAM_ECONOMY } from '@/data/management';
 import { createRng, hashSeed } from '../rng';
+import { money } from '../career/selectors';
 
 /** Chance de um evento de gestão depois de cada etapa. */
 export const MANAGEMENT_EVENT_CHANCE = 0.35;
@@ -13,7 +14,6 @@ export const MANAGEMENT_EVENT_CHANCE = 0.35;
 const budget = (value: number, label: string): Effect => ({ type: 'teamBudget', value: Math.round(value), label });
 const sure = (text: string, ...effects: Effect[]): EventChoice['outcomes'] => [{ probability: 1, text, effects }];
 const choice = (id: string, label: string, description: string, outcomes: EventChoice['outcomes']): EventChoice => ({ id, label, description, outcomes });
-const euro = (value: number) => `€ ${Math.round(value).toLocaleString('pt-BR')}`;
 
 type Builder = (career: CareerState, record: RoundRecord) => Pick<PendingEvent, 'title' | 'body' | 'choices'> | null;
 
@@ -26,7 +26,7 @@ const BUILDERS: Readonly<Record<string, Builder>> = {
     const fee = sponsor.perSeason * 0.12;
     return {
       title: `${sponsor.name} pede uma ação promocional`,
-      body: `O patrocinador ${sponsor.name} quer os dois pilotos em um evento no meio da semana. Paga ${euro(fee)} a mais, mas tira os pilotos da preparação.`,
+      body: `O patrocinador ${sponsor.name} quer os dois pilotos em um evento no meio da semana. Paga ${money(career, fee)} a mais, mas tira os pilotos da preparação.`,
       choices: [
         choice('accept', 'Aceitar', 'Entra dinheiro; os pilotos chegam cansados à próxima etapa.', sure('O evento foi um sucesso comercial.', budget(fee, 'Ação promocional'), { type: 'lineupCondition', stat: 'morale', value: -4 })),
         choice('decline', 'Recusar', 'Os pilotos agradecem; o patrocinador, não.', sure('O patrocinador registrou a recusa.', { type: 'teamReputation', value: -1 }, { type: 'lineupCondition', stat: 'morale', value: 2 })),
@@ -42,7 +42,7 @@ const BUILDERS: Readonly<Record<string, Builder>> = {
       title: `Rival sonda ${director.name}`,
       body: `Uma equipe rival fez uma proposta ao seu diretor técnico, ${director.name} (nota ${director.rating}). Ele espera uma resposta.`,
       choices: [
-        choice('raise', 'Cobrir a proposta', `Custa ${euro(raise)} agora.`, sure(`${director.name} fica, motivado.`, budget(-raise, 'Aumento do diretor técnico'), { type: 'staffRating', role: 'technicalDirector', value: 1 })),
+        choice('raise', 'Cobrir a proposta', `Custa ${money(career, raise)} agora.`, sure(`${director.name} fica, motivado.`, budget(-raise, 'Aumento do diretor técnico'), { type: 'staffRating', role: 'technicalDirector', value: 1 })),
         choice('talk', 'Apelar ao projeto', 'Sem custo, mas pode não convencer.', [
           { probability: 0.5, text: `${director.name} acreditou no projeto e fica.`, effects: [] },
           { probability: 0.5, text: `${director.name} fica, mas contrariado: o trabalho dele perde rendimento.`, effects: [{ type: 'staffRating', role: 'technicalDirector', value: -6 }] },
@@ -62,7 +62,7 @@ const BUILDERS: Readonly<Record<string, Builder>> = {
       body: 'Os comissários técnicos questionam uma solução usada na última atualização do seu carro. Você pode adaptar a peça ou defender a legalidade dela.',
       choices: [
         choice('comply', 'Adaptar a peça', 'Parte da pesquisa em andamento é refeita.', sure('A equipe redesenhou a peça.', { type: 'devProgress', area: null, value: -2.5 })),
-        choice('protest', 'Defender a solução', `Se perder, multa de ${euro(fine)} e arranhão na reputação.`, [
+        choice('protest', 'Defender a solução', `Se perder, multa de ${money(career, fine)} e arranhão na reputação.`, [
           { probability: 0.5, text: 'A federação aceitou os argumentos. A equipe ganhou respeito no paddock.', effects: [{ type: 'teamReputation', value: 2 }] },
           { probability: 0.5, text: 'A federação manteve a diretriz e multou a equipe.', effects: [budget(-fine, 'Multa técnica'), { type: 'teamReputation', value: -3 }, { type: 'devProgress', area: null, value: -2.5 }] },
         ]),
@@ -96,7 +96,7 @@ const BUILDERS: Readonly<Record<string, Builder>> = {
       title: 'Atraso na fábrica',
       body: 'Um lote de peças saiu com defeito. Refazê-lo no prazo exige horas extras; sem elas, o desenvolvimento atrasa.',
       choices: [
-        choice('overtime', 'Pagar horas extras', `Custa ${euro(overtime)}.`, sure('As peças ficaram prontas a tempo.', budget(-overtime, 'Horas extras na fábrica'))),
+        choice('overtime', 'Pagar horas extras', `Custa ${money(career, overtime)}.`, sure('As peças ficaram prontas a tempo.', budget(-overtime, 'Horas extras na fábrica'))),
         choice('delay', 'Aceitar o atraso', 'A pesquisa perde parte do progresso.', sure('O cronograma escorregou.', { type: 'devProgress', area: null, value: -2 })),
       ],
     };
@@ -109,7 +109,7 @@ const BUILDERS: Readonly<Record<string, Builder>> = {
     const bonus = TEAM_ECONOMY[m.categoryId].operations * 0.03;
     return {
       title: 'Pódio rende bônus',
-      body: `O ${best.position}º lugar nesta etapa rendeu um bônus de ${euro(bonus)} dos patrocinadores. Como usar o dinheiro?`,
+      body: `O ${best.position}º lugar nesta etapa rendeu um bônus de ${money(career, bonus)} dos patrocinadores. Como usar o dinheiro?`,
       choices: [
         choice('research', 'Investir em pesquisa', 'Acelera o desenvolvimento em curso.', sure('O dinheiro foi para o departamento técnico.', { type: 'devProgress', area: null, value: 2 })),
         choice('staff', 'Premiar a equipe', 'Mecânicos e pilotos mais motivados.', sure('A equipe comemorou o prêmio.', { type: 'staffRating', role: 'chiefMechanic', value: 2 }, { type: 'lineupCondition', stat: 'morale', value: 5 })),

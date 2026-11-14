@@ -36,11 +36,11 @@ import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, generateReserve, rankTeams } from '../world/generation';
 import { managementRoundEvent } from './events';
 import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, fieldRatings, staffSalary, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
+import { money } from '../career/selectors';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
-const money = (v: number) => `€ ${Math.round(v).toLocaleString('pt-BR')}`;
 /** Venda forçada da equipe por dívida: 90% do valor de mercado. */
 const FORCED_SALE_DISCOUNT = 0.9;
 
@@ -185,7 +185,7 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
       const d = career.drivers.find((x) => x.id === e.driverId);
       return `${d ? fullName(d) : 'Piloto'}: ${e.status === 'finished' ? `${e.position}º (largou em ${e.grid}º), ${e.points} ponto(s)` : 'abandonou'}`;
     });
-    msg('race', 'race', `Etapa ${round}: resultado da ${team?.name ?? 'equipe'}`, `${lines.join('. ')}. Vencedor: ${winner ? fullName(winner) : '-'}. A equipe é a ${position}ª no campeonato (meta: ${result.management.boardTarget}ª). Caixa: ${money(result.management.budget)}.`);
+    msg('race', 'race', `Etapa ${round}: resultado da ${team?.name ?? 'equipe'}`, `${lines.join('. ')}. Vencedor: ${winner ? fullName(winner) : '-'}. A equipe é a ${position}ª no campeonato (meta: ${result.management.boardTarget}ª). Caixa: ${money(career, result.management.budget)}.`);
   } else {
     msg('race', 'race', `Etapa ${round}`, `Vencedor: ${winner ? fullName(winner) : '-'}. Você acompanha o campeonato de fora.`);
   }
@@ -403,7 +403,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
     const economy = TEAM_ECONOMY[management.categoryId];
     const profit = Object.entries(management.ledger).reduce((sum, [key, value]) => sum + (key === 'owner' ? 0 : value), 0);
     const prize = Math.round(lerp(economy.prize, (position - 1) / 9));
-    notes.push(`A ${team?.name ?? 'equipe'} terminou em ${position}º no campeonato de equipes (meta: ${target}º). Resultado do ano: ${money(profit)}. Prêmio para a próxima temporada: ${money(prize)}.`);
+    notes.push(`A ${team?.name ?? 'equipe'} terminou em ${position}º no campeonato de equipes (meta: ${target}º). Resultado do ano: ${money(career, profit)}. Prêmio para a próxima temporada: ${money(career, prize)}.`);
 
     // Patrocinadores: quem viu a equipe muito abaixo do combinado sai; contratos vencidos só renovam com a meta cumprida.
     let brokenDeals = 0;
@@ -428,22 +428,22 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
       strikes = 0;
       if (budget < 0) {
         finance = post(finance, season, rounds, 'team', budget, 'Cobertura do prejuízo da equipe');
-        notes.push(`A equipe fechou o ano com ${money(-budget)} de saldo negativo, cobertos com o seu dinheiro.`);
+        notes.push(`A equipe fechou o ano com ${money(career, -budget)} de saldo negativo, cobertos com o seu dinheiro.`);
         budget = 0;
       }
     } else {
       if (met) {
         const bonus = Math.round(management.salary * MANAGEMENT.TARGET_BONUS);
         finance = post(finance, season, rounds, 'bonus', bonus, 'Bônus por meta cumprida');
-        notes.push(`A diretoria pagou ${money(bonus)} de bônus pela meta cumprida.`);
+        notes.push(`A diretoria pagou ${money(career, bonus)} de bônus pela meta cumprida.`);
       }
       // Equipe de terceiros: os donos retiram o lucro que passa da reserva e cobrem o prejuízo.
       const reserve = Math.round(economy.operations * MANAGEMENT.STARTING_BUDGET);
       if (budget > reserve * 2) {
-        notes.push(`Os donos da equipe retiraram ${money(budget - reserve * 2)} de lucro acumulado.`);
+        notes.push(`Os donos da equipe retiraram ${money(career, budget - reserve * 2)} de lucro acumulado.`);
         budget = reserve * 2;
       } else if (budget < 0) {
-        notes.push(`Os donos cobriram ${money(-budget)} de prejuízo e cobraram explicações.`);
+        notes.push(`Os donos cobriram ${money(career, -budget)} de prejuízo e cobraram explicações.`);
         budget = Math.round(reserve * 0.5);
       }
     }
@@ -487,12 +487,12 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
   if (personal.cash < -ceiling) {
     const liquidation = liquidateAssets(personal, season, rounds, -personal.cash - ceiling);
     personal = liquidation.finance;
-    if (liquidation.raised > 0) notes.push(`Para cobrir a sua dívida, os credores executaram ${money(liquidation.raised)} do seu patrimônio (${liquidation.sold.join(', ')}).`);
+    if (liquidation.raised > 0) notes.push(`Para cobrir a sua dívida, os credores executaram ${money(career, liquidation.raised)} do seu patrimônio (${liquidation.sold.join(', ')}).`);
     if (personal.cash < -ceiling && management && management.position === 'owner') {
       const team = managedTeam(career);
       const proceeds = Math.round(ownedTeamValue({ ...career, management }) * FORCED_SALE_DISCOUNT);
       personal = post(personal, season, rounds, 'assets', proceeds, `Venda forçada da equipe ${team?.name ?? ''}`);
-      notes.push(`Sem ter como pagar o que deve, você foi obrigado a vender a ${team?.name ?? 'equipe'} por ${money(proceeds)}.`);
+      notes.push(`Sem ter como pagar o que deve, você foi obrigado a vender a ${team?.name ?? 'equipe'} por ${money(career, proceeds)}.`);
       teams = normalizeFieldDevelopment({ ...career, management });
       management = null;
     }
@@ -500,7 +500,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
       const forgiven = Math.round(-personal.cash - ceiling);
       personal = { ...personal, cash: -ceiling };
       reputation = Math.max(0, reputation - DEBT_SETTLEMENT_REPUTATION);
-      notes.push(`Acordo com credores: ${money(forgiven)} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
+      notes.push(`Acordo com credores: ${money(career, forgiven)} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
     }
   }
   const worldResults: Record<string, { position: number; wins: number; driver: Driver; teamName: string }> = {};
@@ -514,7 +514,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
   let state: CareerState = { ...career, teams, finance: personal, reputation, management, executiveLog, family: family.family };
   state = syncManagedTeam(state);
   const champion = career.drivers.find((d) => d.id === driverStandings[0]?.driverId);
-  const messages: InboxMessage[] = [{ id: `s${season}-end`, date, category: 'season', title: `Fim da temporada ${career.year}`, body: `${champion ? fullName(champion) : 'O campeão'} é o campeão da ${category.shortName}. ${notes.join(' ')} Imposto de renda do ano: ${money(closed.report.tax)}. Veja as decisões para a próxima temporada na tela Carreira.` }];
+  const messages: InboxMessage[] = [{ id: `s${season}-end`, date, category: 'season', title: `Fim da temporada ${career.year}`, body: `${champion ? fullName(champion) : 'O campeão'} é o campeão da ${category.shortName}. ${notes.join(' ')} Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as decisões para a próxima temporada na tela Carreira.` }];
   if (family.notes.length > 0) messages.push({ id: `s${season}-family`, date, category: 'family', title: 'A família neste ano', body: family.notes.join(' ') });
   state = { ...state, inbox: pushMessages(state.inbox, messages), executiveOffseason: buildExecutiveOffseason(state, summary, evaluation) };
   return checkMortality(state);
@@ -568,7 +568,7 @@ export function leaveTeam(career: CareerState): CareerState {
     const proceeds = ownedTeamValue(career);
     finance = post(finance, career.season, rounds, 'assets', proceeds, `Venda da equipe ${team?.name ?? ''}`);
     finance = post(finance, career.season, rounds, 'tax', -Math.max(0, Math.round((proceeds - m.purchasePrice) * ASSET_RULES.CAPITAL_GAINS_TAX)), 'Imposto sobre ganho de capital');
-    note = `Você vendeu a ${team?.name ?? 'equipe'} por ${money(proceeds)}.`;
+    note = `Você vendeu a ${team?.name ?? 'equipe'} por ${money(career, proceeds)}.`;
   } else {
     note = `Você deixou o comando da ${team?.name ?? 'equipe'}.`;
   }
@@ -660,7 +660,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     categoryId = offer.categoryId;
     targetTeamId = offer.teamId;
     options = { position: 'principal', salary: offer.salary, purchasePrice: 0 };
-    news.push(`Você é o novo chefe de equipe da ${offer.teamName}, com salário de ${money(offer.salary)} por temporada. Meta: terminar entre as ${offer.target} primeiras.`);
+    news.push(`Você é o novo chefe de equipe da ${offer.teamName}, com salário de ${money(career, offer.salary)} por temporada. Meta: terminar entre as ${offer.target} primeiras.`);
   } else if (plan.kind === 'buy') {
     const listing = off.listings.find((l) => l.id === plan.listingId);
     if (!listing) throw new Error('Equipe não está à venda.');
@@ -671,12 +671,12 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     finance = post(finance, career.season, career.calendar.length, 'team', -price, `Compra da equipe ${listing.teamName}`);
     if (stake) {
       finance = { ...finance, stakes: finance.stakes.filter((x) => x.id !== stake.id) };
-      news.push(`A sua participação de ${Math.round(stake.share * 100)}% na ${listing.teamName} entrou no negócio: você pagou ${money(price)} pelo restante.`);
+      news.push(`A sua participação de ${Math.round(stake.share * 100)}% na ${listing.teamName} entrou no negócio: você pagou ${money(career, price)} pelo restante.`);
     }
     categoryId = listing.categoryId;
     targetTeamId = listing.teamId;
     options = { position: 'owner', salary: 0, purchasePrice: listing.price };
-    if (!stake) news.push(`Você comprou a ${listing.teamName} por ${money(listing.price)}.`);
+    if (!stake) news.push(`Você comprou a ${listing.teamName} por ${money(career, listing.price)}.`);
   } else if (plan.kind === 'found') {
     const cost = foundingCost(plan.categoryId);
     if (!/^#[0-9a-fA-F]{6}$/.test(plan.color)) throw new Error('Cor inválida.');
@@ -686,7 +686,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     categoryId = plan.categoryId;
     founding = { name, color: plan.color };
     options = { position: 'owner', salary: 0, purchasePrice: cost, founded: true };
-    news.push(`Você fundou a ${name}, que estreia na ${getCategory(categoryId).name}. A inscrição e o equipamento custaram ${money(cost)}.`);
+    news.push(`Você fundou a ${name}, que estreia na ${getCategory(categoryId).name}. A inscrição e o equipamento custaram ${money(career, cost)}.`);
   }
   const category: CategoryDefinition = getCategory(categoryId);
 
@@ -816,7 +816,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     date,
     category: 'season',
     title: `Temporada ${nextYear}: ${category.shortName}`,
-    body: managed ? `Você comanda a ${teamName} na ${category.name}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(managed.budget)}.` : `Você acompanha a ${category.name} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
+    body: managed ? `Você comanda a ${teamName} na ${category.name}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(career, managed.budget)}.` : `Você acompanha a ${category.name} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
   }];
   if (news.length > 0) messages.push({ id: `s${nextSeason}-market`, date, category: 'contract', title: 'Movimentações', body: news.join(' ') });
   if (childNotes.length > 0) messages.push({ id: `s${nextSeason}-children`, date, category: 'family', title: 'Carreira dos filhos', body: childNotes.join(' ') });

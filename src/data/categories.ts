@@ -102,7 +102,7 @@ const CIRCUITS = ['sao-paulo', 'melbourne', 'imola', 'barcelona', 'monaco', 'mon
 
 /**
  * Valores e sua origem:
- * - Custos em euros, na ordem de grandeza real de cada categoria (uma temporada
+ * - Custos na ordem de grandeza real, em euros, de cada categoria (uma temporada
  *   de F4 custa algumas centenas de milhares; uma de F2, mais de 2 milhões).
  * - Os pontos de licença seguem o espírito da superlicença da FIA: 40 pontos
  *   em três temporadas para chegar à F1; as três primeiras posições da F2

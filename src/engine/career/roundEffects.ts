@@ -34,6 +34,7 @@ import { pushMessages } from './inbox';
 import { updateMarketInterest } from './market';
 import { fullName, getPlayer, getTeam, getTeammate } from './selectors';
 import { SPONSOR_RULES, satisfactionAfterRound } from './sponsors';
+import { money } from './selectors';
 
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
 
@@ -187,7 +188,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   for (const sponsor of career.sponsors) {
     const satisfaction = satisfactionAfterRound(sponsor, position, entry);
     if (sponsor.tier > 0 && satisfaction < SPONSOR_RULES.LEAVE_THRESHOLD) {
-      msg(`sponsor-left-${sponsor.id}`, 'finance', `${sponsor.name} rompe o contrato`, `Insatisfeito com os resultados, o patrocinador ${sponsor.name} encerrou o contrato. Você deixa de receber € ${sponsor.perSeason.toLocaleString('pt-BR')} por temporada.`);
+      msg(`sponsor-left-${sponsor.id}`, 'finance', `${sponsor.name} rompe o contrato`, `Insatisfeito com os resultados, o patrocinador ${sponsor.name} encerrou o contrato. Você deixa de receber ${money(career, sponsor.perSeason)} por temporada.`);
     } else {
       kept.push({ ...sponsor, satisfaction });
     }
