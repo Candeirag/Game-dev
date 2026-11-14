@@ -163,13 +163,21 @@ export function useRacePlayback(): RacePlayback {
     setTime(value);
   }, []);
 
+  /** Ao (re)começar do instante zero com a largada já simulada, as luzes acendem de novo. */
+  const armLights = useCallback(() => {
+    const tl = useGameStore.getState().raceTimeline;
+    lightsRef.current = tl && tl.lapsBuilt > 0 && timeRef.current === 0 ? { elapsed: 0 } : null;
+    setLights(lightsRef.current ? 1 : null);
+  }, []);
+
   const toggle = useCallback(() => {
     const tl = useGameStore.getState().raceTimeline;
     if (!tl) return;
     // Depois do fim, "play" revê a corrida desde a largada.
     if (!playingRef.current && tl.finished && timeRef.current >= endOfBroadcast(tl) - 1e-6) jump(0);
+    if (!playingRef.current) armLights();
     setPlaying(!playingRef.current);
-  }, [jump, setPlaying]);
+  }, [armLights, jump, setPlaying]);
 
   const setSpeed = useCallback((value: number) => {
     speedRef.current = value;
@@ -177,11 +185,10 @@ export function useRacePlayback(): RacePlayback {
   }, []);
 
   const restart = useCallback(() => {
-    lightsRef.current = null;
-    setLights(null);
     jump(0);
+    armLights();
     setPlaying(true);
-  }, [jump, setPlaying]);
+  }, [armLights, jump, setPlaying]);
 
   const goLive = useCallback(() => {
     const tl = useGameStore.getState().raceTimeline;
@@ -228,7 +235,7 @@ export function useRacePlayback(): RacePlayback {
             ? 'order'
             : playing
               ? 'racing'
-              : timeline.lapsBuilt === 0
+              : time === 0
                 ? 'grid'
                 : 'paused';
 

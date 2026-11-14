@@ -47,6 +47,7 @@ As dependências só apontam para baixo. `engine` não conhece React nem Zustand
 | `src/engine/simulation/performance.ts` | Modelo de desempenho: ritmo, tempo de volta, ruído, erros, desgaste, compostos, combustível, dano, condição do piloto. |
 | `src/engine/simulation/weather.ts`, `practice.ts`, `qualifying.ts` | Clima do fim de semana, treino livre e classificação (sessão única ou eliminatória; punições de grid). |
 | `src/engine/simulation/race/` | **Motor de corrida**, independente da carreira e da interface (ver abaixo). |
+| `src/engine/broadcast/` | **Transmissão da corrida**: traçado de cada pista (`circuit.ts`) e linha do tempo que converte os tempos do motor em posições na pista (`timeline.ts`). Puro, sem interface (ver abaixo). |
 | `src/engine/ai/decisions.ts` | Decisões da IA por regras: treino, classificação, ritmo de corrida, foco de treino. |
 | `src/engine/championship/` | Pontuação por categoria e classificação com desempate e ajustes de pontos. |
 | `src/engine/world/generation.ts` | Geração de pilotos e grids por regras, para as categorias sem elenco escrito à mão. |
@@ -60,6 +61,8 @@ As dependências só apontam para baixo. `engine` não conhece React nem Zustand
 | `src/persistence/` | Armazenamento (IndexedDB, localStorage, memória), checksum, integridade, migrações e serviço de saves. |
 | `src/store/gameStore.ts` | Store Zustand: camada fina sobre o motor. |
 | `src/ui/` | Layout, telas, componentes e formatação. |
+| `src/ui/race/` | Corrida visual: canvas (`RaceCanvas`, `raceScene`, `trackPainter`), pintura dos carros (`liveries`), relógio da reprodução (`useRacePlayback`), tela (`RaceBroadcast`) e comandos do jogador (`RaceCommands`). |
+| `src/assets/race/` | Sprites vistos de cima, gerados no Higgsfield: monoposto, kart e safety car. `docs/assets/referencia-circuito.jpg` é a referência visual usada para o desenho das pistas. |
 | `tests/` | Testes Vitest; `tests/fixtures/v1/` e `v2/` guardam saves reais das Fases 1 e 2; `tests/calibration/` guarda os relatórios de balanceamento (carreiras, vidas inteiras e economia das equipes); `tests/bench/` mede desempenho. |
 | `docs/PLANO_ARQUITETURA_FASE3.md` | Análise de escala feita antes da Fase 3 (mundo com centenas de pilotos, saves em partes). É um plano futuro: a Fase 3 foi construída sobre a arquitetura atual. |
 | `legacy/simdev/` | Projeto anterior do repositório, preservado e fora do build. |
@@ -95,6 +98,21 @@ Ordem de cada volta em `stepRaceLap`:
 
 A entrada do jogador (`PlayerRaceInput`) traz o ritmo, um pedido de parada com composto, o cancelamento da parada planejada, a resposta a uma ordem de equipe e a opção de engenheiro automático (o motor decide paradas e protege o combustível pelas regras da IA).
 
+## Transmissão da corrida (`src/engine/broadcast/` e `src/ui/race/`)
+
+O motor de corrida calcula uma volta inteira de cada vez. A transmissão é a camada que mostra essa corrida num circuito, sem decidir nada.
+
+```
+stepRaceLap (motor)  →  appendRaceLap (linha do tempo)  →  sampleCar / standingsAt (instante t)  →  canvas e HUD
+```
+
+- **Circuito (`circuit.ts`).** `buildCircuit(pista, veículo)` gera o traçado a partir do id e das características da pista: um polígono em torno do centro (que nunca se cruza), com miolos, grampos, esses e chicanes encaixados nas arestas longas, e os cantos arredondados em curvas de raio constante. O resultado é validado (nenhum trecho encosta em outro; a área dos boxes fica livre) e guardado em cache. Junto vêm o pit lane, as posições do grid, os setores e o perfil de velocidade da volta (limite de cada curva, aceleração e freada). As medidas são esquemáticas: carros e largura de pista são ampliados para serem visíveis; a velocidade em km/h usa o comprimento real e o tempo de volta real.
+- **Linha do tempo (`timeline.ts`).** A cada volta simulada, `appendRaceLap(linha, estadoAntes, estadoDepois, contexto)` registra, para cada carro, quando a volta começa, quando ele cruza a linha (o tempo acumulado do motor) e os trechos intermediários: ritmo normal, largada parada, travessia do pit lane, parada no box, rodada, abandono. `sampleCar` responde onde o carro está num instante; `standingsAt` dá a classificação e as diferenças nesse instante; `eventsUntil` dá os eventos já acontecidos (cada evento do motor ganha o instante em que acontece na pista, e a ultrapassagem é datada no cruzamento das duas trajetórias). Bandeira vermelha vira uma suspensão; safety car, uma volta em fila.
+- **Garantia.** Cada carro cruza a linha no tempo do motor, então a ordem de pista ao fim de cada volta é a do motor (`tests/broadcast.test.ts` confere isso volta a volta, com chuva, paradas, safety car e bandeira vermelha). O que a interface acrescenta é só apresentação: o lado da pista de cada carro numa disputa, um pequeno recuo para dois carros na mesma faixa não se sobreporem, a câmera e os efeitos.
+- **Loja.** `raceTimeline` fica ao lado de `liveRace` e é atualizada nas mesmas ações (`beginRace`, `stepRace`, `simulateRestOfRace`). Nenhum dos dois vai para o save. `watchAbsentWeekend` simula a corrida inteira de quem não está no carro (dirigente ou piloto ausente) e entrega a linha do tempo completa para assistir.
+- **Relógio (`useRacePlayback`).** O tempo de corrida avança a cada quadro (em 1×, uma volta de referência dura 24 s). Quando o líder termina a última volta simulada, o gancho chama `stepRace`: o motor fica no máximo uma volta à frente da imagem, e o HUD nunca lê o estado do motor, só a linha do tempo no instante exibido. Ordem de equipe pendente e bandeira vermelha param o relógio até o jogador responder.
+- **Desenho.** A pista é vetor (`Path2D` em unidades de mundo) redesenhado a cada quadro sob a transformação da câmera. Os carros são sprites brancos pintados em tempo de execução com a cor da equipe (multiplicação sobre a carroceria) e um desenho de pintura na cor de contraste; se a imagem não carregar, há um carro em vetor.
+
 ## Fluxo de uma etapa
 
 ```
@@ -104,7 +122,8 @@ runPractice(p)         → acerto e modificadores do fim de semana     (autosave
 runQualifying(a)       → grid, já com punições de grid               (autosave)
 playerStrategyOptions  → estratégias de pneus para o jogador escolher
 createWeekendRace(pl)  → RaceSimState (fica na store, não no save)
-stepRaceLap × N        → a UI reproduz volta a volta
+stepRaceLap × N        → a transmissão mostra a corrida (cada volta entra na
+                         linha do tempo; ver acima)
 completeWeekend        → resultado oficial gravado
   └ applyRoundEffects  → 1 economia · 2 condição e lesões · 3 licença ·
                          4 relações · 5 patrocinadores · 6 evolução ·

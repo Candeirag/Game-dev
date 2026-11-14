@@ -14,13 +14,14 @@ interface Props {
   timeRef: MutableRefObject<number>;
   camera: CameraMode;
   focusId: string;
+  mineIds: ReadonlySet<string>;
   lights: number | null;
   onSelect(driverId: string): void;
   className?: string;
 }
 
 /** Canvas da corrida: pista e carros, redesenhados a cada quadro a partir do tempo da reprodução. */
-export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera, focusId, lights, onSelect, className }: Props) {
+export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera, focusId, mineIds, lights, onSelect, className }: Props) {
   const wrapper = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const memory = useRef(createSceneMemory());
@@ -36,8 +37,8 @@ export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera,
   const art = useMemo(() => buildTrackArt(circuit, boxColors, timeline.order.length), [circuit, boxColors, timeline.order.length]);
 
   // O laço de desenho lê sempre os dados mais recentes, sem ser recriado a cada atualização.
-  const latest = useRef<Omit<SceneInput, 'time'>>({ timeline, circuit, art, teams, drivers, camera, focusId, playerId: timeline.playerDriverId, lights });
-  latest.current = { timeline, circuit, art, teams, drivers, camera, focusId, playerId: timeline.playerDriverId, lights };
+  const latest = useRef<Omit<SceneInput, 'time'>>({ timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights });
+  latest.current = { timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights };
 
   useEffect(() => {
     void loadCarSprites(circuit.style);

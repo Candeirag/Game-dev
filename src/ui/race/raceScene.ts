@@ -24,7 +24,8 @@ export interface SceneInput {
   camera: CameraMode;
   /** Carro em destaque (selecionado); a câmera de acompanhamento segue este. */
   focusId: string;
-  playerId: string;
+  /** Carros do jogador: o dele como piloto, ou os da equipe que ele dirige. */
+  mineIds: ReadonlySet<string>;
   /** Luzes de largada acesas (0 a 5), ou null fora do procedimento de largada. */
   lights: number | null;
 }
@@ -68,6 +69,11 @@ function hash01(text: string): number {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0) / 4294967296;
+}
+
+/** Sigla de três letras do piloto, como nas transmissões ("De Groot" vira DEG). */
+export function driverCode(lastName: string): string {
+  return lastName.replace(/[^\p{L}]/gu, '').slice(0, 3).toUpperCase();
 }
 
 function textOn(hex: string): string {
@@ -185,7 +191,11 @@ function formation(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, l
       const theirs = memory.lateral.get(other.driverId) ?? lateral.get(other.driverId) ?? 0;
       // Lado a lado (faixas diferentes) podem emparelhar; na mesma faixa, um carro de distância.
       const overlap = 1 - smooth((Math.abs(theirs - mine) - width * 0.45) / (width * 0.5));
-      position = Math.min(position, (shown[j] ?? 0) - length * 1.06 * overlap);
+      // Por dentro de uma curva o caminho é mais curto do que no eixo da pista: a distância
+      // medida no eixo precisa ser maior para os carros não se encostarem.
+      const curvature = circuit.curvature[Math.floor(row.sample.s * circuit.count) % circuit.count] ?? 0;
+      const inner = 1 / clamp(1 - curvature * mine, 0.5, 1.5);
+      position = Math.min(position, (shown[j] ?? 0) - length * 1.08 * overlap * Math.max(1, inner));
     }
     shown.push(position);
     shift.set(row.driverId, Math.max(position - travelled, -length * 14) / circuit.length);
@@ -237,6 +247,63 @@ function drawLights(g: CanvasRenderingContext2D, width: number, lit: number): vo
     g.fill();
     g.shadowBlur = 0;
   }
+}
+
+/**
+ * Mapa do circuito inteiro, no canto, para a câmera que acompanha um carro: mostra
+ * onde está o pelotão. Cada carro é uma seta na cor da equipe, apontando no sentido em que anda.
+ */
+function drawMiniMap(g: CanvasRenderingContext2D, input: SceneInput, placed: Placed[], portrait: boolean, width: number): void {
+  const { circuit, art } = input;
+  const long = clamp(width * 0.2, 104, 190);
+  const w = portrait ? long * (circuit.height / circuit.width) : long;
+  const h = portrait ? long : long * (circuit.height / circuit.width);
+  const x0 = 8;
+  const y0 = 8;
+  const scale = long / circuit.width;
+  g.save();
+  g.fillStyle = 'rgba(7, 9, 13, 0.8)';
+  g.strokeStyle = 'rgba(151, 163, 184, 0.25)';
+  g.lineWidth = 1;
+  g.beginPath();
+  g.roundRect(x0, y0, w, h, 8);
+  g.fill();
+  g.stroke();
+  g.clip();
+  // Mesma orientação da pista principal.
+  g.translate(x0 + w / 2, y0 + h / 2);
+  g.rotate(portrait ? -Math.PI / 2 : 0);
+  g.scale(scale, scale);
+  g.translate(-circuit.width / 2, -circuit.height / 2);
+  g.lineJoin = 'round';
+  g.strokeStyle = '#596275';
+  g.lineWidth = 20;
+  g.stroke(art.centre);
+  const order = [...placed].sort((a, b) => Number(input.mineIds.has(a.row.driverId) || a.row.driverId === input.focusId) - Number(input.mineIds.has(b.row.driverId) || b.row.driverId === input.focusId));
+  for (const car of order) {
+    if (car.row.state === 'retired') continue;
+    const mine = input.mineIds.has(car.row.driverId);
+    const focused = car.row.driverId === input.focusId;
+    const size = (mine || focused ? 6.5 : 4.5) / scale;
+    g.save();
+    g.translate(car.x, car.y);
+    g.rotate(car.heading);
+    g.beginPath();
+    g.moveTo(size, 0);
+    g.lineTo(-size * 0.75, -size * 0.7);
+    g.lineTo(-size * 0.35, 0);
+    g.lineTo(-size * 0.75, size * 0.7);
+    g.closePath();
+    g.fillStyle = input.teams[car.row.teamId]?.color ?? '#9aa3b2';
+    g.fill();
+    if (mine || focused) {
+      g.strokeStyle = mine ? '#ef3b2d' : '#f4f5f7';
+      g.lineWidth = 1.6 / scale;
+      g.stroke();
+    }
+    g.restore();
+  }
+  g.restore();
 }
 
 /** Desenha um quadro. `width` e `height` em pixels CSS; o contexto já está na escala do dispositivo. */
@@ -394,7 +461,7 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
     return { driverId: p.row.driverId, x, y };
   });
   const boxes: { x: number; y: number; w: number; h: number }[] = [];
-  const priority = (p: Placed) => (p.row.driverId === input.focusId ? 0 : p.row.driverId === input.playerId ? 1 : p.row.position <= 3 ? 2 : 3);
+  const priority = (p: Placed) => (p.row.driverId === input.focusId ? 0 : input.mineIds.has(p.row.driverId) ? 1 : p.row.position <= 3 ? 2 : 3);
   const labelled = placed.filter((p) => p.row.state !== 'retired' || p.row.sample.retiredFor < 6).sort((a, b) => priority(a) - priority(b) || a.row.position - b.row.position);
   g.textBaseline = 'middle';
   g.textAlign = 'center';
@@ -403,9 +470,9 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
     const { row } = car;
     const [sx, sy] = toScreen(car.x, car.y);
     if (sx < -40 || sx > width + 40 || sy < -40 || sy > height + 40) continue;
-    const mine = row.driverId === input.playerId;
+    const mine = input.mineIds.has(row.driverId);
     const focused = row.driverId === input.focusId;
-    const code = (input.drivers[row.driverId]?.lastName ?? '').slice(0, 3).toUpperCase();
+    const code = driverCode(input.drivers[row.driverId]?.lastName ?? '');
     const named = focused || mine;
     const text = row.state === 'retired' ? 'AB' : named ? `${row.position} ${code}` : String(row.position);
     g.font = `700 ${named ? 12 : 11}px "Barlow Condensed", "Arial Narrow", sans-serif`;
@@ -456,5 +523,6 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
     g.stroke();
   }
 
+  if (follow) drawMiniMap(g, input, placed, portrait, width);
   if (input.lights !== null) drawLights(g, width, input.lights);
 }

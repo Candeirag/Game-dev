@@ -53,18 +53,26 @@ export function CompoundDot({ compound }: { compound: TyreCompound }) {
 
 /** Resultado oficial da corrida, com o botão que conclui a etapa. Usado pelos dois modos de exibição. */
 export function RaceResultPanel({ race, result, extra }: { race: RaceSimState; result: RaceResult; extra?: ReactNode }) {
-  const { player, drivers } = useCareerView();
+  const { career, player, drivers } = useCareerView();
   const completeWeekend = useGameStore((s) => s.completeWeekend);
   const nameOf = (id: string) => (drivers[id] ? fullName(drivers[id]!) : id);
   const mine = result.entries.find((e) => e.driverId === player.id);
+  // Fora do carro (dirigente, ou piloto que não disputou a etapa), o destaque é o resultado da equipe.
+  const teamId = career.management?.teamId ?? player.teamId;
+  const team = mine ? [] : result.entries.filter((e) => e.teamId === teamId);
   return (
     <div className="space-y-6">
       <Card title={race.endedEarly ? 'Corrida encerrada com bandeira vermelha' : 'Bandeirada'} className="border-gold-400/30">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="font-display text-3xl font-bold uppercase">
-              {!mine ? 'Corrida encerrada' : mine.status === 'finished' ? `Você terminou em ${mine.position}º` : 'Você abandonou a corrida'}
+              {mine ? (mine.status === 'finished' ? `Você terminou em ${mine.position}º` : 'Você abandonou a corrida') : team.length > 0 ? `Sua equipe: ${team.map((e) => (e.status === 'finished' ? `${e.position}º` : 'abandono')).join(' e ')}` : 'Corrida encerrada'}
             </div>
+            {!mine && (
+              <div className="text-sm text-ink-400">
+                {team.map((e) => `${nameOf(e.driverId)}: largou em ${e.grid}º, ${e.points} ponto(s)`).join(' · ')}{team.length > 0 ? ' · ' : ''}Vencedor: {nameOf(result.entries[0]?.driverId ?? '')}
+              </div>
+            )}
             {mine && (
               <div className="text-sm text-ink-400">
                 Largou em {mine.grid}º · {mine.points} ponto(s) · {mine.overtakes} ultrapassagem(ns)

@@ -122,10 +122,22 @@ Qualidade do acerto: `0,2 + retorno do piloto × 0,35 + bônus do programa + ru�
 Além de 80% de desgaste, o pneu perde 8% por unidade de desgaste extra. Pneu errado custa caro: pneu de seco com 30% de umidade perde 6% da volta e multiplica os erros. Antes da largada, o motor lista as estratégias viáveis com a perda estimada (desgaste, ritmo do composto e tempo de box); na F1, uma e duas paradas ficam próximas, e a escolha depende da pista e do piloto. Na F2 e na F1, quem não usa dois compostos em corrida seca leva 30 s.
 
 ### Corrida
-O jogador acompanha volta a volta (1×, 2×, 4×, 8×, ou volta por volta) e decide:
+O jogador assiste à corrida na pista (1×, 2×, 4×, 8×, ou avançando volta por volta) e decide:
 - **Ritmo:** conservador (+0,25%, erros × 0,6, pneus × 0,8, combustível × 0,93), equilibrado, ou agressivo (−0,15%, erros × 1,5, pneus × 1,25, combustível × 1,06, mais ataque e mais risco de toque).
 - **Boxes:** as paradas planejadas acontecem sozinhas; o jogador pode parar a qualquer volta com o composto que quiser, cancelar a parada planejada ou ligar o engenheiro automático.
 - **Ordens de equipe:** quando chega uma, a corrida para e espera a resposta.
+
+### Transmissão da corrida
+A corrida é mostrada num circuito visto de cima. O que se vê é a simulação, não uma animação à parte:
+- **Circuitos.** Cada uma das 34 pistas tem um traçado próprio, sempre o mesmo, gerado a partir das suas características: pistas de motor têm reta dos boxes mais longa; pistas travadas têm mais grampos, miolos e chicanes. Há zebras nas curvas, brita ou asfalto de escape do lado de fora, pit lane com os boxes das equipes, linha de chegada, grid e setores.
+- **Movimento.** Cada carro cruza a linha no tempo que o motor calculou. Dentro da volta, todos seguem o mesmo perfil de velocidade do circuito (freiam para as curvas, aceleram nas retas); quem faz a volta mais rápida anda mais depressa em todos os pontos. A ultrapassagem acontece onde as duas trajetórias se cruzam, com os carros lado a lado.
+- **Ritmo da reprodução.** Em 1×, uma volta de referência dura 24 segundos na tela; em 8×, 3 segundos. O relógio da corrida, as diferenças e a velocidade em km/h são os reais.
+- **Decisões.** O motor simula a volta seguinte quando o líder termina a atual. Ritmo e pedido de parada valem para a próxima volta a ser simulada; a tela diz qual é ("Entrar nos boxes no fim da volta N").
+- **Eventos.** Largada parada com cinco luzes; parada com o carro entrando no pit lane e parando no box da equipe pelo tempo do serviço; rodada (o carro gira e perde o tempo que perdeu); abandono (o carro sai da pista e é recolhido); safety car à frente do líder com o pelotão em fila única; bandeira vermelha (a corrida para, os carros voltam ao grid e há relargada parada, com troca de pneus livre); chuva e pista molhada.
+- **Classificação.** A torre de tempos mostra a ordem e as diferenças no instante exibido. No fim, vale o resultado oficial, que soma as punições em tempo.
+- **Fora do carro.** O dirigente (e o piloto que não disputa a etapa) pode assistir à corrida com os carros da equipe em destaque. Não há comandos: a corrida já foi simulada, e assistir ou simular dá o mesmo resultado.
+
+O que é só apresentação: o lado da pista em que cada carro anda numa disputa; um recuo de até alguns carros de distância para dois carros na mesma faixa não se sobreporem (as diferenças do motor, de décimos de segundo, são menores do que um carro na escala do desenho); o ponto da volta em que um carro roda ou abandona; e o número do carro, derivado do piloto.
 
 ## Motor de corrida
 
@@ -428,12 +440,15 @@ O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, de
 - Os filhos correm fora do campeonato do jogador (a temporada deles é estimada), a não ser quando ele os escala na própria equipe. Pai e filho não se enfrentam na pista.
 - Ao escolher um herdeiro piloto, os irmãos dele saem do acompanhamento e a equipe da família passa a ser só uma participação.
 - Só o personagem do jogador morre: o parceiro e os filhos não têm mortalidade própria.
-- No modo dirigente, a corrida não é acompanhada volta a volta, e o dirigente não dá ordens durante a prova.
+- No modo dirigente, a corrida pode ser assistida, mas o dirigente não dá ordens durante a prova.
+- Os traçados são gerados por regras e não reproduzem os circuitos reais que inspiram as pistas. A escala do desenho é esquemática (carros ampliados em relação à pista).
+- Na transmissão, a volta de saída dos boxes é mostrada em ritmo de corrida (o tempo perdido na parada aparece todo na volta de entrada), e os pneus trocados numa bandeira vermelha só aparecem na torre ao fim da volta seguinte.
+- Uma corrida recarregada no meio recomeça da largada; a transmissão não é gravada.
 - A mudança de regulamento a cada cinco temporadas embaralha as rivais, mas não mexe no carro da equipe que o jogador dirige (o dela é o que a pesquisa construiu).
 - O equilíbrio da gestão foi medido com robôs e simulações, não com jogadores: os números de retorno e de ritmo de desenvolvimento podem pedir ajuste fino depois de partidas reais.
 - Nas vidas longas, o nível dos pilotos da F1 sobe alguns pontos acima do projetado; os contratos da gestão já medem cada piloto contra o grid real, mas o nível nominal da categoria não é recalibrado.
 - O jogador não pode assinar como piloto reserva de uma categoria superior.
 - Não há mudanças no meio da temporada (troca de equipe, demissão imediata, contratação de pilotos).
 - Corridas sprint, pontuação pela metade e retardatários não são simulados.
-- Áudio, visual de pista em 2D e conquistas ficam para uma fase futura.
+- Áudio, retratos, garagens, paddock e conquistas ficam para uma fase futura.
 - O plano de escala (centenas de pilotos, várias categorias simuladas ao mesmo tempo, saves em partes) está em `docs/PLANO_ARQUITETURA_FASE3.md` e não foi executado.

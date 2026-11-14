@@ -68,6 +68,12 @@ export interface GameStore {
   runPractice(program: PracticeProgram): void;
   runQualifying(approach: QualifyingApproach): void;
   simulateAbsentWeekend(choices?: { program?: PracticeProgram; approach?: QualifyingApproach }): void;
+  /**
+   * Etapa sem o jogador no carro, para assistir: disputa treino e classificação, simula a corrida
+   * inteira (com as mesmas entradas de simulateAbsentWeekend) e deixa a linha do tempo pronta para
+   * a transmissão. O resultado só é gravado quando o jogador conclui a etapa.
+   */
+  watchAbsentWeekend(choices?: { program?: PracticeProgram; approach?: QualifyingApproach }): void;
   beginRace(plan?: StrategyPlan): void;
   setRaceMode(mode: RaceMode): void;
   requestPit(compound: TyreCompound | null): void;
@@ -295,6 +301,26 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     simulateAbsentWeekend(choices) {
       apply((c) => engine.simulateAbsentWeekend(c, choices), { save: true });
+    },
+
+    watchAbsentWeekend(choices) {
+      const career = get().career;
+      if (!career) return;
+      try {
+        const prepared = engine.prepareAbsentWeekend(career, choices);
+        const context = engine.buildRaceContext(prepared);
+        let race = engine.createWeekendRace(prepared);
+        let timeline = engine.createRaceTimeline(race, context);
+        while (!engine.isRaceFinished(race)) {
+          const next = engine.stepRaceLap(race, context, { mode: 'balanced', auto: true, pit: null });
+          timeline = engine.appendRaceLap(timeline, race, next, context);
+          race = next;
+        }
+        set({ career: prepared, ...RACE_RESET, liveRace: race, raceTimeline: timeline, notice: null });
+        void autosave(prepared);
+      } catch (error) {
+        set({ notice: errorMessage(error) });
+      }
     },
 
     beginRace(plan) {

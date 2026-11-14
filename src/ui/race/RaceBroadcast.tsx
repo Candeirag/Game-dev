@@ -17,7 +17,7 @@ import { formatLap } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { RaceCanvas } from './RaceCanvas';
 import { PitStrategyCard, RaceModeCard, TeamOrderDialog } from './RaceCommands';
-import type { CameraMode } from './raceScene';
+import { driverCode, type CameraMode } from './raceScene';
 import { SPEEDS, useRacePlayback } from './useRacePlayback';
 
 const DNF_SHORT: Record<string, string> = { crash: 'Batida', collision: 'Toque', mechanical: 'Quebra', damage: 'Danos', fuel: 'Pane seca' };
@@ -58,13 +58,17 @@ function gapText(row: StandingRow, mode: 'leader' | 'interval', started: boolean
   return value === null ? '' : `+${value.toFixed(value < 100 ? 1 : 0)}`;
 }
 
-export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
-  const { player, drivers, teams, category } = useCareerView();
+/**
+ * `spectator`: a corrida já foi simulada por inteiro e o jogador só assiste (dirigente no pit wall
+ * ou piloto fora da etapa). Não há comandos; os carros em destaque são os da equipe dele.
+ */
+export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: ReactNode; spectator?: boolean }) {
+  const { career, player, drivers, teams, category } = useCareerView();
   const race = useGameStore((s) => s.liveRace);
   const timeline = useGameStore((s) => s.raceTimeline);
   const playback = useRacePlayback();
   const [camera, setCamera] = useState<CameraMode>('overview');
-  const [focusId, setFocusId] = useState(player.id);
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [gapMode, setGapMode] = useState<'leader' | 'interval'>('leader');
 
   const trackId = race?.trackId;
@@ -74,12 +78,21 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
   const events = useMemo(() => (timeline ? eventsUntil(timeline, time) : []), [timeline, time]);
   const finished = race ? isRaceFinished(race) : false;
   const result = useMemo(() => (race && finished ? finalizeRace(race, category) : null), [race, finished, category]);
+  // Carros do jogador: o dele, se está no grid; senão, os da equipe que ele dirige (ou pela qual corre).
+  const managedTeamId = career.management?.teamId ?? null;
+  const mineIds = useMemo(() => {
+    if (!timeline) return new Set<string>();
+    if (timeline.cars[player.id]) return new Set([player.id]);
+    const teamId = managedTeamId ?? player.teamId;
+    return new Set(Object.values(timeline.cars).filter((c) => teamId !== null && c.teamId === teamId).map((c) => c.driverId));
+  }, [timeline, player.id, player.teamId, managedTeamId]);
 
   // Ao voltar para a transmissão com a corrida em andamento, a imagem retoma do ponto mais recente.
+  // Quem só assiste começa sempre do grid: a corrida inteira já está simulada.
   const { goLive } = playback;
   useEffect(() => {
-    if ((useGameStore.getState().raceTimeline?.lapsBuilt ?? 0) > 0) goLive();
-  }, [goLive]);
+    if (!spectator && (useGameStore.getState().raceTimeline?.lapsBuilt ?? 0) > 0) goLive();
+  }, [goLive, spectator]);
 
   if (!race || !timeline || !circuit) return null;
 
@@ -87,12 +100,13 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
   const info = lapInfoAt(timeline, time);
   const started = timeline.lapsBuilt > 0 && (time > 0 || playback.phase !== 'grid');
   const leader = rows[0];
-  const focus = rows.find((r) => r.driverId === focusId) ?? rows.find((r) => r.driverId === player.id) ?? leader;
+  const best = rows.find((r) => mineIds.has(r.driverId));
+  const focus = rows.find((r) => r.driverId === focusId) ?? best ?? leader;
   const focusIndex = focus ? rows.indexOf(focus) : -1;
   const ahead = focusIndex > 0 ? rows[focusIndex - 1] : undefined;
   const behind = focusIndex >= 0 ? rows[focusIndex + 1] : undefined;
   const nameOf = (id: string) => (drivers[id] ? fullName(drivers[id]!) : id);
-  const codeOf = (id: string) => (drivers[id]?.lastName ?? id).slice(0, 3).toUpperCase();
+  const codeOf = (id: string) => driverCode(drivers[id]?.lastName ?? id);
   const wetness = info?.wetness ?? race.weather.wetness;
   const raceLaps = timeline.finished ? timeline.lapsBuilt : timeline.totalLaps;
   const leaderLap = Math.min(raceLaps, leader && started ? leader.sample.lap : 0);
@@ -120,7 +134,10 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
   const playLabel = playback.playing ? 'Pausar' : playback.phase === 'grid' ? 'Largar' : playback.phase === 'suspended' ? 'Relargar' : 'Continuar';
   const ticker = events.slice(-3).filter((e) => time - e.time < timeline.referenceLap * 0.45).reverse();
   const focusIsPlayer = focus?.driverId === player.id;
-  const followLabel = focus && !focusIsPlayer ? `Acompanhar ${codeOf(focus.driverId)}` : null;
+  const focusIsMine = focus ? mineIds.has(focus.driverId) : false;
+  const followLabel = focus && !focusIsMine ? `Acompanhar ${codeOf(focus.driverId)}` : null;
+  const isMine = (id: string | undefined) => id !== undefined && mineIds.has(id);
+  const ownLabel = mineIds.has(player.id) ? 'Meu piloto' : 'Minha equipe';
 
   return (
     <div className="space-y-3">
@@ -150,11 +167,11 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
               <button key={s} type="button" onClick={() => playback.setSpeed(s)} aria-pressed={playback.speed === s} className={cx('rounded-md px-2.5 py-1 text-xs font-semibold tabular', playback.speed === s ? 'bg-apex-500 text-white' : 'text-ink-400 hover:text-ink-100')}>{s}×</button>
             ))}
           </div>
-          <Button onClick={playback.skipLap} disabled={playback.phase === 'order' || playback.phase === 'suspended'} title="Avança até o fim da volta do líder"><Icon path={ICONS.next} />+1 volta</Button>
+          <Button onClick={playback.skipLap} disabled={playback.phase === 'order' || playback.phase === 'suspended' || playback.phase === 'lights'} title="Avança até o fim da volta do líder"><Icon path={ICONS.next} />+1 volta</Button>
         </div>
       </div>
 
-      <TeamOrderDialog race={race} />
+      {!spectator && <TeamOrderDialog race={race} />}
       {playback.phase === 'suspended' && (
         <div role="status" className="rounded-xl border border-apex-500/60 bg-apex-500/15 px-4 py-3 text-sm font-semibold text-apex-400">
           BANDEIRA VERMELHA · corrida interrompida. Os carros voltam ao grid para uma relargada parada.{rules.pitStops ? ' A troca de pneus é livre: escolha um composto em "Boxes e estratégia", se quiser trocar.' : ''} Toque em Relargar quando estiver pronto.
@@ -167,8 +184,8 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
       )}
       {timeline.finished && playback.phase !== 'finished' && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ink-700 bg-ink-900 px-4 py-2 text-sm text-ink-300">
-          <span>A corrida já foi decidida; você está revendo as imagens.</span>
-          <Button onClick={playback.goLive}>Ver o resultado</Button>
+          <span>{spectator ? 'Você acompanha do pit wall: na corrida, os pilotos decidem ritmo e paradas.' : 'A corrida já foi decidida; você está revendo as imagens.'}</span>
+          <Button onClick={playback.goLive}>{spectator ? 'Pular para o resultado' : 'Ver o resultado'}</Button>
         </div>
       )}
 
@@ -182,7 +199,7 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
           }>
             <ol className="py-1">
               {rows.map((row) => {
-                const isMe = row.driverId === player.id;
+                const isMe = mineIds.has(row.driverId);
                 const gained = row.grid - row.position;
                 return (
                   <li key={row.driverId}>
@@ -214,11 +231,11 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
         {/* Pista */}
         <div className="order-1 min-w-0 lg:order-2">
           <div className="relative overflow-hidden rounded-xl border border-ink-700/70">
-            <RaceCanvas timeline={timeline} circuit={circuit} teams={teams} drivers={drivers} timeRef={playback.timeRef} camera={camera} focusId={focus?.driverId ?? player.id} lights={playback.lights} onSelect={setFocusId} className="aspect-[4/5] w-full sm:aspect-[25/16]" />
+            <RaceCanvas timeline={timeline} circuit={circuit} teams={teams} drivers={drivers} timeRef={playback.timeRef} camera={camera} focusId={focus?.driverId ?? ''} mineIds={mineIds} lights={playback.lights} onSelect={setFocusId} className="aspect-[4/5] w-full sm:aspect-[25/16]" />
             <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-wrap items-start justify-end gap-2 p-2">
               <div className="pointer-events-auto flex flex-wrap justify-end gap-1" role="group" aria-label="Câmera">
                 <button type="button" onClick={() => setCamera('overview')} aria-pressed={camera === 'overview'} className={cx('flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold', camera === 'overview' ? 'bg-apex-500 text-white' : 'bg-ink-950/75 text-ink-200 hover:bg-ink-800')}><Icon path={ICONS.overview} />Câmera geral</button>
-                <button type="button" onClick={() => { setFocusId(player.id); setCamera('follow'); }} aria-pressed={camera === 'follow' && focusIsPlayer} className={cx('flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold', camera === 'follow' && focusIsPlayer ? 'bg-apex-500 text-white' : 'bg-ink-950/75 text-ink-200 hover:bg-ink-800')}><Icon path={ICONS.follow} />Meu piloto</button>
+                {best && <button type="button" onClick={() => { setFocusId(focusIsMine && camera === 'follow' && mineIds.size > 1 ? (rows.find((r) => mineIds.has(r.driverId) && r.driverId !== focus?.driverId)?.driverId ?? best.driverId) : best.driverId); setCamera('follow'); }} aria-pressed={camera === 'follow' && focusIsMine} title={mineIds.size > 1 ? 'Acompanha um carro da sua equipe; toque de novo para alternar' : undefined} className={cx('flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold', camera === 'follow' && focusIsMine ? 'bg-apex-500 text-white' : 'bg-ink-950/75 text-ink-200 hover:bg-ink-800')}><Icon path={ICONS.follow} />{ownLabel}</button>}
                 {followLabel && <button type="button" onClick={() => setCamera('follow')} aria-pressed={camera === 'follow'} className={cx('flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold', camera === 'follow' ? 'bg-apex-500 text-white' : 'bg-ink-950/75 text-ink-200 hover:bg-ink-800')}><Icon path={ICONS.follow} />{followLabel}</button>}
               </div>
             </div>
@@ -228,7 +245,7 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
                 <div className="px-2.5 py-1.5">
                   <div className="flex items-baseline gap-2">
                     <span className="font-display text-2xl font-bold leading-none tabular">{focus.state === 'retired' ? 'AB' : `P${focus.position}`}</span>
-                    <span className={cx('font-display text-lg font-bold leading-none tracking-wide', focusIsPlayer && 'text-apex-400')}>{codeOf(focus.driverId)}</span>
+                    <span className={cx('font-display text-lg font-bold leading-none tracking-wide', focusIsMine && 'text-apex-400')}>{codeOf(focus.driverId)}</span>
                     <span className="text-[11px] text-ink-400 tabular">#{focus.number}</span>
                   </div>
                   <div className="mt-1 flex items-baseline gap-3 text-[11px] text-ink-300 tabular">
@@ -241,7 +258,7 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
             )}
             <ul className="pointer-events-none absolute bottom-2 left-2 max-w-[58%] space-y-1" aria-live="polite">
               {ticker.map((e) => (
-                <li key={e.index} className={cx('w-fit rounded-md bg-ink-950/80 px-2 py-1 text-xs', EVENT_TONE[e.type] ?? 'text-ink-200', (e.driverId === player.id || e.otherDriverId === player.id) && 'ring-1 ring-apex-500/70')}>{e.message}</li>
+                <li key={e.index} className={cx('w-fit rounded-md bg-ink-950/80 px-2 py-1 text-xs', EVENT_TONE[e.type] ?? 'text-ink-200', (isMine(e.driverId) || isMine(e.otherDriverId)) && 'ring-1 ring-apex-500/70')}>{e.message}</li>
               ))}
             </ul>
           </div>
@@ -272,7 +289,7 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
                     <div className="truncate font-display text-xl font-bold uppercase leading-tight">{nameOf(focus.driverId)}</div>
                     <div className="font-display text-lg font-bold text-ink-400 tabular">#{focus.number}</div>
                   </div>
-                  <div className="truncate text-xs text-ink-400">{teams[focus.teamId]?.name}{focusIsPlayer ? ' · você' : ''}</div>
+                  <div className="truncate text-xs text-ink-400">{teams[focus.teamId]?.name}{focusIsPlayer ? ' · você' : focusIsMine ? ' · sua equipe' : ''}</div>
                 </div>
               </div>
               <dl className="grid grid-cols-3 gap-x-3 gap-y-2.5 border-t border-ink-800 px-3 py-3 text-sm">
@@ -307,15 +324,15 @@ export function RaceBroadcast({ viewSwitch }: { viewSwitch?: ReactNode }) {
               </dl>
             </Card>
           )}
-        <RaceModeCard race={race} />
-        <PitStrategyCard race={race} />
+        {!spectator && <RaceModeCard race={race} />}
+        {!spectator && <PitStrategyCard race={race} />}
       </div>
 
       <Card title="Acontecimentos" padded={false}>
         <ul className="max-h-64 overflow-y-auto">
           {events.length === 0 && <li className="px-4 py-3 text-sm text-ink-400">Os carros estão alinhados no grid. {rules.pitStops ? `Compostos: ${[...rules.dryCompounds, ...rules.wetCompounds].map((c) => TYRES[c].label.toLowerCase()).join(', ')}.` : ''}</li>}
           {[...events].reverse().slice(0, 60).map((e) => (
-            <li key={e.index} className={cx('flex gap-3 border-t border-ink-800 px-4 py-1.5 text-sm first:border-t-0', (e.driverId === player.id || e.otherDriverId === player.id) && 'bg-apex-500/8')}>
+            <li key={e.index} className={cx('flex gap-3 border-t border-ink-800 px-4 py-1.5 text-sm first:border-t-0', (isMine(e.driverId) || isMine(e.otherDriverId)) && 'bg-apex-500/8')}>
               <span className="w-8 shrink-0 text-xs tabular text-ink-500">V{e.lap}</span>
               <span className={EVENT_TONE[e.type] ?? 'text-ink-300'}>{e.message}</span>
             </li>

@@ -29,6 +29,7 @@ export function WeekendScreen() {
   const liveRace = useGameStore((s) => s.liveRace);
   const startWeekend = useGameStore((s) => s.startWeekend);
   const simulateAbsentWeekend = useGameStore((s) => s.simulateAbsentWeekend);
+  const watchAbsentWeekend = useGameStore((s) => s.watchAbsentWeekend);
   const navigate = useNavigate();
   const weekend = career.weekend;
   const event = weekend ? career.calendar.find((e) => e.round === weekend.round) : getNextEvent(career);
@@ -123,10 +124,17 @@ export function WeekendScreen() {
       </ol>}
 
       {!weekend.playerParticipates ? (
-        <Card title="Você não disputa esta etapa">
-          <p className="text-sm text-ink-300">O piloto reserva da equipe corre no seu lugar. A etapa será simulada por inteiro, e você acompanha o resultado.</p>
-          <Button variant="primary" className="mt-4" onClick={() => simulateAbsentWeekend()}>Simular a etapa</Button>
-        </Card>
+        liveRace ? (
+          <RaceBroadcast spectator />
+        ) : (
+          <Card title="Você não disputa esta etapa">
+            <p className="text-sm text-ink-300">O piloto reserva da equipe corre no seu lugar. Você pode assistir à corrida dos boxes ou ir direto ao resultado; o resultado é o mesmo nos dois casos.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button variant="primary" onClick={() => watchAbsentWeekend()}>Assistir à corrida</Button>
+              <Button onClick={() => simulateAbsentWeekend()}>Simular a etapa</Button>
+            </div>
+          </Card>
+        )
       ) : (
         <>
           {weekend.phase === 'practice' && <PracticePhase />}

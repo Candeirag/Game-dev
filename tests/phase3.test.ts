@@ -47,6 +47,36 @@ function playExecutiveSeason(career: CareerState): CareerState {
 
 /* ------------------------------------------------------------------ */
 
+describe('assistir à corrida do pit wall', () => {
+  it('assistir ou simular a etapa dá exatamente a mesma carreira, e a linha do tempo cobre a corrida toda', () => {
+    const career = engine.startWeekend(resolvePending(ownerCareer('f1')));
+    const program = 'longRun' as const;
+    const approach = 'attack' as const;
+    const simulated = engine.simulateAbsentWeekend(career, { program, approach });
+
+    // Caminho de quem assiste: treino e classificação, corrida volta a volta, e só então o fechamento.
+    const prepared = engine.prepareAbsentWeekend(career, { program, approach });
+    expect(prepared.weekend!.phase).toBe('race');
+    expect(prepared.rounds).toHaveLength(career.rounds.length);
+    const context = engine.buildRaceContext(prepared);
+    let race = engine.createWeekendRace(prepared);
+    let timeline = engine.createRaceTimeline(race, context);
+    while (!engine.isRaceFinished(race)) {
+      const next = engine.stepRaceLap(race, context, { mode: 'balanced', auto: true, pit: null });
+      timeline = engine.appendRaceLap(timeline, race, next, context);
+      race = next;
+    }
+    expect(engine.completeWeekend(prepared, race)).toEqual(simulated);
+    expect(timeline.finished).toBe(true);
+    expect(timeline.lapsBuilt).toBe(race.currentLap);
+    // O dirigente não está no grid; os dois carros da equipe dele estão.
+    expect(timeline.cars[career.playerDriverId]).toBeUndefined();
+    expect(Object.values(timeline.cars).filter((c) => c.teamId === career.management!.teamId)).toHaveLength(2);
+    // Recarregar no meio (a carreira é salva na hora da corrida) e simular chega ao mesmo resultado.
+    expect(engine.simulateAbsentWeekend(prepared)).toEqual(simulated);
+  });
+});
+
 describe('patrimônio pessoal', () => {
   it('ações: compra pelo preço atual, preço médio e imposto de 15% sobre o ganho na venda', () => {
     const stock = STOCKS[0]!;

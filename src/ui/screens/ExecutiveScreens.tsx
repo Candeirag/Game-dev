@@ -17,6 +17,7 @@ import { RaceResultTable } from '../components/RaceResultTable';
 import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, PositionBadge, Stat, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
 import { formatDate, formatMoney, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { RaceBroadcast } from '../race/RaceBroadcast';
 import { TutorialCard } from './HelpScreen';
 
 const input = 'rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
@@ -154,7 +155,8 @@ export function ExecutiveDashboardScreen() {
 export function ExecutiveWeekendScreen() {
   const { career, drivers } = useCareerView();
   const navigate = useNavigate();
-  const { startWeekend, simulateAbsentWeekend } = useGameStore.getState();
+  const { startWeekend, simulateAbsentWeekend, watchAbsentWeekend } = useGameStore.getState();
+  const liveRace = useGameStore((s) => s.liveRace);
   const [program, setProgram] = useState<PracticeProgram>('setup');
   const [approach, setApproach] = useState<QualifyingApproach>('balanced');
   const m = career.management;
@@ -168,12 +170,18 @@ export function ExecutiveWeekendScreen() {
     if (!useGameStore.getState().career?.weekend) startWeekend();
     if (useGameStore.getState().career?.weekend) simulateAbsentWeekend({ program, approach });
   };
+  const watch = () => {
+    if (!useGameStore.getState().career?.weekend) startWeekend();
+    if (useGameStore.getState().career?.weekend) watchAbsentWeekend({ program, approach });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader eyebrow={m && team ? `Pit wall · ${team.name}` : 'Acompanhando o campeonato'} title={seasonOver ? 'Temporada encerrada' : next && track ? `Etapa ${next.round}: ${track.name}` : 'Fim de semana'} />
 
-      {seasonOver ? (
+      {liveRace ? (
+        <RaceBroadcast spectator />
+      ) : seasonOver ? (
         <EmptyState title="A temporada acabou">As decisões para o próximo ano estão na tela Carreira.<div className="mt-4"><Button variant="primary" onClick={() => navigate('/career')}>Ir para Carreira</Button></div></EmptyState>
       ) : next && track ? (
         <Card title="Plano do fim de semana">
@@ -201,14 +209,17 @@ export function ExecutiveWeekendScreen() {
           ) : (
             <p className="mt-4 text-sm text-ink-300">Sem equipe para comandar, você acompanha o resultado. A etapa é simulada por inteiro pelo mesmo motor de corrida.</p>
           )}
-          <Button variant="primary" className="mt-5" disabled={career.pendingEvents.length > 0} onClick={simulate}>
-            {career.pendingEvents.length > 0 ? 'Resolva as decisões pendentes no painel' : 'Disputar a etapa'}
-          </Button>
-          <p className="mt-2 text-xs text-ink-400">Na corrida, os pilotos decidem ritmo e paradas. O que você controla é o carro, a estrutura e quem está no cockpit.</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button variant="primary" disabled={career.pendingEvents.length > 0} onClick={watch}>
+              {career.pendingEvents.length > 0 ? 'Resolva as decisões pendentes no painel' : 'Assistir à corrida'}
+            </Button>
+            <Button disabled={career.pendingEvents.length > 0} onClick={simulate}>Simular a etapa</Button>
+          </div>
+          <p className="mt-2 text-xs text-ink-400">Na corrida, os pilotos decidem ritmo e paradas. O que você controla é o carro, a estrutura e quem está no cockpit. Assistir ou simular dá o mesmo resultado.</p>
         </Card>
       ) : null}
 
-      {last && (
+      {last && !liveRace && (
         <Card title={`Última etapa: ${getTrack(last.trackId).name}`} padded={false}>
           {mine.length > 0 && (
             <div className="flex flex-wrap gap-3 border-b border-ink-800 px-4 py-3">

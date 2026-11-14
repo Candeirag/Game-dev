@@ -202,10 +202,20 @@ export function completeWeekend(career: CareerState, race: RaceSimState): Career
  * programa de treino e a abordagem de classificação dos pilotos da equipe.
  */
 export function simulateAbsentWeekend(career: CareerState, choices: { program?: PracticeProgram; approach?: QualifyingApproach } = {}): CareerState {
+  const c = prepareAbsentWeekend(career, choices);
+  const race = simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), { mode: 'balanced', auto: true });
+  return completeWeekend(c, race);
+}
+
+/**
+ * Leva uma etapa sem o jogador no carro até a hora da corrida (treino e
+ * classificação). Quem quer assistir à corrida usa isto e depois simula as
+ * voltas com as mesmas entradas de simulateAbsentWeekend; o resultado é igual.
+ */
+export function prepareAbsentWeekend(career: CareerState, choices: { program?: PracticeProgram; approach?: QualifyingApproach } = {}): CareerState {
   if (!career.weekend || career.weekend.playerParticipates) throw new Error('O jogador participa desta etapa.');
   let c = career;
   if (c.weekend?.phase === 'practice') c = runPractice(c, choices.program ?? 'setup');
   if (c.weekend?.phase === 'qualifying') c = runQualifying(c, choices.approach ?? 'balanced');
-  const race = simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), { mode: 'balanced', auto: true });
-  return completeWeekend(c, race);
+  return c;
 }

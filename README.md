@@ -38,6 +38,7 @@ O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer serv
 - **Contratos:** duração, salário, custo da vaga, bônus, multa rescisória e cláusula de desempenho; propostas no fim do ano, negociação com margem e paciência, renovação e rescisão; mercado de pilotos entre as temporadas.
 - **Piloto:** nove atributos, treino com foco e intensidade, fase, confiança e moral, lesões e recuperação, envelhecimento e declínio.
 - **Corrida:** classificação (eliminatória na F1), largada, ultrapassagens e defesa, erros e acidentes, danos, quebras, safety car, safety car virtual, bandeira vermelha, punições, clima que muda durante a prova, compostos de pneu, desgaste, paradas, estratégia e combustível.
+- **Corrida visual:** cada pista tem um circuito visto de cima, e os carros (com a pintura de cada equipe) andam por ele no tempo real da simulação: largada com luzes, disputas lado a lado, ultrapassagens, paradas no pit lane, rodadas, abandonos, safety car, bandeira vermelha com relargada e chuva. Há torre de tempos, câmera geral ou acompanhando um carro, pausa e velocidades de 1× a 8×.
 - **Equipes:** primeiro piloto, segundo e reserva; ordens de equipe; confiança, relação com o companheiro e rivalidades; academias das equipes de F1.
 - **Economia pessoal:** salário, patrocínios, bônus, custo da vaga, padrão de vida, conta de danos e impostos; renda fixa, fundo, ações com cotação que muda a cada etapa, imóveis, empresas, participações em equipes com dividendos, empréstimos e dívida.
 - **Eventos:** entrevistas, polêmicas, rivalidades, investigações, protestos, problemas contratuais, pressão de patrocinadores, imprevistos, vida em família e decisões de gestão, todos com consequências sobre os outros sistemas.
@@ -53,11 +54,11 @@ O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer serv
    - **Treino livre:** acerto, simulação de classificação ou ritmo de corrida.
    - **Classificação:** abordagem segura, equilibrada ou ataque total.
    - **Estratégia** (da F4 em diante): escolha entre os planos de pneus calculados para a pista.
-   - **Corrida:** acompanhe volta a volta, troque o ritmo, peça paradas, responda às ordens de equipe e reaja a safety car e chuva. O "engenheiro automático" cuida de paradas e combustível, se você preferir.
+   - **Corrida:** em "Ir para a largada" abre a pista. Toque em **Largar**: as luzes apagam e os carros saem. Use **Pausar**, **1× a 8×** e **+1 volta** para controlar o ritmo da transmissão; **Câmera geral** mostra o circuito inteiro e **Meu piloto** acompanha o seu carro (toque em qualquer piloto da classificação, ou num carro, para destacá-lo). Durante a prova você troca o ritmo, pede paradas, responde às ordens de equipe e reage a safety car e chuva; a decisão vale para a volta seguinte à que o líder está fazendo. O "engenheiro automático" cuida de paradas e combustível, se você preferir. **Reiniciar visualização** mostra de novo o que já aconteceu, sem simular outra vez, e **Simular até o fim** vai direto ao resultado. Quem prefere a tabela antiga usa "Modo cronometragem".
 4. **Entre as etapas:** ajuste o treino, acompanhe a confiança da equipe e as rivalidades (tela Equipe), o interesse das equipes e os requisitos do próximo degrau (tela Carreira), e o dinheiro (tela Finanças).
 5. **Fim de temporada:** na tela Carreira, veja o fechamento do ano e as propostas. Negocie, confira os requisitos de cada uma e assine.
 6. **Fora das pistas:** em Finanças, aplique o dinheiro (ações, imóveis, empresas, participações) e escolha o padrão de vida. Em Família, acompanhe o parceiro e os filhos; as decisões do casal aparecem como eventos no começo de cada temporada, a partir dos 21 anos.
-7. **Depois da carreira de piloto:** na tela Carreira, "Pendurar o capacete" leva às propostas de cargo, às equipes à venda e à fundação de uma equipe. A tela Equipe vira Gestão, e o fim de semana passa a ser do pit wall: você define o treino e a classificação dos seus pilotos e a etapa é disputada.
+7. **Depois da carreira de piloto:** na tela Carreira, "Pendurar o capacete" leva às propostas de cargo, às equipes à venda e à fundação de uma equipe. A tela Equipe vira Gestão, e o fim de semana passa a ser do pit wall: você define o treino e a classificação dos seus pilotos e escolhe entre assistir à corrida (com os dois carros da equipe em destaque) ou simular a etapa. O resultado é o mesmo.
 8. **Sucessão:** quando o personagem morre (ou passa o comando em vida), escolha o herdeiro e o caminho dele.
 
 O painel traz uma lista de primeiros passos, e a tela "Como jogar" resume as regras.
@@ -88,6 +89,7 @@ src/
   engine/       motor do jogo, sem React
     simulation/   desempenho, clima, treino, classificação
     simulation/race/  motor de corrida (independente da carreira)
+    broadcast/    transmissão: traçado dos circuitos e linha do tempo da corrida
     career/       fim de semana, economia, contratos, mercado, temporadas
     economy/      patrimônio pessoal (ações, imóveis, empresas, empréstimos)
     dynasty/      família, carreira dos filhos, morte e sucessão
@@ -97,6 +99,8 @@ src/
   persistence/  IndexedDB, checksum, integridade, migrações e saves
   store/        Zustand (camada fina sobre o motor + autosave)
   ui/           telas, componentes e layout
+    race/         corrida visual: canvas, pintura dos carros, torre de tempos, controles
+  assets/race/  sprites dos carros (monoposto, kart, safety car)
 tests/          testes do motor, da carreira, dos saves, de várias temporadas e de vidas inteiras
 legacy/simdev/  projeto anterior do repositório, preservado e fora do build
 ```
