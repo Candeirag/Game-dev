@@ -113,6 +113,8 @@ export function runAiMarket(
   teams: readonly Team[],
   player: { teamId: string; role: 'first' | 'second' },
   nextSeason: number,
+  /** Equipe cuja dupla já foi definida (a que o jogador dirige): [primeiro piloto, segundo piloto]. */
+  reserved?: { teamId: string; drivers: readonly Driver[] },
 ): MarketResult {
   const category = getCategory(career.categoryId);
   const standings = computeDriverStandings(career.rounds, career.drivers, career.adjustments);
@@ -120,8 +122,10 @@ export function runAiMarket(
   const maxPoints = Math.max(1, ...standings.map((s) => s.points));
   const value = (d: Driver) => overallRating(d.attributes) + 6 * ((pointsOf.get(d.id) ?? 0) / maxPoints) + Math.max(0, 22 - d.age) * 0.3;
   const news: string[] = [];
-  const ai = drivers.filter((d) => !d.isPlayer);
-  const usedNames = new Set(drivers.map(fullName));
+  const reservedIds = new Set(reserved?.drivers.map((d) => d.id) ?? []);
+  const ai = drivers.filter((d) => !d.isPlayer && !reservedIds.has(d.id));
+  const usedNames = new Set([...drivers, ...(reserved?.drivers ?? [])].map(fullName));
+  const capacity = (teamId: string | null) => (teamId === reserved?.teamId ? 0 : teamId === player.teamId ? 1 : 2);
 
   // 1. Saídas.
   const leaving = new Set<string>();
@@ -156,7 +160,7 @@ export function runAiMarket(
   for (const d of staying) {
     const displacedByPlayer = d.teamId === player.teamId && d.role === player.role;
     const keeps = d.teamId !== null && d.role !== 'reserve' && d.contractEnd >= nextSeason && !unhappy.has(d.id) && !displacedByPlayer;
-    if (keeps && (seats.get(d.teamId ?? '')?.length ?? 2) < (d.teamId === player.teamId ? 1 : 2)) seats.get(d.teamId ?? '')?.push(d);
+    if (keeps && (seats.get(d.teamId ?? '')?.length ?? 2) < capacity(d.teamId)) seats.get(d.teamId ?? '')?.push(d);
     else free.push({ ...d, teamId: null, role: null });
   }
 
@@ -172,8 +176,7 @@ export function runAiMarket(
   const previousTeam = new Map(drivers.map((d) => [d.id, d.teamId]));
   for (const team of ranked) {
     const list = seats.get(team.id) ?? [];
-    const capacity = team.id === player.teamId ? 1 : 2;
-    while (list.length < capacity && free.length > 0) {
+    while (list.length < capacity(team.id) && free.length > 0) {
       const pick = free.shift();
       if (!pick) break;
       const years = 1 + (hashSeed(career.seed, 'contract', pick.id, nextSeason) % 2);
@@ -191,7 +194,9 @@ export function runAiMarket(
   const result: Driver[] = [];
   for (const team of ranked) {
     const list = [...(seats.get(team.id) ?? [])].sort((a, b) => value(b) - value(a));
-    if (team.id === player.teamId) {
+    if (team.id === reserved?.teamId) {
+      reserved.drivers.slice(0, 2).forEach((d, i) => result.push({ ...d, teamId: team.id, role: i === 0 ? 'first' : 'second', contractEnd: Math.max(nextSeason, d.contractEnd) }));
+    } else if (team.id === player.teamId) {
       const mate = list[0];
       if (mate) result.push({ ...mate, role: player.role === 'first' ? 'second' : 'first' });
     } else {

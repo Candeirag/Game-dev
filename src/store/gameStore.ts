@@ -319,7 +319,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     retire() {
-      apply(engine.retire, { save: true });
+      apply(engine.retireFromDriving, { save: true });
     },
   };
 });

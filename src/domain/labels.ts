@@ -126,6 +126,8 @@ export const EVENT_CATEGORY_LABELS: Record<import('./schemas').EventCategory, st
   contract: 'Contrato',
   sponsor: 'Patrocínio',
   unexpected: 'Inesperado',
+  family: 'Família',
+  management: 'Gestão',
 };
 
 export const OFFER_KIND_LABELS: Record<import('./schemas').Offer['kind'], string> = {
@@ -151,10 +153,82 @@ export const LEDGER_LABELS: Record<import('./schemas').LedgerKey, string> = {
   interest: 'Juros',
   release: 'Multas rescisórias',
   event: 'Eventos',
+  dividends: 'Dividendos',
+  rent: 'Imóveis (aluguel e manutenção)',
+  business: 'Empresas',
+  loan: 'Empréstimos',
+  assets: 'Compra e venda de ativos',
+  family: 'Família',
+  team: 'Equipe própria',
+  inheritance: 'Herança',
 };
 
 export const ROLE_LABELS: Record<import('./schemas').DriverRole, string> = {
   first: 'Primeiro piloto',
   second: 'Segundo piloto',
   reserve: 'Reserva',
+};
+
+/* ---------------- Fase 3 ---------------- */
+
+export const LIFESTYLE_LABELS: Record<import('./schemas').Lifestyle, string> = {
+  frugal: 'Simples',
+  comfortable: 'Confortável',
+  luxury: 'Luxo',
+};
+
+export const SUPPORT_LABELS: Record<import('./schemas').SupportLevel, string> = {
+  none: 'Nenhum',
+  basic: 'Parcial',
+  full: 'Total',
+};
+
+export const CHILD_STAGE_LABELS: Record<import('./schemas').Child['stage'], string> = {
+  child: 'Criança',
+  karting: 'Formação no kart',
+  racing: 'Piloto',
+  other: 'Fora das pistas',
+};
+
+export const STAFF_ROLE_LABELS: Record<import('./schemas').StaffRole, string> = {
+  principal: 'Chefe de equipe',
+  technicalDirector: 'Diretor técnico',
+  sportingDirector: 'Diretor esportivo',
+  chiefEngineer: 'Engenheiro-chefe',
+  chiefMechanic: 'Chefe dos mecânicos',
+};
+
+export const DEV_AREA_LABELS: Record<import('./schemas').DevArea, string> = {
+  aero: 'Aerodinâmica',
+  chassis: 'Chassi',
+  engine: 'Motor',
+  suspension: 'Suspensão',
+  manufacturing: 'Fabricação',
+};
+
+export const RESEARCH_SPEND_LABELS: Record<import('./schemas').ResearchSpend, string> = {
+  low: 'Contido',
+  medium: 'Normal',
+  high: 'Agressivo',
+};
+
+export const TEAM_LEDGER_LABELS: Record<string, string> = {
+  sponsors: 'Patrocínios',
+  seats: 'Vagas pagas pelos pilotos',
+  prize: 'Prêmios',
+  owner: 'Aportes e retiradas do dono',
+  drivers: 'Salários dos pilotos',
+  staff: 'Equipe técnica',
+  principal: 'Salário do chefe de equipe',
+  operations: 'Operação',
+  facilities: 'Instalações',
+  research: 'Pesquisa e desenvolvimento',
+  damage: 'Danos',
+  event: 'Eventos',
+};
+
+export const SUCCESSION_CAUSE_LABELS: Record<import('./schemas').Succession['cause'], string> = {
+  death: 'Falecimento',
+  accident: 'Acidente fatal',
+  handover: 'Passagem de comando',
 };

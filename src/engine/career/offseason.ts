@@ -9,6 +9,9 @@
  * startNextSeason aplica a proposta escolhida: paga a multa (se houver),
  * troca de equipe ou de categoria, roda o mercado da IA, envelhece e
  * desenvolve os pilotos, evolui as equipes e monta o novo calendário.
+ *
+ * A aposentadoria das pistas e a vida de dirigente ficam em
+ * management/executive.ts.
  */
 import type { CareerState, Driver, InboxMessage, Offer, RoundRecord, SeasonSummary, Team } from '@/domain/schemas';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
@@ -22,6 +25,10 @@ import { buildCategoryField, rankTeams } from '../world/generation';
 import { canAcceptOffer, contractFromOffer, generateOffers, negotiate, releaseFeeFor, type NegotiationDemand } from './contracts';
 import { buildCalendar } from './createCareer';
 import { applyAging, developDriver } from './development';
+import { closeFamilyYear } from '../dynasty/family';
+import { beginSeasonFamily } from '../dynasty/familyEvents';
+import { checkMortality, touchLineage } from '../dynasty/succession';
+import { closeAssetsYear } from '../economy/assets';
 import { closeSeasonFinance, post } from './economy';
 import { pushMessages } from './inbox';
 import { licensePointsFor } from './license';
@@ -88,14 +95,18 @@ export function closeSeason(career: CareerState): CareerState {
   const date = career.calendar[lastRound - 1]?.date ?? `${career.year}-12-01`;
   const notes: string[] = [];
 
-  const reputationAfter = reputationAfterSeason(career.reputation, me.position, me.wins, category.tier);
+  // Um parceiro que conhece a imprensa ajuda a imagem: +1 de reputação por temporada.
+  const mediaBoost = career.family.partner?.background === 'media' ? 1 : 0;
+  const reputationAfter = Math.min(100, reputationAfterSeason(career.reputation, me.position, me.wins, category.tier) + mediaBoost);
   const licensePointsEarned = licensePointsFor(category.id, me.position);
   const license = { ...career.license, history: [...career.license.history, { season: career.season, categoryId: category.id, position: me.position, points: licensePointsEarned }] };
 
   // Contas do ano: bônus de título, imposto, investimentos e juros.
   let finance = career.finance;
   if (me.position === 1) finance = post(finance, career.season, lastRound, 'bonus', career.contract.bonuses.title, 'Bônus pelo título');
-  const closed = closeSeasonFinance({ ...career, finance });
+  // Patrimônio (dividendos, imóveis, empresas, participações, empréstimos) e, depois, o imposto de renda.
+  const assets = closeAssetsYear({ ...career, finance });
+  const closed = closeSeasonFinance({ ...career, finance: assets.finance });
   finance = closed.finance;
 
   // Contrato.
@@ -128,7 +139,10 @@ export function closeSeason(career: CareerState): CareerState {
     }
   }
 
-  const base: CareerState = { ...career, reputation: reputationAfter, license, finance, academy };
+  notes.push(...assets.notes);
+  // A família também fecha o ano: temporada dos filhos, aniversários e a relação do casal.
+  const family = closeFamilyYear(career);
+  const base: CareerState = { ...career, reputation: reputationAfter, license, finance, academy, family: family.family };
   const offers = generateOffers(base, reputationAfter, contractStatus, me.position);
   const champion = career.drivers.find((d) => d.id === standings[0]?.driverId);
   const message: InboxMessage = {
@@ -139,9 +153,11 @@ export function closeSeason(career: CareerState): CareerState {
     body: `${champion ? fullName(champion) : 'O campeão'} é o campeão. Você terminou em ${me.position}º (meta: ${team.driverTarget}º) e ganhou ${licensePointsEarned} ponto(s) de licença. Imposto de renda do ano: € ${closed.report.tax.toLocaleString('pt-BR')}. Veja as propostas para a próxima temporada na tela Carreira.`,
   };
 
-  return {
+  const messages: InboxMessage[] = [message];
+  if (family.notes.length > 0) messages.push({ id: `s${career.season}-family`, date, category: 'family', title: 'A família neste ano', body: family.notes.join(' ') });
+  const closedState: CareerState = {
     ...base,
-    inbox: pushMessages(base.inbox, [message]),
+    inbox: pushMessages(base.inbox, messages),
     offseason: {
       playerPosition: me.position,
       playerPoints: me.points,
@@ -159,6 +175,7 @@ export function closeSeason(career: CareerState): CareerState {
       notes,
     },
   };
+  return checkMortality(touchLineage(closedState));
 }
 
 /** Negocia uma proposta aberta. Devolve o novo estado e a resposta da equipe. */
@@ -231,11 +248,12 @@ export function archiveSeason(career: CareerState): SeasonSummary {
     driverNames: Object.fromEntries(career.drivers.map((d) => [d.id, fullName(d)])),
     teamColors: Object.fromEntries(career.teams.map((t) => [t.id, t.color])),
     rounds: career.rounds.map(compactRound),
+    mode: 'driver',
   };
 }
 
 /** Passagem de ano de um piloto: idade, declínio, pré-temporada e condição renovada. */
-function winter(driver: Driver, careerSeed: number, season: number): Driver {
+export function winter(driver: Driver, careerSeed: number, season: number): Driver {
   let d: Driver = { ...driver, age: driver.age + 1 };
   d = applyAging(d, hashSeed(careerSeed, season, 'aging', d.id));
   if (d.teamId || d.isPlayer) d = developDriver(d, hashSeed(careerSeed, season, 'offseason', d.id), OFFSEASON_TRAINING_CYCLES).driver;
@@ -276,6 +294,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
   const offer = offseason.offers.find((o) => o.id === offerId);
   if (!offer) throw new Error('Não há proposta desta equipe.');
   if (!canAcceptOffer(career, offer)) throw new Error('Você não cumpre os requisitos desta proposta.');
+  if (career.succession) throw new Error('Escolha o herdeiro antes de continuar.');
 
   const player = getPlayer(career);
   const next = getCategory(offer.categoryId);
@@ -389,18 +408,5 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     },
   ];
   if (news.length > 0) messages.push({ id: `s${nextSeason}-market`, date, category: 'contract', title: 'Mercado de pilotos', body: news.join(' ') });
-  return { ...state, inbox: pushMessages(career.inbox, messages) };
+  return beginSeasonFamily({ ...state, inbox: pushMessages(career.inbox, messages) });
 }
-
-/** Encerra a carreira do jogador. O save continua disponível para consulta. */
-export function retire(career: CareerState): CareerState {
-  if (career.weekend) throw new Error('Termine o fim de semana antes de se aposentar.');
-  const date = career.calendar[Math.max(0, career.nextRoundIndex - 1)]?.date ?? `${career.year}-01-01`;
-  return {
-    ...career,
-    status: 'retired',
-    pendingEvents: [],
-    inbox: pushMessages(career.inbox, [{ id: `s${career.season}-retired`, date, category: 'season', title: 'Aposentadoria', body: 'Você pendurou o capacete. A sua carreira fica registrada no histórico.' }]),
-  };
-}
-

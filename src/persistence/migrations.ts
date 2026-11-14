@@ -9,8 +9,15 @@
  * categoria, contrato, finanças, licença, relações, eventos e fechamento de
  * temporada. Um save da Fase 1 vira uma carreira no kart regional, com os
  * novos sistemas no estado inicial e todo o histórico de resultados mantido.
+ *
+ * Versão 2 → 3 (Fase 3): entram o patrimônio pessoal (ações, imóveis,
+ * empresas, participações, empréstimos), a família, a dinastia, a gestão de
+ * equipe, a sucessão e o tutorial. É uma migração só de dados: acrescenta os
+ * campos novos no estado inicial, sem chamar o motor do jogo. Um save da
+ * Fase 2 continua exatamente de onde parou.
  */
 import { CAREER_SCHEMA_VERSION, type CareerState, type Contract, type Driver, type Team } from '@/domain/schemas';
+import { initialStockPrices } from '@/data/assets';
 import { getCategory } from '@/data/categories';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
 import { initialTeams } from '@/data/teams';
@@ -133,19 +140,52 @@ function migrateV1(data: Loose): Loose {
     history,
   } as unknown as CareerState;
 
-  let career: CareerState = { ...migrated, marketInterest: updateMarketInterest(migrated, 1) };
-  // Um save da versão 1 parado no fim da temporada precisa do fechamento, que antes não existia.
-  if (career.nextRoundIndex >= career.calendar.length && career.weekend === null) career = closeSeason(career);
+  // O fechamento de temporada de um save parado no fim do ano é feito depois de todas as
+  // migrações (ver migrateCareerData), quando os dados já estão no formato atual.
+  const career: CareerState = { ...migrated, marketInterest: updateMarketInterest(migrated, 1) };
   return career as unknown as Loose;
 }
 
+function migrateV2(data: Loose): Loose {
+  const num = (value: unknown, fallback: number) => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
+  const text = (value: unknown, fallback: string) => (typeof value === 'string' ? value : fallback);
+  const season = num(data.season, 1);
+  const year = num(data.year, 2027);
+  const player = list(data.drivers).find((d) => d.id === data.playerDriverId) ?? {};
+  const name = `${text(player.firstName, 'Piloto')} ${text(player.lastName, '')}`.trim();
+  const history: Loose[] = list(data.history).map((h) => ({ mode: 'driver', ...h }));
+  // Categoria mais alta já disputada, para o registro da linhagem.
+  const tierOf = (id: unknown) => { try { return getCategory(id as CareerState['categoryId']).tier; } catch { return 0; } };
+  const best = [...history.map((h) => h.categoryId), data.categoryId].reduce((top, id) => (tierOf(id) > tierOf(top) ? id : top), data.categoryId);
+  const started = season > 1 || list(data.rounds).length > 0;
+  return {
+    ...data,
+    mode: 'driver',
+    history,
+    finance: { ...obj(data.finance), stocks: [], stockPrices: initialStockPrices(), properties: [], businesses: [], stakes: [], loans: [], lifestyle: 'frugal' },
+    family: { partner: null, children: [], divorces: 0 },
+    dynasty: {
+      generation: 1,
+      surname: text(player.lastName, 'Família'),
+      lineage: [{ generation: 1, driverId: text(data.playerDriverId, 'player'), name, bornYear: year - num(player.age, 16), fromSeason: 1, toSeason: null, endReason: null, bestCategoryId: best, titles: 0, wins: 0, peakReputation: Math.min(100, Math.max(0, num(data.reputation, 10))), netWorthPassed: null }],
+    },
+    management: null,
+    executiveOffseason: null,
+    executiveLog: [],
+    succession: null,
+    // Quem já tinha uma carreira em andamento não precisa do tutorial.
+    tutorial: { done: [], dismissed: started },
+  };
+}
+
 /** Chave: versão de origem. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1 };
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1, 2: migrateV2 };
 
 export function migrateCareerData(raw: unknown): unknown {
   if (raw === null || typeof raw !== 'object') return raw;
   let data = raw as Loose;
   let version = typeof data.schemaVersion === 'number' ? data.schemaVersion : 0;
+  const original = version;
   if (version > CAREER_SCHEMA_VERSION) {
     throw new Error(`Save criado por uma versão mais nova do jogo (schema ${version}).`);
   }
@@ -154,6 +194,11 @@ export function migrateCareerData(raw: unknown): unknown {
     if (!migrate) throw new Error(`Não há migração do schema ${version} para ${version + 1}.`);
     data = { ...migrate(data), schemaVersion: version + 1 };
     version += 1;
+  }
+  // Um save da versão 1 parado no fim da temporada precisa do fechamento, que só existe a partir
+  // da versão 2. Ele é calculado aqui, com os dados já no formato atual.
+  if (original === 1 && Array.isArray(data.calendar) && typeof data.nextRoundIndex === 'number' && data.nextRoundIndex >= data.calendar.length && data.weekend === null && !data.offseason) {
+    data = closeSeason(data as unknown as CareerState) as unknown as Loose;
   }
   return data;
 }

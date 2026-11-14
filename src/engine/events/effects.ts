@@ -6,8 +6,11 @@
  * e testável.
  */
 import type { CareerState, Effect } from '@/domain/schemas';
-import { post } from '../career/economy';
+import { DEV_AREAS } from '@/domain/schemas';
+import { FAMILY } from '@/data/family';
+import { netWorth, post } from '../career/economy';
 import { getPlayer } from '../career/selectors';
+import { setKartFunding, startChildCareer } from '../dynasty/family';
 
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
 
@@ -66,6 +69,72 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
       return { ...career, contract: { ...career.contract, seatCost: Math.max(0, Math.round(career.contract.seatCost + effect.value)) } };
     case 'releaseFee':
       return { ...career, contract: { ...career.contract, clauses: { ...career.contract.clauses, releaseFee: Math.round(career.contract.clauses.releaseFee * effect.factor) } } };
+
+    /* ---------------- Família ---------------- */
+    case 'partner':
+      return career.family.partner ? career : { ...career, family: { ...career.family, partner: effect.partner } };
+    case 'relationship': {
+      const partner = career.family.partner;
+      return partner ? { ...career, family: { ...career.family, partner: { ...partner, relationship: clamp(partner.relationship + effect.value) } } } : career;
+    }
+    case 'marry': {
+      const partner = career.family.partner;
+      return partner ? { ...career, family: { ...career.family, partner: { ...partner, married: true } } } : career;
+    }
+    case 'child':
+      return career.family.children.some((c) => c.id === effect.child.id) ? career : { ...career, family: { ...career.family, children: [...career.family.children, effect.child] } };
+    case 'divorce': {
+      if (!career.family.partner) return career;
+      // O ex-cônjuge fica com uma parte do patrimônio líquido, paga em dinheiro.
+      const settlement = Math.max(0, netWorth(career.finance)) * effect.share;
+      return {
+        ...career,
+        finance: post(career.finance, career.season, round, 'family', -settlement, 'Partilha do divórcio'),
+        family: { partner: null, divorces: career.family.divorces + 1, children: career.family.children.map((c) => ({ ...c, bond: clamp(c.bond - 5) })) },
+      };
+    }
+    case 'childStat': {
+      const children = career.family.children.map((c) => {
+        if (c.id !== effect.childId) return c;
+        const next = { ...c, [effect.stat]: clamp(c[effect.stat] + effect.value) };
+        // Sem vontade de correr na idade de começar, segue outro caminho.
+        const givesUp = (next.stage === 'child' || next.stage === 'karting') && next.age >= FAMILY.CAREER_START_AGE && next.interest < FAMILY.CAREER_INTEREST;
+        return givesUp ? { ...next, stage: 'other' as const } : next;
+      });
+      return { ...career, family: { ...career.family, children } };
+    }
+    case 'childKart':
+      return career.family.children.some((c) => c.id === effect.childId && (c.stage === 'child' || c.stage === 'karting')) ? setKartFunding(career, effect.childId, effect.funding) : career;
+    case 'childCareer':
+      return startChildCareer(career, effect.childId, effect.support);
+
+    /* ---------------- Gestão de equipe ---------------- */
+    case 'teamBudget': {
+      const m = career.management;
+      return m ? { ...career, management: { ...m, budget: Math.round(m.budget + effect.value), ledger: { ...m.ledger, event: (m.ledger.event ?? 0) + Math.round(effect.value) } } } : career;
+    }
+    case 'teamReputation': {
+      const m = career.management;
+      return m ? { ...career, management: { ...m, reputation: clamp(m.reputation + effect.value) } } : career;
+    }
+    case 'devProgress': {
+      const m = career.management;
+      if (!m) return career;
+      const progress = { ...m.development.progress };
+      for (const area of DEV_AREAS) {
+        if (effect.area === null ? m.development.allocation[area] > 0 : effect.area === area) progress[area] = Math.max(0, progress[area] + effect.value);
+      }
+      return { ...career, management: { ...m, development: { ...m.development, progress } } };
+    }
+    case 'staffRating': {
+      const m = career.management;
+      return m ? { ...career, management: { ...m, staff: m.staff.map((x) => (x.role === effect.role ? { ...x, rating: clamp(x.rating + effect.value) } : x)) } } : career;
+    }
+    case 'lineupCondition': {
+      const m = career.management;
+      if (!m) return career;
+      return { ...career, drivers: career.drivers.map((d) => (d.teamId === m.teamId ? { ...d, condition: { ...d.condition, [effect.stat]: clamp(d.condition[effect.stat] + effect.value) } } : d)) };
+    }
   }
 }
 

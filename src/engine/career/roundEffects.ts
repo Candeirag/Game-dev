@@ -4,8 +4,11 @@
  * Depois que o resultado oficial é gravado, esta sequência liga todos os
  * sistemas, sempre na mesma ordem:
  *
- *  1. Economia: salário, patrocínios, bônus, vaga, custos e conta de danos.
- *  2. Condição: fase, confiança e moral de todos os pilotos; lesões e recuperação.
+ *  1. Economia: salário, patrocínios, bônus, vaga, custos e conta de danos;
+ *     patrimônio pessoal (ações, imóveis, empréstimos) e custos com a família.
+ *  2. Condição: fase, confiança e moral de todos os pilotos; lesões e
+ *     recuperação. A vida pessoal do jogador (padrão de vida, casa, parceiro)
+ *     entra na moral dele.
  *  3. Licença: pontos de punição, suspensões e punições de grid.
  *  4. Relações: confiança da equipe, companheiro (ordens de equipe) e rivalidades.
  *  5. Patrocinadores: satisfação; os muito insatisfeitos rompem o contrato.
@@ -23,6 +26,9 @@ import { generateEvents } from '../events/engine';
 import { createRng, hashSeed } from '../rng';
 import { conditionAfterRace, recoverInjury, rollInjury } from './condition';
 import { INTENSITY_GAIN, developAfterRound, type AttributeDelta } from './development';
+import { LIFESTYLE_RULES } from '@/data/assets';
+import { partnerMoraleEffect } from '../dynasty/family';
+import { hasPersonalProperty, settleAssetsRound } from '../economy/assets';
 import { settleRound } from './economy';
 import { pushMessages } from './inbox';
 import { updateMarketInterest } from './market';
@@ -74,12 +80,18 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   /* 1. Economia */
   const cashBefore = career.finance.cash;
   career = { ...career, finance: settleRound(career, round, entry) };
+  // Patrimônio e família: cotações, aluguéis, parcelas de empréstimos e custos com os filhos.
+  career = { ...career, finance: settleAssetsRound(career, round) };
   if (cashBefore >= 0 && career.finance.cash < 0) {
     msg('debt', 'finance', 'Conta no vermelho', 'O seu caixa ficou negativo. A dívida paga 14% de juros no fim da temporada, e as equipes olham as suas finanças antes de oferecer uma vaga.');
   }
 
   /* 2. Condição e lesões (todos os pilotos) */
   const trainingRng = createRng(hashSeed(career.seed, season, round, 'training-injury'));
+  // Vida fora das pistas: padrão de vida, moradia e relacionamento mexem com a moral do jogador.
+  const lifeMorale = LIFESTYLE_RULES[career.finance.lifestyle].morale + partnerMoraleEffect(career.family)
+    + (hasPersonalProperty(career.finance, 'apartamento') ? 0.3 : 0) + (hasPersonalProperty(career.finance, 'casa-campo') ? 0.5 : 0);
+  const healthPartner = career.family.partner?.background === 'health';
   const drivers: Driver[] = career.drivers.map((d) => {
     if (!d.teamId) return d;
     const e = record.race.entries.find((x) => x.driverId === d.id) ?? null;
@@ -88,7 +100,10 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
     let condition = d.role === 'reserve' && !raced ? d.condition : conditionAfterRace(d.condition, e, target);
     let injury = recoverInjury(d.injury, !raced);
     if (e?.injured) injury = rollInjury(hashSeed(career.seed, season, round, 'injury', d.id));
+    // Com um parceiro da área da saúde, a recuperação do jogador leva uma etapa a menos.
+    if (d.isPlayer && healthPartner && e?.injured && injury) injury = { ...injury, roundsRemaining: Math.max(1, injury.roundsRemaining - 1) };
     if (d.isPlayer) {
+      if (lifeMorale !== 0) condition = { ...condition, morale: clamp(condition.morale + lifeMorale) };
       // Intensidade do treino: o leve recupera a fase; o intenso desgasta e pode lesionar.
       if (career.trainingIntensity === 'light') condition = { ...condition, form: clamp(condition.form + 2) };
       if (career.trainingIntensity === 'intense') {

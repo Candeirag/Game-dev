@@ -3,9 +3,11 @@
  * impostos, rendimento de investimentos e juros de dívida.
  *
  * Tudo passa por `post`, que registra o lançamento, atualiza o caixa e os
- * totais da temporada. O patrimônio é caixa + investimentos.
+ * totais da temporada. O restante do patrimônio (ações, imóveis, empresas,
+ * participações e empréstimos) fica em economy/assets.ts.
  */
 import type { CareerState, Finance, LedgerKey, RaceEntryResult, SeasonFinanceReport, Transaction } from '@/domain/schemas';
+import { LIFESTYLE_RULES, initialStockPrices, STOCKS } from '@/data/assets';
 import { getCategory } from '@/data/categories';
 import { createRng, gaussian, hashSeed } from '../rng';
 
@@ -37,12 +39,27 @@ export const ECONOMY = {
   TRANSACTION_LIMIT: 60,
 } as const;
 
+/** Valor de mercado da carteira de ações. */
+export function stocksValue(finance: Finance): number {
+  return finance.stocks.reduce((sum, h) => sum + h.shares * (finance.stockPrices[h.stockId] ?? STOCKS.find((s) => s.id === h.stockId)?.startPrice ?? 0), 0);
+}
+
+/**
+ * Patrimônio líquido: caixa, aplicações, ações, imóveis, empresas e
+ * participações em equipes, menos os empréstimos. Uma equipe da qual o
+ * jogador é dono entra à parte (ver `ownedTeamValue`, na gestão).
+ */
 export function netWorth(finance: Finance): number {
-  return finance.cash + finance.fixedIncome + finance.equityFund;
+  const sum = (items: readonly { value: number }[]) => items.reduce((total, item) => total + item.value, 0);
+  const loans = finance.loans.reduce((total, l) => total + l.balance, 0);
+  return Math.round(finance.cash + finance.fixedIncome + finance.equityFund + stocksValue(finance) + sum(finance.properties) + sum(finance.businesses) + sum(finance.stakes) - loans);
 }
 
 export function emptyFinance(cash: number): Finance {
-  return { cash, fixedIncome: 0, equityFund: 0, seasonTotals: {}, transactions: [], reports: [] };
+  return {
+    cash, fixedIncome: 0, equityFund: 0, seasonTotals: {}, transactions: [], reports: [],
+    stocks: [], stockPrices: initialStockPrices(), properties: [], businesses: [], stakes: [], loans: [], lifestyle: 'frugal',
+  };
 }
 
 /** Registra um lançamento (positivo = receita, negativo = despesa). */
@@ -79,8 +96,10 @@ export function settleRound(career: CareerState, round: number, entry: RaceEntry
   const seat = contract.seatCost * share;
   f = post(f, season, round, 'seat', -seat, 'Parcela da vaga');
   if (career.academy) f = post(f, season, round, 'academy', seat * career.academy.supportShare, `Apoio da ${career.academy.name}`);
-  f = post(f, season, round, 'living', -category.economy.living * share, 'Custo de vida e estrutura');
-  f = post(f, season, round, 'training', -category.economy.trainingCost * ECONOMY.TRAINING_COST[career.trainingIntensity], 'Programa de treino');
+  f = post(f, season, round, 'living', -category.economy.living * LIFESTYLE_RULES[f.lifestyle].cost * share, 'Custo de vida e estrutura');
+  // Quem usa o próprio galpão como oficina treina gastando 20% menos.
+  const ownWorkshop = f.properties.some((p) => p.catalogId === 'galpao' && p.use === 'personal') ? 0.8 : 1;
+  f = post(f, season, round, 'training', -category.economy.trainingCost * ECONOMY.TRAINING_COST[career.trainingIntensity] * ownWorkshop, 'Programa de treino');
   if (entry && entry.damage > 0) f = post(f, season, round, 'damage', -category.economy.damageBill * Math.min(1, entry.damage), 'Conta de danos');
   return f;
 }
@@ -107,8 +126,11 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
   const rounds = career.calendar.length;
   let f = career.finance;
   const t = f.seasonTotals;
-  const taxable = Math.max(0, (t.salary ?? 0) + (t.bonus ?? 0) + (t.sponsors ?? 0) + (t.academy ?? 0) + (t.seat ?? 0));
-  const tax = incomeTax(taxable);
+  // Renda do trabalho (líquida do custo da vaga) mais a renda do patrimônio: dividendos, aluguéis e lucro das empresas.
+  const taxable = Math.max(0, (t.salary ?? 0) + (t.bonus ?? 0) + (t.sponsors ?? 0) + (t.academy ?? 0) + (t.seat ?? 0) + (t.dividends ?? 0) + (t.rent ?? 0) + (t.business ?? 0));
+  // Residência fiscal em Mônaco (cobertura de uso próprio): 25% a menos de imposto de renda.
+  const residence = f.properties.some((p) => p.catalogId === 'cobertura-monaco' && p.use === 'personal') ? 0.75 : 1;
+  const tax = Math.round(incomeTax(taxable) * residence);
   f = post(f, season, rounds, 'tax', -tax, 'Imposto de renda');
 
   const equityRate = Math.min(0.5, Math.max(-0.35, ECONOMY.EQUITY_MEAN + gaussian(createRng(hashSeed(career.seed, season, 'equity'))) * ECONOMY.EQUITY_SD));

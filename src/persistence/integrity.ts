@@ -20,8 +20,14 @@ export function validateCareerIntegrity(career: CareerState): string[] {
   const players = career.drivers.filter((d) => d.isPlayer);
   const player = players[0];
   if (players.length !== 1 || player?.id !== career.playerDriverId) problems.push('Deve existir exatamente um piloto do jogador.');
-  if (!player?.teamId) problems.push('O jogador precisa ter equipe.');
-  if (player && player.role !== 'first' && player.role !== 'second') problems.push('O jogador precisa ser piloto titular.');
+  // Como piloto, o jogador tem uma vaga de titular (salvo durante uma sucessão aberta no meio da temporada).
+  const driving = career.mode === 'driver' && !(career.succession && !career.offseason);
+  if (driving) {
+    if (!player?.teamId) problems.push('O jogador precisa ter equipe.');
+    if (player && player.role !== 'first' && player.role !== 'second') problems.push('O jogador precisa ser piloto titular.');
+  } else if (player?.teamId) {
+    problems.push('Fora das pistas, o personagem do jogador não ocupa vaga em equipe.');
+  }
 
   for (const d of career.drivers) {
     if (d.teamId !== null && !teamIds.has(d.teamId)) problems.push(`Piloto ${d.id} aponta para equipe inexistente ${d.teamId}.`);
@@ -36,9 +42,11 @@ export function validateCareerIntegrity(career: CareerState): string[] {
   }
 
   // Contrato do jogador.
-  if (player && career.contract.teamId !== player.teamId) problems.push('O contrato não corresponde à equipe do jogador.');
-  if (career.contract.categoryId !== career.categoryId) problems.push('O contrato não corresponde à categoria atual.');
-  if (player && career.contract.role !== player.role) problems.push('O papel do jogador não corresponde ao contrato.');
+  if (driving) {
+    if (player && career.contract.teamId !== player.teamId) problems.push('O contrato não corresponde à equipe do jogador.');
+    if (career.contract.categoryId !== career.categoryId) problems.push('O contrato não corresponde à categoria atual.');
+    if (player && career.contract.role !== player.role) problems.push('O papel do jogador não corresponde ao contrato.');
+  }
   if (career.contract.endSeason < career.contract.startSeason) problems.push('Contrato com datas invertidas.');
 
   if (!category) problems.push(`Categoria desconhecida: ${career.categoryId}.`);
@@ -69,12 +77,48 @@ export function validateCareerIntegrity(career: CareerState): string[] {
     for (const e of career.weekend.entrants) {
       if (!driverIds.has(e.driverId) || !teamIds.has(e.teamId)) problems.push('Fim de semana com inscrito inexistente.');
     }
-    if (career.offseason) problems.push('Fim de semana em andamento durante o fechamento da temporada.');
+    if (career.offseason || career.executiveOffseason) problems.push('Fim de semana em andamento durante o fechamento da temporada.');
+    if (career.succession) problems.push('Fim de semana em andamento durante uma sucessão.');
   }
 
   // Fechamento: existe exatamente quando a temporada acabou.
   const seasonOver = career.nextRoundIndex >= career.calendar.length && career.weekend === null;
-  if (career.status === 'active' && seasonOver !== (career.offseason !== null)) problems.push('Fechamento de temporada incoerente com o progresso.');
+  const closing = career.mode === 'driver' ? career.offseason : career.executiveOffseason;
+  if (career.status === 'active' && seasonOver !== (closing !== null)) problems.push('Fechamento de temporada incoerente com o progresso.');
+  if (career.mode === 'driver' && (career.executiveOffseason || career.management)) problems.push('Dados de dirigente em uma carreira de piloto.');
+  if (career.mode === 'executive' && career.offseason) problems.push('Fechamento de piloto em uma carreira de dirigente.');
+
+  // Gestão de equipe.
+  const m = career.management;
+  if (m) {
+    if (!teamIds.has(m.teamId)) problems.push('A equipe administrada não existe no campeonato.');
+    if (m.categoryId !== career.categoryId) problems.push('A equipe administrada é de outra categoria.');
+    const allocation = Object.values(m.development.allocation).reduce((sum, v) => sum + v, 0);
+    if (Math.abs(allocation - 1) > 0.01) problems.push('A distribuição da pesquisa não soma 100%.');
+    if (new Set(m.staff.map((s) => s.role)).size !== m.staff.length) problems.push('Duas pessoas na mesma função da equipe técnica.');
+    if (!Number.isFinite(m.budget)) problems.push('Caixa da equipe inválido.');
+  }
+  const off = career.executiveOffseason;
+  if (off) {
+    for (const id of off.lineup) if (!off.candidates.some((c) => c.driverId === id)) problems.push('Piloto escalado que não está entre os candidatos.');
+  }
+
+  // Família e dinastia.
+  const childIds = new Set(career.family.children.map((c) => c.id));
+  if (childIds.size !== career.family.children.length) problems.push('Filhos com id duplicado.');
+  for (const child of career.family.children) {
+    if (child.stage === 'racing' && (!child.driver || !child.racing)) problems.push(`Filho ${child.id} corre, mas não tem dados de piloto.`);
+    if (child.driver?.isPlayer) problems.push(`Filho ${child.id} marcado como jogador.`);
+  }
+  const lineage = career.dynasty.lineage;
+  const current = lineage[lineage.length - 1];
+  if (!current || current.driverId !== career.playerDriverId) problems.push('A linhagem não termina no personagem atual.');
+  if (current && current.generation !== career.dynasty.generation) problems.push('Geração da dinastia incoerente com a linhagem.');
+  if (career.succession && !career.succession.heirs.some((h) => h.canDrive || h.canManage)) problems.push('Sucessão sem herdeiro que possa assumir.');
+
+  // Patrimônio.
+  for (const holding of career.finance.stocks) if (!(holding.stockId in career.finance.stockPrices)) problems.push(`Ação sem cotação: ${holding.stockId}.`);
+  if (new Set(career.finance.stocks.map((h) => h.stockId)).size !== career.finance.stocks.length) problems.push('Ação repetida na carteira.');
 
   for (const event of career.pendingEvents) {
     for (const choice of event.choices) {

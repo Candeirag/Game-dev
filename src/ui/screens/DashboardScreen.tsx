@@ -8,7 +8,7 @@ import { Button, Card, Meter, PageHeader, Pill, PositionBadge, Stat, TeamSwatch,
 import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
-const CATEGORY_TONE = { team: 'bg-sky-400', race: 'bg-apex-500', training: 'bg-go-400', season: 'bg-gold-400', finance: 'bg-emerald-300', contract: 'bg-purple-400', health: 'bg-rose-400', media: 'bg-sky-300' } as const;
+const CATEGORY_TONE = { team: 'bg-sky-400', race: 'bg-apex-500', training: 'bg-go-400', season: 'bg-gold-400', finance: 'bg-emerald-300', contract: 'bg-purple-400', health: 'bg-rose-400', media: 'bg-sky-300', family: 'bg-pink-300', business: 'bg-amber-300' } as const;
 
 export function DashboardScreen() {
   const { career, player, team, category, drivers, teams, driverStandings } = useCareerView();

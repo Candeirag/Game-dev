@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CareerStateSchema } from '@/domain/schemas';
+import { CAREER_SCHEMA_VERSION, CareerStateSchema } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { IndexedDbStorage, MemoryStorage } from '@/persistence/storage';
 import {
@@ -129,7 +129,7 @@ describe('compatibilidade com saves da Fase 1', () => {
   it('save no meio de um fim de semana: migra, valida e a corrida pode ser disputada', () => {
     const original = raw('mid-weekend').career;
     const c = load('mid-weekend');
-    expect(c.schemaVersion).toBe(2);
+    expect(c.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
     expect(CareerStateSchema.safeParse(c).success).toBe(true);
     expect(validateCareerIntegrity(c)).toEqual([]);
     expect(c.categoryId).toBe('kart-regional');

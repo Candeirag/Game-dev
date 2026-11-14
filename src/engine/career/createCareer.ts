@@ -18,6 +18,7 @@ import { chooseAiTrainingFocus } from '../ai/decisions';
 import { hashSeed } from '../rng';
 import { generateEventWeather } from '../simulation/weather';
 import { generateReserve, rankTeams } from '../world/generation';
+import { emptyFamily } from '../dynasty/family';
 import { ECONOMY, emptyFinance } from './economy';
 import { updateMarketInterest } from './market';
 import { fullName } from './selectors';
@@ -148,6 +149,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     season: 1,
     year,
     status: 'active',
+    mode: 'driver',
     categoryId: category.id,
     playerDriverId: PLAYER_DRIVER_ID,
     reputation: STARTING_REPUTATION,
@@ -172,6 +174,17 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     eventLog: [],
     offseason: null,
     history: [],
+    family: emptyFamily(),
+    dynasty: {
+      generation: 1,
+      surname: player.lastName,
+      lineage: [{ generation: 1, driverId: player.id, name: fullName(player), bornYear: year - player.age, fromSeason: 1, toSeason: null, endReason: null, bestCategoryId: category.id, titles: 0, wins: 0, peakReputation: STARTING_REPUTATION, netWorthPassed: null }],
+    },
+    management: null,
+    executiveOffseason: null,
+    executiveLog: [],
+    succession: null,
+    tutorial: { done: [], dismissed: false },
     inbox: [
       {
         id: 's1-welcome',

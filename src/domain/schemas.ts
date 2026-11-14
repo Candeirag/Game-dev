@@ -90,7 +90,7 @@ export const DriverSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   nationality: z.string().length(2),
-  age: z.number().int().min(10).max(60),
+  age: z.number().int().min(10).max(110),
   /** Equipe atual, ou null quando o piloto está sem vaga. */
   teamId: z.string().nullable(),
   /** Papel na equipe (null para quem está sem vaga). */
@@ -338,7 +338,7 @@ export type WeekendState = z.infer<typeof WeekendStateSchema>;
 export const InboxMessageSchema = z.object({
   id: z.string(),
   date: z.string(),
-  category: z.enum(['team', 'race', 'training', 'season', 'finance', 'contract', 'health', 'media']),
+  category: z.enum(['team', 'race', 'training', 'season', 'finance', 'contract', 'health', 'media', 'family', 'business']),
   title: z.string(),
   body: z.string(),
 });
@@ -409,6 +409,8 @@ export type Offer = z.infer<typeof OfferSchema>;
 export const LEDGER_KEYS = [
   'salary', 'sponsors', 'bonus', 'academy', 'investment',
   'seat', 'living', 'training', 'damage', 'tax', 'interest', 'release', 'event',
+  // Fase 3: patrimônio, família e negócios.
+  'dividends', 'rent', 'business', 'loan', 'assets', 'family', 'team', 'inheritance',
 ] as const;
 export const LedgerKeySchema = z.enum(LEDGER_KEYS);
 export type LedgerKey = z.infer<typeof LedgerKeySchema>;
@@ -435,6 +437,75 @@ export const SeasonFinanceReportSchema = z.object({
 });
 export type SeasonFinanceReport = z.infer<typeof SeasonFinanceReportSchema>;
 
+/* ---------------- Patrimônio (Fase 3) ---------------- */
+
+/** Posição em uma ação: quantidade e preço médio de compra (base do imposto sobre o ganho). */
+export const StockHoldingSchema = z.object({
+  stockId: z.string(),
+  shares: z.number().min(0),
+  avgCost: z.number().min(0),
+});
+export type StockHolding = z.infer<typeof StockHoldingSchema>;
+
+export const PropertySchema = z.object({
+  id: z.string(),
+  catalogId: z.string(),
+  name: z.string(),
+  /** Preço pago, base do imposto sobre o ganho de capital na venda. */
+  cost: z.number().min(0),
+  value: z.number().min(0),
+  purchasedSeason: z.number().int(),
+  /** Alugado rende aluguel; de uso próprio dá o benefício descrito no catálogo. */
+  use: z.enum(['rented', 'personal']),
+});
+export type Property = z.infer<typeof PropertySchema>;
+
+export const BusinessSchema = z.object({
+  id: z.string(),
+  catalogId: z.string(),
+  name: z.string(),
+  invested: z.number().min(0),
+  value: z.number().min(0),
+  level: z.number().int().min(1).max(3),
+  foundedSeason: z.number().int(),
+  /** Lucro (ou prejuízo) da última temporada fechada. */
+  lastProfit: z.number(),
+});
+export type Business = z.infer<typeof BusinessSchema>;
+
+/** Participação minoritária (ou herdada) em uma equipe. */
+export const TeamStakeSchema = z.object({
+  id: z.string(),
+  teamId: z.string(),
+  teamName: z.string(),
+  categoryId: CategoryIdSchema,
+  share: z.number().min(0).max(1),
+  cost: z.number().min(0),
+  value: z.number().min(0),
+  /** Última posição conhecida da equipe no campeonato. */
+  lastPosition: z.number().int().min(1),
+  lastDividend: z.number(),
+});
+export type TeamStake = z.infer<typeof TeamStakeSchema>;
+
+export const LoanSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  principal: z.number().min(0),
+  /** Saldo devedor no início da temporada atual. */
+  balance: z.number().min(0),
+  rate: z.number().min(0),
+  /** Parcela anual (dividida pelas etapas da temporada). */
+  annualPayment: z.number().min(0),
+  seasonsRemaining: z.number().int().min(1),
+  paidThisSeason: z.number().min(0),
+});
+export type Loan = z.infer<typeof LoanSchema>;
+
+export const LIFESTYLES = ['frugal', 'comfortable', 'luxury'] as const;
+export const LifestyleSchema = z.enum(LIFESTYLES);
+export type Lifestyle = z.infer<typeof LifestyleSchema>;
+
 export const FinanceSchema = z.object({
   /** Dinheiro em caixa. Negativo = dívida, com juros no fim da temporada. */
   cash: z.number(),
@@ -447,6 +518,15 @@ export const FinanceSchema = z.object({
   /** Últimos lançamentos, do mais recente para o mais antigo. */
   transactions: z.array(TransactionSchema),
   reports: z.array(SeasonFinanceReportSchema),
+  /** Ações em carteira e cotações atuais (id da ação → preço). */
+  stocks: z.array(StockHoldingSchema),
+  stockPrices: z.record(z.string(), z.number().positive()),
+  properties: z.array(PropertySchema),
+  businesses: z.array(BusinessSchema),
+  stakes: z.array(TeamStakeSchema),
+  loans: z.array(LoanSchema),
+  /** Padrão de vida: multiplica o custo de vida e mexe com a moral e a família. */
+  lifestyle: LifestyleSchema,
 });
 export type Finance = z.infer<typeof FinanceSchema>;
 
@@ -501,6 +581,256 @@ export const RelationsSchema = z.object({
 });
 export type Relations = z.infer<typeof RelationsSchema>;
 
+/* ---------------- Família e dinastia (Fase 3) ---------------- */
+
+export const CHILD_TRAITS = ['determined', 'gifted', 'calm', 'aggressive', 'charismatic', 'rebel', 'studious', 'intuitive'] as const;
+export const ChildTraitSchema = z.enum(CHILD_TRAITS);
+export type ChildTrait = z.infer<typeof ChildTraitSchema>;
+
+export const SUPPORT_LEVELS = ['none', 'basic', 'full'] as const;
+export const SupportLevelSchema = z.enum(SUPPORT_LEVELS);
+export type SupportLevel = z.infer<typeof SupportLevelSchema>;
+
+export const PARTNER_BACKGROUNDS = ['motorsport', 'business', 'arts', 'health', 'media'] as const;
+
+export const PartnerSchema = z.object({
+  firstName: z.string(),
+  lastName: z.string(),
+  age: z.number().int().min(16),
+  background: z.enum(PARTNER_BACKGROUNDS),
+  /** Aptidão esportiva que passa aos filhos (os filhos herdam dos dois lados). */
+  talent: RatingSchema,
+  relationship: RatingSchema,
+  married: z.boolean(),
+  sinceSeason: z.number().int(),
+});
+export type Partner = z.infer<typeof PartnerSchema>;
+
+export const LicenseHistoryEntrySchema = z.object({ season: z.number().int(), categoryId: CategoryIdSchema, position: z.number().int().min(1), points: z.number().min(0) });
+
+export const ChildSeasonSchema = z.object({
+  season: z.number().int(),
+  year: z.number().int(),
+  categoryId: CategoryIdSchema,
+  teamName: z.string(),
+  position: z.number().int().min(1),
+  wins: z.number().int().min(0),
+  /** Verdadeiro quando o resultado veio do campeonato simulado (na equipe do jogador), não da estimativa. */
+  inWorld: z.boolean(),
+});
+export type ChildSeason = z.infer<typeof ChildSeasonSchema>;
+
+/** Carreira própria de um filho, que corre fora do campeonato do jogador. */
+export const ChildRacingSchema = z.object({
+  categoryId: CategoryIdSchema,
+  teamName: z.string(),
+  /** Força da equipe em que corre: 0 = a melhor, 9 = a pior. */
+  teamRank: z.number().int().min(0).max(9),
+  reputation: RatingSchema,
+  license: z.array(LicenseHistoryEntrySchema),
+  /** Academia de F1 que o apoia (null = nenhuma). */
+  academy: z.string().nullable(),
+  seasons: z.array(ChildSeasonSchema),
+  /** Temporadas seguidas sem conseguir bancar a vaga; com 2, a carreira acaba. */
+  stalled: z.number().int().min(0),
+  /** Custo anual da carreira que cabe à família nesta temporada. */
+  familyCost: z.number().min(0),
+});
+export type ChildRacing = z.infer<typeof ChildRacingSchema>;
+
+export const ChildSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  nationality: z.string().length(2),
+  age: z.number().int().min(0),
+  traits: z.array(ChildTraitSchema).min(1).max(2),
+  /** Teto de desenvolvimento herdado dos pais (com variação). */
+  talent: RatingSchema,
+  /** Vontade de seguir no automobilismo. */
+  interest: RatingSchema,
+  /** Relação com o personagem do jogador. */
+  bond: RatingSchema,
+  /** child: pequeno; karting: formação no kart; racing: carreira própria; other: seguiu outro caminho. */
+  stage: z.enum(['child', 'karting', 'racing', 'other']),
+  kartFunding: SupportLevelSchema,
+  /** Anos de formação no kart, ponderados pelo investimento. */
+  kartYears: z.number().min(0),
+  support: SupportLevelSchema,
+  driver: DriverSchema.nullable(),
+  racing: ChildRacingSchema.nullable(),
+});
+export type Child = z.infer<typeof ChildSchema>;
+
+export const FamilySchema = z.object({
+  partner: PartnerSchema.nullable(),
+  children: z.array(ChildSchema),
+  divorces: z.number().int().min(0),
+});
+export type Family = z.infer<typeof FamilySchema>;
+
+export const LineageEntrySchema = z.object({
+  generation: z.number().int().min(1),
+  driverId: z.string(),
+  name: z.string(),
+  bornYear: z.number().int(),
+  fromSeason: z.number().int().min(1),
+  toSeason: z.number().int().nullable(),
+  endReason: z.enum(['death', 'accident', 'handover']).nullable(),
+  bestCategoryId: CategoryIdSchema.nullable(),
+  titles: z.number().int().min(0),
+  wins: z.number().int().min(0),
+  peakReputation: RatingSchema,
+  /** Patrimônio líquido transmitido ao sucessor. */
+  netWorthPassed: z.number().nullable(),
+});
+export type LineageEntry = z.infer<typeof LineageEntrySchema>;
+
+export const DynastySchema = z.object({
+  generation: z.number().int().min(1),
+  surname: z.string(),
+  lineage: z.array(LineageEntrySchema).min(1),
+});
+export type Dynasty = z.infer<typeof DynastySchema>;
+
+export const HeirOptionSchema = z.object({
+  id: z.string(),
+  kind: z.enum(['child', 'partner', 'relative']),
+  name: z.string(),
+  age: z.number().int(),
+  description: z.string(),
+  /** Pode assumir como piloto (tem carreira em andamento). */
+  canDrive: z.boolean(),
+  /** Pode assumir os negócios (é maior de idade). */
+  canManage: z.boolean(),
+  childId: z.string().nullable(),
+  driver: DriverSchema.nullable(),
+  racing: ChildRacingSchema.nullable(),
+});
+export type HeirOption = z.infer<typeof HeirOptionSchema>;
+
+/** Sucessão em aberto: o jogo espera a escolha do herdeiro. */
+export const SuccessionSchema = z.object({
+  cause: z.enum(['death', 'accident', 'handover']),
+  year: z.number().int(),
+  formerName: z.string(),
+  /** Patrimônio líquido no momento da sucessão e imposto que incide sobre ele. */
+  estate: z.number(),
+  tax: z.number().min(0),
+  heirs: z.array(HeirOptionSchema).min(1),
+});
+export type Succession = z.infer<typeof SuccessionSchema>;
+
+/* ---------------- Gestão de equipe (Fase 3) ---------------- */
+
+export const STAFF_ROLES = ['principal', 'technicalDirector', 'sportingDirector', 'chiefEngineer', 'chiefMechanic'] as const;
+export const StaffRoleSchema = z.enum(STAFF_ROLES);
+export type StaffRole = z.infer<typeof StaffRoleSchema>;
+
+export const StaffMemberSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  role: StaffRoleSchema,
+  rating: RatingSchema,
+  /** Salário por temporada. */
+  salary: z.number().min(0),
+  contractEnd: z.number().int(),
+});
+export type StaffMember = z.infer<typeof StaffMemberSchema>;
+
+export const DEV_AREAS = ['aero', 'chassis', 'engine', 'suspension', 'manufacturing'] as const;
+export const DevAreaSchema = z.enum(DEV_AREAS);
+export type DevArea = z.infer<typeof DevAreaSchema>;
+
+export const DevValuesSchema = z.object({
+  aero: z.number().min(0),
+  chassis: z.number().min(0),
+  engine: z.number().min(0),
+  suspension: z.number().min(0),
+  manufacturing: z.number().min(0),
+});
+export type DevValues = z.infer<typeof DevValuesSchema>;
+
+export const FACILITY_KEYS = ['simulator', 'windTunnel', 'factory'] as const;
+export type FacilityKey = (typeof FACILITY_KEYS)[number];
+const FacilityLevelSchema = z.number().int().min(0).max(5);
+
+export const RESEARCH_SPENDS = ['low', 'medium', 'high'] as const;
+export const ResearchSpendSchema = z.enum(RESEARCH_SPENDS);
+export type ResearchSpend = z.infer<typeof ResearchSpendSchema>;
+
+export const TeamSponsorSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  perSeason: z.number().min(0),
+  endSeason: z.number().int(),
+  /** Posição no campeonato de equipes que o patrocinador exige. */
+  targetPosition: z.number().int().min(1),
+});
+export type TeamSponsor = z.infer<typeof TeamSponsorSchema>;
+
+export const DriverDealSchema = z.object({
+  /** Salário que a equipe paga ao piloto por temporada. */
+  salary: z.number().min(0),
+  /** Valor que o piloto (ou seus patrocinadores) leva à equipe por temporada. */
+  seatFee: z.number().min(0),
+  endSeason: z.number().int(),
+});
+export type DriverDeal = z.infer<typeof DriverDealSchema>;
+
+export const ManagedTeamSchema = z.object({
+  teamId: z.string(),
+  categoryId: CategoryIdSchema,
+  /** principal = chefe de equipe contratado; owner = dono (que também comanda). */
+  position: z.enum(['principal', 'owner']),
+  sinceSeason: z.number().int(),
+  /** Caixa da equipe (separado do dinheiro pessoal). */
+  budget: z.number(),
+  reputation: RatingSchema,
+  /** Salário do jogador como chefe contratado (0 para o dono). */
+  salary: z.number().min(0),
+  /** Prêmio anual, definido pela posição no campeonato anterior e pago em parcelas por etapa. */
+  prize: z.number().min(0),
+  purchasePrice: z.number().min(0),
+  /** Posição no campeonato de equipes que a diretoria (ou o mercado) espera. */
+  boardTarget: z.number().int().min(1),
+  /** Temporadas seguidas abaixo da meta; com 2, o chefe contratado é demitido. */
+  strikes: z.number().int().min(0),
+  staff: z.array(StaffMemberSchema),
+  /** Profissionais disponíveis para contratação nesta temporada. */
+  staffMarket: z.array(StaffMemberSchema),
+  /** Tamanho dos departamentos (1 a 5). */
+  engineers: z.number().int().min(1).max(5),
+  mechanics: z.number().int().min(1).max(5),
+  facilities: z.object({ simulator: FacilityLevelSchema, windTunnel: FacilityLevelSchema, factory: FacilityLevelSchema }),
+  /** Carro no início da temporada, sem as melhorias do ano. */
+  baseCar: CarPerformanceSchema,
+  development: z.object({
+    /** Distribuição do esforço de pesquisa entre as áreas (soma 1). */
+    allocation: DevValuesSchema,
+    spend: ResearchSpendSchema,
+    /** Pontos de pesquisa acumulados para a próxima melhoria de cada área. */
+    progress: DevValuesSchema,
+    /** Melhorias entregues nesta temporada, por área. */
+    gains: DevValuesSchema,
+    /** Gasto com desenvolvimento na temporada (conta para o teto de gastos). */
+    spent: z.number().min(0),
+  }),
+  /** Evolução das equipes rivais nesta temporada (id → pontos de carro). */
+  fieldGains: z.record(z.string(), z.number()),
+  sponsors: z.array(TeamSponsorSchema),
+  deals: z.record(z.string(), DriverDealSchema),
+  /** Totais da temporada por tipo de lançamento do caixa da equipe. */
+  ledger: z.record(z.string(), z.number()),
+  /** Posição da equipe no campeonato anterior (null na primeira temporada do jogador nela). */
+  previousPosition: z.number().int().min(1).nullable(),
+});
+export type ManagedTeam = z.infer<typeof ManagedTeamSchema>;
+
+/** Uma temporada do jogador no comando de uma equipe. */
+export const ExecutiveLogEntrySchema = z.object({ season: z.number().int(), categoryId: CategoryIdSchema, teamName: z.string(), position: z.number().int().min(1), target: z.number().int().min(1), profit: z.number() });
+export type ExecutiveLogEntry = z.infer<typeof ExecutiveLogEntrySchema>;
+
 /* ---------------- Eventos ---------------- */
 
 export const EffectSchema = z.discriminatedUnion('type', [
@@ -521,10 +851,25 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('carUpgrade'), value: z.number() }),
   z.object({ type: z.literal('seatCost'), value: z.number() }),
   z.object({ type: z.literal('releaseFee'), factor: z.number().min(0) }),
+  // Fase 3: família.
+  z.object({ type: z.literal('partner'), partner: PartnerSchema }),
+  z.object({ type: z.literal('relationship'), value: z.number() }),
+  z.object({ type: z.literal('marry') }),
+  z.object({ type: z.literal('child'), child: ChildSchema }),
+  z.object({ type: z.literal('divorce'), share: z.number().min(0).max(1) }),
+  z.object({ type: z.literal('childStat'), childId: z.string(), stat: z.enum(['interest', 'bond']), value: z.number() }),
+  z.object({ type: z.literal('childKart'), childId: z.string(), funding: SupportLevelSchema }),
+  z.object({ type: z.literal('childCareer'), childId: z.string(), support: SupportLevelSchema }),
+  // Fase 3: gestão de equipe.
+  z.object({ type: z.literal('teamBudget'), value: z.number(), label: z.string() }),
+  z.object({ type: z.literal('teamReputation'), value: z.number() }),
+  z.object({ type: z.literal('devProgress'), area: DevAreaSchema.nullable(), value: z.number() }),
+  z.object({ type: z.literal('staffRating'), role: StaffRoleSchema, value: z.number() }),
+  z.object({ type: z.literal('lineupCondition'), stat: z.enum(['morale', 'confidence']), value: z.number() }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
-export const EVENT_CATEGORIES = ['interview', 'controversy', 'rivalry', 'investigation', 'protest', 'contract', 'sponsor', 'unexpected'] as const;
+export const EVENT_CATEGORIES = ['interview', 'controversy', 'rivalry', 'investigation', 'protest', 'contract', 'sponsor', 'unexpected', 'family', 'management'] as const;
 export const EventCategorySchema = z.enum(EVENT_CATEGORIES);
 export type EventCategory = z.infer<typeof EventCategorySchema>;
 
@@ -604,6 +949,8 @@ export const SeasonSummarySchema = z.object({
   driverNames: z.record(z.string(), z.string()),
   teamColors: z.record(z.string(), z.string()),
   rounds: z.array(RoundRecordSchema),
+  /** driver: temporada como piloto; executive: como dirigente (a posição é a da equipe, se houver). */
+  mode: z.enum(['driver', 'executive']),
 });
 export type SeasonSummary = z.infer<typeof SeasonSummarySchema>;
 
@@ -628,11 +975,71 @@ export const OffseasonSchema = z.object({
 });
 export type Offseason = z.infer<typeof OffseasonSchema>;
 
+/* ---------------- Fechamento como dirigente (Fase 3) ---------------- */
+
+export const JobOfferSchema = z.object({
+  id: z.string(),
+  categoryId: CategoryIdSchema,
+  teamId: z.string(),
+  teamName: z.string(),
+  rank: z.number().int().min(0),
+  salary: z.number().min(0),
+  target: z.number().int().min(1),
+});
+export type JobOffer = z.infer<typeof JobOfferSchema>;
+
+export const TeamListingSchema = z.object({
+  id: z.string(),
+  categoryId: CategoryIdSchema,
+  teamId: z.string(),
+  teamName: z.string(),
+  rank: z.number().int().min(0),
+  price: z.number().min(0),
+});
+export type TeamListing = z.infer<typeof TeamListingSchema>;
+
+export const DriverCandidateSchema = z.object({
+  driverId: z.string(),
+  name: z.string(),
+  age: z.number().int(),
+  rating: z.number(),
+  origin: z.enum(['current', 'market', 'rookie', 'child']),
+  salary: z.number().min(0),
+  seatFee: z.number().min(0),
+  years: z.number().int().min(1),
+  /** Falso quando o piloto não aceita correr por esta equipe. */
+  willing: z.boolean(),
+  /** Dados do piloto, quando ele ainda não está no campeonato (estreantes e filhos). */
+  driver: DriverSchema.nullable(),
+  childId: z.string().nullable(),
+});
+export type DriverCandidate = z.infer<typeof DriverCandidateSchema>;
+
+export const ExecutiveOffseasonSchema = z.object({
+  /** Resumo da temporada encerrada, arquivado quando a próxima começar. */
+  summary: SeasonSummarySchema,
+  teamPosition: z.number().int().min(1).nullable(),
+  target: z.number().int().min(1).nullable(),
+  objectiveMet: z.boolean().nullable(),
+  prize: z.number(),
+  profit: z.number(),
+  /** O chefe contratado foi demitido neste fechamento. */
+  dismissed: z.boolean(),
+  notes: z.array(z.string()),
+  jobOffers: z.array(JobOfferSchema),
+  listings: z.array(TeamListingSchema),
+  candidates: z.array(DriverCandidateSchema),
+  /** Pilotos escolhidos para a próxima temporada: [primeiro, segundo]. */
+  lineup: z.array(z.string()).max(2),
+  sponsorOffers: z.array(TeamSponsorSchema),
+});
+export type ExecutiveOffseason = z.infer<typeof ExecutiveOffseasonSchema>;
+
 export const TRAINING_INTENSITIES = ['light', 'normal', 'intense'] as const;
 export const TrainingIntensitySchema = z.enum(TRAINING_INTENSITIES);
 export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
 
-export const CAREER_SCHEMA_VERSION = 2;
+export const CAREER_SCHEMA_VERSION = 3;
 
 export const CareerStateSchema = z.object({
   schemaVersion: z.literal(CAREER_SCHEMA_VERSION),
@@ -643,8 +1050,11 @@ export const CareerStateSchema = z.object({
   seed: z.number().int().min(0).max(0xffffffff),
   season: z.number().int().min(1),
   year: z.number().int(),
+  /** 'retired' só aparece em saves antigos (Fase 2); hoje a carreira segue como dirigente. */
   status: z.enum(['active', 'retired']),
-  /** Categoria que o jogador disputa nesta temporada. */
+  /** driver: o personagem corre; executive: aposentou-se das pistas e atua como dirigente ou investidor. */
+  mode: z.enum(['driver', 'executive']),
+  /** Categoria acompanhada nesta temporada: a que o jogador disputa ou a da equipe que ele dirige. */
   categoryId: CategoryIdSchema,
   playerDriverId: z.string(),
   reputation: RatingSchema,
@@ -665,6 +1075,7 @@ export const CareerStateSchema = z.object({
   /** Atributos do jogador no início da temporada, para mostrar a evolução. */
   playerSeasonStartAttributes: DriverAttributesSchema,
   trainingIntensity: TrainingIntensitySchema,
+  /** Contrato de piloto. No modo dirigente, guarda o último contrato assinado (só histórico). */
   contract: ContractSchema,
   finance: FinanceSchema,
   sponsors: z.array(SponsorSchema),
@@ -678,6 +1089,16 @@ export const CareerStateSchema = z.object({
   offseason: OffseasonSchema.nullable(),
   history: z.array(SeasonSummarySchema),
   inbox: z.array(InboxMessageSchema),
+  family: FamilySchema,
+  dynasty: DynastySchema,
+  /** Equipe que o jogador comanda ou possui (modo dirigente). */
+  management: ManagedTeamSchema.nullable(),
+  executiveOffseason: ExecutiveOffseasonSchema.nullable(),
+  /** Retrospecto do personagem atual como dirigente (acompanha-o entre equipes). */
+  executiveLog: z.array(ExecutiveLogEntrySchema),
+  /** Sucessão em aberto: bloqueia o jogo até o herdeiro ser escolhido. */
+  succession: SuccessionSchema.nullable(),
+  tutorial: z.object({ done: z.array(z.string()), dismissed: z.boolean() }),
 });
 export type CareerState = z.infer<typeof CareerStateSchema>;
 

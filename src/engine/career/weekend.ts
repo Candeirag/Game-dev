@@ -30,6 +30,8 @@ import {
   type StrategyOption,
   type StrategyPlan,
 } from '../simulation/race';
+import { checkFatalAccident } from '../dynasty/succession';
+import { applyExecutiveRoundEffects, closeExecutiveSeason } from '../management/executive';
 import { isUnavailable } from './condition';
 import { moveInvestment, type InvestmentMove } from './economy';
 import { closeSeason } from './offseason';
@@ -77,13 +79,15 @@ export function playerAvailability(career: CareerState): { available: boolean; r
  */
 export function startWeekend(career: CareerState, options: { rest?: boolean } = {}): CareerState {
   if (career.status !== 'active') throw new Error('A carreira está encerrada.');
+  if (career.succession) throw new Error('Escolha o herdeiro antes de continuar.');
   if (career.weekend) throw new Error('Já existe um fim de semana em andamento.');
   if (career.pendingEvents.length > 0) throw new Error('Resolva as decisões pendentes antes do fim de semana.');
   const event = career.calendar[career.nextRoundIndex];
   if (!event) throw new Error('A temporada já terminou.');
 
+  // No modo dirigente, o jogador não corre: a etapa é disputada só pelos pilotos das equipes.
   const availability = playerAvailability(career);
-  const playerParticipates = availability.available && !(options.rest && availability.canRest);
+  const playerParticipates = career.mode === 'driver' && availability.available && !(options.rest && availability.canRest);
   const entrants: WeekendState['entrants'] = [];
   for (const team of career.teams) {
     const reserve = career.drivers.find((d) => d.teamId === team.id && d.role === 'reserve');
@@ -100,6 +104,14 @@ export function startWeekend(career: CareerState, options: { rest?: boolean } = 
   return { ...career, weekend: { round: event.round, phase: 'practice', practice: null, qualifying: null, entrants, playerParticipates } };
 }
 
+/**
+ * Pilotos cujas decisões de treino e classificação são do jogador: ele mesmo
+ * ou, no modo dirigente, os dois pilotos da equipe que ele comanda.
+ */
+function directedByPlayer(career: CareerState, driver: { isPlayer: boolean; teamId: string | null }): boolean {
+  return driver.isPlayer || (career.mode === 'executive' && career.management !== null && driver.teamId === career.management.teamId);
+}
+
 function entrantDrivers(career: CareerState, weekend: WeekendState) {
   const drivers = driverMap(career);
   return weekend.entrants.map((e) => {
@@ -114,7 +126,7 @@ export function runPractice(career: CareerState, playerProgram: PracticeProgram)
   const participants = entrantDrivers(career, weekend).map(({ driver, team }) => ({
     driver,
     team,
-    program: driver.isPlayer ? playerProgram : chooseAiPracticeProgram(driver.attributes, track),
+    program: directedByPlayer(career, driver) ? playerProgram : chooseAiPracticeProgram(driver.attributes, track),
   }));
   const practice = simulatePractice(participants, track, event.weather.practice, sessionSeed(career, weekend.round, 'practice'), category);
   return { ...career, weekend: { ...weekend, phase: 'qualifying', practice } };
@@ -128,7 +140,7 @@ export function runQualifying(career: CareerState, playerApproach: QualifyingApp
   const participants = entrantDrivers(career, weekend).map(({ driver, team }) => {
     const entry = practice.entries.find((e) => e.driverId === driver.id);
     if (!entry) throw new Error(`Piloto ${driver.id} sem resultado de treino.`);
-    return { driver, team, approach: driver.isPlayer ? playerApproach : chooseAiQualifyingApproach(driver.attributes, weather), modifiers: entry.modifiers };
+    return { driver, team, approach: directedByPlayer(career, driver) ? playerApproach : chooseAiQualifyingApproach(driver.attributes, weather), modifiers: entry.modifiers };
   });
   const qualifying = simulateQualifying(participants, track, weather, sessionSeed(career, weekend.round, 'qualifying'), category, career.gridPenalties);
   return { ...career, weekend: { ...weekend, phase: 'race', qualifying } };
@@ -173,16 +185,27 @@ export function completeWeekend(career: CareerState, race: RaceSimState): Career
 
   const record: RoundRecord = { season: career.season, round: weekend.round, trackId: event.trackId, date: event.date, practice, qualifying, race: finalizeRace(race, category) };
   const withResult: CareerState = { ...career, rounds: [...career.rounds, record], weekend: null, nextRoundIndex: career.nextRoundIndex + 1 };
-  const next = applyRoundEffects(withResult, record, gridDropsFromRace(race));
-  return next.nextRoundIndex >= next.calendar.length ? closeSeason(next) : next;
+  const drops = gridDropsFromRace(race);
+  if (career.mode === 'executive') {
+    const next = applyExecutiveRoundEffects(withResult, record, drops);
+    return next.nextRoundIndex >= next.calendar.length ? closeExecutiveSeason(next) : next;
+  }
+  const effects = applyRoundEffects(withResult, record, drops);
+  const next = effects.nextRoundIndex >= effects.calendar.length ? closeSeason(effects) : effects;
+  const injured = record.race.entries.find((e) => e.driverId === career.playerDriverId)?.injured ?? false;
+  return checkFatalAccident(next, record.season, record.round, injured);
 }
 
-/** Simula a etapa inteira sem o jogador (lesionado, suspenso ou descansando). */
-export function simulateAbsentWeekend(career: CareerState): CareerState {
+/**
+ * Simula a etapa inteira sem o jogador no carro: lesionado, suspenso,
+ * descansando ou, no modo dirigente, no pit wall. O dirigente escolhe o
+ * programa de treino e a abordagem de classificação dos pilotos da equipe.
+ */
+export function simulateAbsentWeekend(career: CareerState, choices: { program?: PracticeProgram; approach?: QualifyingApproach } = {}): CareerState {
   if (!career.weekend || career.weekend.playerParticipates) throw new Error('O jogador participa desta etapa.');
   let c = career;
-  if (c.weekend?.phase === 'practice') c = runPractice(c, 'setup');
-  if (c.weekend?.phase === 'qualifying') c = runQualifying(c, 'balanced');
+  if (c.weekend?.phase === 'practice') c = runPractice(c, choices.program ?? 'setup');
+  if (c.weekend?.phase === 'qualifying') c = runQualifying(c, choices.approach ?? 'balanced');
   const race = simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), { mode: 'balanced', auto: true });
   return completeWeekend(c, race);
 }
