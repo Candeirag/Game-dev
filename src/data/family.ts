@@ -98,8 +98,8 @@ export const FAMILY = {
   PROMOTION_POSITION: 8,
   /** Ruído do resultado de uma temporada simulada fora do campeonato do jogador. */
   SEASON_NOISE_SD: 2.5,
-  /** Quanto cada posição de força da equipe vale em nota de desempenho. */
-  CAR_WEIGHT: 0.9,
+  /** Quanto cada posição de força da equipe vale em nota de desempenho (no kart; cresce com o peso do carro na categoria). */
+  CAR_WEIGHT: 0.45,
 
   /** Mortalidade anual por faixa de idade (tábua de vida simplificada). */
   MORTALITY: [

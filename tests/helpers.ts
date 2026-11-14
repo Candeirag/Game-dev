@@ -1,4 +1,5 @@
 import type { CareerState, PracticeProgram, QualifyingApproach, RaceMode } from '@/domain/schemas';
+import * as engine from './engineApi';
 import {
   buildRaceContext,
   canAcceptOffer,
@@ -134,5 +135,86 @@ export function playCareer(career: CareerState, seasons: number, choices: Choice
     onSeasonEnd?.(c);
     c = startNextSeason(c, pickBestOffer(c));
   }
+  return c;
+}
+
+/* ------------------------------------------------------------------ */
+/* Fase 3: vida inteira (piloto → dirigente → sucessão)                */
+/* ------------------------------------------------------------------ */
+
+export interface LifePolicy {
+  /** Idade em que o robô pendura o capacete. */
+  retireAge?: number;
+  /** Na sucessão, prefere um herdeiro que corra (padrão) ou um que só administre. */
+  heir?: 'driver' | 'executive';
+  /** Compra uma equipe se o dinheiro em caixa cobrir o preço com folga. */
+  buyTeam?: boolean;
+  choices?: Choices;
+}
+
+/** Joga uma etapa no modo dirigente (o jogador não corre). */
+export function playExecutiveRound(career: CareerState, choices: Choices = {}): CareerState {
+  const c = engine.startWeekend(resolvePending(career, choices.eventChoice));
+  return engine.simulateAbsentWeekend(c, { program: choices.program ?? 'setup', approach: choices.approach ?? 'balanced' });
+}
+
+/** Decisão do robô no fechamento de uma temporada como dirigente. */
+export function botExecutiveOffseason(career: CareerState, policy: LifePolicy = {}): CareerState {
+  let c = resolvePending(career, policy.choices?.eventChoice);
+  const off = c.executiveOffseason;
+  if (!off) throw new Error('Sem fechamento de dirigente.');
+  if (c.management && !off.dismissed) {
+    // Preenche as cotas de patrocínio com as propostas mais altas.
+    for (const offer of [...off.sponsorOffers].sort((a, b) => b.perSeason - a.perSeason)) {
+      if ((c.management?.sponsors.length ?? 3) < 3) c = engine.acceptTeamSponsor(c, offer.id);
+    }
+    return engine.startExecutiveSeason(c, { kind: 'continue' });
+  }
+  if (policy.buyTeam) {
+    const affordable = off.listings.filter((l) => l.price <= c.finance.cash * 0.6).sort((a, b) => b.price - a.price)[0];
+    if (affordable) return engine.startExecutiveSeason(c, { kind: 'buy', listingId: affordable.id });
+  }
+  const job = off.jobOffers[0];
+  if (job) return engine.startExecutiveSeason(c, { kind: 'job', offerId: job.id });
+  return engine.startExecutiveSeason(c, { kind: 'spectate' });
+}
+
+/** Escolha do robô em uma sucessão. */
+export function botSuccession(career: CareerState, policy: LifePolicy = {}): CareerState {
+  const heirs = career.succession?.heirs ?? [];
+  const preferDriver = (policy.heir ?? 'driver') === 'driver';
+  const driver = heirs.find((h) => h.kind === 'child' && h.canDrive) ?? heirs.find((h) => h.canDrive);
+  const manager = heirs.find((h) => h.kind === 'child' && h.canManage) ?? heirs.find((h) => h.kind === 'partner') ?? heirs.find((h) => h.canManage);
+  const pick = preferDriver ? (driver ?? manager) : (manager ?? driver);
+  if (!pick) throw new Error('Sucessão sem herdeiro.');
+  return engine.resolveSuccession(career, pick.id, pick === driver && (preferDriver || !manager) ? 'driver' : pick.canManage && !(preferDriver && pick.canDrive) ? 'executive' : 'driver');
+}
+
+/**
+ * Joga uma temporada completa de uma "vida": corre enquanto é piloto,
+ * aposenta-se na idade definida, dirige ou acompanha depois, e resolve as
+ * sucessões que aparecerem. Devolve o estado no começo da temporada seguinte.
+ */
+export function playLifeSeason(career: CareerState, policy: LifePolicy = {}, onSeasonEnd?: (c: CareerState) => void): CareerState {
+  let c = career;
+  if (c.succession) return botSuccession(c, policy);
+  if (c.mode === 'driver') {
+    c = botTraining(c);
+    while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playRound(c, policy.choices);
+    onSeasonEnd?.(c);
+    if (c.succession) return botSuccession(c, policy);
+    if (getPlayer(c).age >= (policy.retireAge ?? 36)) return engine.retireFromDriving(resolvePending(c));
+    return startNextSeason(resolvePending(c), pickBestOffer(c));
+  }
+  while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playExecutiveRound(c, policy.choices);
+  onSeasonEnd?.(c);
+  if (c.succession) return botSuccession(c, policy);
+  return botExecutiveOffseason(c, policy);
+}
+
+export function playLife(career: CareerState, seasons: number, policy: LifePolicy = {}, onSeasonEnd?: (c: CareerState) => void): CareerState {
+  let c = career;
+  // Cada chamada avança no máximo uma temporada; sucessões e aposentadorias são passos extras.
+  for (let guard = 0; guard < seasons * 3 && c.season < career.season + seasons; guard++) c = playLifeSeason(c, policy, onSeasonEnd);
   return c;
 }

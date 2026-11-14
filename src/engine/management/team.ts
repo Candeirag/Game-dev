@@ -7,13 +7,14 @@
  * muda esses números por regras: melhorias de pesquisa mexem no carro,
  * mecânicos e chefias mexem nos boxes. Nada aqui toca o motor de corrida.
  */
-import type { CareerState, CarPerformance, DevArea, DevValues, FacilityKey, InboxMessage, ManagedTeam, ResearchSpend, RoundRecord, StaffMember, StaffRole, Team, TeamSponsor } from '@/domain/schemas';
+import type { CareerState, CarPerformance, Driver, DevArea, DevValues, FacilityKey, InboxMessage, ManagedTeam, ResearchSpend, RoundRecord, StaffMember, StaffRole, Team, TeamSponsor } from '@/domain/schemas';
 import { DEV_AREAS, STAFF_ROLES } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
 import { DEV_EFFECTS, MANAGEMENT, REGULATIONS, STAFF_FIRST_NAMES, STAFF_LAST_NAMES, TEAM_ECONOMY, TEAM_SPONSOR_NAMES, teamValue } from '@/data/management';
 import { computeTeamStandings } from '../championship/standings';
 import { post } from '../career/economy';
 import { createRng, gaussian, hashSeed } from '../rng';
+import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
@@ -154,6 +155,26 @@ export function buildSponsorOffers(careerSeed: number, season: number, m: Pick<M
   return offers;
 }
 
+/**
+ * Quanto um piloto custa ou paga para correr por uma equipe.
+ * Na F1, a equipe paga: o salário pedido cresce com a nota do piloto. Nas
+ * categorias de base, é o piloto que paga pela vaga, e quanto melhor ele é,
+ * menos paga: de 105% do preço de tabela (o mais fraco do grid) a 65% (o
+ * melhor). A ambição diz que tamanho de equipe ele aceita.
+ */
+export function driverTerms(categoryId: ManagedTeam['categoryId'], teamRank: number, driver: Pick<Driver, 'attributes'>): { rating: number; salary: number; seatFee: number; ambition: number } {
+  const category = getCategory(categoryId);
+  const rating = overallRating(driver.attributes);
+  const q = clamp((rating - (category.field.driverLevel - category.field.driverSpread / 2 - 2)) / (category.field.driverSpread + 4), 0, 1);
+  const [top, bottom] = category.economy.salary;
+  return {
+    rating: round1(rating),
+    salary: Math.round((bottom + (top - bottom) * Math.pow(q, 1.5)) / 1000) * 1000,
+    seatFee: Math.round((lerp(category.economy.seatCost, teamRank / 9) * (1.05 - 0.4 * q)) / 500) * 500,
+    ambition: 50 + (rating - category.field.driverLevel) * 5,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Criação                                                             */
 /* ------------------------------------------------------------------ */
@@ -173,7 +194,6 @@ export function createManagedTeam(career: CareerState, teamId: string, options: 
   const team = ranked[rank];
   if (!team) throw new Error('Equipe não encontrada.');
   const categoryId = career.categoryId;
-  const category = getCategory(categoryId);
   const economy = TEAM_ECONOMY[categoryId];
   const season = career.season;
   const t = rank / 9;
@@ -188,11 +208,8 @@ export function createManagedTeam(career: CareerState, teamId: string, options: 
   const deals: ManagedTeam['deals'] = {};
   for (const driver of career.drivers.filter((d) => d.teamId === teamId)) {
     const race = driver.role !== 'reserve';
-    deals[driver.id] = {
-      salary: race ? Math.round((lerp(category.economy.salary, t) * (driver.role === 'first' ? 1 : 0.6)) / 1000) * 1000 : 0,
-      seatFee: race ? Math.round(lerp(category.economy.seatCost, t) / 500) * 500 : 0,
-      endSeason: Math.max(season, driver.contractEnd),
-    };
+    const terms = driverTerms(categoryId, rank, driver);
+    deals[driver.id] = { salary: race ? terms.salary : 0, seatFee: race ? terms.seatFee : 0, endSeason: Math.max(season, driver.contractEnd) };
   }
 
   const base: ManagedTeam = {

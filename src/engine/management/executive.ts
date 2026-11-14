@@ -35,7 +35,7 @@ import { createRng, gaussian, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, generateReserve, rankTeams } from '../world/generation';
 import { managementRoundEvent } from './events';
-import { buildSponsorOffers, buildStaffMarket, createManagedTeam, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
+import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -264,7 +264,7 @@ export function foundingCost(categoryId: CategoryId): number {
  *
  * Quanto melhor o piloto, mais ele custa: na F1, o salário pedido cresce com
  * a nota; nas categorias de base, é o piloto que paga, e os melhores pagam
- * menos (de 115% a 25% do preço de tabela da vaga). Um piloto só aceita se a
+ * menos (de 105% a 65% do preço de tabela da vaga; ver driverTerms). Um piloto só aceita se a
  * equipe estiver à altura da ambição dele.
  */
 export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
@@ -275,29 +275,21 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
   const rank = Math.max(0, ranked.findIndex((t) => t.id === m.teamId));
   const nextSeason = career.season + 1;
   const attractiveness = m.reputation + (staffRating(m, 'sportingDirector') - 60) * 0.3;
-  const terms = (driver: Driver) => {
-    const rating = overallRating(driver.attributes);
-    const q = clamp((rating - (category.field.driverLevel - category.field.driverSpread / 2 - 2)) / (category.field.driverSpread + 4), 0, 1);
-    const [top, bottom] = category.economy.salary;
-    return {
-      rating: round1(rating),
-      salary: Math.round((bottom + (top - bottom) * Math.pow(q, 1.5)) / 1000) * 1000,
-      seatFee: Math.round((lerp(category.economy.seatCost, rank / 9) * (1.15 - 0.9 * q)) / 500) * 500,
-      ambition: 50 + (rating - category.field.driverLevel) * 5,
-    };
-  };
+  // Idade-limite: na F1, quem chega aos 38 se aposenta; nas outras, vale a idade máxima da categoria.
+  const tooOld = (ageNextSeason: number) => (category.tier === 7 ? ageNextSeason >= 38 : ageNextSeason > category.field.maxAge + 1);
   const candidate = (driver: Driver, origin: DriverCandidate['origin'], inWorld: boolean, childId: string | null): DriverCandidate => {
-    const t = terms(driver);
+    const t = driverTerms(m.categoryId, rank, driver);
     const family = origin === 'child';
-    const willing = family || origin === 'rookie' || attractiveness + (origin === 'current' ? 18 : 8) >= t.ambition;
-    return { driverId: driver.id, name: fullName(driver), age: driver.age + (inWorld ? 1 : 0), rating: t.rating, origin, salary: family ? 0 : t.salary, seatFee: family ? 0 : t.seatFee, years: 1 + (hashSeed(career.seed, 'deal', driver.id, nextSeason) % 2), willing, driver: inWorld ? null : driver, childId };
+    const age = driver.age + (inWorld ? 1 : 0);
+    const willing = !tooOld(age) && (family || origin === 'rookie' || attractiveness + (origin === 'current' ? 18 : 8) >= t.ambition);
+    return { driverId: driver.id, name: fullName(driver), age, rating: t.rating, origin, salary: family ? 0 : t.salary, seatFee: family ? 0 : t.seatFee, years: 1 + (hashSeed(career.seed, 'deal', driver.id, nextSeason) % 2), willing, driver: inWorld ? null : driver, childId };
   };
 
   const list: DriverCandidate[] = [];
   const childByDriver = new Map(career.family.children.filter((c) => c.driver).map((c) => [c.driver?.id ?? '', c]));
   for (const d of career.drivers.filter((x) => x.teamId === m.teamId)) list.push(candidate(d, childByDriver.has(d.id) ? 'child' : 'current', true, childByDriver.get(d.id)?.id ?? null));
   const free = career.drivers
-    .filter((d) => !d.isPlayer && d.teamId !== m.teamId && (d.teamId === null || d.role === 'reserve' || d.contractEnd <= career.season) && d.age + 1 <= category.field.maxAge + (category.tier === 7 ? 0 : 1))
+    .filter((d) => !d.isPlayer && d.teamId !== m.teamId && (d.teamId === null || d.role === 'reserve' || d.contractEnd <= career.season) && !tooOld(d.age + 1))
     .sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes))
     .slice(0, 8);
   for (const d of free) list.push(candidate(d, 'market', true, null));
@@ -405,7 +397,8 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
 
     const teamReputation = Math.round(clamp(management.reputation + (92 - (position - 1) * 8 - management.reputation) * MANAGEMENT.REPUTATION_SPEED * (0.8 + principalRating(career) / 250)));
     let budget = management.budget;
-    let strikes = met ? 0 : management.strikes + (position > target + 1 || budget < 0 ? 1 : 0);
+    // Advertência: ficar duas ou mais posições abaixo da meta, ou fechar o ano no vermelho.
+    let strikes = met && budget >= 0 ? 0 : management.strikes + (position > target + 1 || budget < 0 ? 1 : 0);
     if (management.position === 'owner') {
       strikes = 0;
       if (budget < 0) {
@@ -413,10 +406,21 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
         notes.push(`A equipe fechou o ano com ${money(-budget)} de saldo negativo, cobertos com o seu dinheiro.`);
         budget = 0;
       }
-    } else if (met) {
-      const bonus = Math.round(management.salary * MANAGEMENT.TARGET_BONUS);
-      finance = post(finance, season, rounds, 'bonus', bonus, 'Bônus por meta cumprida');
-      notes.push(`A diretoria pagou ${money(bonus)} de bônus pela meta cumprida.`);
+    } else {
+      if (met) {
+        const bonus = Math.round(management.salary * MANAGEMENT.TARGET_BONUS);
+        finance = post(finance, season, rounds, 'bonus', bonus, 'Bônus por meta cumprida');
+        notes.push(`A diretoria pagou ${money(bonus)} de bônus pela meta cumprida.`);
+      }
+      // Equipe de terceiros: os donos retiram o lucro que passa da reserva e cobrem o prejuízo.
+      const reserve = Math.round(economy.operations * MANAGEMENT.STARTING_BUDGET);
+      if (budget > reserve * 2) {
+        notes.push(`Os donos da equipe retiraram ${money(budget - reserve * 2)} de lucro acumulado.`);
+        budget = reserve * 2;
+      } else if (budget < 0) {
+        notes.push(`Os donos cobriram ${money(-budget)} de prejuízo e cobraram explicações.`);
+        budget = Math.round(reserve * 0.5);
+      }
     }
     if (strikes >= MANAGEMENT.MAX_STRIKES) {
       evaluation.dismissed = true;

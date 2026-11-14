@@ -32,13 +32,13 @@ export interface TeamEconomy {
 }
 
 export const TEAM_ECONOMY: Readonly<Record<CategoryId, TeamEconomy>> = {
-  'kart-regional': { operations: 30_000, prize: [6_000, 500], sponsorBase: 9_000, staffSalary: 3_500, researchCost: 350, value: [120_000, 50_000], principalSalary: [18_000, 8_000], facilityCost: 7_000, budgetCap: null, fieldDevelopment: 0.6 },
-  'kart-national': { operations: 60_000, prize: [15_000, 1_500], sponsorBase: 24_000, staffSalary: 7_000, researchCost: 800, value: [300_000, 120_000], principalSalary: [35_000, 15_000], facilityCost: 16_000, budgetCap: null, fieldDevelopment: 0.6 },
-  'kart-international': { operations: 150_000, prize: [40_000, 4_000], sponsorBase: 60_000, staffSalary: 16_000, researchCost: 2_000, value: [800_000, 350_000], principalSalary: [70_000, 30_000], facilityCost: 40_000, budgetCap: null, fieldDevelopment: 0.6 },
-  f4: { operations: 400_000, prize: [100_000, 10_000], sponsorBase: 150_000, staffSalary: 40_000, researchCost: 5_500, value: [2_500_000, 1_200_000], principalSalary: [140_000, 60_000], facilityCost: 110_000, budgetCap: null, fieldDevelopment: 0.4 },
-  f3: { operations: 1_000_000, prize: [300_000, 30_000], sponsorBase: 380_000, staffSalary: 100_000, researchCost: 14_000, value: [7_000_000, 3_500_000], principalSalary: [300_000, 120_000], facilityCost: 280_000, budgetCap: null, fieldDevelopment: 0.4 },
-  f2: { operations: 2_600_000, prize: [800_000, 80_000], sponsorBase: 950_000, staffSalary: 240_000, researchCost: 35_000, value: [18_000_000, 9_000_000], principalSalary: [600_000, 250_000], facilityCost: 650_000, budgetCap: null, fieldDevelopment: 0.4 },
-  f1: { operations: 20_000_000, prize: [70_000_000, 18_000_000], sponsorBase: 26_000_000, staffSalary: 1_500_000, researchCost: 420_000, value: [220_000_000, 70_000_000], principalSalary: [4_000_000, 1_000_000], facilityCost: 5_000_000, budgetCap: 30_000_000, fieldDevelopment: 2 },
+  'kart-regional': { operations: 30_000, prize: [10_000, 500], sponsorBase: 9_000, staffSalary: 1_500, researchCost: 150, value: [120_000, 50_000], principalSalary: [18_000, 8_000], facilityCost: 7_000, budgetCap: null, fieldDevelopment: 0.6 },
+  'kart-national': { operations: 60_000, prize: [22_000, 1_500], sponsorBase: 24_000, staffSalary: 3_000, researchCost: 320, value: [300_000, 120_000], principalSalary: [35_000, 15_000], facilityCost: 16_000, budgetCap: null, fieldDevelopment: 0.6 },
+  'kart-international': { operations: 150_000, prize: [60_000, 4_000], sponsorBase: 60_000, staffSalary: 7_500, researchCost: 800, value: [800_000, 350_000], principalSalary: [70_000, 30_000], facilityCost: 40_000, budgetCap: null, fieldDevelopment: 0.6 },
+  f4: { operations: 400_000, prize: [160_000, 10_000], sponsorBase: 150_000, staffSalary: 20_000, researchCost: 2_000, value: [2_500_000, 1_200_000], principalSalary: [140_000, 60_000], facilityCost: 110_000, budgetCap: null, fieldDevelopment: 0.4 },
+  f3: { operations: 1_000_000, prize: [450_000, 30_000], sponsorBase: 380_000, staffSalary: 50_000, researchCost: 5_000, value: [7_000_000, 3_500_000], principalSalary: [300_000, 120_000], facilityCost: 280_000, budgetCap: null, fieldDevelopment: 0.4 },
+  f2: { operations: 2_600_000, prize: [1_200_000, 80_000], sponsorBase: 950_000, staffSalary: 120_000, researchCost: 13_000, value: [18_000_000, 9_000_000], principalSalary: [600_000, 250_000], facilityCost: 650_000, budgetCap: null, fieldDevelopment: 0.4 },
+  f1: { operations: 18_000_000, prize: [70_000_000, 20_000_000], sponsorBase: 26_000_000, staffSalary: 1_500_000, researchCost: 420_000, value: [220_000_000, 70_000_000], principalSalary: [4_000_000, 1_000_000], facilityCost: 5_000_000, budgetCap: 30_000_000, fieldDevelopment: 2 },
 };
 
 export interface TechnicalRegulations {

@@ -229,11 +229,21 @@ export function setChildSupport(career: CareerState, childId: string, support: S
 /* ------------------------------------------------------------------ */
 
 /**
+ * Nota competitiva: média entre a velocidade e a nota geral. Em corrida, a
+ * velocidade pesa mais do que na nota geral, e é ela que os jovens treinam
+ * primeiro; esta média reproduz as posições que o próprio jogador consegue no
+ * campeonato simulado com atributos equivalentes.
+ */
+export function competitiveRating(attributes: DriverAttributes): number {
+  return (attributes.pace + overallRating(attributes)) / 2;
+}
+
+/**
  * Estima a posição final. Cada piloto do grid tem uma nota de desempenho =
  * nível esperado da vaga (pelo nível da categoria e pela força da equipe) +
- * vantagem do carro. A do filho é a nota geral dele + a vantagem do carro da
- * equipe em que corre + o acaso da temporada. A posição é quantos ficam à
- * frente.
+ * vantagem do carro. A do filho é a nota competitiva dele + a vantagem do
+ * carro da equipe em que corre + o acaso da temporada. A posição é quantos
+ * ficam à frente.
  */
 export function estimateSeasonPosition(rating: number, category: CategoryDefinition, teamRank: number, noise: number): number {
   const carWeight = FAMILY.CAR_WEIGHT * Math.sqrt(category.carFactor);
@@ -243,11 +253,17 @@ export function estimateSeasonPosition(rating: number, category: CategoryDefinit
   for (let rank = 0; rank < 10; rank++) {
     for (const offset of [1.5, -1.5]) {
       if (rank === teamRank && offset < 0) continue; // a vaga que o próprio filho ocupa
-      const level = category.field.driverLevel + category.field.driverSpread * (0.5 - rank / 9) + offset;
+      // +1: nos pilotos gerados, a velocidade fica cerca de 2 pontos acima da média dos atributos.
+      const level = category.field.driverLevel + category.field.driverSpread * (0.5 - rank / 9) + offset + 1;
       if (level + car(rank) > score) ahead++;
     }
   }
   return ahead + 1;
+}
+
+/** Foco de treino de um jovem em formação: velocidade enquanto houver margem; depois, o ponto mais fraco. */
+function coachFocus(driver: Driver): Driver['trainingFocus'] {
+  return driver.potential - driver.attributes.pace > 4 ? 'speed' : chooseAiTrainingFocus(driver.attributes);
 }
 
 function winsFor(position: number, rng: Rng): number {
@@ -272,11 +288,15 @@ export function closeChildSeason(child: Child, career: CareerState, world: { pos
     ({ position, wins, driver, teamName } = world);
   } else {
     const noise = gaussian(rng) * Math.max(1, FAMILY.SEASON_NOISE_SD + traitSum(child, 'volatility'));
-    position = estimateSeasonPosition(overallRating(driver.attributes), category, racing.teamRank, noise);
+    position = estimateSeasonPosition(competitiveRating(driver.attributes), category, racing.teamRank, noise);
     wins = winsFor(position, rng);
     const multiplier = traitProduct(child, 'development') * (child.support === 'full' ? 1 : child.support === 'basic' ? 0.92 : 0.85) * (racing.academy ? FAMILY.ACADEMY_DEVELOPMENT : 1);
-    // Uma temporada equivale às etapas da categoria mais a pré-temporada.
-    driver = developDriver(driver, hashSeed(career.seed, career.season, 'child-dev', child.id), category.rounds + 2, multiplier).driver;
+    // Uma temporada equivale às etapas da categoria mais a pré-temporada, em três blocos:
+    // a cada bloco, o treinador revê o foco do treino.
+    const cycles = (category.rounds + 2) / 3;
+    for (let block = 0; block < 3; block++) {
+      driver = developDriver({ ...driver, trainingFocus: coachFocus(driver) }, hashSeed(career.seed, career.season, 'child-dev', child.id, block), cycles, multiplier).driver;
+    }
   }
   const points = licensePointsFor(category.id, position);
   const reputation = reputationAfterSeason(racing.reputation, position, wins, category.tier);
