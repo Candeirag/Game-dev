@@ -34,7 +34,7 @@ test('o "Mais" entra e sai em até 300 ms e pode ser interrompido', async ({ pag
   // Fecha e reabre em seguida, sem esperar a saída terminar: a folha volta, não fica presa.
   await page.keyboard.press('Escape');
   await mais.click();
-  await expect(folha.getByRole('link', { name: 'Finanças' })).toBeVisible();
+  await expect(folha.getByRole('link', { name: 'Vida' })).toBeVisible();
 
   // Fechada de vez, sai da página logo depois da transição.
   await page.keyboard.press('Escape');

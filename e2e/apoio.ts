@@ -1,11 +1,19 @@
 /** Apoio aos testes no navegador: tamanhos de tela, abertura de saves e a verificação visual. */
 import { expect, type Page } from '@playwright/test';
 
-/** Os dois formatos de celular: em pé e deitado (o do aplicativo). */
+/**
+ * Formatos conferidos. O aplicativo é feito para a tela deitada (844×390) e escala para tablet
+ * e computador; o celular em pé continua valendo para quem joga pelo navegador.
+ */
 export const TELAS = [
-  { nome: 'em-pe', width: 390, height: 844 },
-  { nome: 'deitado', width: 844, height: 390 },
+  { nome: 'em-pe', width: 390, height: 844, toque: true, celular: true },
+  { nome: 'deitado', width: 844, height: 390, toque: true, celular: true },
+  { nome: 'tablet', width: 1180, height: 820, toque: true, celular: false },
+  { nome: 'computador', width: 1366, height: 768, toque: false, celular: false },
 ] as const;
+
+/** Menor lado aceito para uma área de toque, em px (44, com meio pixel de folga de arredondamento). */
+const TOQUE_MINIMO = 43.5;
 
 export const SAVES = {
   naLargada: 'tests/fixtures/v3/atual-kart-na-largada.json',
@@ -144,13 +152,41 @@ export async function sobreposicoes(page: Page): Promise<Sobreposicao[]> {
   });
 }
 
-/** Tira o print da tela inteira e confere sobreposição de imagem com texto e transbordo lateral. */
+/**
+ * Áreas de toque menores que 44×44 px. Conta tudo que é clicável e está visível: botões, links,
+ * abas, campos e caixas de seleção (estas pelo rótulo que as envolve).
+ */
+export async function alvosPequenos(page: Page): Promise<string[]> {
+  return page.evaluate((minimo) => {
+    const found: string[] = [];
+    for (const element of document.querySelectorAll('button, a[href], input, select, textarea, [role="tab"], summary')) {
+      if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) || element.closest('.sr-only, [inert]')) continue;
+      if (element instanceof HTMLInputElement && (element.type === 'file' || element.type === 'hidden')) continue;
+      const label = element.matches('input[type="checkbox"], input[type="radio"]') ? element.closest('label') : null;
+      const box = (label ?? element).getBoundingClientRect();
+      if (box.width === 0 || box.height === 0) continue;
+      if (box.width < minimo || box.height < minimo) {
+        const name = (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40);
+        found.push(`<${element.tagName.toLowerCase()}> "${name}" (${Math.round(box.width)}×${Math.round(box.height)} px)`);
+      }
+    }
+    return [...new Set(found)];
+  }, TOQUE_MINIMO);
+}
+
+/**
+ * Tira o print da tela inteira e confere sobreposição de imagem com texto, transbordo lateral e,
+ * nos formatos de toque, o tamanho das áreas de toque.
+ */
 export async function conferirTela(page: Page, tela: string, formato: string): Promise<void> {
   await page.waitForTimeout(250);
   await page.screenshot({ path: `test-results/telas/${formato}/${tela}.png`, fullPage: true });
   const achados = await sobreposicoes(page);
+  const toque = TELAS.find((item) => item.nome === formato)?.toque ?? true;
+  const pequenos = toque ? await alvosPequenos(page) : [];
   if (process.env.LEVANTAR) {
     for (const a of achados) console.log(`ACHADO ${formato} | ${tela} | ${a.imagem} × "${a.texto}" (${a.area})`);
+    for (const alvo of pequenos) console.log(`ACHADO ${formato} | ${tela} | toque pequeno: ${alvo}`);
     const sobra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (sobra > 0) console.log(`ACHADO ${formato} | ${tela} | transbordo de ${sobra} px`);
     return;
@@ -158,4 +194,5 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   expect(achados, `${tela} (${formato}): imagem sobre texto\n${achados.map((a) => `  ${a.imagem} × "${a.texto}" (${a.area})`).join('\n')}`).toEqual([]);
   const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(transbordo, `${tela} (${formato}): a página passa ${transbordo} px da largura da tela`).toBeLessThanOrEqual(0);
+  expect(pequenos, `${tela} (${formato}): áreas de toque menores que 44 px\n  ${pequenos.join('\n  ')}`).toEqual([]);
 }
