@@ -25,7 +25,7 @@ import { developAfterRound, developDriver } from '../career/development';
 import { closeSeasonFinance, post } from '../career/economy';
 import { pushMessages } from '../career/inbox';
 import { runAiMarket, teamsOfCategory } from '../career/market';
-import { DEBT_SETTLEMENT_REPUTATION, REPUTATION, archiveSeason, compactRound, evolveTeams, positionPrestige, trimHistory, winter } from '../career/offseason';
+import { DEBT_SETTLEMENT_REPUTATION, REPUTATION, archiveSeason, compactRound, evolveTeams, isRegulationChange, positionPrestige, trimHistory, winter } from '../career/offseason';
 import { familyDriverIds, formerCharacterIds, fullName, getPlayer } from '../career/selectors';
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
@@ -694,6 +694,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   let lineup: DriverCandidate[] = [];
   if (categoryId === career.categoryId) {
     teams = evolveTeamsExecutive(career);
+    if (isRegulationChange(career.seed, career.season, career.categoryId)) news.push(`Regulamento técnico novo na ${category.shortName}: as rivais refizeram o projeto e a ordem de forças entre elas pode ter mudado.`);
     if (plan.kind === 'continue' && previous) {
       lineup = off.lineup.map((id) => off.candidates.find((c) => c.driverId === id)).filter((c): c is DriverCandidate => c !== undefined);
       if (lineup.length !== 2) throw new Error('Escolha os dois pilotos da equipe para a próxima temporada.');

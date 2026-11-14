@@ -16,12 +16,12 @@
 import type { CareerState, Driver, InboxMessage, Offer, RoundRecord, SeasonSummary, Team } from '@/domain/schemas';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
-import { TEAM_TARGETS } from '@/data/teams';
+import { TEAM_TARGETS, initialTeams } from '@/data/teams';
 import { chooseAiTrainingFocus } from '../ai/decisions';
 import { computeDriverStandings, computeTeamStandings } from '../championship/standings';
 import { instantiateEvent } from '../events/engine';
-import { hashSeed } from '../rng';
-import { buildCategoryField, rankTeams } from '../world/generation';
+import { createRng, gaussian, hashSeed } from '../rng';
+import { buildCategoryField, rankTeams, teamStrength } from '../world/generation';
 import { canAcceptOffer, contractFromOffer, generateOffers, negotiate, releaseFeeFor, type NegotiationDemand } from './contracts';
 import { buildCalendar } from './createCareer';
 import { applyAging, developDriver } from './development';
@@ -192,20 +192,62 @@ export function negotiateOffer(career: CareerState, offerId: string, demand: Neg
 }
 
 /**
- * Evolução das equipes: quem termina acima da posição esperada atrai
- * patrocínio e melhora o equipamento; quem termina abaixo perde verba. São
- * até 2 pontos por temporada em motor e chassi. A meta de cada equipe é então
- * recalculada pela nova ordem de forças.
+ * Evolução das equipes entre temporadas.
+ *
+ * Cada posição no campeonato de equipes tem um carro de referência: o da
+ * equipe que ocupa essa posição na ordem de forças original da categoria (a
+ * "escada" de `initialTeams`). A cada temporada, a equipe anda 15% do caminho
+ * entre o carro dela e a referência da posição em que terminou, no máximo 2
+ * pontos em motor e chassi e 1 em confiabilidade. Quem termina acima do que o
+ * carro vale atrai dinheiro e melhora; quem termina abaixo perde verba.
+ *
+ * A isso se soma o acerto (ou erro) do projeto do ano: uma variação sorteada
+ * de cerca de 1,5 ponto por equipe, limitada a 3 e com soma zero no grid. É ela
+ * que cria ciclos: uma equipe que acerta dois projetos seguidos sobe na
+ * tabela, e a posição melhor passa a puxar o carro para cima. A cada cinco
+ * temporadas o regulamento muda e essa variação dobra. A meta de cada equipe
+ * é então recalculada pela nova ordem de forças.
+ *
+ * A referência fixa mantém a categoria com a mesma cara ao longo de décadas.
+ * A regra anterior (até ±2 pontos pela diferença entre a posição esperada e a
+ * obtida) tinha dois defeitos que só aparecem em carreiras longas: o
+ * arredondamento dava +1 a quem subia uma posição e 0 a quem caía uma, e a
+ * melhor equipe só podia perder enquanto a pior só podia ganhar. Em 60
+ * temporadas, os carros inflavam e ficavam quase iguais.
  */
+export const TEAM_EVOLUTION = {
+  PULL: 0.15,
+  MAX_STEP: 2,
+  MAX_RELIABILITY_STEP: 1,
+  DESIGN_SD: 1.5,
+  MAX_DESIGN: 3,
+  /** A cada cinco temporadas o regulamento técnico muda e a variação de projeto dobra: é quando o grid se embaralha. */
+  REGULATION_CYCLE: 5,
+  REGULATION_FACTOR: 2,
+} as const;
+
+/** A temporada que vai começar depois de `season` estreia um regulamento novo? (O ano do ciclo varia com a carreira e a categoria.) */
+export function isRegulationChange(careerSeed: number, season: number, categoryId: CareerState['categoryId']): boolean {
+  return season % TEAM_EVOLUTION.REGULATION_CYCLE === hashSeed(careerSeed, 'regulation', categoryId) % TEAM_EVOLUTION.REGULATION_CYCLE;
+}
+
 export function evolveTeams(teams: readonly Team[], career: CareerState): Team[] {
   const standings = computeTeamStandings(career.rounds, teams, career.adjustments);
+  const ladder = rankTeams(initialTeams(career.categoryId));
   const expectedOrder = rankTeams(teams).map((t) => t.id);
   const limit = (v: number) => clamp(Math.round(v * 10) / 10, 40, 97);
-  const evolved = teams.map((team) => {
-    const expected = expectedOrder.indexOf(team.id) + 1;
-    const actual = standings.find((s) => s.teamId === team.id)?.position ?? expected;
-    const delta = clamp(Math.round((expected - actual) / 2), -2, 2);
-    return { ...team, car: { engine: limit(team.car.engine + delta), chassis: limit(team.car.chassis + delta), reliability: limit(team.car.reliability + Math.sign(delta)) } };
+  // Projeto do ano: um sorteio por equipe, descontada a média para a soma do grid ser zero.
+  const shake = isRegulationChange(career.seed, career.season, career.categoryId) ? TEAM_EVOLUTION.REGULATION_FACTOR : 1;
+  const design = teams.map((team) => clamp(gaussian(createRng(hashSeed(career.seed, career.season, 'team-design', team.id))) * TEAM_EVOLUTION.DESIGN_SD * shake, -TEAM_EVOLUTION.MAX_DESIGN * shake, TEAM_EVOLUTION.MAX_DESIGN * shake));
+  const designMean = design.reduce((sum, v) => sum + v, 0) / Math.max(1, design.length);
+  const evolved = teams.map((team, index) => {
+    const position = standings.find((s) => s.teamId === team.id)?.position ?? expectedOrder.indexOf(team.id) + 1;
+    const reference = ladder[position - 1];
+    if (!reference) return team;
+    const pull = clamp((teamStrength(reference) - teamStrength(team)) * TEAM_EVOLUTION.PULL, -TEAM_EVOLUTION.MAX_STEP, TEAM_EVOLUTION.MAX_STEP);
+    const step = pull + (design[index] ?? 0) - designMean;
+    const reliability = clamp((reference.car.reliability - team.car.reliability) * TEAM_EVOLUTION.PULL, -TEAM_EVOLUTION.MAX_RELIABILITY_STEP, TEAM_EVOLUTION.MAX_RELIABILITY_STEP);
+    return { ...team, car: { engine: limit(team.car.engine + step), chassis: limit(team.car.chassis + step), reliability: limit(team.car.reliability + reliability) } };
   });
   const newOrder = rankTeams(evolved).map((t) => t.id);
   return evolved.map((t) => ({ ...t, driverTarget: TEAM_TARGETS[newOrder.indexOf(t.id)] ?? 16 }));
@@ -371,6 +413,13 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     news.push(...field.news);
   } else {
     teams = evolveTeams(career.teams, career);
+    if (isRegulationChange(career.seed, career.season, career.categoryId)) news.push(`Regulamento técnico novo na ${next.shortName}: as equipes refizeram o projeto e a ordem de forças pode ter mudado.`);
+    const before = career.teams.find((t) => t.id === offer.teamId);
+    const after = teams.find((t) => t.id === offer.teamId);
+    if (before && after) {
+      const change = teamStrength(after) - teamStrength(before);
+      if (Math.abs(change) >= 1) news.push(`A ${after.name} ${change > 0 ? 'acertou' : 'errou'} o projeto do ano: o ${next.machine} ficou ${Math.abs(change).toFixed(1).replace('.', ',')} ponto(s) ${change > 0 ? 'melhor' : 'pior'}.`);
+    }
     const market = runAiMarket(career, career.drivers, teams, { teamId: offer.teamId, role: contract.role }, nextSeason);
     others = market.drivers;
     news.push(...market.news);
