@@ -2,166 +2,278 @@
 
 ## Visão
 
-Um jogo de carreira e gestão de automobilismo em que o jogador vive a trajetória de um piloto: do kart regional, em uma equipe modesta, até as categorias de topo. A Fase 1 entrega a fundação: um campeonato de kart completo e jogável, com simulação baseada em regras.
+Um simulador de carreira de automobilismo: o jogador vive a trajetória de um piloto, do kart regional em uma equipe modesta até a Fórmula 1. A Fase 1 entregou um campeonato de kart jogável. A Fase 2 transforma isso em uma carreira completa, em que resultados, dinheiro, contratos, relações e eventos se influenciam.
 
 **Pilares**
-1. **Decisões que importam.** Cada fim de semana tem três decisões com custo e benefício (treino, classificação, ritmo de corrida), além do plano de treino entre as etapas.
-2. **Simulação crível.** Resultados nascem de atributos, equipamento, pista e clima, com sorte limitada e explicável.
-3. **Progressão sentida.** O piloto evolui de forma visível, a reputação abre portas e a carreira atravessa temporadas.
+1. **Decisões que importam.** Treino, classificação, estratégia, ritmo de corrida, negociação, dinheiro e imprensa: cada escolha tem custo e benefício.
+2. **Simulação crível.** Resultados nascem de atributos, equipamento, pista, clima e condição do piloto, com sorte limitada e explicável.
+3. **Sistemas interligados.** Um toque na pista vira dano (conta a pagar), punição (grid da próxima etapa), rivalidade (mais risco nas disputas), investigação (decisão do jogador) e queda na confiança da equipe (contrato).
+4. **Progressão conquistada.** Subir de categoria exige resultados, licença, reputação, experiência, idade, dinheiro e uma equipe interessada.
 
 ## Loop principal
 
 ```
-Entre etapas:   escolher o foco de treino → ler mensagens → ver classificação e calendário
-Fim de semana:  Treino livre (programa) → Classificação (abordagem) → Corrida (ritmo, volta a volta)
-Após a etapa:   resultado oficial → pontos → evolução → reação da equipe → autosave
-Fim de temporada: meta avaliada → reputação → propostas → nova temporada
+Entre etapas:    decisões pendentes (eventos) → treino (foco e intensidade) →
+                 finanças e investimentos → mensagens
+Fim de semana:   treino livre (programa) → classificação (abordagem) →
+                 estratégia de pneus → corrida (ritmo, boxes, ordens de equipe)
+Após a etapa:    pontos → dinheiro → condição → licença → relações →
+                 patrocinadores → evolução → interesse das equipes → eventos
+Fim de temporada: reputação e licença → contas do ano → contrato e academia →
+                 propostas e negociação → mercado de pilotos → novo ano
 ```
+
+## A escada
+
+| Degrau | Categoria | Etapas | Corrida | Vaga por ano | Requisitos (licença · reputação · experiência · idade) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Kart Regional | 10 | sem paradas | € 16 a 30 mil | início da carreira |
+| 2 | Kart Nacional | 10 | sem paradas | € 34 a 60 mil | 2 pts · 10 · 26 · 13 anos |
+| 3 | Kart Internacional | 10 | sem paradas | € 90 a 150 mil | 8 pts · 18 · 34 · 14 anos |
+| 4 | Fórmula 4 | 10 | 28 min; safety car, bandeira vermelha, clima variável | € 240 a 380 mil | 12 pts · 25 · 40 · 15 anos |
+| 5 | Fórmula 3 | 10 | 40 min; + safety car virtual e ordens de equipe | € 620 a 950 mil | 18 pts · 36 · 50 · 16 anos |
+| 6 | Fórmula 2 | 12 | 58 min; + parada obrigatória (dois compostos) e combustível | € 1,6 a 2,4 mi | 25 pts · 48 · 58 · 17 anos |
+| 7 | Fórmula 1 | 14 | 82 min; + três compostos, intermediário, classificação eliminatória | salário de € 0,6 a 14 mi | 40 pts · 60 · 64 · 18 anos |
+
+Do kart nacional é possível ir direto para a F4, como na vida real. Além dos requisitos esportivos, é preciso uma proposta de uma equipe do degrau de cima e dinheiro para a vaga.
+
+### Requisitos de promoção
+- **Resultados e licença.** Cada temporada rende pontos de licença pela posição final (por exemplo, F3: 30, 25, 20, 15, 12…; F2: 40 para os três primeiros). Vale a soma das últimas três temporadas. A F1 exige 40, no espírito da superlicença.
+- **Reputação.** Prestígio de 0 a 100, ancorado ao degrau: cada temporada tem uma nota (base da categoria + bônus da posição) e a reputação anda metade do caminho até ela, mais 0,5 por vitória. Bases: 5, 15, 27, 38, 50, 62 e 74. Bônus: campeão +22, vice +18, 3º +15, até 5º +13, até 10º +6, até 15º 0, abaixo −5. Um campeão regional fica perto de 20, não de 100; quem termina sempre entre os cinco primeiros cumpre o requisito do degrau seguinte a cada ano.
+- **Experiência.** O atributo cresce só competindo: +1,6 por etapa × (1 − exp/110).
+- **Idade.** Mínima por categoria, contada para a temporada seguinte.
+- **Finanças.** A temporada precisa se pagar (patrocínios, salário e academia cobrem vaga, custo de vida e treino) ou o saldo projetado não pode passar do limite de crédito (30% do custo líquido da vaga).
+- **Proposta de equipe.** Depende do interesse (ver Mercado).
 
 ## Piloto
 
-Nove atributos, de 0 a 100 (guardados com casas decimais para permitir evolução gradual):
-
+### Atributos (0 a 100)
 | Atributo | Efeito na simulação |
 | --- | --- |
-| Velocidade | 64% da nota de ritmo no seco. É o atributo que mais pesa. |
+| Velocidade | 64% da nota de ritmo no seco. |
 | Consistência | 10% do ritmo. Reduz o desvio das voltas e a chance de erro. |
-| Ultrapassagem | Aumenta a chance de completar uma ultrapassagem. |
-| Defesa | Reduz a chance de ser ultrapassado. |
-| Concentração | 8% do ritmo. Reduz o cansaço (ruído e erros no fim da corrida) e melhora a largada. |
-| Inteligência de corrida | 10% do ritmo. Melhora o retorno de acerto e reduz o risco de toque em disputas. |
-| Gestão de pneus | Reduz o desgaste em até 30% em relação à média. |
+| Ultrapassagem / Defesa | Sucesso nas disputas de posição. |
+| Concentração | 8% do ritmo. Reduz o cansaço, melhora a largada e evita excesso de velocidade no pit lane. |
+| Inteligência de corrida | 10% do ritmo. Melhora o acerto, reduz toques e faz reagir mais cedo à mudança de clima. |
+| Gestão de pneus | Reduz o desgaste em até 30%. |
 | Chuva | Na pista molhada, substitui até 60% da nota de ritmo. |
-| Experiência | 8% do ritmo. Melhora a largada e o acerto. Só cresce competindo. |
+| Experiência | 8% do ritmo. Melhora a largada e o acerto. |
 
-**Nota geral** (só para exibição e para a IA): média ponderada, com 25% de velocidade.
-**Potencial**: teto de desenvolvimento dos atributos treináveis.
+### Condição
+Três indicadores de 0 a 100, neutros em 50, para o jogador e para a IA:
+- **Fase:** média móvel (60% do valor anterior) da nota de cada corrida: 50 + 6 por posição acima ou abaixo da meta da equipe. Vale até ±0,12% no tempo de volta.
+- **Confiança:** vitória +10, pódio +6, dentro da meta +2, abaixo −3, acidente por erro próprio −8; volta 10% do caminho até 50 a cada etapa. Muda a chance de erro (de −25% a +25%) e o sucesso nas disputas.
+- **Moral:** reage a resultados, abandonos e eventos; volta 15% do caminho até 55. Muda a regularidade das voltas (±10%) e o rendimento do treino (de −20% a +20%).
 
-### Criação
-- Três perfis com o mesmo total de pontos (474 nos 8 atributos treináveis): *Talento natural* (rápido, irregular, potencial 92), *Piloto técnico* (regular e cuidadoso, potencial 86) e *Lutador* (forte no roda a roda, potencial 89).
-- Mais 8 pontos livres, no máximo 4 por atributo.
-- Idade de 14 a 17 anos. Mais jovem significa evolução mais rápida.
-- Vaga em uma das três equipes de entrada: Horizonte, Cerrado ou Garagem Nova.
-
-### Evolução
-Após cada etapa, para todos os pilotos (jogador e IA):
-
+### Treino e evolução
 ```
-ganho = (0,5 × peso_do_foco + 0,08) × fator_idade × min(1, distância_ao_potencial / 30) × variação(0,75 a 1,25)
+ganho = (0,6 × peso_do_foco + 0,08) × fator_idade × min(1, distância_ao_potencial / 20)
+        × variação(0,75 a 1,25) × intensidade × moral × academia
 ```
+- **Foco:** Velocidade, Disputa e estratégia, Consistência mental, Gestão de pneus, Pilotagem na chuva ou Equilibrado.
+- **Intensidade:** leve (60% do ganho, custo baixo, +2 de fase por etapa), normal, ou intenso (140%, mais que o dobro do custo, −2 de fase, 1,5% de risco de lesão leve por etapa).
+- **Idade:** fator 1,15 até 17 anos; 1,0 até 21; 0,85 até 25; 0,55 até 29; 0,25 depois.
+- **Academia:** +10%.
+- **Pré-temporada:** dois ciclos de treino.
 
-- **Focos de treino:** Velocidade, Disputa e estratégia, Consistência mental, Gestão de pneus, Pilotagem na chuva e Equilibrado.
-- **Fator de idade:** 1,15 até 15 anos; 1,0 de 16 a 18; 0,8 de 19 a 22; 0,5 de 23 a 27; 0,25 depois disso.
-- **Experiência:** +1,6 por etapa × (1 − exp/110).
-- **Pré-temporada:** equivale a 2 ciclos de treino.
-- **IA:** treina sempre o grupo de atributos em que está mais fraca.
+### Lesões e recuperação
+Um acidente que tira o piloto da corrida tem chance de lesão (5% no kart, 4% nos monopostos, 2% na F1). 65% são leves (1 a 2 etapas; o piloto pode correr 0,3% mais lento e com 30% mais erros, ou descansar) e 35% são graves (2 a 5 etapas fora). Quando um titular está fora, o **reserva** da equipe corre no lugar. As lesões cicatrizam na pré-temporada.
 
-## Campeonato regional de kart
-
-- **10 equipes** em 5 níveis, com 2 equipes por nível. Cerca de 20 pontos de kart separam a primeira da última, o que vale uns 0,15 s por volta.
-- **20 pilotos**, 2 por equipe, com perfis escritos à mão (prodígio, veterano metódico, especialista em chuva…).
-- **10 etapas** de março a setembro, em 10 kartódromos fictícios em cidades reais do Sul, Sudeste e Centro-Oeste.
-- **Pontuação:** 25-18-15-12-10-8-6-4-2-1, mais 1 ponto pela pole e 1 pela volta mais rápida (só para quem termina).
-- **Desempate:** countback (mais vitórias, depois mais 2º lugares, e assim por diante).
-- **Equipes:** soma dos pontos dos dois pilotos.
-- **Metas:** cada equipe espera uma posição no campeonato de pilotos (3º, 6º, 10º, 13º ou 16º, conforme o nível).
-
-### Pistas
-Cada pista tem comprimento, tempo de referência, número de voltas, dificuldade de ultrapassagem, desgaste de pneus, peso motor/chassi, chance climatológica de chuva e temperatura. Exemplos: o **Planalto** (retas longas, favorece o motor, ultrapassagens fáceis), a **Lagoa Azul** (travada, favorece o chassi, ultrapassagens difíceis), o **Triângulo** (calor e asfalto abrasivo, pneus decisivos) e a **Serra Gaúcha** e o **Litoral Norte** (frequentemente chuvosos).
+### Envelhecimento e declínio
+A partir dos 31 anos, velocidade, concentração, ultrapassagem e chuva caem a cada temporada: 0,25 ponto por ano acima de 30, com variação de ±30% (cerca de 1 ponto por ano aos 34, 2 aos 38). Leitura de corrida, gestão de pneus e experiência não caem. O potencial acompanha a queda. Na F1, a IA se aposenta aos 38, ou aos 34 se estiver abaixo do nível do grid.
 
 ## Fim de semana
 
-### Treino livre: programa de trabalho
+### Treino livre
 | Programa | Benefício |
 | --- | --- |
-| Trabalho de acerto | +0,10 de qualidade de acerto sobre os outros programas (≈0,035 s em todas as voltas do fim de semana). |
-| Simulação de classificação | ≈0,07 s mais rápido na volta lançada de classificação. |
-| Ritmo de corrida | 15% menos desgaste de pneus na corrida. |
+| Trabalho de acerto | +0,10 de qualidade de acerto (≈0,035 s por volta no fim de semana todo). |
+| Simulação de classificação | ≈0,07 s na volta lançada. |
+| Ritmo de corrida | 15% menos desgaste de pneus. |
 
-A **qualidade do acerto** (0 a 1) é `0,2 + retorno do piloto × 0,35 + bônus do programa + ruído(σ 0,2)`. O retorno combina experiência, inteligência de corrida e chassi. O ruído representa acertar ou errar a janela do kart naquela pista: é a "forma do fim de semana", e vale até ±0,07 s por volta. Um acerto perfeito vale 0,7% do tempo de volta.
+Qualidade do acerto: `0,2 + retorno do piloto × 0,35 + bônus do programa + ruído(σ 0,2)`. Um acerto perfeito vale 0,7% do tempo de volta.
 
-### Classificação: abordagem
-Três tentativas lançadas com pneus novos; vale a melhor. Uma tentativa com erro é invalidada. O risco de erro em volta de classificação é 4 vezes o de uma volta de corrida.
+### Classificação
+- **Sessão única** (até a F2): três tentativas; vale a melhor.
+- **Eliminatória** (F1): três fases de duas tentativas; a cada uma das duas primeiras, os cinco mais lentos são eliminados.
+- **Abordagem:** segura (+0,08%, metade do risco), equilibrada, ou ataque total (−0,10%, risco × 2,2). O risco em volta lançada é 4 vezes o de corrida.
+- **Punições de grid** herdadas da corrida anterior ou de investigações deslocam o punido para trás.
 
-| Abordagem | Ritmo | Risco de erro |
-| --- | --- | --- |
-| Segura | +0,08% | ×0,5 |
-| Equilibrada | - | ×1 |
-| Ataque total | −0,10% (≈0,05 s) | ×2,2 |
+### Estratégia de pneus (categorias com boxes)
+| Composto | Ritmo | Desgaste | Dura até o "penhasco" |
+| --- | --- | --- | --- |
+| Macio | −0,6% | × 1,7 | ≈15 voltas |
+| Médio | referência | × 1,0 | ≈26 voltas |
+| Duro | +0,5% | × 0,68 | ≈37 voltas |
+| Intermediário | ideal com pista de 15% a 65% molhada | × 1,0 | |
+| Chuva | ideal acima de 50% | × 0,8 | |
 
-### Corrida: ritmo volta a volta
-O jogador assiste a corrida em tempo real (1×, 2× ou 4×, ou avança volta a volta) e pode mudar o ritmo a qualquer momento:
+Além de 80% de desgaste, o pneu perde 8% por unidade de desgaste extra. Pneu errado custa caro: pneu de seco com 30% de umidade perde 6% da volta e multiplica os erros. Antes da largada, o motor lista as estratégias viáveis com a perda estimada (desgaste, ritmo do composto e tempo de box); na F1, uma e duas paradas ficam próximas, e a escolha depende da pista e do piloto. Na F2 e na F1, quem não usa dois compostos em corrida seca leva 30 s.
 
-| Ritmo | Tempo de volta | Erros | Pneus | Ataque | Defesa | Toques |
-| --- | --- | --- | --- | --- | --- | --- |
-| Conservador | +0,25% | ×0,6 | ×0,8 | −0,6 | - | ×0,6 |
-| Equilibrado | - | ×1 | ×1 | - | - | ×1 |
-| Agressivo | −0,15% | ×1,5 | ×1,25 | +0,6 | +0,3 | ×1,6 |
+### Corrida
+O jogador acompanha volta a volta (1×, 2×, 4×, 8×, ou volta por volta) e decide:
+- **Ritmo:** conservador (+0,25%, erros × 0,6, pneus × 0,8, combustível × 0,93), equilibrado, ou agressivo (−0,15%, erros × 1,5, pneus × 1,25, combustível × 1,06, mais ataque e mais risco de toque).
+- **Boxes:** as paradas planejadas acontecem sozinhas; o jogador pode parar a qualquer volta com o composto que quiser, cancelar a parada planejada ou ligar o engenheiro automático.
+- **Ordens de equipe:** quando chega uma, a corrida para e espera a resposta.
 
-## Simulação
+## Motor de corrida
 
 ### Tempo de volta
 ```
-base     = tempo de referência da pista × (1 + 9% × umidade)
-perdas   = (100 − nota do piloto) × 0,022%
-         + (100 − nota do kart)   × 0,014%
-         − acerto × 0,7%
-         + 1,4% × desgaste²
-         + ajuste do modo
-volta    = base × (1 + perdas) × (1 + N(0,1) × σ)
-σ        = (0,1% + (100 − consistência) × 0,004% + cansaço) × (1 + 0,6 × umidade)
-cansaço  = (100 − concentração) × 0,002% × progresso da corrida
+base   = referência da pista × fator da categoria × (1 + 9% × umidade)
+perdas = (100 − nota do piloto) × 0,022%
+       + (100 − nota do carro)  × 0,014% × peso do carro na categoria
+       − acerto × 0,7%
+       + 1,4% × desgaste² + penhasco + composto + pneu errado
+       + combustível + dano + modo + fase do piloto
+volta  = base × (1 + perdas) × (1 + N(0,1) × σ)
 ```
-A nota do kart é `motor × peso_motor + chassi × (1 − peso_motor)`, conforme o traçado.
+O peso do carro vai de 1 (kart) a 4 (F1): no kart, o piloto decide; na F1, o carro pesa quatro vezes mais.
 
-### Erros e incidentes
-- **Chance por volta:** `0,3% + (100 − consistência) × 0,012% + (100 − concentração) × 0,008% × progresso + 2,5% × umidade × (1 − chuva/100)`, multiplicada pelo modo.
-- **Gravidade no seco:** 72% erro leve (0,8 a 2,2 s), 25% rodada (4 a 9 s) e 3% batida (abandono). Na chuva: 60%, 34% e 6%.
-- **Quebra mecânica por volta:** `(100 − confiabilidade)² × 0,00015%`, ou cerca de 3% por corrida com confiabilidade 70.
+### Incidentes
+- **Erros:** chance por volta de `0,3% + (100 − consistência) × 0,012% + cansaço + chuva`, multiplicada pelo modo, pela confiança e pelo pneu. 72% erro leve, 25% rodada, 3% batida (60%, 34% e 6% na chuva).
+- **Quebra mecânica:** `(100 − confiabilidade)² × 0,00015%` por volta.
+- **Danos:** toques e rodadas danificam o carro (até 1,2% mais lento); dano total tira o carro da corrida. O reparo custa 9 s no box. Nas categorias de base, o piloto paga a conta.
+- **Combustível (F2 e F1):** o tanque leva 3% além da distância; o tanque cheio custa 2,5% de ritmo. Atacar a corrida inteira consome 6% a mais: sem neutralizações, o carro para antes do fim. A IA e o engenheiro automático poupam quando a conta aperta.
 
-### Largada
-Os karts partem separados por 0,25 s por posição do grid. A reação tem desvio de `0,5 s × (1 − (experiência + concentração)/200)`. Na primeira volta, a dificuldade de ultrapassagem cai 40%, porque o pelotão está embolado.
-
-### Ultrapassagens
-As posições são resolvidas da frente para trás. Um kart que chega a menos de 0,18 s do que está à frente, com volta mais rápida, tenta passar:
-
+### Disputas de posição
 ```
-logit = −0,6 + (ataque − defesa)/18 + 3,5 × vantagem_de_ritmo(s) − 3,0 × dificuldade_da_pista + modos
-P(sucesso) = 1 / (1 + e^−logit)
+logit = −0,6 + (ataque − defesa)/18 + 3,5 × vantagem_de_ritmo(s) − 3,0 × dificuldade_da_pista
+        + modos + confiança
 ```
-- **Se passa:** o kart ultrapassado perde 0,08 s.
-- **Se falha:** o atacante perde 0,12 s e fica preso atrás. Há risco de toque de `3,5% × modo × (1,2 − inteligência/100)`; um quarto dos toques tira alguém da corrida.
-- **Limite:** no máximo 2 ultrapassagens por piloto por volta.
+Uma tentativa frustrada tem risco de toque (cresce com a agressividade e com a **rivalidade** entre os dois; cai com a leitura de corrida). Um quarto dos toques tira alguém da prova.
+
+### Direção de prova
+| Incidente | Safety car | Safety car virtual | Bandeira vermelha |
+| --- | --- | --- | --- |
+| Batida | 40% | 30% | 2% |
+| Toque | 50% | 25% | 5% |
+| Quebra | 12% | 40% | - |
+| Rodada | - | 6% | - |
+
+- **Safety car** (3 a 5 voltas): o pelotão se reagrupa a 0,5 s, ninguém ultrapassa, parar custa metade do tempo; a relargada lançada facilita ultrapassagens.
+- **Safety car virtual** (1 a 2 voltas): posições congeladas, parada 35% mais barata.
+- **Bandeira vermelha:** com pista encharcada, um acidente tem 25% de chance extra. Antes de 75% da prova, há relargada parada, com reparos e troca de pneus livres; depois disso, a corrida é encerrada.
+
+### Punições
+| Infração | Punição |
+| --- | --- |
+| Queimar a largada | 5 s |
+| Causar um toque (60% de chance de culpa) | 5 s e 1 ponto na licença |
+| Causar um toque que tira o rival da prova | 10 s, 2 pontos e 3 posições no próximo grid |
+| Excesso de velocidade no pit lane, liberação insegura | 5 s |
+| Limites de pista, nos monopostos (3 erros leves, e a cada 2 depois) | 5 s |
+| Não usar dois compostos no seco (F2 e F1) | 30 s |
+
+As punições em tempo entram no tempo final. Com 12 pontos na licença, o piloto é suspenso por uma etapa.
 
 ### Clima
-Cada fim de semana tem uma "frente" climática latente. Cada sessão deriva dela com correlação de 0,92, e a sessão tem chuva quando `Φ(z) < chance de chuva da pista`. Isso garante que a frequência de chuva siga exatamente a climatologia da pista, o que é verificado em teste. Da chuva, 55% é pista encharcada (umidade de 0,75 a 1); o resto é pista úmida (0,3 a 0,55). A chuva esfria o asfalto.
+O clima do fim de semana vem de uma frente climática com frequência igual à climatologia da pista. Nos monopostos, a pista pode mudar durante a corrida: chuva que chega (45% da chance de chuva da pista) ou pista que seca (55% das largadas molhadas). O jogador recebe uma previsão com erro de até três voltas.
 
-### IA
-Todas as decisões seguem regras explícitas, sem sorteio:
-- **Treino:** inexperiente (experiência < 45) faz acerto; em pista abrasiva, quem cuida mal dos pneus faz ritmo de corrida; onde ultrapassar é difícil, simulação de classificação.
-- **Classificação:** consistência ≥ 78 ataca; < 62 joga seguro; na chuva, quem não domina o molhado joga seguro.
-- **Corrida:** poupa pneus gastos; ataca nas voltas finais se houver alguém a menos de 0,8 s; administra quando está isolado; pilotos de boa leitura atacam a menos de 0,5 s; bons defensores fecham a porta no fim.
+### Frequências medidas (`npm run calibrate`, médias por corrida)
+| Categoria | Safety car | Virtual | Vermelha | Paradas por carro | Abandonos | Punidos |
+| --- | --- | --- | --- | --- | --- | --- |
+| Kart | - | - | - | - | 0,7 | 1,0 |
+| F4 | 0,5 | - | 0,04 | 0,2 | 0,5 | 0,9 |
+| F3 | 0,7 | 0,6 | 0,13 | 0,2 | 0,9 | 1,2 |
+| F2 | 1,0 | 0,7 | 0,10 | 1,0 | 1,0 | 1,6 |
+| F1 | 1,0 | 0,9 | 0,10 | 1,6 | 1,4 | 1,5 |
 
-### Justificativa da aleatoriedade
-A sorte entra apenas em: ruído de volta (limitado pela consistência), forma do fim de semana (acerto), erros, quebras, desfecho das disputas e clima. Toda ela vem de sementes derivadas da carreira. Não existe sorteio sem regra, e recarregar o save não muda o resultado de uma mesma decisão.
+## Equipes
 
-### Calibração (20 temporadas, `npm run calibrate`)
-- Títulos divididos entre os favoritos (por exemplo, Andrade 11, Monteiro 8 e Lima 1); vitórias distribuídas entre 4 a 6 pilotos.
-- Cerca de 50 ultrapassagens, 4,5 erros e 0,7 abandono por corrida.
-- O estreante na equipe mais fraca termina em média entre 16º e 18º, conforme suas decisões; com escolhas boas, cumpre a meta (16º) e pontua.
+- **Hierarquia.** Cada equipe tem primeiro piloto, segundo piloto e reserva. O papel do jogador vem do contrato; o da IA, do valor de mercado.
+- **Ordens de equipe** (F3 em diante): se o segundo piloto está logo à frente do primeiro (até 0,6 s) e mais lento, a equipe pede a troca, uma vez por corrida. A IA obedece em 85% dos casos. O jogador escolhe: obedecer (+5 de confiança da equipe, +4 na relação) ou ignorar (−10 nas duas, e uma reunião com o chefe).
+- **Boxes.** Quando os dois carros param juntos, o de trás espera 3 s. A qualidade da equipe de box define o tempo e o risco de parada lenta.
+- **Confiança da equipe.** +1 por posição acima da meta (de −5 a +6 por etapa), −5 em abandono por erro, cai com danos e punições, e volta 4% do caminho até 50. Abaixo de 18, a equipe rescinde o contrato.
+- **Relação com o companheiro** e **rivalidades.** Toque: +15 de rivalidade (+25 se alguém abandona); vizinho de tabela a até 10 pontos: +3 por etapa; perde 2 por etapa. A rivalidade aumenta o risco de toque nas disputas com aquele piloto.
+- **Academia.** Equipes de F1 mantêm academias e convidam para avaliação quem está entre os cinco primeiros, tem até 21 anos e corre do kart internacional à F2. O piloto aprovado tem 70% da vaga paga, +10% no treino e mais interesse das equipes ligadas à academia. Duas temporadas fora dos seis primeiros e ele é dispensado.
+- **Evolução.** Equipes que superam a expectativa ganham até 2 pontos de motor e chassi por ano; as que decepcionam perdem.
 
-## Fim de temporada
+## Contratos e mercado
 
-- **Reputação:** `+3 × (meta − posição final) + 2 × vitórias + pódios`, limitada entre 0 e 100.
-- **Propostas:** uma equipe faz proposta se `posição ≤ meta da equipe + 2 + ⌊reputação/25⌋`. A equipe atual renova se o jogador não ficou mais de 6 posições abaixo da meta. As equipes de entrada sempre oferecem vaga.
-- **Transferência:** o piloto mais fraco da nova equipe ocupa a vaga deixada pelo jogador.
-- **Equipes:** evoluem até ±2 pontos de motor e chassi conforme superem ou decepcionem a expectativa; as metas são recalculadas.
-- **Envelhecimento:** todos ficam um ano mais velhos e passam pela pré-temporada.
+### Interesse das equipes
+Cada equipe avalia o jogador pelo que ela mesma espera (0 a 100):
+```
+45% desempenho  (posição no campeonato comparada à meta da equipe)
+30% nível       (nota geral comparada ao nível dos pilotos dela)
+15% reputação · 10% juventude
+```
+Uma posição vale seis posições a menos no degrau de cima. A equipe atual pondera a confiança no piloto; equipes ligadas à academia do jogador somam 15. O interesse anda 35% do caminho até o alvo a cada etapa e é visível na tela Carreira.
 
-## Próximas fases (fora do escopo da Fase 1)
-- Escada de categorias (kart nacional, Fórmula 4, Fórmula Regional…), com propostas entre categorias.
-- Contratos, salário, patrocínio, empresário e orçamento.
-- Rivalidades, moral, mídia e eventos narrativos.
-- Aposentadoria e chegada de novos pilotos da IA, mercado de transferências entre pilotos da IA.
-- Estratégia de pneus e paradas nas categorias de monoposto; telemetria detalhada.
-- Áudio, visual de pista em 2D e conquistas.
+### Propostas
+No fim do ano, fazem proposta as equipes com interesse suficiente (52 na mesma categoria, 50 para promoção, 40 no degrau de baixo); de cada grupo ficam as três mais fortes. Uma **rede de segurança** (vaga sem custo na equipe mais fraca do degrau de baixo) impede que a carreira trave.
+- **Custo da vaga:** tabela da categoria pela força da equipe, com desconto de até 45% conforme o interesse.
+- **Bolsa de promoção:** campeão, vice e terceiro ganham 60%, 35% e 20% de desconto na vaga do degrau de cima.
+- **Duração:** 1 ano, ou 2 com interesse alto (com cláusula de desempenho).
+- **Cláusulas:** multa rescisória; cláusula de desempenho (a equipe rescinde se o piloto terminar abaixo da posição combinada).
+
+### Negociação
+Cada pedido custa pontos de interesse; a margem é `interesse − 45 − concessões`.
+
+| Pedido | Custo |
+| --- | --- |
+| Reduzir a vaga em 12% / aumentar o salário em 12% | 8 |
+| Melhorar os bônus em 25% | 5 |
+| Status de primeiro piloto | 15 |
+| Contrato mais curto / retirar a cláusula de desempenho | 4 / 8 |
+
+Um pedido recusado gasta paciência (três recusas e a proposta é retirada).
+
+### Renovação e rescisão
+Contrato no fim: a equipe propõe renovar se ainda confia no piloto. Contrato vigente: o jogador pode cumpri-lo ou sair pagando a multa. A equipe rescinde pela cláusula de desempenho ou por quebra de confiança.
+
+### Mercado de pilotos da IA
+Entre as temporadas: os três melhores da IA sobem de categoria (na F1, os veteranos se aposentam); quem saiu de contrato, os reservas e o segundo piloto que superou o primeiro (insatisfeito) ficam livres; chegam estreantes; e as equipes escolhem, da mais forte para a mais fraca, o melhor piloto livre. Quando o jogador sobe, os melhores rivais sobem junto.
+
+## Economia
+
+| Receitas | Despesas |
+| --- | --- |
+| Salário (parcelas por etapa) | Custo da vaga (parcelas por etapa) |
+| Patrocínios e bônus de pódio | Custo de vida e estrutura |
+| Bônus de contrato (vitória, pódio, pontos, título) | Treino (pela intensidade) |
+| Apoio da academia (70% da vaga) | Conta de danos (categorias de base) |
+| Apoio da família (€ 24 mil por ano, 5 anos) | Impostos, juros, multas, taxas de eventos |
+
+- **Patrocinadores.** Três cotas. O porte de quem procura o piloto vem dos resultados (entre os três primeiros: grande; entre os oito: médio) e da fama. Pagam 20%, 36% ou 60% do valor de referência da categoria e esperam top 15, top 10 ou top 5. A satisfação sobe e desce a cada etapa; abaixo de 35 há pressão (evento), e só renovam com 60 ou mais. Ao mudar de categoria, o valor acompanha a nova vitrine.
+- **Impostos.** Progressivo sobre a renda da temporada (salário, bônus e patrocínios menos o custo da vaga): isento até € 40 mil, 15% até 300 mil, 27,5% até 3 milhões, 37% acima.
+- **Investimentos.** Renda fixa (4% ao ano) e fundo de ações (9% em média, desvio de 16%, pode perder). O rendimento entra no fechamento do ano.
+- **Dívida.** Caixa negativo paga 14% ao ano. Uma dívida maior que metade da vaga mais cara da categoria seguinte é reduzida a esse teto em um acordo com credores, ao custo de 4 pontos de reputação.
+
+A economia é uma restrição real: um piloto de meio de grid atrai só patrocinadores pequenos e não sustenta por muito tempo uma categoria cara; quem vence atrai cotas grandes, bolsa e academia.
+
+## Eventos dinâmicos
+
+Depois de cada etapa, entram os eventos cuja condição vale (até dois) e, com 45% de chance, um sorteado por peso. O jogador precisa decidir antes do próximo fim de semana. Escolhas com desfecho incerto são sorteadas pela semente da carreira.
+
+| Tipo | Eventos | Consequências possíveis |
+| --- | --- | --- |
+| Entrevistas | coletiva do vencedor; pressão em má fase | confiança da equipe, confiança, rivalidade, patrocinadores |
+| Polêmicas | toque sofrido; vídeo fora de contexto | rivalidade, reputação, patrocinadores |
+| Rivalidades | provocação do rival; conflito com o companheiro | risco de toque, multa, confiança da equipe |
+| Investigações | comissários após um toque causado; vistoria técnica | posições no próximo grid, pontos na licença, perda dos pontos da etapa |
+| Protestos | contra o rival à frente; contra o seu resultado | pontos do rival ou seus, taxa, rivalidade |
+| Contrato | aporte extra pedido pela equipe; sondagem de outra equipe; vontade de sair | dinheiro, rendimento do carro, custo da vaga, multa rescisória, interesse de equipes |
+| Patrocínio | pressão por resultados; proposta nova (ou troca por um maior) | receita, satisfação, fase |
+| Inesperados | virose; prova de exibição; convite de academia; peça nova | lesão leve, experiência, academia, rendimento do carro |
+
+Todo evento altera estado de jogo: nenhum é só texto.
+
+## Equilíbrio
+
+`npm run calibrate` simula 12 carreiras de 14 temporadas com um robô que joga de forma simples. O "talento" soma pontos aos atributos e representa um jogador que decide melhor:
+
+| Robô | Onde chega em 14 temporadas |
+| --- | --- |
+| Mediano (talento 0) | F3 ou F2 |
+| Bom (talento 4) | F1 aos 26 ou 27 anos, no meio do grid |
+| Excelente (talento 8) | F1 aos 24 a 28 anos; em parte das carreiras, vitórias e títulos |
+
+O nível médio dos grids da IA fica de 2 a 4 pontos acima do projetado ao longo dos anos, sem inflar nem desabar.
+
+## Limitações conhecidas e próximos passos
+- Só a categoria do jogador é simulada; as outras existem como equipes e propostas.
+- O jogador não pode assinar como piloto reserva de uma categoria superior.
+- Não há mudanças no meio da temporada (troca de equipe, demissão imediata).
+- Corridas sprint, pontuação pela metade e retardatários não são simulados.
+- Áudio, visual de pista em 2D e conquistas ficam para uma fase futura.

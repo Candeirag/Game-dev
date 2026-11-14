@@ -1,20 +1,8 @@
 import type { DriverAttributes } from '@/domain/schemas';
 
+/** Categoria em que toda carreira começa. As regras de cada categoria ficam em categories.ts. */
 export const CHAMPIONSHIP_NAME = 'Campeonato Regional de Kart';
 export const FIRST_SEASON_YEAR = 2027;
-
-/**
- * Pontuação de corrida para as 10 primeiras posições. É a tabela 25-18-15-...
- * usada em muitas categorias e na maioria dos regionais de kart. Ela premia a
- * vitória sem tornar inútil a briga pelo meio do grid.
- */
-export const RACE_POINTS: readonly number[] = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
-
-/** Ponto extra pela pole position. */
-export const POLE_POSITION_POINTS = 1;
-
-/** Ponto extra pela volta mais rápida, válido só para quem termina a corrida. */
-export const FASTEST_LAP_POINTS = 1;
 
 /** Tentativas lançadas de cada piloto na classificação. */
 export const QUALIFYING_ATTEMPTS = 3;

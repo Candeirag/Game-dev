@@ -106,7 +106,8 @@ function buildOffer(career: CareerState, category: CategoryDefinition, team: Tea
  * - Contrato vigente: opção de simplesmente cumpri-lo.
  * - Contrato no fim: a equipe atual propõe renovação se ainda confia no piloto.
  * - Outras equipes da categoria, da categoria acima e da categoria abaixo:
- *   propõem conforme o interesse; ficam as três mais interessadas de cada grupo.
+ *   propõem conforme o interesse; de cada grupo ficam as três equipes mais
+ *   fortes entre as interessadas.
  * - Rede de segurança: a equipe mais fraca do degrau abaixo (ou do primeiro
  *   degrau) sempre oferece uma vaga sem custo, para a carreira nunca travar.
  */
@@ -115,31 +116,38 @@ export function generateOffers(career: CareerState, reputation: number, contract
   const current = getCategory(career.categoryId);
   const offers: Offer[] = [];
 
-  for (const category of reachableCategories(career)) {
+  // Ordem de apresentação: a equipe atual, depois as categorias de cima para baixo.
+  const categories = [...reachableCategories(career)].sort((a, b) => b.tier - a.tier);
+  const own: Offer[] = [];
+  for (const category of categories) {
     const kind: Offer['kind'] = category.tier > current.tier ? 'promotion' : category.tier < current.tier ? 'demotion' : 'transfer';
     const group: Offer[] = [];
+    // As equipes são percorridas da mais forte para a mais fraca: ficam as três
+    // melhores entre as interessadas, que são as propostas que mais importam.
     rankTeams(teamsOfCategory(career, category.id)).forEach((team, rank) => {
       const isCurrentTeam = category.id === current.id && team.id === player.teamId;
       const interest = targetInterest(career, category, team, rank, reputation);
       if (isCurrentTeam) {
         if (contractStatus === 'active') {
           const c = career.contract;
-          offers.push({
+          own.push({
             id: `offer-s${career.season}-continue`, teamId: team.id, teamName: team.name, categoryId: category.id, kind: 'continue', role: c.role,
             years: c.endSeason - career.season, salary: c.salary, seatCost: c.seatCost, bonuses: { ...c.bonuses }, clauses: { ...c.clauses },
             interest: Math.round(interest), conceded: 0, patience: 0, status: 'open', firstDriverPossible: false, scholarship: 0,
           });
         } else if (contractStatus === 'expired' && interest >= CONTRACT_RULES.MIN_INTEREST.renewal) {
-          offers.push(buildOffer(career, category, team, rank, 'renewal', interest));
+          own.push(buildOffer(career, category, team, rank, 'renewal', interest));
         }
         return;
       }
       const scholarship = kind === 'promotion' ? (CONTRACT_RULES.SCHOLARSHIP[finalPosition - 1] ?? 0) : 0;
-      if (interest >= CONTRACT_RULES.MIN_INTEREST[kind as 'transfer' | 'promotion' | 'demotion']) group.push(buildOffer(career, category, team, rank, kind, interest, scholarship));
+      if (group.length < CONTRACT_RULES.MAX_OFFERS_PER_GROUP && interest >= CONTRACT_RULES.MIN_INTEREST[kind as 'transfer' | 'promotion' | 'demotion']) {
+        group.push(buildOffer(career, category, team, rank, kind, interest, scholarship));
+      }
     });
-    group.sort((a, b) => b.interest - a.interest);
-    offers.push(...group.slice(0, CONTRACT_RULES.MAX_OFFERS_PER_GROUP));
+    offers.push(...group);
   }
+  offers.unshift(...own);
 
   // Rede de segurança: a equipe mais fraca do degrau de baixo que ainda não fez proposta.
   const safetyCategory = reachableCategories(career)[0] ?? current;

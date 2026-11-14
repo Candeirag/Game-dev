@@ -10,7 +10,7 @@
  * troca de equipe ou de categoria, roda o mercado da IA, envelhece e
  * desenvolve os pilotos, evolui as equipes e monta o novo calendário.
  */
-import type { CareerState, Driver, InboxMessage, Offer, SeasonSummary, Team } from '@/domain/schemas';
+import type { CareerState, Driver, InboxMessage, Offer, RoundRecord, SeasonSummary, Team } from '@/domain/schemas';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
 import { TEAM_TARGETS } from '@/data/teams';
@@ -18,7 +18,7 @@ import { chooseAiTrainingFocus } from '../ai/decisions';
 import { computeDriverStandings, computeTeamStandings } from '../championship/standings';
 import { instantiateEvent } from '../events/engine';
 import { hashSeed } from '../rng';
-import { buildCategoryField, rankTeams, teamStrength } from '../world/generation';
+import { buildCategoryField, rankTeams } from '../world/generation';
 import { canAcceptOffer, contractFromOffer, generateOffers, negotiate, releaseFeeFor, type NegotiationDemand } from './contracts';
 import { buildCalendar } from './createCareer';
 import { applyAging, developDriver } from './development';
@@ -194,6 +194,21 @@ export function evolveTeams(teams: readonly Team[], career: CareerState): Team[]
   return evolved.map((t) => ({ ...t, driverTarget: TEAM_TARGETS[newOrder.indexOf(t.id)] ?? 16 }));
 }
 
+/**
+ * Versão compacta de uma etapa para o arquivo de temporadas: ficam o resultado
+ * oficial e o grid, que é o que o histórico mostra. A narração volta a volta,
+ * as tentativas de classificação e os tempos de treino são descartados, para
+ * o save não crescer vários megabytes ao longo de uma carreira longa.
+ */
+export function compactRound(record: RoundRecord): RoundRecord {
+  return {
+    ...record,
+    practice: { ...record.practice, entries: [] },
+    qualifying: { ...record.qualifying, entries: record.qualifying.entries.map((e) => ({ ...e, attempts: [] })) },
+    race: { ...record.race, events: [] },
+  };
+}
+
 export function archiveSeason(career: CareerState): SeasonSummary {
   const offseason = career.offseason;
   if (!offseason) throw new Error('A temporada ainda não foi fechada.');
@@ -215,7 +230,7 @@ export function archiveSeason(career: CareerState): SeasonSummary {
     driverStandings: standings.map((s) => ({ driverId: s.driverId, teamId: s.teamId, position: s.position, points: s.points, wins: s.wins })),
     driverNames: Object.fromEntries(career.drivers.map((d) => [d.id, fullName(d)])),
     teamColors: Object.fromEntries(career.teams.map((t) => [t.id, t.color])),
-    rounds: career.rounds,
+    rounds: career.rounds.map(compactRound),
   };
 }
 
@@ -389,4 +404,3 @@ export function retire(career: CareerState): CareerState {
   };
 }
 
-export { teamStrength };

@@ -8,7 +8,7 @@ import { initialTeams } from '@/data/teams';
 import { computeDriverStandings } from '../championship/standings';
 import { hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
-import { generateDriver, rankTeams, teamStrength } from '../world/generation';
+import { generateDriver, rankTeams } from '../world/generation';
 import { driverStandings, fullName, getPlayer, teamKey } from './selectors';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
@@ -217,4 +217,3 @@ export function promotedRivals(career: CareerState, next: CategoryDefinition, li
   return rivals;
 }
 
-export { teamStrength };

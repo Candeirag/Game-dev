@@ -241,7 +241,7 @@ function PreRacePhase() {
                     <td className={cx(td, 'font-semibold tabular')}>{e.position}</td>
                     <td className={td}>
                       <span className="flex flex-wrap items-center gap-2">
-                        <TeamSwatch team={teams[e.teamId]} />{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
+                        <span className="flex items-center gap-2"><TeamSwatch team={teams[e.teamId]} />{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
                         {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
                         {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
                       </span>
