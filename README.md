@@ -26,7 +26,7 @@ Abra o endereço mostrado no terminal (normalmente http://localhost:5173).
 | `npm run preview` | Serve o build de produção localmente |
 | `npm test` | Roda os 187 testes automatizados (Vitest); leva cerca de 20 segundos |
 | `npm run typecheck` | Só a checagem de tipos |
-| `npm run calibrate` | Imprime os relatórios de balanceamento (carreiras, vidas inteiras, equipes, investimentos em 40 temporadas, saúde do mundo em 60 temporadas) e roda os testes de estresse (vidas com políticas variadas e um "macaco" que aperta botões ao acaso); leva cerca de 12 minutos (no Windows: `set CALIBRATE=1 && npx vitest run --reporter=verbose`) |
+| `npm run calibrate` | Imprime os relatórios de balanceamento (carreiras, vidas inteiras, equipes, investimentos em 40 temporadas, saúde do mundo em 60 temporadas) e roda os testes de estresse (vidas com políticas variadas e um "macaco" que aperta botões ao acaso); leva cerca de 6 minutos (no Windows: `set CALIBRATE=1 && npx vitest run --reporter=verbose`) |
 | `npm run bench` | Mede o desempenho do motor e dos saves |
 
 O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer servidor estático.

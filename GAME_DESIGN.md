@@ -282,7 +282,8 @@ O que acontece com € 100 milhões em 40 temporadas, por estratégia (`npm run 
 | Só Grid Tech (a mais arriscada) | 1,6× | 0,9× a 15× |
 | Empréstimo máximo aplicado em ações | 3,2× | 0,7× a 26× |
 | 25% da melhor equipe da F1 | 1,7× | 1,6× a 1,8× |
-| Dono passivo de uma equipe | lucro médio de −3% a 0% do preço da equipe por ano | e a equipe ainda desvaloriza, porque o carro fica para trás |
+| 25% da pior equipe da F1 | 1,0× | 0,9× a 1,2× |
+| Dono passivo de uma equipe | lucro médio de −0,5% a +2,3% do preço da equipe por ano | e a equipe desvaloriza, porque o carro fica para trás |
 
 Antes da auditoria, o fundo e a carteira de ações multiplicavam o dinheiro por 12 a 16 no mesmo prazo, e as caudas passavam de 100×: depois de uma geração, o dinheiro deixava de importar.
 
@@ -355,7 +356,7 @@ No fim de semana, o dirigente escolhe o programa de treino e a abordagem de clas
 - **Reputação da equipe.** A cada ano, anda 40% do caminho até a nota da posição final (92 para a campeã, 8 a menos por posição), mais depressa com um bom comando.
 - **Eventos de gestão** (35% de chance por etapa): ação promocional de patrocinador, rival sondando o diretor técnico, diretriz técnica da federação, briga entre os pilotos, atraso na fábrica, bônus de pódio.
 
-Com a estrutura padrão, o resultado previsto do ano vai de 0,3% a 8% do valor da equipe (`npm run calibrate`): a pior de cada categoria empata, e as do meio do grid rendem de 3% a 6%. Não é dinheiro fácil: em 40 temporadas, o lucro médio de um dono que só deixa a equipe rodar ficou entre −3% e 0% do preço dela por ano, e a equipe ainda desvaloriza, porque o carro fica para trás. O ganho está em subir na tabela (prêmio e patrocínio maiores) e em vender uma equipe melhor do que a que comprou.
+Com a estrutura padrão, o resultado previsto do ano vai de 0,3% a 8% do valor da equipe (`npm run calibrate`): a pior de cada categoria empata, e as do meio do grid rendem de 3% a 6%. Não é dinheiro fácil: em 40 temporadas, o lucro médio de um dono que só deixa a equipe rodar ficou entre −0,5% e +2,3% do preço dela por ano (menos que a renda fixa), e a equipe ainda desvaloriza, porque o carro fica para trás. O ganho está em subir na tabela (prêmio e patrocínio maiores) e em vender uma equipe melhor do que a que comprou.
 
 ## Desenvolvimento técnico
 
