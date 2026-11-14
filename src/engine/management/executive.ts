@@ -26,7 +26,7 @@ import { closeSeasonFinance, post } from '../career/economy';
 import { pushMessages } from '../career/inbox';
 import { runAiMarket, teamsOfCategory } from '../career/market';
 import { REPUTATION, archiveSeason, compactRound, evolveTeams, positionPrestige, trimHistory, winter } from '../career/offseason';
-import { familyDriverIds, fullName, getPlayer } from '../career/selectors';
+import { familyDriverIds, formerCharacterIds, fullName, getPlayer } from '../career/selectors';
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality } from '../dynasty/succession';
@@ -289,8 +289,9 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
   const list: DriverCandidate[] = [];
   const childByDriver = new Map(career.family.children.filter((c) => c.driver).map((c) => [c.driver?.id ?? '', c]));
   for (const d of career.drivers.filter((x) => x.teamId === m.teamId)) list.push(candidate(d, childByDriver.has(d.id) ? 'child' : 'current', true, childByDriver.get(d.id)?.id ?? null));
+  const former = formerCharacterIds(career);
   const free = career.drivers
-    .filter((d) => !d.isPlayer && d.teamId !== m.teamId && (d.teamId === null || d.role === 'reserve' || d.contractEnd <= career.season) && !tooOld(d.age + 1))
+    .filter((d) => !d.isPlayer && !former.has(d.id) && d.teamId !== m.teamId && (d.teamId === null || d.role === 'reserve' || d.contractEnd <= career.season) && !tooOld(d.age + 1))
     .sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes))
     .slice(0, 8);
   for (const d of free) list.push(candidate(d, 'market', true, null));
@@ -625,6 +626,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   let teams: Team[];
   let others: Driver[];
   const newcomers = new Set<string>();
+  const former = formerCharacterIds(career);
   const worldChildIds = new Set(career.family.children.map((c) => c.driver?.id).filter((id): id is string => !!id && career.drivers.some((d) => d.id === id)));
   let lineup: DriverCandidate[] = [];
   if (categoryId === career.categoryId) {
@@ -639,12 +641,12 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
         return { ...driver, contractEnd: nextSeason + c.years - 1 };
       });
       const keep = new Set(lineup.map((c) => c.driverId));
-      const pool = career.drivers.filter((d) => !worldChildIds.has(d.id) || keep.has(d.id));
+      const pool = career.drivers.filter((d) => !former.has(d.id) && (!worldChildIds.has(d.id) || keep.has(d.id)));
       const market = runAiMarket(career, pool, teams, { teamId: '', role: 'first' }, nextSeason, { teamId: previous.teamId, drivers: reserved });
       others = market.drivers;
       news.push(...market.news);
     } else {
-      const pool = career.drivers.filter((d) => !worldChildIds.has(d.id));
+      const pool = career.drivers.filter((d) => !former.has(d.id) && !worldChildIds.has(d.id));
       const market = runAiMarket(career, pool, teams, { teamId: '', role: 'first' }, nextSeason);
       others = market.drivers;
       news.push(...market.news);

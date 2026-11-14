@@ -206,12 +206,12 @@ Toda gravação faz antes a ida e volta (serializa e valida) e guarda a versão 
 
 **Nova decisão de dirigente.** Acrescente a função em `management/team.ts` ou `executive.ts`, exporte pela API do motor, exponha na store com `action(...)` e use na tela. Se for um evento, acrescente um construtor em `management/events.ts`.
 
-**Rebalanceamento.** Ajuste constantes ou dados e rode `npm run calibrate`. Ele imprime três relatórios: 12 carreiras de 14 temporadas com um robô (trajetórias, estatísticas de corrida por categoria e desvio do nível dos grids); 4 vidas de 70 temporadas (piloto, dirigente, família e sucessões, com verificação de integridade a cada passo); e o resultado previsto das equipes por categoria e força.
+**Rebalanceamento.** Ajuste constantes ou dados e rode `npm run calibrate`. Ele imprime três relatórios: 12 carreiras de 14 temporadas com um robô (trajetórias, estatísticas de corrida por categoria e desvio do nível dos grids); 4 vidas de 70 temporadas (piloto, dirigente, família e sucessões, com verificação de integridade a cada passo); e o resultado previsto das equipes por categoria e força. Roda também um teste de estresse (`fuzz.calib.ts`): 12 vidas de 45 temporadas com políticas variadas, aposentadorias no meio do ano, acidentes fatais e passagens de comando, conferindo schema, integridade e ida e volta do save.
 
 ## Qualidade
 
 - `npm run typecheck`: TypeScript estrito (`strict`, `noUncheckedIndexedAccess`), sem `any`.
-- `npm test`: 171 testes.
+- `npm test`: 173 testes.
   - `raceEngine.test.ts`: pneus, combustível, clima, estratégia, boxes, safety car, safety car virtual, bandeira vermelha, punições, regra dos dois compostos, ordens de equipe, classificação eliminatória, todas as categorias.
   - `simulation.test.ts`, `championship.test.ts`: modelo de desempenho, sessões, pontuação por categoria, ajustes.
   - `systems.test.ts`: economia, impostos, investimentos, condição, lesões, suspensão, licença, reputação, contratos, negociação, patrocinadores, mercado, eventos e cada tipo de efeito.

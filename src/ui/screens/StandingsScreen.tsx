@@ -57,7 +57,7 @@ export function StandingsScreen() {
                   {driverStandings.map((s) => {
                     const d = drivers[s.driverId];
                     const team = teams[s.teamId ?? ''];
-                    const isMe = s.driverId === player.id;
+                    const isMe = s.driverId === player.id || (career.management !== null && s.teamId === career.management.teamId);
                     return (
                       <tr key={s.driverId} className={cx('border-t border-ink-800', isMe && 'bg-apex-500/10')}>
                         <td className={cx(td, 'w-10 font-display text-base font-bold tabular')}>{s.position}</td>
@@ -108,7 +108,7 @@ export function StandingsScreen() {
                   {teamStandings.map((s) => {
                     const team = teams[s.teamId];
                     const lineup = career.drivers.filter((d) => d.teamId === s.teamId && d.role !== 'reserve');
-                    const isMine = s.teamId === player.teamId;
+                    const isMine = s.teamId === (player.teamId ?? career.management?.teamId);
                     return (
                       <tr key={s.teamId} className={cx('border-t border-ink-800', isMine && 'bg-apex-500/10')}>
                         <td className={cx(td, 'w-10 font-display text-base font-bold tabular')}>{s.position}</td>

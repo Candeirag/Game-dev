@@ -395,6 +395,7 @@ O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, de
 - Só uma categoria é simulada por vez: a do jogador ou a da equipe que ele dirige. As outras existem como equipes, propostas e participações.
 - Os filhos correm fora do campeonato do jogador (a temporada deles é estimada), a não ser quando ele os escala na própria equipe. Pai e filho não se enfrentam na pista.
 - Ao escolher um herdeiro piloto, os irmãos dele saem do acompanhamento e a equipe da família passa a ser só uma participação.
+- Só o personagem do jogador morre: o parceiro e os filhos não têm mortalidade própria.
 - No modo dirigente, a corrida não é acompanhada volta a volta, e o dirigente não dá ordens durante a prova.
 - Nas vidas longas, o nível dos pilotos da F1 sobe alguns pontos acima do projetado; os contratos da gestão já medem cada piloto contra o grid real, mas o nível nominal da categoria não é recalibrado.
 - O jogador não pode assinar como piloto reserva de uma categoria superior.

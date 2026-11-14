@@ -42,7 +42,8 @@ function sessionWeather(rng: Rng, front: number, track: Track): SessionWeather {
     wetness = uniform(rng, 0.3, 0.55);
   }
   // Chuva esfria o asfalto: até 12 °C a menos com a pista encharcada.
-  const trackTemp = Math.round(track.baseTrackTemp + gaussian(rng) * 3 - wetness * 12);
+  // O `+ 0` transforma um eventual −0 (arredondamento de −0,4) em 0: no JSON do save os dois são iguais.
+  const trackTemp = Math.round(track.baseTrackTemp + gaussian(rng) * 3 - wetness * 12) + 0;
   return { condition, wetness: Math.round(wetness * 100) / 100, trackTemp };
 }
 

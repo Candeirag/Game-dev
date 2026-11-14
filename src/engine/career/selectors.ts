@@ -82,6 +82,17 @@ export function familyDriverIds(career: CareerState): Set<string> {
   return ids;
 }
 
+/**
+ * Personagens anteriores da família. Quem correu na temporada em curso continua
+ * na lista de pilotos até ela ser arquivada (os resultados apontam para ele),
+ * mas não pode ser contratado nem entrar no mercado.
+ */
+export function formerCharacterIds(career: CareerState): Set<string> {
+  const ids = new Set(career.dynasty.lineage.map((l) => l.driverId));
+  ids.delete(career.playerDriverId);
+  return ids;
+}
+
 export function fullName(driver: Pick<Driver, 'firstName' | 'lastName'>): string {
   return `${driver.firstName} ${driver.lastName}`;
 }

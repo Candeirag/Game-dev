@@ -800,6 +800,46 @@ describe('morte e sucessão', () => {
     }
   }, 60_000);
 
+  it('morte de um piloto em atividade: um herdeiro adulto pode assumir só os negócios', () => {
+    const closed = withCash(resolvePending(playSeason(careerWithPartner(85, 80, true))), 3_000_000);
+    const opened = engine.beginSuccession(closed, 'death');
+    const widow = engine.resolveSuccession(opened, 'partner', 'executive');
+    expect(widow.mode).toBe('executive');
+    expect(widow.offseason).toBeNull();
+    expect(widow.executiveOffseason!.summary).toMatchObject({ mode: 'driver', season: 1 });
+    expect(engine.getPlayer(widow).teamId).toBeNull();
+    // O piloto que morreu fica na lista só até a temporada ser arquivada, sem equipe e fora do mercado.
+    expect(widow.drivers.find((d) => d.id === 'player')).toMatchObject({ isPlayer: false, teamId: null });
+    expectValid(widow);
+    const next = botExecutiveOffseason(widow);
+    expect(next.drivers.some((d) => d.id === 'player')).toBe(false);
+    expectValid(playExecutiveSeason(next));
+  });
+
+  it('um filho que corria pela equipe da família deixa o carro ao assumir o comando dela', () => {
+    let c = ownerCareer('kart-regional', 8, 87);
+    const base = { ...c, family: { ...c.family, partner: engine.generatePartner(1, 45, 1) } };
+    const kid = childOf(base, 9, { id: 'kid-d', age: 18, kartYears: 6, talent: 88, interest: 80 });
+    c = engine.startChildCareer({ ...base, family: { ...base.family, children: [kid] } }, kid.id, 'full');
+    c = playExecutiveSeason(c);
+    const candidate = c.executiveOffseason!.candidates.find((x) => x.origin === 'child')!;
+    const other = c.executiveOffseason!.candidates.find((x) => x.origin === 'current' && x.willing)!;
+    c = engine.startExecutiveSeason(resolvePending(engine.setLineup(c, [other.driverId, candidate.driverId])), { kind: 'continue' });
+    c = playExecutiveSeason(c);
+    const teamId = c.management!.teamId;
+
+    const heir = engine.resolveSuccession(engine.beginSuccession(resolvePending(c), 'death'), 'kid-d', 'executive');
+    const player = engine.getPlayer(heir);
+    expect(player).toMatchObject({ id: candidate.driverId, firstName: kid.firstName, teamId: null, isPlayer: true });
+    expect(heir.management).toMatchObject({ teamId, position: 'owner' });
+    expect(heir.drivers.filter((d) => d.teamId === teamId && d.role !== 'reserve')).toHaveLength(2);
+    // O novo dono não aparece na lista de pilotos da própria equipe.
+    expect(heir.executiveOffseason!.candidates.some((x) => x.driverId === player.id)).toBe(false);
+    expect(heir.executiveOffseason!.lineup).toHaveLength(2);
+    expectValid(heir);
+    expectValid(playExecutiveSeason(botExecutiveOffseason(heir)));
+  }, 60_000);
+
   it('herdeiro piloto de um dono de equipe: a equipe vira participação de 100% e segue pagando dividendos', () => {
     const c = playExecutiveSeason(ownerCareer('f3', 8, 77));
     const team = engine.managedTeam(c)!;

@@ -149,6 +149,8 @@ export interface LifePolicy {
   heir?: 'driver' | 'executive';
   /** Compra uma equipe se o dinheiro em caixa cobrir o preço com folga. */
   buyTeam?: boolean;
+  /** Como dirigente, passa o comando em vida ao chegar a esta idade. */
+  handoverAge?: number;
   choices?: Choices;
 }
 
@@ -209,6 +211,7 @@ export function playLifeSeason(career: CareerState, policy: LifePolicy = {}, onS
   while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playExecutiveRound(c, policy.choices);
   onSeasonEnd?.(c);
   if (c.succession) return botSuccession(c, policy);
+  if (policy.handoverAge !== undefined && getPlayer(c).age >= policy.handoverAge) return botSuccession(engine.beginHandover(resolvePending(c)), policy);
   return botExecutiveOffseason(c, policy);
 }
 

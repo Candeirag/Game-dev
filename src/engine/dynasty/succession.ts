@@ -27,7 +27,7 @@ import { updateMarketInterest } from '../career/market';
 import { archiveSeason, trimHistory } from '../career/offseason';
 import { familyDriverIds, fullName, getPlayer } from '../career/selectors';
 import { instantiateEvent } from '../events/engine';
-import { buildJobOffers, convertToExecutive, executiveSummary, vacatePlayerSeat } from '../management/executive';
+import { buildExecutiveOffseason, buildJobOffers, convertToExecutive, executiveSummary, vacatePlayerSeat } from '../management/executive';
 import { ownedTeamValue } from '../management/team';
 import { createRng, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
@@ -208,7 +208,11 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     const base: Driver = heirDriver ?? { id: `dyn-${option.id}-g${generation}-s${state.season}`, firstName: option.name.split(' ')[0] ?? option.name, lastName: option.name.split(' ').slice(1).join(' ') || former.lastName, nationality: former.nationality, age: Math.max(10, option.age), teamId: null, role: null, contractEnd: 0, condition: { ...NEUTRAL_CONDITION }, injury: null, isPlayer: false, attributes: { ...NON_DRIVER_ATTRIBUTES }, potential: 40, trainingFocus: 'balanced' };
     // Um filho que corria pela equipe da família deixa o carro para assumir o comando.
     const inWorld = state.drivers.find((d) => d.id === base.id);
-    let drivers = state.drivers.filter((d) => d.id !== former.id);
+    // Quem correu nesta temporada fica na lista (sem equipe) até ela ser arquivada: os resultados apontam para ele.
+    const raced = state.rounds.some((r) => r.race.entries.some((e) => e.driverId === former.id));
+    let drivers = raced
+      ? state.drivers.map((d) => (d.id === former.id ? { ...d, isPlayer: false, teamId: null, role: null, contractEnd: 0, injury: null } : d))
+      : state.drivers.filter((d) => d.id !== former.id);
     if (inWorld) {
       drivers = drivers.map((d) => (d.id === base.id ? { ...d, isPlayer: true } : d));
       state = vacatePlayerSeat({ ...state, drivers, playerDriverId: base.id });
@@ -228,8 +232,13 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
       dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(base.id, option.name, option.age)] },
     };
     if (state.executiveOffseason) {
+      // O fechamento é refeito para o novo personagem: propostas de cargo pelo prestígio dele e,
+      // se a equipe ficou na família, a lista de pilotos sem o próprio herdeiro.
       const off = state.executiveOffseason;
-      state = { ...state, executiveOffseason: { ...off, jobOffers: buildJobOffers(state), ...(keepsTeam ? {} : { candidates: [], lineup: [], sponsorOffers: [] }) } };
+      const evaluation = { teamPosition: off.teamPosition, target: off.target, objectiveMet: off.objectiveMet, prize: off.prize, profit: off.profit, dismissed: false, notes: off.notes };
+      state = keepsTeam
+        ? { ...state, executiveOffseason: { ...buildExecutiveOffseason(state, off.summary, evaluation), sponsorOffers: off.sponsorOffers } }
+        : { ...state, executiveOffseason: { ...off, dismissed: false, jobOffers: buildJobOffers(state), candidates: [], lineup: [], sponsorOffers: [] } };
     }
     const date = state.calendar[Math.min(state.calendar.length - 1, Math.max(0, state.nextRoundIndex - 1))]?.date ?? `${state.year}-01-01`;
     return { ...state, inbox: pushMessages(state.inbox, [{ id: `s${state.season}-heir-g${generation}`, date, category: 'family', title: `${option.name} assume a família`, body: `${option.name} passa a cuidar do patrimônio${keepsTeam ? ' e da equipe' : ''} da família ${former.lastName}. ${inheritedNote}` }]) };
