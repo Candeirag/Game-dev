@@ -19,6 +19,7 @@ import { formatLap, trackCredit } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { RaceCanvas } from './RaceCanvas';
 import { PitStrategyCard, RaceModeCard, TeamOrderDialog } from './RaceCommands';
+import { RaceControlBar } from './RaceControlBar';
 import { driverCode, type CameraMode } from './raceScene';
 import { SPEEDS, useRacePlayback } from './useRacePlayback';
 
@@ -68,6 +69,8 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
   const { career, player, drivers, teams, category } = useCareerView();
   const race = useGameStore((s) => s.liveRace);
   const timeline = useGameStore((s) => s.raceTimeline);
+  const raceMode = useGameStore((s) => s.raceMode);
+  const setRaceMode = useGameStore((s) => s.setRaceMode);
   const playback = useRacePlayback();
   // A corrida abre acompanhando o carro do jogador, com o circuito inteiro no minimapa.
   const [camera, setCamera] = useState<CameraMode>('follow');
@@ -144,6 +147,12 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
   const followLabel = focus && !focusIsMine ? `Acompanhar ${codeOf(focus.driverId)}` : null;
   const isMine = (id: string | undefined) => id !== undefined && mineIds.has(id);
   const ownLabel = mineIds.has(player.id) ? 'Meu piloto' : 'Minha equipe';
+
+  // Barra fixa de comandos: só enquanto a corrida do jogador está valendo (some na bandeirada e nas reprises).
+  const myRow = rows.find((r) => r.driverId === player.id);
+  const myCar = race.cars.find((c) => c.driverId === player.id);
+  const live = !timeline.finished || leaderLap >= raceLaps;
+  const showBar = !spectator && myRow !== undefined && !chequered && live;
 
   return (
     <div className="space-y-3">
@@ -338,6 +347,22 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
         {!spectator && <RaceModeCard race={race} />}
         {!spectator && <PitStrategyCard race={race} />}
       </div>
+
+      {showBar && myRow && (
+        <RaceControlBar
+          position={myRow.state === 'retired' ? 'AB' : `P${started ? myRow.position : myRow.grid}`}
+          lap={`Volta ${Math.min(raceLaps, started ? myRow.sample.lap : 0)}/${raceLaps}`}
+          mode={raceMode}
+          onMode={setRaceMode}
+          modeDisabled={myCar?.status !== 'running' || finished}
+          modeFromLap={race.currentLap < race.totalLaps ? race.currentLap + 1 : null}
+          playing={playback.playing}
+          playLabel={playLabel}
+          onToggle={playback.toggle}
+          toggleDisabled={orderDue}
+          speeds={SPEEDS.map((s) => ({ label: `${s}×`, active: playback.speed === s, select: () => playback.setSpeed(s) }))}
+        />
+      )}
 
       <Card title="Acontecimentos" padded={false}>
         <ul className="max-h-64 overflow-y-auto">

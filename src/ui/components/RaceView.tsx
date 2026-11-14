@@ -8,6 +8,7 @@ import { RaceResultTable } from './RaceResultTable';
 import { Button, Card, Pill, TableWrap, TeamSwatch, cx, td, th } from './ui';
 import { formatGap, formatLap } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { RaceControlBar } from '../race/RaceControlBar';
 
 /** Duração de cada volta na reprodução, por velocidade. */
 const SPEEDS = [
@@ -159,6 +160,22 @@ export function RaceView() {
           <Button variant="ghost" onClick={() => { setPlaying(false); simulateRestOfRace(); }} title="O engenheiro assume paradas e combustível até o fim">Simular até o fim</Button>
         </div>
       </div>
+
+      {me && (
+        <RaceControlBar
+          position={me.status === 'running' ? `P${myIndex + 1}` : 'AB'}
+          lap={`Volta ${race.currentLap}/${race.totalLaps}`}
+          mode={mode}
+          onMode={setRaceMode}
+          modeDisabled={!running}
+          modeFromLap={race.currentLap < race.totalLaps ? race.currentLap + 1 : null}
+          playing={playing}
+          playLabel={race.currentLap === 0 ? 'Largar' : 'Continuar'}
+          onToggle={() => setPlaying(!playing)}
+          toggleDisabled={awaitingOrder}
+          speeds={SPEEDS.map((sp, i) => ({ label: sp.label, active: speed === i, select: () => setSpeed(i) }))}
+        />
+      )}
 
       {race.neutralization.type !== 'none' && (
         <div role="status" className="rounded-xl border border-gold-400/50 bg-gold-400/15 px-4 py-3 text-sm font-semibold text-gold-400">
