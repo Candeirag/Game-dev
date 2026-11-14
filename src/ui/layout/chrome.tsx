@@ -14,9 +14,19 @@ export interface Chrome {
   setRaceBar(open: boolean): void;
   /** Formato largo: celular deitado, tablet ou computador. */
   wide: boolean;
+  /**
+   * Encaixe da barra superior (só no formato largo): a tela de corrida põe ali a volta, a
+   * bandeira e os comandos da transmissão, no lugar dos números da carreira.
+   */
+  topSlot: HTMLElement | null;
+  /**
+   * Encaixe do botão principal (só no formato largo): a tela põe ali o passo que faz a carreira
+   * avançar (disputar o treino, largar, concluir a etapa), no lugar do atalho padrão.
+   */
+  actionSlot: HTMLElement | null;
 }
 
-export const ChromeContext = createContext<Chrome>({ setRaceBar() {}, wide: true });
+export const ChromeContext = createContext<Chrome>({ setRaceBar() {}, wide: true, topSlot: null, actionSlot: null });
 
 /** Enquanto o componente estiver montado com `open`, a moldura abre espaço para a barra de corrida. */
 export function useRaceBarSpace(open: boolean): void {

@@ -1,7 +1,14 @@
+import { Check, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type PracticeProgram, type QualifyingApproach, type RoundRecord } from '@/domain/schemas';
-import { PRACTICE_PROGRAM_DESCRIPTIONS, PRACTICE_PROGRAM_LABELS, QUALIFYING_APPROACH_DESCRIPTIONS, QUALIFYING_APPROACH_LABELS } from '@/domain/labels';
+import {
+  PRACTICE_PROGRAM_DESCRIPTIONS,
+  PRACTICE_PROGRAM_LABELS,
+  QUALIFYING_APPROACH_DESCRIPTIONS,
+  QUALIFYING_APPROACH_LABELS,
+  WEATHER_LABELS,
+} from '@/domain/labels';
 import { getTrack, raceLaps } from '@/data/tracks';
 import { buildWetnessProfile, fullName, getNextEvent, isSeasonComplete, playerAvailability, playerStrategyOptions, sessionSeed } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
@@ -13,9 +20,10 @@ import { buildCircuit, type CircuitStyle } from '@/engine';
 import { CarSprite } from '../components/CarSprite';
 import { CircuitMap } from '../components/CircuitMap';
 import { RaceBroadcast } from '../race/RaceBroadcast';
-import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
+import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, Stat, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
 import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { ScreenAction } from '../layout/ScreenAction';
 import { counted, pluralWord } from '@/domain/text';
 
 const STEPS = [
@@ -42,41 +50,35 @@ export function WeekendScreen() {
   if (!weekend) {
     const availability = playerAvailability(career);
     return (
-      <div className="space-y-6">
-        <PageHeader eyebrow="Fim de semana" title={event ? `Etapa ${event.round}` : 'Temporada encerrada'} />
+      <div className="space-y-4">
+        <PageHeader eyebrow="Fim de semana" title={event ? `Etapa ${event.round} de ${career.calendar.length}` : 'Temporada encerrada'} />
         <EventsPanel />
-        {lastRound && <RoundSummary record={lastRound} />}
         {event ? (
-          <Card>
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <Card title={`Próxima etapa · ${formatDate(event.date)}`}>
+            <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">Próxima etapa · {formatDate(event.date)}</div>
-                <div className="font-display text-2xl font-bold uppercase">{getTrack(event.trackId).name}</div>
-                <div className="mt-1 flex flex-wrap gap-2 text-sm text-ink-400">
-                  Previsão: <WeatherBadge weather={event.weather.race} />
+                <div className="font-display text-2xl font-bold uppercase leading-none">{getTrack(event.trackId).name}</div>
+                <div className="mt-1 text-sm text-ink-400">
+                  {trackLocation(getTrack(event.trackId))} · {raceLaps(getTrack(event.trackId), category)} voltas
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-400">
+                  Previsão para a corrida: <WeatherBadge weather={event.weather.race} />
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <ScreenAction disabled={career.pendingEvents.length > 0} onClick={() => startWeekend()} className="min-h-12 w-full sm:w-auto">
+                    {!availability.available ? 'Acompanhar dos boxes' : availability.canRest ? 'Correr mesmo lesionado' : 'Iniciar fim de semana'}
+                  </ScreenAction>
+                  {availability.available && availability.canRest && (
+                    <Button disabled={career.pendingEvents.length > 0} onClick={() => startWeekend({ rest: true })}>
+                      Descansar e ceder a vaga ao reserva
+                    </Button>
+                  )}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {availability.available ? (
-                  <>
-                    <Button variant="primary" disabled={career.pendingEvents.length > 0} onClick={() => startWeekend()}>
-                      {availability.canRest ? 'Correr mesmo lesionado' : 'Iniciar fim de semana'}
-                    </Button>
-                    {availability.canRest && (
-                      <Button disabled={career.pendingEvents.length > 0} onClick={() => startWeekend({ rest: true })}>
-                        Descansar e ceder a vaga ao reserva
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <Button variant="primary" disabled={career.pendingEvents.length > 0} onClick={() => startWeekend()}>
-                    Acompanhar a etapa dos boxes
-                  </Button>
-                )}
-              </div>
+              <CircuitMap track={getTrack(event.trackId)} style={category.vehicle} className="mx-auto hidden max-h-36 w-full md:block" />
             </div>
             {!availability.available && (
-              <p className="mt-3 text-sm text-rose-200">
+              <p className="mt-3 text-sm text-gold-400">
                 {availability.reason === 'ban'
                   ? 'Você está suspenso desta etapa por pontos na licença.'
                   : `Você está fora por lesão (${player.injury?.description}).`}{' '}
@@ -103,6 +105,7 @@ export function WeekendScreen() {
             </EmptyState>
           )
         )}
+        {lastRound && <RoundSummary record={lastRound} />}
       </div>
     );
   }
@@ -112,48 +115,27 @@ export function WeekendScreen() {
   const activeIndex = STEPS.findIndex((s) => s.key === weekend.phase);
 
   return (
-    <div className={liveRace ? 'space-y-3' : 'space-y-6'}>
+    <div className={liveRace ? 'space-y-3' : 'space-y-4'}>
       {/* Com a corrida na tela, o cabeçalho e as etapas do fim de semana dão lugar à pista. */}
-      {liveRace ? (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h1 className="font-display text-2xl font-bold uppercase leading-none tracking-wide">{track.name}</h1>
-          <span className="text-xs text-ink-400">
-            {category.shortName} · Etapa {event.round} de {career.calendar.length} · {trackLocation(track)} · {raceLaps(track, category)} voltas
-          </span>
-        </div>
-      ) : (
-        <PageHeader eyebrow={`${category.shortName} · Etapa ${event.round} de ${career.calendar.length} · ${formatDate(event.date)}`} title={track.name}>
-          <span className="text-sm text-ink-400">
-            {trackLocation(track)} · {raceLaps(track, category)} voltas
-          </span>
-        </PageHeader>
-      )}
-
       {!liveRace && (
-        <ol className="grid grid-cols-3 gap-2">
-          {STEPS.map((step, i) => {
-            const weather = event.weather[step.key];
-            return (
+        <PageHeader eyebrow={`${trackLocation(track)} · ${raceLaps(track, category)} voltas`} title={track.name}>
+          <ol className="flex flex-wrap items-center gap-1.5" aria-label="Sessões do fim de semana">
+            {STEPS.map((step, i) => (
               <li
                 key={step.key}
+                aria-current={i === activeIndex ? 'step' : undefined}
                 className={cx(
-                  'rounded-lg border px-3 py-2.5',
-                  i === activeIndex ? 'border-apex-500 bg-apex-500/10' : i < activeIndex ? 'border-ink-700 bg-ink-900' : 'border-ink-800 bg-ink-950 opacity-70',
+                  'chamfer-br flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold leading-none [--chamfer:6px]',
+                  i === activeIndex ? 'bg-apex-500 text-white' : i < activeIndex ? 'bg-ink-800 text-ink-200' : 'bg-ink-850 text-ink-400',
                 )}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-ink-300">
-                    {i < activeIndex ? '✓ ' : ''}
-                    {step.label}
-                  </span>
-                  <span className="hidden sm:inline">
-                    <WeatherBadge weather={weather} compact />
-                  </span>
-                </div>
+                {i < activeIndex && <Check size={12} strokeWidth={3} className="text-go-400" aria-label="Concluída" />}
+                {step.label}
+                <span className="font-normal opacity-80">{WEATHER_LABELS[event.weather[step.key].condition]}</span>
               </li>
-            );
-          })}
-        </ol>
+            ))}
+          </ol>
+        </PageHeader>
       )}
 
       {!weekend.playerParticipates ? (
@@ -166,9 +148,9 @@ export function WeekendScreen() {
               casos.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button variant="primary" onClick={() => watchAbsentWeekend()}>
+              <ScreenAction onClick={() => watchAbsentWeekend()} className="min-h-12">
                 Assistir à corrida
-              </Button>
+              </ScreenAction>
               <Button onClick={() => simulateAbsentWeekend()}>Simular a etapa</Button>
             </div>
           </Card>
@@ -193,7 +175,7 @@ function PracticePhase() {
   const track = getTrack(event.trackId);
   return (
     <Card title="Programa do treino livre">
-      <p className="mb-4 text-sm text-ink-400">
+      <p className="mb-3 text-sm text-ink-400">
         O treino define o trabalho do fim de semana. Esta pista tem desgaste de pneus {describeTyreWear(track.tyreWear)}, ultrapassagem{' '}
         {describeOvertaking(track.overtakingDifficulty)} e clima previsto para o treino: <WeatherBadge weather={event.weather.practice} />
       </p>
@@ -208,9 +190,11 @@ function PracticePhase() {
           />
         ))}
       </div>
-      <Button variant="primary" className="mt-5" onClick={() => runPractice(program)}>
-        Disputar treino livre
-      </Button>
+      <div className="mt-4">
+        <ScreenAction onClick={() => runPractice(program)} className="min-h-12 w-full">
+          Disputar treino livre
+        </ScreenAction>
+      </div>
     </Card>
   );
 }
@@ -226,25 +210,16 @@ function QualifyingPhase() {
   const best = practice.entries[0]?.bestLap ?? 0;
   const gridPenalty = career.gridPenalties[player.id] ?? 0;
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+    <div className="grid items-start gap-4 md:grid-cols-2">
       <Card title="Resultado do treino livre" padded={false}>
         {mine && (
-          <div className="grid grid-cols-3 gap-4 border-b border-ink-800 p-4">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Sua posição</div>
-              <div className="font-display text-2xl font-bold tabular">{myPos}º</div>
-            </div>
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Qualidade do acerto</div>
-              <div className="font-display text-2xl font-bold tabular">{Math.round(mine.modifiers.setupScore * 100)}%</div>
-            </div>
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Programa</div>
-              <div className="text-sm font-semibold">{PRACTICE_PROGRAM_LABELS[mine.program]}</div>
-            </div>
+          <div className="grid grid-cols-3 gap-3 border-b border-ink-700 px-4 py-3">
+            <Stat label="Sua posição" value={`${myPos}º`} />
+            <Stat label="Acerto" value={`${Math.round(mine.modifiers.setupScore * 100)}%`} />
+            <Stat label="Programa" value={<span className="font-sans text-sm font-semibold">{PRACTICE_PROGRAM_LABELS[mine.program]}</span>} />
           </div>
         )}
-        <div className="max-h-[420px] overflow-y-auto px-4">
+        <div className="max-h-[420px] overflow-y-auto px-4 md:max-h-[max(11rem,calc(100dvh-16.5rem))]">
           <TableWrap>
             <table className="w-full">
               <thead className="sticky top-0 bg-ink-900">
@@ -275,18 +250,18 @@ function QualifyingPhase() {
         </div>
       </Card>
       <Card title="Abordagem da classificação">
-        <p className="mb-4 text-sm text-ink-400">
+        <p className="mb-3 text-sm text-ink-400">
           {category.qualifyingFormat === 'knockout'
             ? 'Classificação eliminatória em três fases: em cada uma das duas primeiras, os cinco mais lentos são eliminados. São duas tentativas por fase.'
             : 'São 3 tentativas lançadas; vale a melhor volta.'}{' '}
           Um erro invalida a tentativa. Sua consistência é {Math.floor(player.attributes.consistency)}.
         </p>
         {gridPenalty > 0 && (
-          <p className="mb-4 rounded-lg border border-gold-400/30 bg-gold-400/10 px-3 py-2 text-sm text-gold-400">
+          <p className="mb-3 bg-gold-400/10 px-3 py-2 text-sm text-gold-400 shadow-[inset_3px_0_0_0_var(--color-gold-400)]">
             Você cumpre uma punição: perde {gridPenalty} posições no grid depois da classificação.
           </p>
         )}
-        <div className="grid gap-3">
+        <div className="grid gap-2">
           {QUALIFYING_APPROACHES.map((a) => (
             <ChoiceCard
               key={a}
@@ -297,9 +272,11 @@ function QualifyingPhase() {
             />
           ))}
         </div>
-        <Button variant="primary" className="mt-5" onClick={() => runQualifying(approach)}>
-          Disputar classificação
-        </Button>
+        <div className="mt-4">
+          <ScreenAction onClick={() => runQualifying(approach)} className="min-h-12 w-full">
+            Disputar classificação
+          </ScreenAction>
+        </div>
       </Card>
     </div>
   );
@@ -333,10 +310,10 @@ function PreRacePhase() {
   const plan = options[selected]?.plan;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Fica no alto: no celular o grid ocupa várias telas antes do botão de largada. */}
       {resume && (
-        <div role="status" className="rounded-xl border border-gold-400/50 bg-gold-400/10 p-4">
+        <div role="status" className="chamfer bg-gold-400/10 p-4 shadow-[inset_3px_0_0_0_var(--color-gold-400)]">
           <div className="text-sm font-semibold text-gold-400">Corrida interrompida</div>
           <p className="mt-1 text-sm text-ink-200">
             A página foi fechada ou recarregada com a corrida em andamento:{' '}
@@ -346,16 +323,16 @@ function PreRacePhase() {
             . Os seus comandos ficaram guardados; a corrida é a mesma.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <Button variant="primary" className="h-12 text-base" onClick={() => resumeRace(false)}>
+            <Button variant="primary" className="min-h-12 text-base" onClick={() => resumeRace(false)}>
               Continuar de onde parou
             </Button>
-            <Button className="h-12 text-base" onClick={() => resumeRace(true)} title="O engenheiro assume paradas e combustível nas voltas que faltam">
+            <Button className="min-h-12 text-base" onClick={() => resumeRace(true)} title="O engenheiro assume paradas e combustível nas voltas que faltam">
               Ver resultado
             </Button>
           </div>
         </div>
       )}
-      <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <Card title="Grid de largada" padded={false}>
           <div className="px-4">
             <TableWrap>
@@ -364,7 +341,7 @@ function PreRacePhase() {
                   <tr>
                     <th className={th}>Pos</th>
                     <th className={th}>Piloto</th>
-                    <th className={cx(th, 'hidden sm:table-cell')}>Tentativas</th>
+                    <th className={cx(th, 'hidden xl:table-cell')}>Tentativas</th>
                     <th className={cx(th, 'text-right')}>Melhor</th>
                     <th className={cx(th, 'text-right')}>Dif.</th>
                   </tr>
@@ -391,8 +368,18 @@ function PreRacePhase() {
                           {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
                         </span>
                       </td>
-                      <td className={cx(td, 'hidden text-xs tabular text-ink-400 sm:table-cell')}>
-                        {e.attempts.map((t) => (t === null ? '✕' : formatLap(t))).join(' · ')}
+                      <td className={cx(td, 'hidden text-xs tabular text-ink-400 xl:table-cell')}>
+                        <span className="flex flex-wrap items-center gap-x-1.5">
+                          {e.attempts.map((t, n) =>
+                            t === null ? (
+                              // biome-ignore lint/suspicious/noArrayIndexKey: as tentativas não mudam de ordem
+                              <X key={n} size={12} className="text-gold-400" aria-label="Tentativa invalidada" />
+                            ) : (
+                              // biome-ignore lint/suspicious/noArrayIndexKey: as tentativas não mudam de ordem
+                              <span key={n}>{formatLap(t)}</span>
+                            ),
+                          )}
+                        </span>
                       </td>
                       <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
                       <td className={cx(td, 'text-right tabular text-ink-400')}>
@@ -406,7 +393,7 @@ function PreRacePhase() {
           </div>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {rules.pitStops && (
             <Card title="Estratégia de pneus">
               <p className="mb-3 text-sm text-ink-400">
@@ -451,7 +438,7 @@ function PreRacePhase() {
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-400">
               Largada: <WeatherBadge weather={event.weather.race} />
               {forecast && forecast.kind !== 'stable' && (
-                <span className="text-rain-400">
+                <span className="text-gold-400">
                   {forecast.kind === 'rain' ? 'Risco de chuva' : 'Pista deve secar'} por volta da volta {forecast.aroundLap}.
                 </span>
               )}
@@ -469,11 +456,13 @@ function PreRacePhase() {
               {rules.teamOrders && <li>A equipe pode pedir que você ceda a posição ao companheiro.</li>}
             </ul>
             {resume ? (
-              <p className="mt-5 text-sm text-gold-400">Há uma corrida interrompida nesta etapa: use os botões no alto da tela.</p>
+              <p className="mt-4 text-sm text-gold-400">Há uma corrida interrompida nesta etapa: use os botões no alto da tela.</p>
             ) : (
-              <Button variant="primary" className="mt-5 h-12 w-full text-base" onClick={() => beginRace(plan)}>
-                Ir para a largada
-              </Button>
+              <div className="mt-4">
+                <ScreenAction onClick={() => beginRace(plan)} className="min-h-12 w-full">
+                  Ir para a largada
+                </ScreenAction>
+              </div>
             )}
           </Card>
         </div>
@@ -487,7 +476,7 @@ function RoundSummary({ record }: { record: RoundRecord }) {
   const mine = record.race.entries.find((e) => e.driverId === player.id);
   return (
     <Card title={`Resultado da etapa ${record.round} · ${getTrack(record.trackId).name}`} padded={false}>
-      <div className="border-b border-ink-800 p-4 text-sm text-ink-300">
+      <div className="border-b border-ink-700 px-4 py-3 text-sm text-ink-300">
         {mine ? (
           <>
             Você{' '}
@@ -534,15 +523,14 @@ function RaceStage() {
       // Sem armazenamento disponível, a escolha vale só para esta corrida.
     }
   };
-  const toggle = (
-    <Button variant="ghost" onClick={() => choose(view === 'broadcast' ? 'timing' : 'broadcast')}>
-      {view === 'broadcast' ? 'Modo cronometragem' : 'Voltar à corrida visual'}
-    </Button>
-  );
-  if (view === 'broadcast') return <RaceBroadcast viewSwitch={toggle} />;
+  if (view === 'broadcast') return <RaceBroadcast onTimingView={() => choose('timing')} />;
   return (
     <div className="space-y-3">
-      <div className="flex justify-end">{toggle}</div>
+      <div className="flex justify-end">
+        <Button variant="ghost" onClick={() => choose('broadcast')}>
+          Voltar à corrida visual
+        </Button>
+      </div>
       <RaceView />
     </div>
   );

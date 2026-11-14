@@ -49,8 +49,8 @@ const NAV: readonly NavItem[] = [
   { to: '/team', label: 'Equipe', icon: Users, modes: 'driver' },
   { to: '/team', label: 'Gestão', icon: Users, modes: 'executive' },
   { to: '/career', label: 'Carreira', icon: TrendingUp, modes: 'both' },
-  { to: '/finance', label: 'Finanças', icon: Wallet, modes: 'both' },
-  { to: '/family', label: 'Família', icon: Heart, modes: 'both' },
+  // "Vida" reúne finanças, patrocínios, imóveis, investimentos e família.
+  { to: '/life', label: 'Vida', icon: Heart, modes: 'both' },
   { to: '/calendar', label: 'Calendário', icon: CalendarDays, modes: 'both' },
   { to: '/standings', label: 'Classificação', icon: ListOrdered, modes: 'both' },
   { to: '/history', label: 'Histórico', icon: History, modes: 'both' },
@@ -172,7 +172,9 @@ function CareerShell() {
   const wide = useMediaQuery(WIDE_QUERY);
   // A barra de comandos da corrida ocupa o rodapé: sai a navegação inferior e a página ganha espaço no fim.
   const [raceBar, setRaceBar] = useState(false);
-  const chrome = useMemo(() => ({ setRaceBar, wide }), [wide]);
+  const [topSlot, setTopSlot] = useState<HTMLElement | null>(null);
+  const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
+  const chrome = useMemo(() => ({ setRaceBar, wide, topSlot: wide ? topSlot : null, actionSlot: wide ? actionSlot : null }), [wide, topSlot, actionSlot]);
   const [moreOpen, setMoreOpen] = useState(false);
   // O "Mais" entra e sai com transição; fica montado só enquanto aparece.
   const more = usePresence(moreOpen);
@@ -205,7 +207,8 @@ function CareerShell() {
   const mainRoutes = MAIN[wide ? 'wide' : 'tall'][career.mode];
   const primary = items.filter((item) => mainRoutes.includes(item.to));
   const secondary = items.filter((item) => !mainRoutes.includes(item.to));
-  const inSecondary = secondary.some((item) => location.pathname.startsWith(item.to));
+  const inSecondary =
+    secondary.some((item) => location.pathname.startsWith(item.to)) || ['/finance', '/family'].some((route) => location.pathname.startsWith(route));
   const action = primaryAction(career);
   // Na própria tela de destino o botão não precisa aparecer (a não ser quando rola até as decisões).
   const showAction = action !== null && (action.anchor !== undefined || location.pathname !== action.to);
@@ -286,7 +289,13 @@ function CareerShell() {
       <main
         className={cx(
           'mx-auto w-full max-w-[1500px] flex-1 px-4 pt-4 lg:px-6',
-          wide ? (raceBar ? 'pb-28' : 'pb-6') : raceBar ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]' : 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]',
+          wide
+            ? raceBar
+              ? 'pb-[calc(4.75rem+env(safe-area-inset-bottom))]'
+              : 'pb-6'
+            : raceBar
+              ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]'
+              : 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]',
         )}
       >
         {career.status === 'retired' && !career.succession && (
@@ -394,20 +403,26 @@ function CareerShell() {
           <div className="flex min-w-0 flex-1 flex-col">
             {/* Barra superior: onde a carreira está e o botão que a faz avançar, sempre à direita. */}
             <header className="sticky top-0 z-20 flex min-h-12 items-center gap-4 border-b border-ink-700 bg-ink-900/95 pl-4 pr-[calc(0.75rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] backdrop-blur lg:pl-6">
-              <div className="min-w-0 flex-1 leading-none">
-                <div className="truncate font-display text-lg font-semibold uppercase leading-none tracking-wide">
-                  {category.shortName} {career.year}
+              {/* A tela de corrida ocupa este encaixe; enquanto ele está cheio, os números da carreira saem. */}
+              <div ref={setTopSlot} className="peer contents" />
+              <div className="contents peer-[:not(:empty)]:hidden">
+                <div className="min-w-0 flex-1 leading-none">
+                  <div className="truncate font-display text-lg font-semibold uppercase leading-none tracking-wide">
+                    {category.shortName} {career.year}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-ink-400">
+                    {stage}
+                    <span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span>
+                  </div>
                 </div>
-                <div className="mt-1 truncate text-xs text-ink-400">
-                  {stage}
-                  <span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span>
-                </div>
+                <TopStat icon={Wallet} label="Caixa" value={formatMoney(career.finance.cash)} attention={career.finance.cash < 0} />
+                <TopStat icon={Star} label="Reputação" value={Math.floor(career.reputation)} />
+                <TopStat icon={Trophy} label={executive ? 'Equipes' : 'Campeonato'} value={position} />
+                <SaveIndicator />
+                {/* O passo da própria tela (disputar o treino, largar) toma o lugar do atalho padrão. */}
+                <div ref={setActionSlot} className="peer/action contents" />
+                <div className="contents peer-[:not(:empty)]/action:hidden">{showAction && action && <AdvanceButton action={action} />}</div>
               </div>
-              <TopStat icon={Wallet} label="Caixa" value={formatMoney(career.finance.cash)} attention={career.finance.cash < 0} />
-              <TopStat icon={Star} label="Reputação" value={Math.floor(career.reputation)} />
-              <TopStat icon={Trophy} label={executive ? 'Equipes' : 'Campeonato'} value={position} />
-              <SaveIndicator />
-              {showAction && action && <AdvanceButton action={action} />}
             </header>
             {content}
           </div>

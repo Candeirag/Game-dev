@@ -8,6 +8,7 @@ import { RaceResultTable } from './RaceResultTable';
 import { Button, Card, Pill, TableWrap, TeamSwatch, cx, td, th } from './ui';
 import { formatGap, formatLap } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { ScreenAction } from '../layout/ScreenAction';
 import { RaceControlBar } from '../race/RaceControlBar';
 import { counted } from '@/domain/text';
 
@@ -68,7 +69,7 @@ export function RaceResultPanel({ race, result, extra }: { race: RaceSimState; r
   const team = mine ? [] : result.entries.filter((e) => e.teamId === teamId);
   return (
     <div className="space-y-6">
-      <Card title={race.endedEarly ? 'Corrida encerrada com bandeira vermelha' : 'Bandeirada'} className="border-gold-400/30">
+      <Card title={race.endedEarly ? 'Corrida encerrada com bandeira vermelha' : 'Bandeirada'} tone="attention">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="font-display text-3xl font-bold uppercase">
@@ -96,9 +97,9 @@ export function RaceResultPanel({ race, result, extra }: { race: RaceSimState; r
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {extra}
-            <Button variant="primary" className="h-12 px-6 text-base" onClick={completeWeekend}>
+            <ScreenAction onClick={completeWeekend} className="min-h-12 px-6">
               Concluir etapa e salvar
-            </Button>
+            </ScreenAction>
           </div>
         </div>
       </Card>
