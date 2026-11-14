@@ -67,7 +67,8 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
   const race = useGameStore((s) => s.liveRace);
   const timeline = useGameStore((s) => s.raceTimeline);
   const playback = useRacePlayback();
-  const [camera, setCamera] = useState<CameraMode>('overview');
+  // A corrida abre acompanhando o carro do jogador, com o circuito inteiro no minimapa.
+  const [camera, setCamera] = useState<CameraMode>('follow');
   const [focusId, setFocusId] = useState<string | null>(null);
   const [gapMode, setGapMode] = useState<'leader' | 'interval'>('leader');
 
@@ -127,6 +128,9 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
                 ? { tone: 'yellow', label: 'Bandeira amarela' }
                 : { tone: 'green', label: 'Bandeira verde' };
 
+  // A resposta a uma ordem de equipe só é pedida quando a imagem chega ao ponto em que o motor precisa dela.
+  const orderDue = !spectator && race.pendingTeamOrder !== null && time >= timeline.horizon - 1e-6;
+
   if (result && playback.phase === 'finished') {
     return <RaceResultPanel race={race} result={result} extra={<Button onClick={playback.restart}><Icon path={ICONS.restart} />Rever a corrida</Button>} />;
   }
@@ -159,7 +163,7 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={playback.playing ? 'secondary' : 'primary'} onClick={playback.toggle} disabled={playback.phase === 'order'} className="min-w-28">
+          <Button variant={playback.playing ? 'secondary' : 'primary'} onClick={playback.toggle} disabled={orderDue} className="min-w-28">
             <Icon path={playback.playing ? ICONS.pause : ICONS.play} />{playLabel}
           </Button>
           <div className="flex rounded-lg border border-ink-700 p-0.5" role="group" aria-label="Velocidade da corrida">
@@ -167,11 +171,11 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
               <button key={s} type="button" onClick={() => playback.setSpeed(s)} aria-pressed={playback.speed === s} className={cx('rounded-md px-2.5 py-1 text-xs font-semibold tabular', playback.speed === s ? 'bg-apex-500 text-white' : 'text-ink-400 hover:text-ink-100')}>{s}×</button>
             ))}
           </div>
-          <Button onClick={playback.skipLap} disabled={playback.phase === 'order' || playback.phase === 'suspended' || playback.phase === 'lights'} title="Avança até o fim da volta do líder"><Icon path={ICONS.next} />+1 volta</Button>
+          <Button onClick={playback.skipLap} disabled={orderDue || playback.phase === 'suspended' || playback.phase === 'lights'} title="Avança até o fim da volta do líder"><Icon path={ICONS.next} />+1 volta</Button>
         </div>
       </div>
 
-      {!spectator && <TeamOrderDialog race={race} />}
+      {orderDue && <TeamOrderDialog race={race} />}
       {playback.phase === 'suspended' && (
         <div role="status" className="rounded-xl border border-apex-500/60 bg-apex-500/15 px-4 py-3 text-sm font-semibold text-apex-400">
           BANDEIRA VERMELHA · corrida interrompida. Os carros voltam ao grid para uma relargada parada.{rules.pitStops ? ' A troca de pneus é livre: escolha um composto em "Boxes e estratégia", se quiser trocar.' : ''} Toque em Relargar quando estiver pronto.

@@ -232,11 +232,13 @@ Toda gravação valida antes a carreira (integridade e o mesmo schema usado na l
 ## Qualidade
 
 - `npm run typecheck`: TypeScript estrito (`strict`, `noUncheckedIndexedAccess`), sem `any`.
-- `npm test`: 187 testes.
+- `npm test`: 209 testes.
   - `raceEngine.test.ts`: pneus, combustível, clima, estratégia, boxes, safety car, safety car virtual, bandeira vermelha, punições, regra dos dois compostos, ordens de equipe, classificação eliminatória, todas as categorias.
   - `simulation.test.ts`, `championship.test.ts`: modelo de desempenho, sessões, pontuação por categoria, ajustes.
   - `systems.test.ts`: economia, impostos, investimentos, condição, lesões, suspensão, licença, reputação, contratos, negociação, patrocinadores, mercado, eventos e cada tipo de efeito.
   - `career.test.ts`, `multiSeason.test.ts`: temporada completa, virada de ano, e carreiras de 12 a 14 temporadas com verificação de integridade em todo fechamento, determinismo, faixas de equilíbrio e nível dos grids.
   - `save.test.ts`: ida e volta, IndexedDB, adulteração, backup, e os saves reais da Fase 1.
   - `phase3.test.ts`: patrimônio (ações, imóveis, empresas, participações, empréstimos, impostos), família (herança de talento, casamento, divórcio, formação e carreira dos filhos), aposentadoria, gestão (compra, fundação, cargo, demissão, equipe técnica, instalações, caixa), desenvolvimento técnico e regulamento, escalação de pilotos (inclusive filhos), morte e sucessão por todos os caminhos, saves reais da Fase 2, saves no modo dirigente, uma vida de 60 temporadas com várias gerações e o tutorial; e os casos da auditoria: dívida e execução de bens, insolvência do dirigente, empréstimo no meio do ano, revenda de equipes sem lucro, participações, salários da equipe técnica, mortalidade e gravação.
+  - `broadcast.test.ts`: traçado das 34 pistas (fechado, contínuo, sem trechos sobrepostos, sempre igual), perfil de velocidade, pit lane; e a linha do tempo: cada carro cruza a linha na ordem e no tempo do motor em todas as voltas (kart e monopostos, com chuva, paradas, safety car e bandeira vermelha), posição sem saltos, classificação e diferenças no meio da volta, paradas no box da equipe, abandonos, ultrapassagens no instante do evento, safety car, troca de pneus na relargada, e igualdade entre montar ao vivo e montar de uma vez.
+  - `raceScene.test.ts`: reproduz corridas a 60 quadros por segundo e confere a apresentação: nenhum carro salta, sai da largura da pista ou fica sobreposto a outro, em 1× e em 8×; fila única atrás do safety car.
 - `npm run build`: checagem de tipos e build de produção.

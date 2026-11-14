@@ -24,7 +24,7 @@ Abra o endereço mostrado no terminal (normalmente http://localhost:5173).
 | --- | --- |
 | `npm run build` | Checa os tipos e gera o build de produção em `dist/` |
 | `npm run preview` | Serve o build de produção localmente |
-| `npm test` | Roda os 187 testes automatizados (Vitest); leva cerca de 20 segundos |
+| `npm test` | Roda os 209 testes automatizados (Vitest); leva cerca de 25 segundos |
 | `npm run typecheck` | Só a checagem de tipos |
 | `npm run calibrate` | Imprime os relatórios de balanceamento (carreiras, vidas inteiras, equipes, investimentos em 40 temporadas, saúde do mundo em 60 temporadas) e roda os testes de estresse (vidas com políticas variadas e um "macaco" que aperta botões ao acaso); leva cerca de 6 minutos (no Windows: `set CALIBRATE=1 && npx vitest run --reporter=verbose`) |
 | `npm run bench` | Mede o desempenho do motor e dos saves |
@@ -101,7 +101,7 @@ src/
   ui/           telas, componentes e layout
     race/         corrida visual: canvas, pintura dos carros, torre de tempos, controles
   assets/race/  sprites dos carros (monoposto, kart, safety car)
-tests/          testes do motor, da carreira, dos saves, de várias temporadas e de vidas inteiras
+tests/          testes do motor, da carreira, dos saves, da corrida visual, de várias temporadas e de vidas inteiras
 legacy/simdev/  projeto anterior do repositório, preservado e fora do build
 ```
 

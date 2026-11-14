@@ -380,6 +380,30 @@ describe('linha do tempo da corrida', () => {
     expect(checked).toBeGreaterThan(0);
   });
 
+  it('troca livre de pneus na bandeira vermelha aparece já no grid da relargada', () => {
+    const { ctx, states } = fieldRace('f1', 'suzuka', 41, 1);
+    const flagged = states.findIndex((s) => s.restart === 'standing' && s.currentLap > 0);
+    expect(flagged).toBeGreaterThan(0);
+    const before = states[flagged]!;
+    const playerId = before.playerDriverId;
+    expect(before.cars.find((c) => c.driverId === playerId)!.status).toBe('running');
+    const regrouped = before.cars.find((c) => c.driverId === playerId)!.tyre.compound;
+    const chosen = regrouped === 'intermediate' ? 'wet' : 'intermediate';
+    // O jogador escolhe outro composto para a relargada (sem engenheiro automático).
+    const after = stepRaceLap(before, ctx, { mode: 'balanced', pit: chosen });
+    const timeline = appendRaceLap(buildRaceTimeline(states.slice(0, flagged + 1), ctx)!, before, after, ctx);
+    const circuit = circuitForRace(ctx);
+    const restart = timeline.suspensions.at(-1)!.time;
+    const onGrid = standingsAt(timeline, circuit, restart + 0.01).find((r) => r.driverId === playerId)!;
+    expect(onGrid.sample.gridSlot).not.toBeNull();
+    expect(onGrid.compound).toBe(chosen);
+    expect(onGrid.wear).toBe(0);
+    expect(onGrid.pitStops).toBe(before.cars.find((c) => c.driverId === playerId)!.pitStops);
+    // Os outros carros continuam com o composto do reagrupamento.
+    const other = before.cars.find((c) => c.status === 'running' && c.driverId !== playerId)!;
+    expect(standingsAt(timeline, circuit, restart + 0.01).find((r) => r.driverId === other.driverId)!.compound).toBe(other.tyre.compound);
+  });
+
   it('os eventos aparecem conforme a corrida avança, nunca antes', () => {
     const { ctx, states } = fieldRace('f2', 'monza', 23);
     const timeline = buildRaceTimeline(states, ctx)!;

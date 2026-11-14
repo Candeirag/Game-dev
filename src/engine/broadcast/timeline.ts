@@ -322,7 +322,14 @@ export function appendRaceLap(timeline: RaceTimeline, previous: RaceSimState, ne
       fuel: car.fuel,
       mode: car.mode,
     };
-    cars[car.driverId] = { ...base, laps: [...base.laps, record], retired };
+    // Troca livre de pneus numa relargada: o carro já sai do grid com o composto novo,
+    // então o registro da volta anterior (o que a torre mostra até esta volta acabar) é corrigido.
+    const previousLaps = [...base.laps];
+    const before = previousLaps.at(-1);
+    if (before && standing && !d.pitted && !d.retiredNow && car.compoundsUsed.length > d.previous.compoundsUsed.length) {
+      previousLaps[previousLaps.length - 1] = { ...before, compound: car.tyre.compound, wear: 0 };
+    }
+    cars[car.driverId] = { ...base, laps: [...previousLaps, record], retired };
   }
 
   /* ---------- 3. Volta, bandeiras e fim de corrida ---------- */
@@ -521,13 +528,12 @@ function lapAt(car: CarTimeline, t: number): CarLap | null {
 export function sampleCar(timeline: RaceTimeline, circuit: Circuit, car: CarTimeline, t: number): CarSample {
   const toKmh = timeline.lengthMeters * 3.6;
   const lap = lapAt(car, t);
-  const completed = (upTo: number) => {
-    for (let i = car.laps.length - 1; i >= 0; i--) {
-      const l = car.laps[i];
-      if (l && l.t1 <= upTo && !(car.retired && car.retired.lap === l.lap)) return l;
-    }
-    return null;
-  };
+  // Registro da última volta completa: o da volta em andamento, se ela já terminou; senão, o da anterior.
+  // (Depois de uma bandeira vermelha a volta da relargada já começou, e o registro que vale é o do reagrupamento.)
+  const index = lap ? car.laps.indexOf(lap) : -1;
+  const earlier = index > 0 ? (car.laps[index - 1] ?? null) : null;
+  const retiredHere = lap !== null && car.retired !== null && car.retired.lap === lap.lap;
+  const completed = (upTo: number) => (lap && upTo >= lap.t1 && !retiredHere ? lap : earlier);
   const first = lap?.segments[0];
   const gridSlot = !lap ? car.grid - 1 : first && first.kind === 'launch' ? Math.round(-first.s0 / circuit.gridSlot - 0.7) : null;
   const base = { driverId: car.driverId, spinPhase: null, retiredFor: 0, reason: null, inBox: false, gridSlot, inLap: 0 } as const;

@@ -48,7 +48,7 @@ export function createSceneMemory(): SceneMemory {
 }
 
 /** Medidas do carro desenhado, por tipo de veículo. */
-const CAR_SIZE = {
+export const CAR_SIZE = {
   formula: { length: CIRCUIT.CAR_LENGTH, width: CIRCUIT.CAR_WIDTH },
   kart: { length: 15.5, width: 9.6 },
 } as const;
@@ -82,12 +82,15 @@ function textOn(hex: string): string {
   return light > 0.58 ? '#0b0d11' : '#ffffff';
 }
 
-interface Placed {
+export interface Placed {
   row: StandingRow;
   x: number;
   y: number;
   heading: number;
   alpha: number;
+  /** Deslocamento lateral em relação ao eixo da pista e ponto da volta em que o carro é desenhado. */
+  lateral: number;
+  along: number;
 }
 
 interface Formation {
@@ -198,9 +201,66 @@ function formation(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, l
       position = Math.min(position, (shown[j] ?? 0) - length * 1.08 * overlap * Math.max(1, inner));
     }
     shown.push(position);
-    shift.set(row.driverId, Math.max(position - travelled, -length * 14) / circuit.length);
+    shift.set(row.driverId, (position - travelled) / circuit.length);
   });
   return { lateral, shift };
+}
+
+/**
+ * Posição de cada carro no quadro: ponto da pista (da linha do tempo), lado da pista e recuo
+ * (da formação), com as suavizações guardadas em `memory`. `dt` é o tempo real desde o quadro
+ * anterior, em segundos. Sem dependência de canvas, para poder ser testada.
+ */
+export function placeCars(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, dt: number, singleFile: boolean): Placed[] {
+  const size = CAR_SIZE[circuit.style];
+  const targets = formation(rows, circuit, memory, size.length, size.width, singleFile);
+  const ease = 1 - Math.exp(-dt * 7);
+  // O recuo muda mais devagar que o lado: quando o safety car entra, a fila se forma aos poucos.
+  const slide = 1 - Math.exp(-dt * 2.2);
+  const placed: Placed[] = [];
+  for (const row of rows) {
+    const { sample } = row;
+    let alpha = 1;
+    let target: number;
+    let turn = 0;
+    if (sample.state === 'retired') {
+      // O carro sai para fora da pista, fica alguns segundos e é recolhido.
+      const out = hash01(`side|${row.driverId}`) < 0.5 ? 1 : -1;
+      const crashed = sample.reason === 'crash' || sample.reason === 'collision';
+      target = out * (CIRCUIT.TRACK_WIDTH / 2 + 8) * smooth(sample.retiredFor / 3);
+      if (crashed) turn = out * 1.9 * smooth(sample.retiredFor / 1.5);
+      alpha = 1 - smooth((sample.retiredFor - 22) / 8);
+    } else if (sample.inPitLane) {
+      target = pitLateralAt(circuit, sample.s) + (sample.inBox ? Math.sign(circuit.pit.offset) * 2.6 : 0);
+    } else {
+      target = targets.lateral.get(row.driverId) ?? racingLineAt(circuit, sample.s);
+      if (sample.gridSlot !== null) {
+        // Na largada o carro sai da sua posição do grid e converge para a linha de corrida.
+        const blend = 1 - smooth(sample.inLap / 0.035);
+        target = target * (1 - blend) + gridLateral(sample.gridSlot) * blend;
+      }
+    }
+    if (alpha <= 0) {
+      memory.lateral.delete(row.driverId);
+      memory.shift.delete(row.driverId);
+      continue;
+    }
+    const previous = memory.lateral.get(row.driverId);
+    // No pit lane e no grid (parado ou ainda atrás da linha) a posição é exata; na pista, o carro
+    // muda de lado aos poucos.
+    const exact = previous === undefined || sample.inPitLane || sample.state === 'grid' || (sample.gridSlot !== null && sample.inLap <= 0);
+    const lateral = exact ? target : previous + (target - previous) * ease;
+    memory.lateral.set(row.driverId, lateral);
+    // O recuo também entra e sai aos poucos, para o carro nunca dar um salto na pista.
+    const wanted = targets.shift.get(row.driverId) ?? 0;
+    const lastShift = memory.shift.get(row.driverId);
+    const shift = exact || lastShift === undefined ? wanted : lastShift + (wanted - lastShift) * slide;
+    memory.shift.set(row.driverId, shift);
+    if (sample.spinPhase !== null) turn += smooth(sample.spinPhase * 1.6) * Math.PI * 3;
+    const pose = poseAt(circuit, sample.s + shift, lateral);
+    placed.push({ row, x: pose.x, y: pose.y, heading: pose.heading + turn, alpha, lateral, along: sample.s + shift });
+  }
+  return placed;
 }
 
 function drawSafetyCar(g: CanvasRenderingContext2D, time: number, length: number, width: number): void {
@@ -317,49 +377,7 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const wetness = info?.wetness ?? 0;
 
   /* ---------- Carros: posição na pista ---------- */
-  const targets = formation(rows, circuit, memory, size.length, size.width, info?.flag === 'sc' && time < info.end);
-  const ease = 1 - Math.exp(-dt * 7);
-  const placed: Placed[] = [];
-  for (const row of rows) {
-    const { sample } = row;
-    let alpha = 1;
-    let target: number;
-    let turn = 0;
-    if (sample.state === 'retired') {
-      // O carro sai para fora da pista, fica alguns segundos e é recolhido.
-      const out = hash01(`side|${row.driverId}`) < 0.5 ? 1 : -1;
-      const crashed = sample.reason === 'crash' || sample.reason === 'collision';
-      target = out * (CIRCUIT.TRACK_WIDTH / 2 + 8) * smooth(sample.retiredFor / 3);
-      if (crashed) turn = out * 1.9 * smooth(sample.retiredFor / 1.5);
-      alpha = 1 - smooth((sample.retiredFor - 22) / 8);
-    } else if (sample.inPitLane) {
-      target = pitLateralAt(circuit, sample.s) + (sample.inBox ? Math.sign(circuit.pit.offset) * 2.6 : 0);
-    } else {
-      target = targets.lateral.get(row.driverId) ?? racingLineAt(circuit, sample.s);
-      if (sample.gridSlot !== null) {
-        // Na largada o carro sai da sua posição do grid e converge para a linha de corrida.
-        const blend = 1 - smooth(sample.inLap / 0.035);
-        target = target * (1 - blend) + gridLateral(sample.gridSlot) * blend;
-      }
-    }
-    if (alpha <= 0) {
-      memory.lateral.delete(row.driverId);
-      memory.shift.delete(row.driverId);
-      continue;
-    }
-    const previous = memory.lateral.get(row.driverId);
-    // No pit lane e no grid a posição é exata; na pista, o carro muda de lado aos poucos.
-    const exact = previous === undefined || sample.inPitLane || sample.state === 'grid';
-    const lateral = exact ? target : previous + (target - previous) * ease;
-    memory.lateral.set(row.driverId, lateral);
-    // O recuo também entra e sai aos poucos, para o carro nunca dar um salto na pista.
-    const wanted = targets.shift.get(row.driverId) ?? 0;
-    const shift = (memory.shift.get(row.driverId) ?? wanted) + (wanted - (memory.shift.get(row.driverId) ?? wanted)) * ease;
-    memory.shift.set(row.driverId, shift);
-    if (sample.spinPhase !== null) turn += smooth(sample.spinPhase * 1.6) * Math.PI * 3;
-    const pose = poseAt(circuit, sample.s + shift, lateral);
-    placed.push({ row, x: pose.x, y: pose.y, heading: pose.heading + turn, alpha });
-  }
+  const placed = placeCars(rows, circuit, memory, dt, info?.flag === 'sc' && time < info.end);
 
   /* ---------- Câmera ---------- */
   const portrait = height > width * 1.12;

@@ -46,6 +46,8 @@ const TOPICS: { title: string; items: string[] }[] = [
       'Treino livre: acerto, simulação de classificação ou ritmo de corrida. Classificação: segura, equilibrada ou ataque total.',
       'Da Fórmula 4 em diante há estratégia de pneus, paradas, combustível, safety car e chuva que muda no meio da prova.',
       'As decisões pendentes (eventos) precisam ser resolvidas antes de abrir o fim de semana.',
+      'A corrida é mostrada na pista: toque em Largar, controle a transmissão com Pausar, 1× a 8× e +1 volta, e escolha entre a câmera geral e a que acompanha o seu carro. Tocar num piloto da classificação (ou num carro) o destaca.',
+      'Ritmo e pedido de parada valem para a volta seguinte à que o líder está fazendo; a tela mostra qual é. Reiniciar visualização só repete as imagens: o que já aconteceu não muda.',
     ],
   },
   {
