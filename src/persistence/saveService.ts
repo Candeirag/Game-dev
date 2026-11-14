@@ -124,8 +124,14 @@ export function parseEnvelope(raw: unknown): CareerState {
 
 export async function saveCareer(storage: StorageAdapter, slot: SaveSlotId, career: CareerState, now: string): Promise<SaveEnvelope> {
   const envelope = createEnvelope(career, now);
-  // Confere a ida e volta antes de gravar: nunca escreve um save que não conseguiria ler.
-  parseEnvelope(JSON.parse(JSON.stringify(envelope)));
+  // Nunca grava um save que não conseguiria ler: além da integridade (createEnvelope), a carreira
+  // passa pelo mesmo schema usado na leitura. A ida e volta completa por JSON (serializar, ler e
+  // conferir o checksum de novo) dobrava o tempo de cada gravação automática em saves longos e
+  // não detectava nada além disso.
+  const parsed = CareerStateSchema.safeParse(envelope.career);
+  if (!parsed.success) {
+    throw new SaveError('A carreira tem uma estrutura inválida e não foi salva.', parsed.error.issues.slice(0, 10).map((i) => `${i.path.join('.')}: ${i.message}`));
+  }
   const previous = await storage.get(slot);
   const entries: Record<string, unknown> = { [slot]: envelope };
   if (previous !== undefined) entries[backupKey(slot)] = previous;

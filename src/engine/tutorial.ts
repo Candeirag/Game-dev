@@ -37,8 +37,9 @@ export function tutorialSteps(career: CareerState): TutorialStep[] {
   return STEPS.map(({ derived, ...step }) => ({ ...step, done: career.tutorial.done.includes(step.id) || (derived ? derived(career) : false) }));
 }
 
+/** O tutorial acompanha a carreira de piloto; no modo dirigente, ele não aparece. */
 export function tutorialActive(career: CareerState): boolean {
-  return !career.tutorial.dismissed && tutorialSteps(career).some((s) => !s.done);
+  return career.mode === 'driver' && !career.tutorial.dismissed && tutorialSteps(career).some((s) => !s.done);
 }
 
 /** Marca os passos de "conhecer a tela" quando a rota é aberta. */

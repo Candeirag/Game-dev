@@ -289,8 +289,8 @@ export function ownedTeamValue(career: CareerState): number {
   const m = career.management;
   if (!m || m.position !== 'owner') return 0;
   const rank = rankTeams(career.teams).findIndex((t) => t.id === m.teamId);
-  const facilities = (m.facilities.simulator + m.facilities.windTunnel + m.facilities.factory) * TEAM_ECONOMY[m.categoryId].facilityCost * 0.5;
-  return Math.round(teamValue(m.categoryId, Math.max(0, rank)) * (0.7 + m.reputation / 200) + facilities + Math.max(0, m.budget));
+  const facilities = (m.facilities.simulator + m.facilities.windTunnel + m.facilities.factory) * TEAM_ECONOMY[m.categoryId].facilityCost * MANAGEMENT.RESALE_FACILITIES;
+  return Math.round(teamValue(m.categoryId, Math.max(0, rank)) * (MANAGEMENT.RESALE_BASE + m.reputation / 200) + facilities + Math.max(0, m.budget));
 }
 
 /* ------------------------------------------------------------------ */

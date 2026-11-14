@@ -432,6 +432,20 @@ export function closeFamilyYear(career: CareerState, worldResults: Readonly<Reco
   return { family: { ...career.family, partner, children }, notes };
 }
 
+/**
+ * Avaliação dos treinadores sobre o teto de um filho. Só existe depois de
+ * pelo menos um ano de kart (com investimento) ou com a carreira em andamento:
+ * antes disso, ninguém viu a criança pilotar.
+ */
+export function childScoutReport(child: Child): string | null {
+  if (child.stage !== 'racing' && child.kartYears < 0.5) return null;
+  if (child.talent >= 90) return 'Fora de série';
+  if (child.talent >= 86) return 'Muito promissor';
+  if (child.talent >= 82) return 'Promissor';
+  if (child.talent >= 76) return 'Mediano';
+  return 'Limitado';
+}
+
 /** Texto curto sobre a fase de um filho, para a interface e as mensagens. */
 export function childSummary(child: Child): string {
   if (child.stage === 'racing' && child.racing) return `${getCategory(child.racing.categoryId).shortName}, ${child.racing.teamName}`;

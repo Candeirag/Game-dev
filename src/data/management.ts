@@ -123,8 +123,22 @@ export const MANAGEMENT = {
   STARTING_BUDGET: 0.25,
   /** Reserva mínima que o dono deve deixar ao retirar dinheiro: 15% do custo operacional. */
   RESERVE: 0.15,
-  /** Fundar uma equipe custa 60% do valor da mais fraca da categoria. */
-  FOUNDING_COST: 0.6,
+  /**
+   * Fundar uma equipe custa 75% do valor da mais fraca da categoria, mais o
+   * caixa inicial (que sai do bolso do fundador). Com menos que isso, fundar
+   * e revender no ano seguinte dava lucro certo.
+   */
+  FOUNDING_COST: 0.75,
+  /**
+   * Valor de revenda de uma equipe: valor de mercado da posição × (0,55 +
+   * reputação/200), mais um quarto do custo das instalações e o caixa. Fica
+   * abaixo do preço de compra enquanto a equipe não subir na tabela ou ganhar
+   * reputação: comprar para revender em seguida dá prejuízo.
+   */
+  RESALE_BASE: 0.55,
+  RESALE_FACILITIES: 0.25,
+  /** Patrocinador que rompe o contrato por resultado ruim tira 2 pontos da reputação da equipe. */
+  BROKEN_SPONSOR_REPUTATION: 2,
   /** O excedente de desenvolvimento sobre a média do grid perde 30% na virada do ano. */
   CARRY_OVER: 0.7,
   /** Chefe contratado: bônus de 20% do salário por meta cumprida; duas temporadas abaixo da meta, demissão. */

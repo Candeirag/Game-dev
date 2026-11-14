@@ -263,7 +263,9 @@ export function buildTeamListings(career: CareerState): TeamListing[] {
       const team = ranked[rank];
       if (!team || (career.management?.teamId === team.id && career.management.categoryId === category.id)) continue;
       const variation = 0.95 + (hashSeed(career.seed, career.season, 'listing', team.id) % 11) / 100;
-      listings.push({ id: `sale-s${career.season}-${category.id}-${team.id}`, categoryId: category.id, teamId: team.id, teamName: team.name, rank, price: Math.round((teamValue(category.id, rank) * variation) / 1000) * 1000 });
+      // O preço inclui o caixa com que a equipe é entregue.
+      const cashOnHand = TEAM_ECONOMY[category.id].operations * MANAGEMENT.STARTING_BUDGET;
+      listings.push({ id: `sale-s${career.season}-${category.id}-${team.id}`, categoryId: category.id, teamId: team.id, teamName: team.name, rank, price: Math.round((teamValue(category.id, rank) * variation + cashOnHand) / 1000) * 1000 });
     }
   }
   return listings;
@@ -271,7 +273,8 @@ export function buildTeamListings(career: CareerState): TeamListing[] {
 
 /** Custo de fundar uma equipe em uma categoria. */
 export function foundingCost(categoryId: CategoryId): number {
-  return Math.round(TEAM_ECONOMY[categoryId].value[1] * MANAGEMENT.FOUNDING_COST);
+  const economy = TEAM_ECONOMY[categoryId];
+  return Math.round(economy.value[1] * MANAGEMENT.FOUNDING_COST + economy.operations * MANAGEMENT.STARTING_BUDGET);
 }
 
 /**
@@ -403,9 +406,11 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
     notes.push(`A ${team?.name ?? 'equipe'} terminou em ${position}º no campeonato de equipes (meta: ${target}º). Resultado do ano: ${money(profit)}. Prêmio para a próxima temporada: ${money(prize)}.`);
 
     // Patrocinadores: quem viu a equipe muito abaixo do combinado sai; contratos vencidos só renovam com a meta cumprida.
+    let brokenDeals = 0;
     const sponsors = management.sponsors.filter((s) => {
       if (position > s.targetPosition + 2) {
-        notes.push(`${s.name} rompeu o patrocínio: queria a equipe entre as ${s.targetPosition} primeiras.`);
+        notes.push(`${s.name} rompeu o patrocínio: queria a equipe entre as ${s.targetPosition} primeiras. A quebra de contrato arranha a reputação da equipe.`);
+        brokenDeals += 1;
         return false;
       }
       if (s.endSeason <= season && position > s.targetPosition) {
@@ -415,7 +420,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
       return true;
     }).map((s) => (s.endSeason <= season ? { ...s, endSeason: season + 1 } : s));
 
-    const teamReputation = Math.round(clamp(management.reputation + (92 - (position - 1) * 8 - management.reputation) * MANAGEMENT.REPUTATION_SPEED * (0.8 + principalRating(career) / 250)));
+    const teamReputation = Math.round(clamp(management.reputation + (92 - (position - 1) * 8 - management.reputation) * MANAGEMENT.REPUTATION_SPEED * (0.8 + principalRating(career) / 250) - brokenDeals * MANAGEMENT.BROKEN_SPONSOR_REPUTATION));
     let budget = management.budget;
     // Advertência: ficar duas ou mais posições abaixo da meta, ou fechar o ano no vermelho.
     let strikes = met && budget >= 0 ? 0 : management.strikes + (position > target + 1 || budget < 0 ? 1 : 0);

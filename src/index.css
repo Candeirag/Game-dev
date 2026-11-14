@@ -71,3 +71,13 @@
 .animate-flash {
   animation: flash-in 1.2s ease-out;
 }
+
+/*
+ * Um item de grid ou de coluna flex tem largura mínima "auto": conteúdo largo
+ * (uma tabela, uma linha comprida) empurra o item para fora da tela no
+ * celular. Com largura mínima zero, quem rola é a tabela, dentro do cartão.
+ */
+.grid > *,
+main > * {
+  min-width: 0;
+}

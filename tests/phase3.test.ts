@@ -1078,6 +1078,48 @@ describe('auditoria: dívida, insolvência e brechas fechadas', () => {
     expect(Math.max(...positions)).toBeLessThanOrEqual(6);
   });
 
+  it('fundar ou comprar uma equipe para revender em seguida não dá lucro, em nenhuma categoria', () => {
+    for (const categoryId of ['kart-regional', 'kart-national', 'kart-international', 'f4', 'f3', 'f2', 'f1'] as const) {
+      const retired = retiredCareer(113, 500_000_000, 60);
+      const founded = engine.startExecutiveSeason(retired, { kind: 'found', categoryId, name: 'Revenda Rápida', color: '#123456' });
+      expect(engine.ownedTeamValue(founded), `fundar na ${categoryId}`).toBeLessThan(engine.foundingCost(categoryId));
+      for (const rank of [5, 8, 9] as const) {
+        const listing = retired.executiveOffseason!.listings.find((l) => l.categoryId === categoryId && l.rank === rank)!;
+        const bought = engine.startExecutiveSeason(retired, { kind: 'buy', listingId: listing.id });
+        expect(engine.ownedTeamValue(bought), `comprar a ${rank + 1}ª da ${categoryId}`).toBeLessThan(listing.price);
+      }
+    }
+  });
+
+  it('patrocinador que rompe o contrato arranha a reputação da equipe', () => {
+    const c = ownerCareer('f3', 8, 115);
+    const m = c.management!;
+    // Mesma temporada, com e sem um patrocinador que exigia o título.
+    const demanding = { ...m, sponsors: m.sponsors.map((s, i) => (i === 0 ? { ...s, targetPosition: 1 } : s)) };
+    const calm = playExecutiveSeason(c);
+    const broken = playExecutiveSeason({ ...c, management: demanding });
+    expect(broken.management!.sponsors).toHaveLength(calm.management!.sponsors.length - 1);
+    expect(broken.management!.reputation).toBe(calm.management!.reputation - MANAGEMENT.BROKEN_SPONSOR_REPUTATION);
+  });
+
+  it('gravação recusa uma carreira com estrutura inválida, sem precisar da ida e volta por JSON', async () => {
+    const c = newCareer(117);
+    const storage = new MemoryStorage();
+    await expect(saveCareer(storage, 'slot1', { ...c, reputation: Number.NaN }, NOW)).rejects.toThrow(/estrutura inválida|inconsistente/);
+    await expect(saveCareer(storage, 'slot1', { ...c, finance: { ...c.finance, lifestyle: 'nababo' as never } }, NOW)).rejects.toThrow(/estrutura inválida/);
+    expect(await storage.get('slot1')).toBeUndefined();
+  });
+
+  it('avaliação dos treinadores só aparece depois que o filho pilota; o tutorial some no modo dirigente', () => {
+    const c = careerWithPartner(119);
+    const kid = childOf(c, 3, { talent: 91 });
+    expect(engine.childScoutReport(kid)).toBeNull();
+    expect(engine.childScoutReport({ ...kid, stage: 'karting', kartYears: 1 })).toBe('Fora de série');
+    expect(engine.childScoutReport({ ...kid, stage: 'karting', kartYears: 1, talent: 70 })).toBe('Limitado');
+    expect(engine.tutorialActive(newCareer(119))).toBe(true);
+    expect(engine.tutorialActive(engine.retireFromDriving(resolvePending(playSeason(newCareer(119)))))).toBe(false);
+  });
+
   it('mortalidade e idade: ninguém passa dos 100 anos, e quem largou as pistas não guarda dados de piloto', () => {
     expect(engine.mortalityRisk(99)).toBe(0.3);
     expect(engine.mortalityRisk(100)).toBe(1);

@@ -3,7 +3,7 @@ import { SUPPORT_LEVELS, type Child, type SupportLevel } from '@/domain/schemas'
 import { CHILD_STAGE_LABELS, SUPPORT_LABELS } from '@/domain/labels';
 import { getCategory } from '@/data/categories';
 import { FAMILY, PARTNER_BACKGROUND_INFO, getTrait } from '@/data/family';
-import { childSummary, familyAnnualCost, fullName, mortalityRisk, overallRating, partnerMoraleEffect } from '@/engine';
+import { childScoutReport, childSummary, familyAnnualCost, fullName, mortalityRisk, overallRating, partnerMoraleEffect } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, EmptyState, Meter, PageHeader, Pill, Stat, TableWrap, cx, td, th } from '../components/ui';
 import { formatMoney } from '../format';
@@ -35,6 +35,7 @@ function ChildCard({ child }: { child: Child }) {
         <div>
           <div className="font-display text-xl font-bold uppercase leading-tight">{fullName(child)}</div>
           <div className="text-sm text-ink-400">{child.age} anos · {childSummary(child)}</div>
+          {child.stage !== 'other' && <div className="text-sm text-ink-300">Avaliação dos treinadores: <b className="text-ink-100">{childScoutReport(child) ?? 'ainda não avaliado'}</b></div>}
         </div>
         <Pill tone={child.stage === 'racing' ? 'good' : child.stage === 'other' ? 'neutral' : 'warn'}>{CHILD_STAGE_LABELS[child.stage]}</Pill>
       </div>
