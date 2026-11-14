@@ -158,3 +158,41 @@ export function TableWrap({ children }: { children: ReactNode }) {
 
 export const th = 'px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-400';
 export const td = 'px-2 py-2 text-sm';
+
+/** Medidor de 0 a 100 com rótulo, usado para condição, confiança, interesse e satisfação. */
+export function Meter({ label, value, hint, tone }: { label: ReactNode; value: number; hint?: ReactNode; tone?: 'auto' | 'neutral' }) {
+  const v = Math.max(0, Math.min(100, value));
+  const color = tone === 'neutral' ? 'bg-sky-400' : v >= 65 ? 'bg-go-400' : v >= 40 ? 'bg-gold-400' : 'bg-apex-500';
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+        <span className="text-ink-300">{label}</span>
+        <span className="font-semibold tabular">{Math.round(v)}</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
+        <div className={cx('h-full rounded-full', color)} style={{ width: `${v}%` }} />
+      </div>
+      {hint && <div className="mt-1 text-xs text-ink-400">{hint}</div>}
+    </div>
+  );
+}
+
+export function Pill({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'good' | 'warn' | 'bad' | 'accent' }) {
+  const tones = {
+    neutral: 'bg-ink-800 text-ink-300 border-ink-700',
+    good: 'bg-go-400/10 text-go-400 border-go-400/30',
+    warn: 'bg-gold-400/10 text-gold-400 border-gold-400/30',
+    bad: 'bg-apex-600/15 text-apex-400 border-apex-600/40',
+    accent: 'bg-apex-500 text-white border-apex-500',
+  };
+  return <span className={cx('inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', tones[tone])}>{children}</span>;
+}
+
+export function Check({ met, children }: { met: boolean; children: ReactNode }) {
+  return (
+    <li className="flex items-start gap-2 text-sm">
+      <span aria-hidden className={cx('mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-bold', met ? 'bg-go-400/20 text-go-400' : 'bg-apex-600/20 text-apex-400')}>{met ? '✓' : '✕'}</span>
+      <span className={met ? 'text-ink-300' : 'text-ink-100'}>{children}</span>
+    </li>
+  );
+}

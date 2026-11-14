@@ -1,14 +1,14 @@
-import { getTrack } from '@/data/tracks';
+import { getTrack, raceLaps } from '@/data/tracks';
 import { fullName } from '@/engine';
 import { Card, PageHeader, PositionBadge, WeatherBadge, cx } from '../components/ui';
-import { describeOvertaking, describePower, describeTyreWear, formatDate } from '../format';
+import { describeOvertaking, describePower, describeTyreWear, formatDate, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
 export function CalendarScreen() {
-  const { career, player, drivers } = useCareerView();
+  const { career, player, drivers, category } = useCareerView();
   return (
     <div>
-      <PageHeader eyebrow={`Temporada ${career.year}`} title="Calendário">
+      <PageHeader eyebrow={`${category.name} · ${career.year}`} title="Calendário">
         <span className="text-sm text-ink-400">{career.rounds.length} de {career.calendar.length} etapas disputadas</span>
       </PageHeader>
       <div className="grid gap-3">
@@ -29,7 +29,7 @@ export function CalendarScreen() {
                     {isCurrent && <span className="rounded bg-apex-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">Em andamento</span>}
                     {isNext && <span className="rounded bg-apex-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-apex-400">Próxima</span>}
                   </div>
-                  <div className="text-sm text-ink-400">{track.city}, {track.state} · {formatDate(event.date)} · {track.laps} voltas · {track.lengthMeters} m</div>
+                  <div className="text-sm text-ink-400">{trackLocation(track)} · {formatDate(event.date)} · {raceLaps(track, category)} voltas · {track.lengthMeters} m</div>
                   <div className="mt-1 text-xs text-ink-500">Ultrapassagem {describeOvertaking(track.overtakingDifficulty)} · Desgaste {describeTyreWear(track.tyreWear)} · Traçado que {describePower(track.powerSensitivity)}</div>
                 </div>
                 <div className="text-sm">
@@ -48,6 +48,8 @@ export function CalendarScreen() {
                         <div className="text-xs text-ink-400">Vencedor: {winner ? fullName(winner) : '-'}</div>
                       </div>
                     </>
+                  ) : record ? (
+                    <span className="text-xs text-ink-400">Não disputou · Vencedor: {winner ? fullName(winner) : '-'}</span>
                   ) : (
                     <span className="text-ink-500">-</span>
                   )}

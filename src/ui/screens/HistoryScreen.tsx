@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react';
 import type { RoundRecord } from '@/domain/schemas';
 import { DNF_LABELS } from '@/domain/labels';
+import { getCategory } from '@/data/categories';
 import { getTrack } from '@/data/tracks';
-import { computeCareerStats, driverRoundResults } from '@/engine';
+import { computeCareerStats, driverRoundResults, fullName } from '@/engine';
 import { RaceResultTable } from '../components/RaceResultTable';
 import { Card, EmptyState, PageHeader, PositionBadge, Stat, Tabs, WeatherBadge, cx } from '../components/ui';
 import { formatDate } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
 export function HistoryScreen() {
-  const { career, player, teams } = useCareerView();
+  const { career, player } = useCareerView();
   const seasons = useMemo(
     () => [
-      ...career.history.map((h) => ({ season: h.season, year: h.year, rounds: h.rounds, names: h.driverNames, summary: h })),
-      { season: career.season, year: career.year, rounds: career.rounds, names: undefined, summary: undefined },
+      ...career.history.map((h) => ({ season: h.season, year: h.year, categoryId: h.categoryId, rounds: h.rounds, names: h.driverNames, colors: h.teamColors, summary: h })),
+      { season: career.season, year: career.year, categoryId: career.categoryId, rounds: career.rounds, names: undefined, colors: undefined, summary: undefined },
     ],
     [career],
   );
@@ -27,7 +28,7 @@ export function HistoryScreen() {
     <div className="space-y-6">
       <PageHeader eyebrow="Carreira" title="Histórico de resultados">
         {seasons.length > 1 && (
-          <Tabs value={selected} onChange={(v) => { setSelected(v); setOpen(null); }} options={seasons.map((s) => ({ value: String(s.season), label: String(s.year) }))} />
+          <Tabs value={selected} onChange={(v) => { setSelected(v); setOpen(null); }} options={seasons.map((s) => ({ value: String(s.season), label: `${s.year} · ${getCategory(s.categoryId).shortName}` }))} />
         )}
       </PageHeader>
 
@@ -50,14 +51,14 @@ export function HistoryScreen() {
       </Card>
 
       {current.summary && (
-        <Card title={`Temporada ${current.year}`}>
+        <Card title={`Temporada ${current.year} · ${getCategory(current.categoryId).name}`}>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Campeão" value={<span className="text-lg">{current.summary.driverNames[current.summary.championDriverId] ?? '-'}</span>} />
             <Stat label="Sua posição" value={`${current.summary.playerPosition}º`} accent />
             <Stat label="Seus pontos" value={current.summary.playerPoints} />
             <Stat label="Meta" value={`${current.summary.objectiveTarget}º`} hint={current.summary.objectiveMet ? 'Cumprida' : 'Não cumprida'} />
           </div>
-          <div className="mt-2 text-sm text-ink-400">Equipe: {teams[current.summary.playerTeamId]?.name ?? current.summary.playerTeamId}</div>
+          <div className="mt-2 text-sm text-ink-400">Equipe: {current.summary.playerTeamName}</div>
         </Card>
       )}
 
@@ -66,7 +67,7 @@ export function HistoryScreen() {
       ) : (
         <div className="space-y-3">
           {[...current.rounds].reverse().map((record) => (
-            <RoundRow key={record.round} record={record} names={current.names} expanded={open === record.round} onToggle={() => setOpen(open === record.round ? null : record.round)} />
+            <RoundRow key={record.round} record={record} names={current.names} colors={current.colors} expanded={open === record.round} onToggle={() => setOpen(open === record.round ? null : record.round)} />
           ))}
         </div>
       )}
@@ -74,8 +75,8 @@ export function HistoryScreen() {
   );
 }
 
-function RoundRow({ record, names, expanded, onToggle }: { record: RoundRecord; names?: Record<string, string>; expanded: boolean; onToggle: () => void }) {
-  const { player } = useCareerView();
+function RoundRow({ record, names, colors, expanded, onToggle }: { record: RoundRecord; names?: Record<string, string>; colors?: Record<string, string>; expanded: boolean; onToggle: () => void }) {
+  const { player, drivers } = useCareerView();
   const mine = record.race.entries.find((e) => e.driverId === player.id);
   const winner = record.race.entries[0];
   const track = getTrack(record.trackId);
@@ -86,8 +87,8 @@ function RoundRow({ record, names, expanded, onToggle }: { record: RoundRecord; 
         <div className="min-w-0 flex-1">
           <div className="font-semibold">Etapa {record.round} · {track.name}</div>
           <div className="text-xs text-ink-400">
-            {formatDate(record.date)} · Largada {mine?.grid}º · {mine?.status === 'dnf' ? `Abandono (${DNF_LABELS[mine.dnfReason ?? 'crash']})` : `${mine?.points ?? 0} pts`}
-            {winner && ` · Vencedor: ${names?.[winner.driverId] ?? winner.driverId}`}
+            {formatDate(record.date)} · {mine ? `Largada ${mine.grid}º · ${mine.status === 'dnf' ? `Abandono (${DNF_LABELS[mine.dnfReason ?? 'crash']})` : `${mine.points} pts`}` : 'Não disputou'}
+            {winner && ` · Vencedor: ${names?.[winner.driverId] ?? (drivers[winner.driverId] ? fullName(drivers[winner.driverId]!) : winner.driverId)}`}
           </div>
         </div>
         <WeatherBadge weather={record.race.weather} compact />
@@ -95,7 +96,7 @@ function RoundRow({ record, names, expanded, onToggle }: { record: RoundRecord; 
       </button>
       {expanded && (
         <div className="border-t border-ink-800 px-4 pb-2">
-          <RaceResultTable result={record.race} names={names} />
+          <RaceResultTable result={record.race} names={names} colors={colors} />
         </div>
       )}
     </Card>

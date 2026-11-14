@@ -4,7 +4,7 @@ import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
 import { computeCareerStats, fullName, overallRating } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { Card, PageHeader, RatingBar, Stat, cx } from '../components/ui';
+import { Card, Meter, PageHeader, Pill, RatingBar, Stat, cx } from '../components/ui';
 import { formatRating, signed } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
@@ -53,6 +53,20 @@ export function DriverScreen() {
               <Stat label="Reputação" value={career.reputation} hint="De 0 a 100" />
             </div>
             <p className="mt-4 text-xs text-ink-400">A nota geral é uma média ponderada dos atributos, com a velocidade pesando mais. O potencial limita até onde o treino leva cada atributo.</p>
+          </Card>
+
+          <Card title="Condição" action={player.injury ? <Pill tone="bad">Lesionado</Pill> : undefined}>
+            <div className="space-y-4">
+              <Meter label="Fase" value={player.condition.form} hint="Média dos resultados recentes em relação à meta. Vale até ±0,12% no tempo de volta." />
+              <Meter label="Confiança" value={player.condition.confidence} hint="Muda a chance de erro (de −25% a +25%) e o sucesso nas disputas de posição." />
+              <Meter label="Moral" value={player.condition.morale} hint="Muda a regularidade das voltas e o rendimento do treino (de −20% a +20%)." />
+            </div>
+            {player.injury && (
+              <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-200">
+                {player.injury.description}: {player.injury.severity === 'serious' ? 'você não pode correr' : 'você pode correr, 0,3% mais lento e com 30% mais erros'}. Recuperação em {player.injury.roundsRemaining} etapa(s).
+              </p>
+            )}
+            {player.age >= 31 && <p className="mt-4 text-xs text-gold-400">Aos {player.age} anos, a velocidade, a concentração e a ultrapassagem caem um pouco a cada temporada.</p>}
           </Card>
 
           <Card title="Estatísticas de carreira">

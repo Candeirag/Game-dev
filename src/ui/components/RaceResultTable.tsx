@@ -5,11 +5,16 @@ import { PositionBadge, TableWrap, TeamSwatch, cx, td, th } from './ui';
 import { formatLap, formatRaceTime } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
-/** Nomes congelados (temporadas arquivadas) têm prioridade sobre os pilotos atuais. */
-export function RaceResultTable({ result, names }: { result: RaceResult; names?: Record<string, string> }) {
+/**
+ * Resultado oficial de uma corrida. Em temporadas arquivadas, nomes e cores
+ * vêm congelados do arquivo (`names`, `colors`), porque pilotos e equipes mudam.
+ */
+export function RaceResultTable({ result, names, colors }: { result: RaceResult; names?: Record<string, string>; colors?: Record<string, string> }) {
   const { player, drivers, teams } = useCareerView();
   const winnerTime = result.entries[0]?.totalTime ?? 0;
   const nameOf = (id: string) => names?.[id] ?? (drivers[id] ? fullName(drivers[id]!) : id);
+  const colorOf = (teamId: string) => (colors?.[teamId] ? { color: colors[teamId]! } : teams[teamId]);
+  const anyStops = result.entries.some((e) => e.pitStops > 0);
   return (
     <TableWrap>
       <table className="w-full">
@@ -20,6 +25,7 @@ export function RaceResultTable({ result, names }: { result: RaceResult; names?:
             <th className={cx(th, 'hidden text-center sm:table-cell')}>Grid</th>
             <th className={cx(th, 'text-right')}>Tempo</th>
             <th className={cx(th, 'hidden text-right md:table-cell')}>Melhor volta</th>
+            {anyStops && <th className={cx(th, 'hidden text-center md:table-cell')}>Paradas</th>}
             <th className={cx(th, 'hidden text-center md:table-cell')}>Ultrap.</th>
             <th className={cx(th, 'text-right')}>Pts</th>
           </tr>
@@ -29,11 +35,13 @@ export function RaceResultTable({ result, names }: { result: RaceResult; names?:
             <tr key={e.driverId} className={cx('border-t border-ink-800', e.driverId === player.id && 'bg-apex-500/10')}>
               <td className={td}><PositionBadge position={e.position} dnf={e.status === 'dnf'} /></td>
               <td className={td}>
-                <span className="flex items-center gap-2">
-                  <TeamSwatch team={teams[e.teamId]} />
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <TeamSwatch team={colorOf(e.teamId)} />
                   <span className={cx(e.driverId === player.id && 'font-semibold')}>{nameOf(e.driverId)}</span>
                   {result.fastestLap?.driverId === e.driverId && <span title="Volta mais rápida" className="rounded bg-purple-500/20 px-1 text-[10px] font-bold text-purple-300">VMR</span>}
                   {e.grid === 1 && <span title="Pole position" className="rounded bg-ink-700 px-1 text-[10px] font-bold text-ink-300">POLE</span>}
+                  {e.penaltySeconds > 0 && <span title="Punição em tempo" className="rounded bg-gold-400/20 px-1 text-[10px] font-bold text-gold-400">+{e.penaltySeconds}s</span>}
+                  {e.injured && <span title="Lesionado no acidente" className="rounded bg-rose-400/20 px-1 text-[10px] font-bold text-rose-300">LESÃO</span>}
                 </span>
               </td>
               <td className={cx(td, 'hidden text-center tabular text-ink-400 sm:table-cell')}>
@@ -54,12 +62,18 @@ export function RaceResultTable({ result, names }: { result: RaceResult; names?:
                 )}
               </td>
               <td className={cx(td, 'hidden text-right tabular text-ink-300 md:table-cell')}>{formatLap(e.bestLap)}</td>
+              {anyStops && <td className={cx(td, 'hidden text-center tabular text-ink-400 md:table-cell')}>{e.pitStops}</td>}
               <td className={cx(td, 'hidden text-center tabular text-ink-400 md:table-cell')}>{e.overtakes}</td>
               <td className={cx(td, 'text-right font-semibold tabular')}>{e.points || ''}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      {(result.safetyCars > 0 || result.virtualSafetyCars > 0 || result.redFlags > 0) && (
+        <p className="border-t border-ink-800 py-2 text-xs text-ink-400">
+          Neutralizações: {result.safetyCars} safety car, {result.virtualSafetyCars} safety car virtual, {result.redFlags} bandeira(s) vermelha(s).
+        </p>
+      )}
     </TableWrap>
   );
 }

@@ -1,15 +1,17 @@
 import { NavLink, Navigate, Outlet } from 'react-router-dom';
-import { CHAMPIONSHIP_NAME } from '@/data/rules';
 import { getNextEvent, isSeasonComplete, trackName } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { cx } from '../components/ui';
-import { formatDateTime } from '../format';
+import { formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
 const NAV = [
   { to: '/dashboard', label: 'Painel', icon: '◧' },
   { to: '/weekend', label: 'Fim de semana', icon: '⚑' },
   { to: '/driver', label: 'Piloto', icon: '◉' },
+  { to: '/team', label: 'Equipe', icon: '⛭' },
+  { to: '/career', label: 'Carreira', icon: '▲' },
+  { to: '/finance', label: 'Finanças', icon: '€' },
   { to: '/calendar', label: 'Calendário', icon: '▦' },
   { to: '/standings', label: 'Classificação', icon: '≡' },
   { to: '/history', label: 'Histórico', icon: '↺' },
@@ -31,7 +33,9 @@ function SaveIndicator() {
 }
 
 function CareerShell() {
-  const { career, player, team } = useCareerView();
+  const { career, player, team, category } = useCareerView();
+  const pending = career.pendingEvents.length;
+  const offers = career.offseason !== null;
   const notice = useGameStore((s) => s.notice);
   const dismissNotice = useGameStore((s) => s.dismissNotice);
   const next = getNextEvent(career);
@@ -67,6 +71,8 @@ function CareerShell() {
             >
               <span aria-hidden className="w-4 text-center text-base">{item.icon}</span>
               {item.label}
+              {item.to === '/dashboard' && pending > 0 && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-gold-400 px-1 text-[11px] font-bold text-ink-950">{pending}</span>}
+              {item.to === '/career' && offers && <span className="ml-auto h-2 w-2 rounded-full bg-apex-500" aria-label="Há propostas" />}
             </NavLink>
           ))}
         </nav>
@@ -81,11 +87,13 @@ function CareerShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center justify-between gap-2 border-b border-ink-800 bg-ink-950/80 px-4 py-2.5 text-xs backdrop-blur sm:px-8">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-300">
-            <span className="font-semibold text-ink-100">{CHAMPIONSHIP_NAME} {career.year}</span>
+            <span className="font-semibold text-ink-100">{category.name} {career.year}</span>
             <span className="text-ink-600">|</span>
             <span>Temporada {career.season}</span>
             <span className="text-ink-600">|</span>
-            <span>{status}</span>
+            <span>{career.status === 'retired' ? 'Carreira encerrada' : status}</span>
+            <span className="text-ink-600">|</span>
+            <span className={career.finance.cash < 0 ? 'text-apex-400' : ''}>Caixa {formatMoney(career.finance.cash)}</span>
           </div>
           <SaveIndicator />
         </header>

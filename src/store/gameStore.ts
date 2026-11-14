@@ -4,9 +4,9 @@
  * regra de jogo vive aqui nem nos componentes React.
  */
 import { create } from 'zustand';
-import type { CareerState, PracticeProgram, QualifyingApproach, RaceMode, TrainingFocus } from '@/domain/schemas';
+import type { CareerState, PracticeProgram, QualifyingApproach, RaceMode, TrainingFocus, TrainingIntensity, TyreCompound } from '@/domain/schemas';
 import * as engine from '@/engine';
-import type { NewCareerInput, RaceSimState } from '@/engine';
+import type { InvestmentProduct, NegotiationDemand, NewCareerInput, RaceSimState, StrategyPlan } from '@/engine';
 import { createDefaultStorage, type StorageAdapter } from '@/persistence/storage';
 import {
   SaveError,
@@ -31,9 +31,17 @@ export interface GameStore {
   career: CareerState | null;
   liveRace: RaceSimState | null;
   raceMode: RaceMode;
+  /** Parada pedida pelo jogador para a próxima volta. */
+  pitRequest: TyreCompound | null;
+  /** Pular a parada planejada para a próxima volta. */
+  skipPlannedStop: boolean;
+  /** Engenheiro automático: decide paradas e protege o combustível. */
+  autoEngineer: boolean;
   saveStatus: SaveStatus;
   slots: SlotInfo[];
   notice: string | null;
+  /** Desfecho do último evento resolvido, para mostrar ao jogador. */
+  lastOutcome: { title: string; text: string } | null;
 
   refreshSlots(): Promise<void>;
   newCareer(input: NewCareerInput): Promise<void>;
@@ -44,17 +52,30 @@ export interface GameStore {
   removeSlot(slot: SaveSlotId): Promise<void>;
   exitToMenu(): void;
   dismissNotice(): void;
+  dismissOutcome(): void;
 
   setTrainingFocus(focus: TrainingFocus): void;
-  startWeekend(): void;
+  setTrainingIntensity(intensity: TrainingIntensity): void;
+  invest(product: InvestmentProduct, amount: number): void;
+  resolveEvent(eventId: string, choiceId: string): void;
+
+  startWeekend(options?: { rest?: boolean }): void;
   runPractice(program: PracticeProgram): void;
   runQualifying(approach: QualifyingApproach): void;
-  beginRace(): void;
+  simulateAbsentWeekend(): void;
+  beginRace(plan?: StrategyPlan): void;
   setRaceMode(mode: RaceMode): void;
-  stepRace(): void;
+  requestPit(compound: TyreCompound | null): void;
+  setSkipPlannedStop(skip: boolean): void;
+  setAutoEngineer(auto: boolean): void;
+  /** Avança uma volta. `teamOrder` responde a uma ordem de equipe pendente. */
+  stepRace(teamOrder?: 'obey' | 'ignore'): void;
   simulateRestOfRace(): void;
   completeWeekend(): void;
-  startNextSeason(teamId: string): void;
+
+  negotiateOffer(offerId: string, demand: NegotiationDemand): void;
+  startNextSeason(offerId: string): void;
+  retire(): void;
 }
 
 const now = () => new Date().toISOString();
@@ -106,14 +127,17 @@ export const useGameStore = create<GameStore>((set, get) => {
     }
   }
 
+  const RACE_RESET = { liveRace: null, raceMode: 'balanced' as RaceMode, pitRequest: null, skipPlannedStop: false };
+
   return {
     storage: createDefaultStorage(),
     career: null,
-    liveRace: null,
-    raceMode: 'balanced',
+    ...RACE_RESET,
+    autoEngineer: false,
     saveStatus: { kind: 'idle' },
     slots: [],
     notice: null,
+    lastOutcome: null,
 
     async refreshSlots() {
       set({ slots: await listSaves(get().storage) });
@@ -121,7 +145,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     async newCareer(input) {
       const career = engine.createCareer(input, newSeed(), now());
-      set({ career, liveRace: null, raceMode: 'balanced', notice: null });
+      set({ career, ...RACE_RESET, notice: null, lastOutcome: null });
       await autosave(career);
     },
 
@@ -130,8 +154,8 @@ export const useGameStore = create<GameStore>((set, get) => {
         const { career, recoveredFromBackup } = await loadCareer(get().storage, slot);
         set({
           career,
-          liveRace: null,
-          raceMode: 'balanced',
+          ...RACE_RESET,
+          lastOutcome: null,
           saveStatus: { kind: 'idle' },
           notice: recoveredFromBackup ? 'O save principal estava danificado; a cópia de segurança foi carregada.' : null,
         });
@@ -143,7 +167,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     async importJson(json) {
       const career = importCareer(json);
-      set({ career, liveRace: null, raceMode: 'balanced', notice: 'Carreira importada com sucesso.' });
+      set({ career, ...RACE_RESET, lastOutcome: null, notice: 'Carreira importada com sucesso.' });
       await autosave(career);
     },
 
@@ -171,7 +195,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     exitToMenu() {
-      set({ career: null, liveRace: null, notice: null, saveStatus: { kind: 'idle' } });
+      set({ career: null, ...RACE_RESET, notice: null, lastOutcome: null, saveStatus: { kind: 'idle' } });
       void get().refreshSlots();
     },
 
@@ -179,12 +203,37 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ notice: null });
     },
 
+    dismissOutcome() {
+      set({ lastOutcome: null });
+    },
+
     setTrainingFocus(focus) {
       apply((c) => engine.setTrainingFocus(c, focus), { save: true });
     },
 
-    startWeekend() {
-      apply(engine.startWeekend, { save: true });
+    setTrainingIntensity(intensity) {
+      apply((c) => engine.setTrainingIntensity(c, intensity), { save: true });
+    },
+
+    invest(product, amount) {
+      apply((c) => engine.invest(c, { product, amount }), { save: true });
+    },
+
+    resolveEvent(eventId, choiceId) {
+      const career = get().career;
+      const event = career?.pendingEvents.find((e) => e.id === eventId);
+      if (!career || !event) return;
+      try {
+        const result = engine.resolveEvent(career, eventId, choiceId);
+        set({ career: result.career, lastOutcome: { title: event.title, text: result.outcome }, notice: null });
+        void autosave(result.career);
+      } catch (error) {
+        set({ notice: errorMessage(error) });
+      }
+    },
+
+    startWeekend(options) {
+      apply((c) => engine.startWeekend(c, options), { save: true });
     },
 
     runPractice(program) {
@@ -195,11 +244,15 @@ export const useGameStore = create<GameStore>((set, get) => {
       apply((c) => engine.runQualifying(c, approach), { save: true });
     },
 
-    beginRace() {
+    simulateAbsentWeekend() {
+      apply(engine.simulateAbsentWeekend, { save: true });
+    },
+
+    beginRace(plan) {
       const career = get().career;
       if (!career) return;
       try {
-        set({ liveRace: engine.createWeekendRace(career), raceMode: 'balanced', notice: null });
+        set({ ...RACE_RESET, liveRace: engine.createWeekendRace(career, plan), notice: null });
       } catch (error) {
         set({ notice: errorMessage(error) });
       }
@@ -209,27 +262,64 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ raceMode: mode });
     },
 
-    stepRace() {
-      const { career, liveRace, raceMode } = get();
+    requestPit(compound) {
+      set({ pitRequest: compound });
+    },
+
+    setSkipPlannedStop(skip) {
+      set({ skipPlannedStop: skip });
+    },
+
+    setAutoEngineer(auto) {
+      set({ autoEngineer: auto });
+    },
+
+    stepRace(teamOrder) {
+      const { career, liveRace, raceMode, pitRequest, skipPlannedStop, autoEngineer } = get();
       if (!career || !liveRace || engine.isRaceFinished(liveRace)) return;
-      set({ liveRace: engine.stepRaceLap(liveRace, engine.buildRaceContext(career), raceMode) });
+      // Uma ordem de equipe pendente exige resposta antes da próxima volta.
+      if (liveRace.pendingTeamOrder && !teamOrder) return;
+      const next = engine.stepRaceLap(liveRace, engine.buildRaceContext(career), {
+        mode: raceMode,
+        pit: pitRequest,
+        skipPlannedStop,
+        auto: autoEngineer,
+        ...(teamOrder ? { teamOrder } : {}),
+      });
+      set({ liveRace: next, pitRequest: null, skipPlannedStop: false });
     },
 
     simulateRestOfRace() {
       const { career, liveRace, raceMode } = get();
       if (!career || !liveRace) return;
-      set({ liveRace: engine.simulateRemainingRace(liveRace, engine.buildRaceContext(career), raceMode) });
+      set({ liveRace: engine.simulateRemainingRace(liveRace, engine.buildRaceContext(career), { mode: raceMode, auto: true }), pitRequest: null, skipPlannedStop: false });
     },
 
     completeWeekend() {
       const race = get().liveRace;
       if (!race) return;
       apply((c) => engine.completeWeekend(c, race), { save: true });
-      if (!get().notice) set({ liveRace: null });
+      if (!get().notice) set({ ...RACE_RESET });
     },
 
-    startNextSeason(teamId) {
-      apply((c) => engine.startNextSeason(c, teamId), { save: true });
+    negotiateOffer(offerId, demand) {
+      const career = get().career;
+      if (!career) return;
+      try {
+        const result = engine.negotiateOffer(career, offerId, demand);
+        set({ career: result.career, notice: result.message });
+        void autosave(result.career);
+      } catch (error) {
+        set({ notice: errorMessage(error) });
+      }
+    },
+
+    startNextSeason(offerId) {
+      apply((c) => engine.startNextSeason(c, offerId), { save: true });
+    },
+
+    retire() {
+      apply(engine.retire, { save: true });
     },
   };
 });

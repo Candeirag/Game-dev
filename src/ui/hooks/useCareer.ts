@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { CareerState } from '@/domain/schemas';
-import { driverMap, driverStandings, getPlayer, getPlayerTeam, teamMap, teamStandings } from '@/engine';
+import { getCategory } from '@/data/categories';
+import { driverMap, driverStandings, getPlayer, getPlayerTeam, getTeammate, teamMap, teamStandings } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 
 /** Carreira ativa. Só use em telas protegidas pelo layout de carreira. */
@@ -18,6 +19,8 @@ export function useCareerView() {
       career,
       player: getPlayer(career),
       team: getPlayerTeam(career),
+      teammate: getTeammate(career),
+      category: getCategory(career.categoryId),
       drivers: driverMap(career),
       teams: teamMap(career),
       driverStandings: driverStandings(career),

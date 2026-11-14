@@ -138,7 +138,7 @@ export function NewCareerScreen() {
           </Card>
 
           <Card title="4 · Equipe">
-            <p className="mb-4 text-sm text-ink-400">Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança.</p>
+            <p className="mb-4 text-sm text-ink-400">Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança e o custo da vaga. Você começa no kart regional, com as economias e o apoio da família; daí em diante, resultados atraem patrocinadores e propostas até a Fórmula 1.</p>
             <div className="grid gap-3 md:grid-cols-3">
               {TEAMS.filter((t) => ROOKIE_TEAM_IDS.includes(t.id)).map((t) => (
                 <ChoiceCard
@@ -148,9 +148,9 @@ export function NewCareerScreen() {
                   title={<span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full" style={{ backgroundColor: t.color }} />{t.name}</span>}
                   description={
                     <span className="grid grid-cols-3 gap-2 pt-1 text-xs tabular">
-                      <span>Motor <b className="text-ink-100">{t.kart.engine}</b></span>
-                      <span>Chassi <b className="text-ink-100">{t.kart.chassis}</b></span>
-                      <span>Confiab. <b className="text-ink-100">{t.kart.reliability}</b></span>
+                      <span>Motor <b className="text-ink-100">{t.car.engine}</b></span>
+                      <span>Chassi <b className="text-ink-100">{t.car.chassis}</b></span>
+                      <span>Confiab. <b className="text-ink-100">{t.car.reliability}</b></span>
                     </span>
                   }
                   meta={`Meta: terminar entre os ${t.driverTarget} primeiros`}

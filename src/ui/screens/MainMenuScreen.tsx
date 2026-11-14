@@ -48,7 +48,7 @@ export function MainMenuScreen() {
       <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-6 py-12 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-apex-500/40 bg-apex-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-apex-400">
-            Fase 1 · Protótipo
+            Fase 2 · Carreira completa
           </div>
           <h1 className="font-display text-6xl font-bold uppercase leading-[0.9] tracking-tight sm:text-7xl">
             Apex
@@ -58,7 +58,7 @@ export function MainMenuScreen() {
             Dynasty
           </h1>
           <p className="mt-6 max-w-md text-base leading-relaxed text-ink-300">
-            Comece no {CHAMPIONSHIP_NAME}, em uma equipe modesta, e construa uma carreira de piloto. Escolha o treino, a estratégia de classificação e o ritmo de corrida, volta a volta.
+            Comece no {CHAMPIONSHIP_NAME}, em uma equipe modesta, e suba a escada até a Fórmula 1: sete categorias, contratos, patrocinadores, finanças, rivalidades e corridas decididas volta a volta.
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export function MainMenuScreen() {
             </Button>
             {auto && (
               <Button className="h-14 text-base" onClick={() => void load('auto')}>
-                Continuar: {auto.summary?.playerName} · {auto.summary?.year} · Etapa {auto.summary?.roundsCompleted}/{auto.summary?.totalRounds}
+                Continuar: {auto.summary?.playerName} · {auto.summary?.categoryName ?? 'Kart Regional'} {auto.summary?.year} · Etapa {auto.summary?.roundsCompleted}/{auto.summary?.totalRounds}
               </Button>
             )}
           </div>
@@ -103,7 +103,7 @@ function SlotRow({ slot, onLoad }: { slot: SlotInfo; onLoad: () => void }) {
         <div className="text-sm font-semibold">{SLOT_LABELS[slot.slot]}</div>
         {slot.status === 'ok' && slot.summary && (
           <div className="truncate text-xs text-ink-400">
-            {slot.summary.playerName} · {slot.summary.teamName} · {slot.summary.year} · {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas · {slot.savedAt && formatDateTime(slot.savedAt)}
+            {slot.summary.playerName} · {slot.summary.categoryName ?? 'Kart Regional'} · {slot.summary.teamName} · {slot.summary.year} · {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas · {slot.savedAt && formatDateTime(slot.savedAt)}
           </div>
         )}
         {slot.status === 'empty' && <div className="text-xs text-ink-500">Vazio</div>}

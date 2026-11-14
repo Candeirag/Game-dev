@@ -55,3 +55,16 @@ export function describeOvertaking(difficulty: number): string {
 export function describePower(powerSensitivity: number): string {
   return powerSensitivity >= 0.6 ? 'favorece o motor' : powerSensitivity <= 0.4 ? 'favorece o chassi' : 'equilibrada';
 }
+
+/** Valor em euros, abreviado acima de 100 mil (€ 1,25 mi) e completo abaixo disso. */
+export function formatMoney(value: number, options: { compact?: boolean; sign?: boolean } = {}): string {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '−' : options.sign && value > 0 ? '+' : '';
+  if (options.compact !== false && abs >= 1_000_000) return `${sign}€ ${(abs / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} mi`;
+  if (options.compact !== false && abs >= 100_000) return `${sign}€ ${Math.round(abs / 1000).toLocaleString('pt-BR')} mil`;
+  return `${sign}€ ${Math.round(abs).toLocaleString('pt-BR')}`;
+}
+
+export function trackLocation(track: { city: string; state: string; country: string }): string {
+  return `${track.city}, ${track.state || track.country}`;
+}

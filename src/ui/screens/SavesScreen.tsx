@@ -65,7 +65,7 @@ export function SavesScreen() {
                     {!slot || slot.status === 'empty' ? 'Vazio' : null}
                     {slot?.status === 'ok' && slot.summary && (
                       <>
-                        {slot.summary.playerName} · {slot.summary.teamName} · {slot.summary.year} · {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas
+                        {slot.summary.playerName} · {slot.summary.categoryName ?? 'Kart Regional'} · {slot.summary.teamName} · {slot.summary.year} · {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas
                         {slot.summary.championshipPosition && ` · ${slot.summary.championshipPosition}º no campeonato`} · {slot.savedAt && formatDateTime(slot.savedAt)}
                       </>
                     )}
