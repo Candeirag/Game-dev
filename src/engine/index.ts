@@ -26,6 +26,7 @@ export * from './championship/standings';
 export { generateEvents, resolveEvent, EVENT_RULES } from './events/engine';
 export { EVENT_DEFINITIONS } from './events/definitions';
 export * from './simulation/race';
+export * from './broadcast';
 export { TYRES, RACE } from './simulation/constants';
 export { overallRating, driverPaceRating, carRating, conditionEffects } from './simulation/performance';
 export { rankTeams, buildCategoryField } from './world/generation';

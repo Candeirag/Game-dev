@@ -1,0 +1,29 @@
+/**
+ * Transmissão da corrida: geometria dos circuitos e linha do tempo que converte
+ * os tempos do motor em posições na pista. Camada pura, sem interface.
+ */
+export { CIRCUIT, buildCircuit, poseAt, racingLineAt, tauAt, sAtTau, paceAt, pitLateralAt, pitBoxAt, sectorAt, wrap01, type Circuit, type CircuitCorner, type CircuitStyle, type PitLane, type TrackPose } from './circuit';
+export {
+  appendRaceLap,
+  buildRaceTimeline,
+  circuitForRace,
+  createRaceTimeline,
+  eventsUntil,
+  lapInfoAt,
+  safetyCarAt,
+  sampleCar,
+  standingsAt,
+  suspensionBetween,
+  timeAtDistance,
+  type CarLap,
+  type CarSample,
+  type CarState,
+  type CarTimeline,
+  type LapFlag,
+  type LapInfo,
+  type LapSegment,
+  type RaceTimeline,
+  type SafetyCarSample,
+  type StandingRow,
+  type TimedEvent,
+} from './timeline';

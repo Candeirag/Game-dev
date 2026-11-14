@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import type { CareerState, CategoryId, DevArea, DevValues, FacilityKey, Lifestyle, PracticeProgram, Property, QualifyingApproach, RaceMode, ResearchSpend, StaffRole, SupportLevel, TrainingFocus, TrainingIntensity, TyreCompound } from '@/domain/schemas';
 import * as engine from '@/engine';
-import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, RaceSimState, StrategyPlan } from '@/engine';
+import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, RaceSimState, RaceTimeline, StrategyPlan } from '@/engine';
 import { createDefaultStorage, type StorageAdapter } from '@/persistence/storage';
 import {
   SaveError,
@@ -30,6 +30,11 @@ export interface GameStore {
   storage: StorageAdapter;
   career: CareerState | null;
   liveRace: RaceSimState | null;
+  /**
+   * Linha do tempo da corrida em andamento, para a transmissão visual. É derivada
+   * das voltas que o motor já simulou; como a corrida ao vivo, não vai para o save.
+   */
+  raceTimeline: RaceTimeline | null;
   raceMode: RaceMode;
   /** Parada pedida pelo jogador para a próxima volta. */
   pitRequest: TyreCompound | null;
@@ -171,7 +176,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   /** Ação simples: chama uma função do motor com os argumentos dados e salva. */
   const action = <A extends unknown[]>(fn: (career: CareerState, ...args: A) => CareerState) => (...args: A) => apply((c) => fn(c, ...args), { save: true });
 
-  const RACE_RESET = { liveRace: null, raceMode: 'balanced' as RaceMode, pitRequest: null, skipPlannedStop: false };
+  const RACE_RESET = { liveRace: null, raceTimeline: null, raceMode: 'balanced' as RaceMode, pitRequest: null, skipPlannedStop: false };
 
   return {
     storage: createDefaultStorage(),
@@ -296,7 +301,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       const career = get().career;
       if (!career) return;
       try {
-        set({ ...RACE_RESET, liveRace: engine.createWeekendRace(career, plan), notice: null });
+        const race = engine.createWeekendRace(career, plan);
+        set({ ...RACE_RESET, liveRace: race, raceTimeline: engine.createRaceTimeline(race, engine.buildRaceContext(career)), notice: null });
       } catch (error) {
         set({ notice: errorMessage(error) });
       }
@@ -319,24 +325,34 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     stepRace(teamOrder) {
-      const { career, liveRace, raceMode, pitRequest, skipPlannedStop, autoEngineer } = get();
+      const { career, liveRace, raceTimeline, raceMode, pitRequest, skipPlannedStop, autoEngineer } = get();
       if (!career || !liveRace || engine.isRaceFinished(liveRace)) return;
       // Uma ordem de equipe pendente exige resposta antes da próxima volta.
       if (liveRace.pendingTeamOrder && !teamOrder) return;
-      const next = engine.stepRaceLap(liveRace, engine.buildRaceContext(career), {
+      const context = engine.buildRaceContext(career);
+      const next = engine.stepRaceLap(liveRace, context, {
         mode: raceMode,
         pit: pitRequest,
         skipPlannedStop,
         auto: autoEngineer,
         ...(teamOrder ? { teamOrder } : {}),
       });
-      set({ liveRace: next, pitRequest: null, skipPlannedStop: false });
+      set({ liveRace: next, raceTimeline: raceTimeline && engine.appendRaceLap(raceTimeline, liveRace, next, context), pitRequest: null, skipPlannedStop: false });
     },
 
     simulateRestOfRace() {
       const { career, liveRace, raceMode } = get();
       if (!career || !liveRace) return;
-      set({ liveRace: engine.simulateRemainingRace(liveRace, engine.buildRaceContext(career), { mode: raceMode, auto: true }), pitRequest: null, skipPlannedStop: false });
+      // Mesmas regras de simulateRemainingRace, volta a volta, para a linha do tempo acompanhar.
+      const context = engine.buildRaceContext(career);
+      let race = liveRace;
+      let timeline = get().raceTimeline;
+      while (!engine.isRaceFinished(race)) {
+        const next = engine.stepRaceLap(race, context, { mode: raceMode, auto: true, pit: null });
+        timeline = timeline && engine.appendRaceLap(timeline, race, next, context);
+        race = next;
+      }
+      set({ liveRace: race, raceTimeline: timeline, pitRequest: null, skipPlannedStop: false });
     },
 
     completeWeekend() {
