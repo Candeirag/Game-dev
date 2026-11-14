@@ -77,6 +77,16 @@ Dicas:
 - Como dirigente, piloto bom custa caro (ou paga menos pela vaga): a dupla ideal depende do caixa da equipe.
 - Em categorias monomarca, só suspensão e fabricação podem ser desenvolvidas; na F1, há teto de gastos.
 
+### Verificação
+
+```
+npm run check        # lint (Biome), tipos, testes (Vitest) e navegador (Playwright)
+npm run check:fast   # o mesmo, sem o Playwright
+npm run format       # formatação e correções seguras
+```
+
+Os testes travam o comportamento do jogo: a simulação com semente fixa é comparada com valores gravados (`tests/golden`), os saves de todas as versões têm de abrir (`tests/fixtures`), e o Playwright percorre o fluxo principal e confere todas as telas em 390×844 e 844×390, acusando imagem sobre texto. O fluxo de trabalho (uma issue e um PR por tarefa) está em [CLAUDE.md](CLAUDE.md).
+
 ### Saves
 
 - **Save automático** depois de cada sessão e de cada decisão.
