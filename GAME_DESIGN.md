@@ -2,13 +2,14 @@
 
 ## Visão
 
-Um simulador de carreira de automobilismo: o jogador vive a trajetória de um piloto, do kart regional em uma equipe modesta até a Fórmula 1. A Fase 1 entregou um campeonato de kart jogável. A Fase 2 transforma isso em uma carreira completa, em que resultados, dinheiro, contratos, relações e eventos se influenciam.
+Um simulador de carreira de automobilismo: o jogador vive a trajetória de um piloto, do kart regional em uma equipe modesta até a Fórmula 1, e depois a de uma família inteira. A Fase 1 entregou um campeonato de kart jogável. A Fase 2 fez disso uma carreira completa, em que resultados, dinheiro, contratos, relações e eventos se influenciam. A Fase 3 acrescenta a vida fora do carro: patrimônio, família, aposentadoria, gestão de equipe, morte e sucessão.
 
 **Pilares**
 1. **Decisões que importam.** Treino, classificação, estratégia, ritmo de corrida, negociação, dinheiro e imprensa: cada escolha tem custo e benefício.
 2. **Simulação crível.** Resultados nascem de atributos, equipamento, pista, clima e condição do piloto, com sorte limitada e explicável.
 3. **Sistemas interligados.** Um toque na pista vira dano (conta a pagar), punição (grid da próxima etapa), rivalidade (mais risco nas disputas), investigação (decisão do jogador) e queda na confiança da equipe (contrato).
 4. **Progressão conquistada.** Subir de categoria exige resultados, licença, reputação, experiência, idade, dinheiro e uma equipe interessada.
+5. **A carreira é da família.** O piloto envelhece, para de correr e morre; o dinheiro, a equipe e o sobrenome passam adiante. O save não tem fim.
 
 ## Loop principal
 
@@ -19,8 +20,18 @@ Fim de semana:   treino livre (programa) → classificação (abordagem) →
                  estratégia de pneus → corrida (ritmo, boxes, ordens de equipe)
 Após a etapa:    pontos → dinheiro → condição → licença → relações →
                  patrocinadores → evolução → interesse das equipes → eventos
-Fim de temporada: reputação e licença → contas do ano → contrato e academia →
-                 propostas e negociação → mercado de pilotos → novo ano
+Fim de temporada: reputação e licença → contas do ano (patrimônio e imposto) →
+                 família (temporada dos filhos, relação do casal) →
+                 contrato e academia → propostas e negociação →
+                 mercado de pilotos → novo ano (eventos de família)
+
+Depois das pistas (modo dirigente):
+Entre etapas:    decisões de gestão → equipe técnica, instalações, pesquisa
+Fim de semana:   treino e classificação dos dois pilotos → corrida simulada
+Após a etapa:    caixa da equipe → pesquisa e melhorias → evolução das rivais
+Fim de temporada: avaliação e prêmio → patrimônio, imposto e família →
+                 pilotos e patrocinadores → cargos, compra ou fundação
+A qualquer fim de ano: mortalidade → sucessão → herdeiro (piloto ou dirigente)
 ```
 
 ## A escada
@@ -234,13 +245,120 @@ Entre as temporadas: os três melhores da IA sobem de categoria (na F1, os veter
 | Bônus de contrato (vitória, pódio, pontos, título) | Treino (pela intensidade) |
 | Apoio da academia (70% da vaga) | Conta de danos (categorias de base) |
 | Apoio da família (€ 24 mil por ano, 5 anos) | Impostos, juros, multas, taxas de eventos |
+| Dividendos, aluguéis, lucro de empresas | Formação e carreira dos filhos, parcelas de empréstimos |
 
 - **Patrocinadores.** Três cotas. O porte de quem procura o piloto vem dos resultados (entre os três primeiros: grande; entre os oito: médio) e da fama. Pagam 20%, 36% ou 60% do valor de referência da categoria e esperam top 15, top 10 ou top 5. A satisfação sobe e desce a cada etapa; abaixo de 35 há pressão (evento), e só renovam com 60 ou mais. Ao mudar de categoria, o valor acompanha a nova vitrine.
-- **Impostos.** Progressivo sobre a renda da temporada (salário, bônus e patrocínios menos o custo da vaga): isento até € 40 mil, 15% até 300 mil, 27,5% até 3 milhões, 37% acima.
+- **Impostos.** Progressivo sobre a renda da temporada (salário, bônus e patrocínios menos o custo da vaga, mais dividendos, aluguéis e lucro das empresas): isento até € 40 mil, 15% até 300 mil, 27,5% até 3 milhões, 37% acima.
 - **Investimentos.** Renda fixa (4% ao ano) e fundo de ações (9% em média, desvio de 16%, pode perder). O rendimento entra no fechamento do ano.
 - **Dívida.** Caixa negativo paga 14% ao ano. Uma dívida maior que metade da vaga mais cara da categoria seguinte é reduzida a esse teto em um acordo com credores, ao custo de 4 pontos de reputação.
 
 A economia é uma restrição real: um piloto de meio de grid atrai só patrocinadores pequenos e não sustenta por muito tempo uma categoria cara; quem vence atrai cotas grandes, bolsa e academia.
+
+## Patrimônio pessoal
+
+Além do caixa, da renda fixa e do fundo de ações, o jogador pode montar um patrimônio. Cada classe de ativo tem um papel diferente:
+
+| Ativo | Como rende | Risco e custo |
+| --- | --- | --- |
+| Ações (6 empresas) | Preço muda a cada etapa; dividendos de 0% a 6% no fim do ano | Retorno médio de 5% a 13% ao ano, com volatilidade de 15% a 40%; metade do movimento é do mercado inteiro |
+| Imóveis (5) | Aluguel de 3% a 7% ao ano, em parcelas por etapa; valorização média de 2% a 5% | Manutenção de 1% a 3%, imposto anual de 0,6%, corretagem de 5% na venda |
+| Empresas (4) | Lucro anual = base × nível × (0,4 + reputação/60) × sorte do ano (0,7 a 1,3) | Exigem reputação mínima; com fama baixa, mal se pagam |
+| Participações em equipes (5%, 10% ou 25%) | Dividendo pela posição da equipe: de 10% do valor (campeã) a −0,8% (última, que pede aporte) | O valor da fatia acompanha a posição no campeonato |
+
+- **Uso próprio dos imóveis.** Em vez de alugar, o jogador pode usar o imóvel: o apartamento e a casa de campo dão moral a cada etapa (a casa também melhora a relação com a família); o galpão vira oficina e barateia o treino em 20%; o kartódromo corta pela metade o custo da formação dos filhos e a faz render 25% mais; a cobertura em Mônaco é residência fiscal e reduz o imposto de renda em 25%.
+- **Empréstimos.** Juros de 9% ao ano, prazos de 2, 4 ou 6 temporadas, parcelas iguais pagas a cada etapa. O limite é 40% dos ativos mais 1,5 vez a renda anual contratada. É mais barato que o caixa negativo (14%) e serve para atravessar um ano caro ou comprar uma equipe.
+- **Padrão de vida.** Simples (custo de vida normal), confortável (1,8×; +0,4 de moral por etapa; +2 na relação por ano) ou luxo (3,5×; +0,8; +4). Viver com simplicidade desgasta o relacionamento (−1 por ano).
+- **Impostos.** Dividendos, aluguéis e lucro das empresas somam-se à renda tributável do ano. Vender com lucro ações, imóveis, empresas, participações ou a própria equipe paga 15% sobre o ganho.
+- **Patrimônio líquido** = caixa + aplicações + ações + imóveis + empresas + participações − empréstimos (mais o valor da equipe própria, se houver).
+
+## Família e dinastia
+
+No começo de cada temporada, a família pode trazer decisões (eventos da categoria "Família"):
+
+| Evento | Quando | O que está em jogo |
+| --- | --- | --- |
+| Conhecer alguém | A partir dos 21 anos, solteiro: 35% de chance por ano | Namorar custa um pouco de fase agora; dá moral |
+| Casamento | Relação 65 ou mais, depois de um ano juntos | Festa (0,8 custo de vida anual) ou cerimônia simples; a relação se desgasta menos; em um divórcio, o cônjuge leva 30% do patrimônio |
+| Filho | Relação 55 ou mais, até os 48 anos, no máximo quatro filhos: 40% de chance por ano | A família cresce; recusar esfria a relação |
+| Crise | Relação abaixo de 35 | Terapia, viagem ou ignorar (50% de chance de separação) |
+| Kart | Um filho faz 8 anos | Programa completo (€ 28 mil por ano), de fim de semana (€ 9 mil, rende 60%) ou nada |
+| Início de carreira | Um filho faz 14 anos e quer correr (vontade 40 ou mais) | Apoio total, parcial ou nenhum; ou proibir |
+
+- **Parceiro.** Tem uma origem (automobilismo, negócios, artes, saúde ou mídia) que dá um benefício: mais aptidão para os filhos, empresas 10% mais lucrativas, moral, uma etapa a menos de recuperação de lesões ou +1 de reputação por ano. A relação muda a cada ano com o padrão de vida, o calendário (mais de 12 etapas: −3), o treino intenso (−2), o casamento (+1) e o tempo em casa (dirigente: +2). Relação de 70 ou mais dá moral a cada etapa; abaixo de 35, tira.
+- **Filhos.** Cada um nasce com um ou dois traços de personalidade (determinado, talentoso, frio, agressivo, carismático, rebelde, estudioso, intuitivo), que mexem na evolução, no teto, na vontade de correr, na relação com o jogador, na regularidade e na atração de patrocinadores.
+- **Talento herdado.** O teto de desenvolvimento do filho = 50% do melhor nível do jogador + 20% da aptidão do parceiro + 30% de acaso (média 72, desvio 9), mais um desvio individual de 4 pontos e o bônus dos traços, entre 55 e 97. Filhos de um campeão (teto 96) ficam em média 12 pontos acima dos de um piloto mediano (teto 72), mas as duas distribuições se sobrepõem. Os dois melhores atributos do jogador viram pontos fortes do filho.
+- **Formação no kart (8 aos 13 anos).** Cada ano bem feito vale cerca de 2 pontos em todos os atributos na estreia e mantém a vontade de correr. Seis anos completos deixam o filho no nível em que o próprio jogador começou; sem formação, ele estreia cerca de 12 pontos abaixo.
+- **Carreira própria.** Aos 14, o filho estreia no kart regional. A temporada dele é estimada por fora do campeonato do jogador: a nota competitiva (média entre velocidade e nota geral) mais a vantagem do carro da equipe dele é comparada às 19 outras vagas do grid, com um acaso de 2,5 pontos. Ele ganha pontos de licença e reputação pelas mesmas tabelas do jogador, evolui pela mesma função e só sobe se cumprir os mesmos requisitos e terminar até o 8º lugar.
+- **Dinheiro.** A vaga custa o preço de tabela da equipe, menos bolsa (três primeiros) e academia (metade). Os patrocinadores do próprio filho cobrem 20% mais reputação/250 (mais 20% se for carismático); a família paga o resto até o limite do apoio (total: tudo; parcial: metade; nenhum: nada). Sem dinheiro para subir, ele fica; sem dinheiro nem para ficar, corre de favor na pior equipe e, depois de dois anos assim, abandona a carreira. Quem passa da idade da categoria sem subir também para.
+- **Linhagem.** A tela Família guarda todas as gerações: período, melhor categoria, títulos, vitórias, reputação máxima e patrimônio deixado.
+
+Medido com o robô (apoio total e formação completa): um filho de teto 81 costuma parar no kart internacional ou na F4; um de teto 89 chegou à F1 aos 28 anos.
+
+## Morte e continuidade
+
+- **Mortalidade.** Sorteio anual no fechamento de cada temporada: 0,1% até os 49 anos, 0,5% dos 50 aos 59, 1,5% dos 60 aos 69, 5% dos 70 aos 79, 14% dos 80 aos 89 e 30% dali em diante. Uma lesão grave em corrida tem 2% de chance de ser fatal.
+- **Sucessão.** A morte (ou a passagem de comando em vida, possível no fechamento de uma temporada como dirigente) abre a escolha do herdeiro. Entram os filhos, o parceiro e dois parentes: um jovem que corre no kart regional e um adulto. Nada avança até a escolha.
+- **Caminhos.** *Nas pistas*: um filho ou parente com carreira vira o piloto do jogador, na categoria e na força de equipe em que já corria, com a licença e a reputação dele (ou 20% da maior reputação da família, se for maior). *Nos negócios*: um herdeiro com 18 anos ou mais assume o patrimônio e a equipe. Filhos menores precisam de um tutor (o parceiro ou o parente adulto) até crescer; os filhos continuam na família do tutor.
+- **Herança.** O patrimônio (com a equipe própria) paga 8% de imposto sobre o que passa de € 100 mil; a doação em vida paga 4%. Se o herdeiro é um dos filhos, cada irmão (até três) recebe 15% e sai do acompanhamento.
+- **Equipe da família.** Com um herdeiro dirigente, ela continua sob comando dele. Com um herdeiro piloto, vira uma participação de 100% com gestores contratados e paga dividendos. O cargo de chefe contratado não é herdado.
+- **Acidente no meio da temporada.** O reserva assume o carro, a temporada é arquivada como está e o herdeiro começa no ano seguinte.
+
+## Aposentadoria e vida de dirigente
+
+"Pendurar o capacete" (tela Carreira) encerra a vida de piloto do personagem, mas não a carreira. No fechamento da temporada, aparecem:
+
+- **Propostas para chefiar uma equipe.** Cada equipe exige um prestígio mínimo (reputação mais o retrospecto das três últimas temporadas no comando: +4 por meta cumprida, −3 por meta perdida): base da categoria + 1,5 por posição na ordem de forças − 8. Um campeão de F1 recebe propostas da F1; um piloto desconhecido, só do kart. Salário de € 8 mil (pior equipe do kart regional) a € 4 milhões (melhor da F1).
+- **Equipes à venda.** Em cada categoria, as duas mais fracas e uma do meio do grid: de cerca de € 50 mil (a pior do kart regional) a cerca de € 140 milhões (meio do grid da F1). As equipes de ponta não ficam à venda.
+- **Fundar uma equipe.** Custa 60% do valor da mais fraca da categoria. A equipe nova ocupa a inscrição da mais fraca e herda o equipamento dela, um pouco pior, sem instalações, sem equipe técnica e com reputação 22.
+- **Ficar sem equipe.** O jogador vive do patrimônio, acompanha o campeonato e a família; a reputação cai 1 ponto por ano.
+
+O **chefe contratado** recebe salário por etapa e bônus de 20% por meta cumprida. Ficar duas ou mais posições abaixo da meta, ou fechar o ano no vermelho, rende advertência; com duas seguidas, é demitido. Os donos retiram o lucro acumulado. O **dono** aporta e retira dinheiro (a retirada é renda tributável e a equipe precisa manter uma reserva), cobre o prejuízo do ano com o próprio bolso e pode vender a equipe no fechamento.
+
+No fim de semana, o dirigente escolhe o programa de treino e a abordagem de classificação dos dois pilotos; a corrida é disputada pelo motor, com os pilotos decidindo ritmo e paradas.
+
+## Gestão de equipe
+
+| Decisão | Efeito |
+| --- | --- |
+| Diretor técnico | Maior peso na velocidade da pesquisa |
+| Engenheiro-chefe | Pesquisa e confiança dos pilotos a cada etapa |
+| Diretor esportivo | Receita de patrocínio (cerca de ±10%) e poder de convencer pilotos |
+| Chefe dos mecânicos | Equipe de box |
+| Chefe de equipe (só o dono contrata; senão vale a nota do jogador) | Ganho de reputação da equipe e moral dos pilotos |
+| Engenharia (nível 1 a 5) | Um ponto-base de pesquisa por etapa por nível (e o custo proporcional) |
+| Mecânicos (nível 1 a 5) | +7 nos boxes por nível |
+| Simulador, túnel de vento, fábrica (nível 0 a 5) | +6% de pesquisa e +4% na evolução dos pilotos; +10% em aerodinâmica; +10% em fabricação, −3% no custo da pesquisa e boxes melhores |
+
+- **Mercado de profissionais.** Dois candidatos por função a cada temporada; o nível deles segue a reputação da equipe. O salário cresce com a nota (elevada a 2,5). Trocar alguém custa meio ano de salário de indenização. Quem tem contrato vencido e nota muito acima da reputação da equipe pode ir embora.
+- **Pilotos.** No fechamento, a lista traz os atuais, os que ficam livres, três estreantes e os filhos do jogador. Cada piloto é medido contra o grid atual: na F1, o melhor pede € 14 milhões e o pior, € 600 mil; nas categorias de base é o piloto que paga, de 105% (o mais fraco) a 65% (o melhor) do preço de tabela da vaga. Um piloto só aceita se a reputação da equipe estiver à altura da ambição dele (os atuais são mais tolerantes), e quem chega à idade-limite não renova. Um filho corre pela equipe da família sem salário e sem pagar.
+- **Patrocinadores da equipe.** Três cotas. O total que o mercado paga é a base da categoria × (0,45 + reputação/80). Cada proposta troca dinheiro por exigência; quem vê a equipe mais de duas posições abaixo do combinado rompe o contrato.
+- **Caixa.** Receitas (patrocínios, vagas pagas pelos pilotos, prêmio pela posição do ano anterior) e despesas (pilotos, equipe técnica, operação, instalações, pesquisa) entram em parcelas por etapa; os danos dos dois carros são cobrados na hora. Com o caixa negativo, a pesquisa para.
+- **Reputação da equipe.** A cada ano, anda 40% do caminho até a nota da posição final (92 para a campeã, 8 a menos por posição), mais depressa com um bom comando.
+- **Eventos de gestão** (35% de chance por etapa): ação promocional de patrocinador, rival sondando o diretor técnico, diretriz técnica da federação, briga entre os pilotos, atraso na fábrica, bônus de pódio.
+
+Com a estrutura padrão, todas as equipes fecham o ano no azul (`npm run calibrate`): de 9% a 42% do custo operacional nas categorias de base e de 21% a 75% na F1. A margem existe para ser investida: quem não investe fica parado enquanto o grid evolui.
+
+## Desenvolvimento técnico
+
+A pesquisa gera pontos a cada etapa: nível da engenharia × ritmo (contido 0,5; normal 1; agressivo 1,6, a 1,9 vez o custo) × pessoas (0,55 + diretor técnico/200 + engenheiro-chefe/400) × simulador. O jogador distribui o esforço entre cinco áreas. A primeira melhoria de uma área custa 6 pontos, e cada seguinte, 35% a mais.
+
+| Área | Cada melhoria dá | Kart | F4, F3 e F2 | F1 |
+| --- | --- | --- | --- | --- |
+| Aerodinâmica | chassi +0,6; motor +0,2 | fechada | fechada | livre |
+| Chassi | chassi +0,7 | livre | fechada | livre |
+| Motor | motor +0,8 | fechada (lacrado) | fechada | livre |
+| Suspensão | chassi +0,4; confiabilidade +0,2 | livre | livre | livre |
+| Fabricação | confiabilidade +1 | livre | livre | livre |
+| Limite por área e por temporada | | 2 | 2 | 5 |
+
+- **Fórmula 1.** Teto de gastos com desenvolvimento de € 30 milhões por temporada: ao atingi-lo, a pesquisa para até o ano seguinte. As horas de túnel de vento dependem da posição no campeonato anterior: 70% para a campeã, 5 pontos percentuais a mais por posição.
+- **Concorrência.** As rivais evoluem um pouco a cada etapa (cerca de 2 pontos de carro por ano na F1 e 0,4 a 0,6 nas demais; as de cima, mais depressa). Na virada do ano, a evolução média do grid é descontada de todos, e o que a equipe do jogador ganhou acima da média perde 30%. Quem não pesquisa anda para trás.
+
+Medido em quatro temporadas à frente da pior equipe da F1: com estrutura e pesquisa no máximo, o carro ganha mais de 2 pontos sobre o grid em relação a uma gestão que só mantém o ritmo contido.
+
+## Tutorial e primeiros passos
+
+O painel mostra uma lista de oito passos até ser concluída ou dispensada: conhecer o piloto, disputar uma etapa, tomar uma decisão, ver a equipe, cuidar do dinheiro, planejar a subida, fechar uma temporada e pensar na dinastia. Cada passo é marcado por algo que o jogador fez de verdade. A tela "Como jogar" repete a lista e resume as regras por assunto.
 
 ## Eventos dinâmicos
 
@@ -257,7 +375,7 @@ Depois de cada etapa, entram os eventos cuja condição vale (até dois) e, com 
 | Patrocínio | pressão por resultados; proposta nova (ou troca por um maior) | receita, satisfação, fase |
 | Inesperados | virose; prova de exibição; convite de academia; peça nova | lesão leve, experiência, academia, rendimento do carro |
 
-Todo evento altera estado de jogo: nenhum é só texto.
+Os eventos de família (no começo de cada temporada) e os de gestão (depois das etapas, no modo dirigente) estão descritos nas seções deles. Todo evento altera estado de jogo: nenhum é só texto.
 
 ## Equilíbrio
 
@@ -269,11 +387,18 @@ Todo evento altera estado de jogo: nenhum é só texto.
 | Bom (talento 4) | F1 aos 26 ou 27 anos, no meio do grid |
 | Excelente (talento 8) | F1 aos 24 a 28 anos; em parte das carreiras, vitórias e títulos |
 
-O nível médio dos grids da IA fica de 2 a 4 pontos acima do projetado ao longo dos anos, sem inflar nem desabar.
+O nível médio dos grids da IA fica de 2 a 4 pontos acima do projetado ao longo dos anos, sem inflar nem desabar. Essas faixas foram medidas de novo depois da Fase 3 e não mudaram.
+
+O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, depois dirigente, com sucessões) e confere a integridade do estado a cada passo. Nessas vidas: um campeão de F1 aposenta-se com cerca de € 180 milhões e recebe proposta da melhor equipe da F1; um piloto que parou na F3 ou na F2 recebe proposta de uma equipe do fundo da F2; as mortes aconteceram aos 60, 64 e 73 anos (um personagem chegou vivo aos 84); e os herdeiros que assumiram tinham de 16 a 22 anos: dois filhos, um no kart regional e outro na F4, e um parente, porque os filhos daquele personagem já tinham largado as pistas.
 
 ## Limitações conhecidas e próximos passos
-- Só a categoria do jogador é simulada; as outras existem como equipes e propostas.
+- Só uma categoria é simulada por vez: a do jogador ou a da equipe que ele dirige. As outras existem como equipes, propostas e participações.
+- Os filhos correm fora do campeonato do jogador (a temporada deles é estimada), a não ser quando ele os escala na própria equipe. Pai e filho não se enfrentam na pista.
+- Ao escolher um herdeiro piloto, os irmãos dele saem do acompanhamento e a equipe da família passa a ser só uma participação.
+- No modo dirigente, a corrida não é acompanhada volta a volta, e o dirigente não dá ordens durante a prova.
+- Nas vidas longas, o nível dos pilotos da F1 sobe alguns pontos acima do projetado; os contratos da gestão já medem cada piloto contra o grid real, mas o nível nominal da categoria não é recalibrado.
 - O jogador não pode assinar como piloto reserva de uma categoria superior.
-- Não há mudanças no meio da temporada (troca de equipe, demissão imediata).
+- Não há mudanças no meio da temporada (troca de equipe, demissão imediata, contratação de pilotos).
 - Corridas sprint, pontuação pela metade e retardatários não são simulados.
 - Áudio, visual de pista em 2D e conquistas ficam para uma fase futura.
+- O plano de escala (centenas de pilotos, várias categorias simuladas ao mesmo tempo, saves em partes) está em `docs/PLANO_ARQUITETURA_FASE3.md` e não foi executado.

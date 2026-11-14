@@ -1,6 +1,6 @@
 # Arquitetura: Apex Motorsport Dynasty
 
-Este documento descreve como o código está organizado, por quê, e como estendê-lo sem quebrar as garantias do projeto. Ele cobre a Fase 2 (carreira completa do kart à Fórmula 1).
+Este documento descreve como o código está organizado, por quê, e como estendê-lo sem quebrar as garantias do projeto. Ele cobre o estado atual, depois da Fase 3: carreira completa do kart à Fórmula 1, patrimônio pessoal, família e dinastia, aposentadoria, gestão de equipe, morte e sucessão.
 
 ## Princípios
 
@@ -9,7 +9,8 @@ Este documento descreve como o código está organizado, por quê, e como estend
 3. **Variabilidade controlada.** Toda aleatoriedade passa por um gerador com semente (`src/engine/rng.ts`), e cada sorteio tem a sua própria semente derivada da carreira.
 4. **Uma fonte de verdade.** Os tipos TypeScript são inferidos dos schemas Zod, que também validam os saves. A classificação do campeonato nunca é armazenada: é recalculada dos resultados e dos ajustes de pontos.
 5. **Regras como dados.** O motor não tem `if` por categoria: cada categoria é uma definição em `src/data/categories.ts` (regras de corrida, economia, requisitos), e os efeitos de cada evento são dados guardados junto com ele.
-6. **Sistemas que conversam em um só lugar.** Os efeitos de uma etapa sobre economia, condição, licença, relações, patrocinadores, evolução, mercado e eventos são aplicados por uma única sequência ordenada (`roundEffects.ts`).
+6. **Sistemas que conversam em um só lugar.** Os efeitos de uma etapa sobre economia, condição, licença, relações, patrocinadores, evolução, mercado e eventos são aplicados por uma única sequência ordenada: `roundEffects.ts` quando o jogador corre, `management/executive.ts` quando ele dirige.
+7. **A carreira é da família.** O estado guarda um "personagem atual" (o piloto do jogador), a família dele e a linhagem. Aposentadoria e morte trocam o modo ou o personagem; nunca encerram o save.
 
 ## Camadas
 
@@ -38,6 +39,9 @@ As dependências só apontam para baixo. `engine` não conhece React nem Zustand
 | `src/domain/labels.ts` | Textos em português compartilhados pelo motor (mensagens) e pela UI. |
 | `src/data/categories.ts` | As sete categorias: regras de corrida, nível do grid, economia, requisitos e pontos de licença. |
 | `src/data/teams.ts`, `drivers.ts`, `tracks.ts`, `names.ts`, `rules.ts` | Equipes de todas as categorias, elenco inicial do kart regional, 34 pistas, nomes para pilotos gerados, perfis iniciais do jogador. |
+| `src/data/assets.ts` | Catálogo do patrimônio: ações, imóveis, empresas, padrão de vida e as regras de crédito, impostos sobre ganho e herança. |
+| `src/data/family.ts` | Regras da família: traços de personalidade, herança de talento, formação no kart, apoio à carreira dos filhos, tábua de mortalidade. |
+| `src/data/management.ts` | Economia das equipes por categoria, regulamento técnico (áreas abertas, limites, teto de gastos), efeito de cada melhoria e regras da gestão. |
 | `src/engine/rng.ts` | PRNG mulberry32, derivação de sementes (FNV-1a), gaussiana saturada. |
 | `src/engine/simulation/constants.ts` | Todas as constantes de calibragem da simulação, comentadas. |
 | `src/engine/simulation/performance.ts` | Modelo de desempenho: ritmo, tempo de volta, ruído, erros, desgaste, compostos, combustível, dano, condição do piloto. |
@@ -48,11 +52,16 @@ As dependências só apontam para baixo. `engine` não conhece React nem Zustand
 | `src/engine/world/generation.ts` | Geração de pilotos e grids por regras, para as categorias sem elenco escrito à mão. |
 | `src/engine/career/` | Carreira: criação, fim de semana, efeitos da etapa, condição e lesões, economia, patrocinadores, licença, contratos e negociação, mercado, evolução e envelhecimento, fechamento e virada de temporada, estatísticas. |
 | `src/engine/events/` | Eventos dinâmicos: catálogo (`definitions.ts`), geração e resolução (`engine.ts`), aplicação de efeitos (`effects.ts`). |
+| `src/engine/economy/assets.ts` | Patrimônio pessoal: ações, imóveis, empresas, participações em equipes, empréstimos e padrão de vida; liquidação por etapa e fechamento anual. |
+| `src/engine/dynasty/` | Família (`family.ts`: parceiro, filhos, herança de talento, carreira própria dos filhos), eventos de família (`familyEvents.ts`) e morte e sucessão (`succession.ts`). |
+| `src/engine/management/` | Gestão de equipe (`team.ts`: estrutura, equipe técnica, instalações, pesquisa, caixa), modo dirigente (`executive.ts`: aposentadoria, etapa, fechamento, mercado de pilotos, propostas, nova temporada) e eventos de gestão (`events.ts`). |
+| `src/engine/tutorial.ts` | Passos do tutorial, deduzidos do estado da carreira. |
 | `src/engine/index.ts` | API pública do motor; a UI e a store importam só daqui. |
 | `src/persistence/` | Armazenamento (IndexedDB, localStorage, memória), checksum, integridade, migrações e serviço de saves. |
 | `src/store/gameStore.ts` | Store Zustand: camada fina sobre o motor. |
 | `src/ui/` | Layout, telas, componentes e formatação. |
-| `tests/` | Testes Vitest; `tests/fixtures/v1/` guarda saves reais da Fase 1; `tests/calibration/` guarda o relatório de balanceamento. |
+| `tests/` | Testes Vitest; `tests/fixtures/v1/` e `v2/` guardam saves reais das Fases 1 e 2; `tests/calibration/` guarda os relatórios de balanceamento (carreiras, vidas inteiras e economia das equipes); `tests/bench/` mede desempenho. |
+| `docs/PLANO_ARQUITETURA_FASE3.md` | Análise de escala feita antes da Fase 3 (mundo com centenas de pilotos, saves em partes). É um plano futuro: a Fase 3 foi construída sobre a arquitetura atual. |
 | `legacy/simdev/` | Projeto anterior do repositório, preservado e fora do build. |
 
 ## Motor de corrida (`src/engine/simulation/race/`)
@@ -108,22 +117,65 @@ Eventos pendentes bloqueiam `startWeekend` até serem resolvidos com `resolveEve
 
 A corrida em andamento não é salva. Se a página for recarregada no meio da prova, a corrida recomeça da largada com a mesma semente.
 
+## Modos da carreira: piloto e dirigente
+
+`career.mode` diz o que o personagem faz. O campeonato (`teams`, `drivers`, `calendar`, `rounds`) é o mesmo nos dois modos e é sempre disputado pelo mesmo motor de corrida.
+
+| | `driver` | `executive` |
+| --- | --- | --- |
+| Personagem | Tem vaga em uma equipe e corre | Está em `drivers` sem equipe: envelhece, mas não corre |
+| Etapa | `applyRoundEffects` | `applyExecutiveRoundEffects`: finanças pessoais, pilotos, caixa e pesquisa da equipe, eventos de gestão |
+| Fechamento | `closeSeason` → `career.offseason` (propostas de piloto) | `closeExecutiveSeason` → `career.executiveOffseason` (avaliação, mercado de pilotos, patrocínios, cargos, equipes à venda) |
+| Novo ano | `startNextSeason(offerId)` | `startExecutiveSeason(plan)`: continuar, aceitar cargo, comprar, fundar ou ficar sem equipe |
+| Equipe | A do contrato | `career.management` (ou nenhuma) |
+
+`completeWeekend` escolhe o caminho pelo modo. `retireFromDriving` passa de `driver` a `executive`: no fechamento, converte o fechamento de piloto no de dirigente; no meio da temporada, o reserva assume o carro (`vacatePlayerSeat`) e o jogador acompanha o resto do ano.
+
+A equipe administrada é uma das equipes do campeonato. A gestão nunca toca o motor de corrida: ela muda `team.car` (melhorias de pesquisa) e `team.crew` (mecânicos e chefias) por regras, e o motor lê esses números como os de qualquer equipe. As rivais evoluem um pouco a cada etapa; na virada do ano, a evolução média do grid é descontada de todos.
+
+### Fechamento de um ano, nos dois modos
+
+```
+closeSeason / closeExecutiveSeason
+  ├ closeAssetsYear       dividendos, imóveis, empresas, participações, empréstimos
+  ├ closeSeasonFinance    imposto de renda, fundos, juros do caixa negativo
+  ├ closeFamilyYear       temporada dos filhos, aniversários, relação do casal
+  ├ touchLineage          registro do personagem na linhagem
+  └ checkMortality        sorteio anual; se morrer, abre a sucessão
+startNextSeason / startExecutiveSeason
+  └ beginSeasonFamily     eventos de família do ano (parceiro, casamento,
+                          filhos, crise, kart, início de carreira)
+```
+
+### Sucessão
+
+`career.succession` não nulo bloqueia o jogo (`startWeekend`, `startNextSeason` e `startExecutiveSeason` recusam) até `resolveSuccession(heirId, caminho)`:
+
+- **`driver`**: o herdeiro vira o piloto do jogador. A temporada em curso é arquivada, o grid da categoria dele é montado e uma nova temporada começa. Uma equipe da família vira participação de 100% (`finance.stakes`).
+- **`executive`**: o herdeiro assume o patrimônio e, se a família for dona, a equipe. O campeonato em curso continua.
+
+Há sempre um parente jovem que corre e um parente adulto entre os herdeiros, para a carreira nunca ficar sem continuação.
+
+### Filhos fora e dentro do campeonato
+
+Os filhos correm fora do campeonato do jogador: a temporada de cada um é estimada (`closeChildSeason`) com as mesmas grandezas do jogo (nota do piloto, nível do grid, força da equipe, pontos de licença, reputação, requisitos de promoção) e a mesma função de evolução dos demais pilotos. Quando o jogador escala um filho na própria equipe, o piloto dele entra em `career.drivers` e o resultado da temporada passa a ser o real.
+
 ## Determinismo e isolamento da sorte
 
 - `hashSeed(seed, temporada, etapa, 'qualifying')` gera a semente de cada sessão.
 - Na corrida, cada piloto em cada volta usa `hashSeed(semente, volta, piloto)`; cada disputa, cada decisão da direção de prova e cada ordem de equipe têm semente própria.
-- Lesões, evolução, envelhecimento, retorno de investimentos, geração de pilotos e desfecho de eventos usam sementes derivadas da carreira e do contexto (`hashSeed(seed, evento, escolha)`).
+- Lesões, evolução, envelhecimento, retorno de investimentos, cotações das ações, geração de pilotos e de filhos, temporadas dos filhos, mortalidade e desfecho de eventos usam sementes derivadas da carreira e do contexto (`hashSeed(seed, evento, escolha)`).
 - Todos os sorteios de um piloto em uma volta acontecem sempre, na mesma ordem.
 
-Consequência: as decisões do jogador mudam médias e probabilidades, mas não embaralham a sorte dos outros; recarregar o save não muda o desfecho de uma mesma decisão; e uma carreira inteira de vários anos é reproduzível (há um teste que compara o checksum de duas execuções).
+Consequência: as decisões do jogador mudam médias e probabilidades, mas não embaralham a sorte dos outros; recarregar o save não muda o desfecho de uma mesma decisão; e uma carreira inteira de vários anos, incluindo aposentadoria, gestão e sucessão, é reproduzível (há testes que comparam duas execuções).
 
 ## Modelo de dados da carreira
 
-`CareerState` guarda a categoria atual e o seu mundo: equipes, pilotos (titulares, reservas e livres), calendário, etapas da temporada e fim de semana em andamento. Sobre isso ficam os sistemas da carreira: `contract`, `finance`, `sponsors`, `academy`, `license`, `relations`, `marketInterest`, `pendingEvents`, `eventLog`, `adjustments`, `gridPenalties`, `offseason` e `history`.
+`CareerState` guarda a categoria atual e o seu mundo: equipes, pilotos (titulares, reservas e livres), calendário, etapas da temporada e fim de semana em andamento. Sobre isso ficam os sistemas da carreira: `contract`, `finance` (com ações, imóveis, empresas, participações e empréstimos), `sponsors`, `academy`, `license`, `relations`, `marketInterest`, `pendingEvents`, `eventLog`, `adjustments`, `gridPenalties`, `offseason` e `history`; e os da Fase 3: `mode`, `family`, `dynasty`, `management`, `executiveOffseason`, `executiveLog`, `succession` e `tutorial`.
 
 Só a categoria que o jogador disputa é simulada. Ao mudar de categoria, o grid da nova é gerado por regras (`world/generation.ts`) e os melhores rivais da categoria anterior sobem junto, para as rivalidades continuarem. As equipes das outras categorias vêm dos dados estáticos e servem para calcular interesse e propostas.
 
-As temporadas arquivadas em `history` são compactadas (`compactRound`): ficam resultado e grid; a narração volta a volta é descartada. Uma carreira de 12 temporadas ocupa cerca de 1,2 MB.
+As temporadas arquivadas em `history` são compactadas (`compactRound`): ficam resultado e grid; a narração volta a volta é descartada. Das temporadas mais antigas que as seis últimas, cada etapa guarda só o pódio e os resultados dos pilotos da família (`trimHistory`); a classificação final continua completa. Uma carreira de 12 temporadas ocupa cerca de 1,2 MB, e uma de 60, cerca de 1,8 MB.
 
 ## Persistência e compatibilidade
 
@@ -132,11 +184,13 @@ As temporadas arquivadas em `history` são compactadas (`compactRound`): ficam r
 1. **Envelope** com formato, versão, data, resumo e checksum.
 2. **Checksum** cyrb53 sobre a serialização canônica da carreira, conferido antes de qualquer migração.
 3. **Migração** (`migrations.ts`): converte saves antigos, versão a versão. Saves de versões futuras são recusados.
-4. **Validação**: schema Zod mais `validateCareerIntegrity` (referências, dois titulares e no máximo um reserva por equipe, contrato coerente com equipe, categoria e papel, calendário do tamanho da categoria, resultados batendo com o progresso, fechamento presente exatamente quando a temporada acabou, probabilidades dos eventos somando 1).
+4. **Validação**: schema Zod mais `validateCareerIntegrity` (referências, dois titulares e no máximo um reserva por equipe, contrato coerente com equipe, categoria e papel quando o jogador corre, calendário do tamanho da categoria, resultados batendo com o progresso, fechamento do modo certo presente exatamente quando a temporada acabou, probabilidades dos eventos somando 1, equipe administrada existente e da categoria atual, pesquisa somando 100%, linhagem terminando no personagem atual, sucessão com herdeiro possível).
 
 Toda gravação faz antes a ida e volta (serializa e valida) e guarda a versão anterior do slot como backup, na mesma transação.
 
-**Compatibilidade com a Fase 1.** O schema subiu da versão 1 para a 2. A migração `1 → 2` transforma um save antigo em uma carreira no kart regional: renomeia `kart` para `car` nas equipes, define papéis e reservas, cria contrato, finanças, licença (a partir do histórico) e relações no estado inicial, completa os campos novos dos resultados e, se o save estava parado no fim da temporada, roda o fechamento que antes não existia. `tests/fixtures/v1/` contém três saves gravados pelo código da Fase 1 (no meio de um fim de semana, com a temporada terminada e na segunda temporada), e os testes verificam que eles abrem, validam e continuam jogáveis.
+**Compatibilidade com a Fase 2.** O schema subiu da versão 2 para a 3. A migração `2 → 3` só acrescenta dados: patrimônio vazio com as cotações iniciais, família vazia, linhagem de uma geração, modo `driver`, sem gestão nem sucessão, e tutorial dispensado para quem já tinha carreira. Ela não chama o motor do jogo, então não muda com o balanceamento. `tests/fixtures/v2/` contém quatro saves gravados pelo código da Fase 2 (no meio de um fim de semana, entre etapas, no fechamento de temporada e em um monoposto no meio do ano); os testes conferem que pilotos, equipes, resultados, contrato, caixa e histórico saem iguais da migração e que a carreira continua jogável. Um save da Fase 2 com a carreira "encerrada" pode voltar como dirigente.
+
+**Compatibilidade com a Fase 1.** O schema tinha subido da versão 1 para a 2. A migração `1 → 2` transforma um save antigo em uma carreira no kart regional: renomeia `kart` para `car` nas equipes, define papéis e reservas, cria contrato, finanças, licença (a partir do histórico) e relações no estado inicial, completa os campos novos dos resultados e, se o save estava parado no fim da temporada, roda o fechamento que antes não existia (depois de todas as migrações, com os dados já no formato atual). `tests/fixtures/v1/` contém três saves gravados pelo código da Fase 1 (no meio de um fim de semana, com a temporada terminada e na segunda temporada), e os testes verificam que eles abrem, validam e continuam jogáveis.
 
 ## Como estender
 
@@ -146,17 +200,22 @@ Toda gravação faz antes a ida e volta (serializa e valida) e guarda a versão 
 
 **Novo evento.** Acrescente uma entrada em `EVENT_DEFINITIONS` com a condição (`build` devolve `null` quando não vale) e as escolhas. Use os efeitos existentes; se precisar de um efeito novo, acrescente a variante em `EffectSchema`, o caso em `effects.ts` e suba a versão do schema se o formato de dados já gravados mudar.
 
-**Novo campo no save.** Suba `CAREER_SCHEMA_VERSION`, registre a migração em `MIGRATIONS`, gere uma fixture com a versão anterior e acrescente o teste de compatibilidade.
+**Novo campo no save.** Suba `CAREER_SCHEMA_VERSION`, registre a migração em `MIGRATIONS` (só transformação de dados, sem chamar o motor), gere uma fixture com a versão anterior e acrescente o teste de compatibilidade.
 
-**Rebalanceamento.** Ajuste constantes ou dados e rode `npm run calibrate`: ele simula 12 carreiras de 14 temporadas com um robô e imprime as trajetórias, as estatísticas de corrida por categoria e o desvio do nível dos grids.
+**Novo ativo, traço de personalidade ou função da equipe técnica.** São dados: `data/assets.ts`, `data/family.ts`, `data/management.ts`. Um ativo com regra própria (como a residência fiscal) declara o benefício no catálogo e aplica a regra no ponto em que ela age.
+
+**Nova decisão de dirigente.** Acrescente a função em `management/team.ts` ou `executive.ts`, exporte pela API do motor, exponha na store com `action(...)` e use na tela. Se for um evento, acrescente um construtor em `management/events.ts`.
+
+**Rebalanceamento.** Ajuste constantes ou dados e rode `npm run calibrate`. Ele imprime três relatórios: 12 carreiras de 14 temporadas com um robô (trajetórias, estatísticas de corrida por categoria e desvio do nível dos grids); 4 vidas de 70 temporadas (piloto, dirigente, família e sucessões, com verificação de integridade a cada passo); e o resultado previsto das equipes por categoria e força.
 
 ## Qualidade
 
 - `npm run typecheck`: TypeScript estrito (`strict`, `noUncheckedIndexedAccess`), sem `any`.
-- `npm test`: 121 testes.
+- `npm test`: 171 testes.
   - `raceEngine.test.ts`: pneus, combustível, clima, estratégia, boxes, safety car, safety car virtual, bandeira vermelha, punições, regra dos dois compostos, ordens de equipe, classificação eliminatória, todas as categorias.
   - `simulation.test.ts`, `championship.test.ts`: modelo de desempenho, sessões, pontuação por categoria, ajustes.
   - `systems.test.ts`: economia, impostos, investimentos, condição, lesões, suspensão, licença, reputação, contratos, negociação, patrocinadores, mercado, eventos e cada tipo de efeito.
   - `career.test.ts`, `multiSeason.test.ts`: temporada completa, virada de ano, e carreiras de 12 a 14 temporadas com verificação de integridade em todo fechamento, determinismo, faixas de equilíbrio e nível dos grids.
   - `save.test.ts`: ida e volta, IndexedDB, adulteração, backup, e os saves reais da Fase 1.
+  - `phase3.test.ts`: patrimônio (ações, imóveis, empresas, participações, empréstimos, impostos), família (herança de talento, casamento, divórcio, formação e carreira dos filhos), aposentadoria, gestão (compra, fundação, cargo, demissão, equipe técnica, instalações, caixa), desenvolvimento técnico e regulamento, escalação de pilotos (inclusive filhos), morte e sucessão por todos os caminhos, saves reais da Fase 2, saves no modo dirigente, uma vida de 60 temporadas com várias gerações e o tutorial.
 - `npm run build`: checagem de tipos e build de produção.
