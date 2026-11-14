@@ -210,7 +210,37 @@ function QualifyingPhase() {
   const best = practice.entries[0]?.bestLap ?? 0;
   const gridPenalty = career.gridPenalties[player.id] ?? 0;
   return (
-    <div className="grid items-start gap-4 md:grid-cols-2">
+    <div className="space-y-4">
+      {/* A decisão vem primeiro: na tela deitada as três abordagens cabem lado a lado, sem rolar. */}
+      <Card title="Abordagem da classificação">
+        <p className="mb-3 text-sm text-ink-400">
+          {category.qualifyingFormat === 'knockout'
+            ? 'Classificação eliminatória em três fases: em cada uma das duas primeiras, os cinco mais lentos são eliminados. São duas tentativas por fase.'
+            : 'São 3 tentativas lançadas; vale a melhor volta.'}{' '}
+          Um erro invalida a tentativa. Sua consistência é {Math.floor(player.attributes.consistency)}.
+        </p>
+        {gridPenalty > 0 && (
+          <p className="mb-3 bg-gold-400/10 px-3 py-2 text-sm text-gold-400 shadow-[inset_3px_0_0_0_var(--color-gold-400)]">
+            Você cumpre uma punição: perde {gridPenalty} posições no grid depois da classificação.
+          </p>
+        )}
+        <div className="grid gap-2 md:grid-cols-3">
+          {QUALIFYING_APPROACHES.map((a) => (
+            <ChoiceCard
+              key={a}
+              selected={approach === a}
+              onSelect={() => setApproach(a)}
+              title={QUALIFYING_APPROACH_LABELS[a]}
+              description={QUALIFYING_APPROACH_DESCRIPTIONS[a]}
+            />
+          ))}
+        </div>
+        <div className="mt-4">
+          <ScreenAction onClick={() => runQualifying(approach)} className="min-h-12 w-full">
+            Disputar classificação
+          </ScreenAction>
+        </div>
+      </Card>
       <Card title="Resultado do treino livre" padded={false}>
         {mine && (
           <div className="grid grid-cols-3 gap-3 border-b border-ink-700 px-4 py-3">
@@ -219,7 +249,7 @@ function QualifyingPhase() {
             <Stat label="Programa" value={<span className="font-sans text-sm font-semibold">{PRACTICE_PROGRAM_LABELS[mine.program]}</span>} />
           </div>
         )}
-        <div className="max-h-[420px] overflow-y-auto px-4 md:max-h-[max(11rem,calc(100dvh-16.5rem))]">
+        <div className="max-h-[420px] overflow-y-auto px-4">
           <TableWrap>
             <table className="w-full">
               <thead className="sticky top-0 bg-ink-900">
@@ -247,35 +277,6 @@ function QualifyingPhase() {
               </tbody>
             </table>
           </TableWrap>
-        </div>
-      </Card>
-      <Card title="Abordagem da classificação">
-        <p className="mb-3 text-sm text-ink-400">
-          {category.qualifyingFormat === 'knockout'
-            ? 'Classificação eliminatória em três fases: em cada uma das duas primeiras, os cinco mais lentos são eliminados. São duas tentativas por fase.'
-            : 'São 3 tentativas lançadas; vale a melhor volta.'}{' '}
-          Um erro invalida a tentativa. Sua consistência é {Math.floor(player.attributes.consistency)}.
-        </p>
-        {gridPenalty > 0 && (
-          <p className="mb-3 bg-gold-400/10 px-3 py-2 text-sm text-gold-400 shadow-[inset_3px_0_0_0_var(--color-gold-400)]">
-            Você cumpre uma punição: perde {gridPenalty} posições no grid depois da classificação.
-          </p>
-        )}
-        <div className="grid gap-2">
-          {QUALIFYING_APPROACHES.map((a) => (
-            <ChoiceCard
-              key={a}
-              selected={approach === a}
-              onSelect={() => setApproach(a)}
-              title={QUALIFYING_APPROACH_LABELS[a]}
-              description={QUALIFYING_APPROACH_DESCRIPTIONS[a]}
-            />
-          ))}
-        </div>
-        <div className="mt-4">
-          <ScreenAction onClick={() => runQualifying(approach)} className="min-h-12 w-full">
-            Disputar classificação
-          </ScreenAction>
         </div>
       </Card>
     </div>
@@ -359,10 +360,10 @@ function PreRacePhase() {
                               color={teams[e.teamId]?.color ?? '#9aa3b2'}
                               driverId={e.driverId}
                               number={carNumbers[e.driverId]}
-                              className="w-12 shrink-0"
+                              className="w-10 shrink-0"
                             />
-                            <span className="w-6 text-right text-xs tabular text-ink-400">{carNumbers[e.driverId]}</span>
-                            {drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
+                            <span className="w-6 shrink-0 text-right text-xs text-ink-400">{carNumbers[e.driverId]}</span>
+                            <span className="whitespace-nowrap">{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
                           </span>
                           {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
                           {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
@@ -397,8 +398,8 @@ function PreRacePhase() {
           {rules.pitStops && (
             <Card title="Estratégia de pneus">
               <p className="mb-3 text-sm text-ink-400">
-                {rules.mandatoryTwoCompounds ? 'No seco, é obrigatório usar dois compostos diferentes. ' : ''}A perda estimada soma desgaste, ritmo de cada
-                composto e tempo de box; quanto menor, melhor. As paradas planejadas acontecem sozinhas, e você pode mudar o plano durante a corrida.
+                {rules.mandatoryTwoCompounds ? 'No seco, é obrigatório usar dois compostos. ' : ''}A perda estimada soma desgaste, ritmo e tempo de box (quanto
+                menor, melhor). O plano pode mudar durante a corrida.
               </p>
               <div className="grid gap-2">
                 {options.map((o, i) => (
@@ -524,16 +525,7 @@ function RaceStage() {
     }
   };
   if (view === 'broadcast') return <RaceBroadcast onTimingView={() => choose('timing')} />;
-  return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button variant="ghost" onClick={() => choose('broadcast')}>
-          Voltar à corrida visual
-        </Button>
-      </div>
-      <RaceView />
-    </div>
-  );
+  return <RaceView onBroadcastView={() => choose('broadcast')} />;
 }
 
 function circuitDirection(track: Parameters<typeof buildCircuit>[0], style: CircuitStyle): string {

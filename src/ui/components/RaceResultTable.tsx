@@ -5,6 +5,7 @@ import { PositionBadge, TableWrap, TeamSwatch, cx, td, th } from './ui';
 import { formatLap, formatRaceTime } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
+import { GridDelta, Mark } from '../race/raceBits';
 
 /**
  * Resultado oficial de uma corrida. Em temporadas arquivadas, nomes e cores
@@ -33,7 +34,7 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
         </thead>
         <tbody>
           {result.entries.map((e) => (
-            <tr key={e.driverId} className={cx('border-t border-ink-800', e.driverId === player.id && 'bg-apex-500/10')}>
+            <tr key={e.driverId} className={cx('border-t border-ink-700', e.driverId === player.id && 'bg-apex-500/10')}>
               <td className={td}>
                 <PositionBadge position={e.position} dnf={e.status === 'dnf'} />
               </td>
@@ -42,34 +43,22 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
                   <TeamSwatch team={colorOf(e.teamId)} />
                   <span className={cx(e.driverId === player.id && 'font-semibold')}>{nameOf(e.driverId)}</span>
                   {result.fastestLap?.driverId === e.driverId && (
-                    <span title="Volta mais rápida" className="rounded bg-purple-500/20 px-1 text-[10px] font-bold text-purple-300">
+                    <Mark title="Volta mais rápida" tone="strong">
                       VMR
-                    </span>
+                    </Mark>
                   )}
-                  {e.grid === 1 && (
-                    <span title="Pole position" className="rounded bg-ink-700 px-1 text-[10px] font-bold text-ink-300">
-                      POLE
-                    </span>
-                  )}
-                  {e.penaltySeconds > 0 && (
-                    <span title="Punição em tempo" className="rounded bg-gold-400/20 px-1 text-[10px] font-bold text-gold-400">
-                      +{e.penaltySeconds}s
-                    </span>
-                  )}
+                  {e.grid === 1 && <Mark title="Pole position">POLE</Mark>}
+                  {e.penaltySeconds > 0 && <Mark title="Punição em tempo" tone="attention">{`+${e.penaltySeconds}s`}</Mark>}
                   {e.injured && (
-                    <span title="Lesionado no acidente" className="rounded bg-rose-400/20 px-1 text-[10px] font-bold text-rose-300">
+                    <Mark title="Lesionado no acidente" tone="attention">
                       LESÃO
-                    </span>
+                    </Mark>
                   )}
                 </span>
               </td>
               <td className={cx(td, 'hidden text-center tabular text-ink-400 sm:table-cell')}>
                 {e.grid}
-                {e.status === 'finished' && e.grid !== e.position && (
-                  <span className={cx('ml-1 text-xs', e.grid > e.position ? 'text-go-400' : 'text-apex-400')}>
-                    {e.grid > e.position ? `▲${e.grid - e.position}` : `▼${e.position - e.grid}`}
-                  </span>
-                )}
+                {e.status === 'finished' && <GridDelta gained={e.grid - e.position} className="ml-1" />}
               </td>
               <td className={cx(td, 'text-right tabular')}>
                 {e.status === 'dnf' ? (
@@ -91,7 +80,7 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
         </tbody>
       </table>
       {(result.safetyCars > 0 || result.virtualSafetyCars > 0 || result.redFlags > 0) && (
-        <p className="border-t border-ink-800 py-2 text-xs text-ink-400">
+        <p className="border-t border-ink-700 py-2 text-xs text-ink-400">
           Neutralizações: {result.safetyCars} safety car, {result.virtualSafetyCars} safety car virtual,{' '}
           {counted(result.redFlags, 'bandeira vermelha', 'bandeiras vermelhas')}.
         </p>

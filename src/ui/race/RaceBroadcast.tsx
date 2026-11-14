@@ -8,31 +8,18 @@
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  ChevronDown,
-  ChevronUp,
-  Crosshair,
-  FastForward,
-  Flag,
-  ListOrdered,
-  Pause,
-  Play,
-  Radio,
-  RotateCcw,
-  SkipForward,
-  Video,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronDown, ChevronUp, Crosshair, FastForward, Flag, ListOrdered, Pause, Play, Radio, RotateCcw, SkipForward, Video } from 'lucide-react';
 import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/domain/labels';
 import { getTrack } from '@/data/tracks';
 import { TYRES, buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName, isRaceFinished, lapInfoAt, standingsAt, type StandingRow } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
-import { CompoundDot, EVENT_TONE, RaceResultPanel } from '../components/RaceView';
+import { RaceResultPanel } from '../components/RaceView';
 import { Button, cx } from '../components/ui';
 import { formatLap, trackCredit } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { useChrome, useMediaQuery } from '../layout/chrome';
+import { CompoundDot, EVENT_TONE, HeaderButton } from './raceBits';
 import { RaceCanvas } from './RaceCanvas';
 import { PitStrategyCard, TeamOrderDialog } from './RaceCommands';
 import { RaceControlBar } from './RaceControlBar';
@@ -689,34 +676,3 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
 }
 
 type SidePanel = 'tower' | 'driver' | 'pits' | 'events';
-
-/** Botão do cabeçalho da transmissão: ícone sempre; o texto aparece quando há espaço. */
-function HeaderButton({
-  icon: Icon,
-  label,
-  onClick,
-  disabled,
-  title,
-  always = false,
-}: {
-  icon: LucideIcon;
-  label: string;
-  onClick(): void;
-  disabled?: boolean;
-  title?: string;
-  always?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={title ?? label}
-      className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 px-2 text-xs font-semibold text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-100 disabled:opacity-40"
-    >
-      <Icon size={18} strokeWidth={1.75} aria-hidden />
-      <span className={always ? 'max-sm:hidden' : 'hidden xl:inline'}>{label}</span>
-    </button>
-  );
-}

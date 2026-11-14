@@ -6,14 +6,12 @@
  *
  * Não há regra aqui: os botões chamam os mesmos comandos dos cartões da tela.
  */
+import { Pause, Play } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { RACE_MODES, type RaceMode } from '@/domain/schemas';
 import { RACE_MODE_LABELS } from '@/domain/labels';
 import { cx } from '../components/ui';
 import { useRaceBarSpace } from '../layout/chrome';
-
-const PLAY = 'M7 4.5v15l13-7.5z';
-const PAUSE = 'M6 4.5h4.5v15H6zm7.5 0H18v15h-4.5z';
 
 export interface RaceControlBarProps {
   /** Posição do jogador (ex.: "P14"), ou "AB" se abandonou. */
@@ -74,8 +72,10 @@ export function RaceControlBar({
               disabled={modeDisabled}
               aria-pressed={mode === m}
               className={cx(
-                'min-h-11 rounded-lg border px-1 text-sm font-semibold transition-colors disabled:opacity-40',
-                mode === m ? 'border-apex-500 bg-apex-500/20 text-ink-100' : 'border-ink-700 text-ink-300 hover:border-ink-500',
+                'chamfer-br min-h-11 px-1 text-sm font-semibold transition-colors [--chamfer:8px] disabled:opacity-40',
+                mode === m
+                  ? 'bg-apex-500/20 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-500)]'
+                  : 'bg-ink-800 text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:text-ink-100',
               )}
             >
               {RACE_MODE_LABELS[m]}
@@ -91,27 +91,22 @@ export function RaceControlBar({
           onClick={onToggle}
           disabled={toggleDisabled}
           className={cx(
-            'flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-bold transition-colors disabled:opacity-40 md:ml-auto md:min-w-28',
-            playing ? 'border border-ink-600 bg-ink-800 text-ink-100 hover:bg-ink-700' : 'bg-apex-500 text-white hover:bg-apex-400',
+            'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors [--chamfer:8px] disabled:opacity-40 md:ml-auto md:min-w-28',
+            playing ? 'bg-ink-800 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-700' : 'bg-apex-500 text-white hover:bg-apex-400',
           )}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0 fill-current">
-            <path d={playing ? PAUSE : PLAY} />
-          </svg>
+          {playing ? <Pause size={16} className="shrink-0" aria-hidden /> : <Play size={16} className="shrink-0" aria-hidden />}
           <span className="max-[379px]:sr-only">{playing ? 'Pausar' : playLabel}</span>
         </button>
 
-        <div role="group" aria-label="Velocidade da corrida" className="flex shrink-0 rounded-lg border border-ink-700 p-0.5">
+        <div role="group" aria-label="Velocidade da corrida" className="flex shrink-0 bg-ink-800 shadow-[inset_0_0_0_1px_var(--color-ink-600)]">
           {speeds.map((s) => (
             <button
               key={s.label}
               type="button"
               onClick={s.select}
               aria-pressed={s.active}
-              className={cx(
-                'min-h-11 min-w-11 rounded-md px-1 text-sm font-semibold tabular',
-                s.active ? 'bg-apex-500 text-white' : 'text-ink-300 hover:text-ink-100',
-              )}
+              className={cx('min-h-11 min-w-11 px-1 text-sm font-semibold', s.active ? 'bg-apex-500 text-white' : 'text-ink-300 hover:text-ink-100')}
             >
               {s.label}
             </button>

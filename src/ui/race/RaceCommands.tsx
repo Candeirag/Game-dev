@@ -3,11 +3,9 @@
  * resposta a ordens de equipe. São os mesmos comandos do modo de cronometragem;
  * as decisões valem para a próxima volta que o motor simular.
  */
-import { RACE_MODES } from '@/domain/schemas';
-import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS } from '@/domain/labels';
 import { TYRES, conditionFor, fullName, type RaceSimState } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { CompoundDot } from '../components/RaceView';
+import { CompoundDot } from './raceBits';
 import { Button, Card, cx } from '../components/ui';
 import { useCareerView } from '../hooks/useCareer';
 
@@ -32,42 +30,6 @@ export function TeamOrderDialog({ race }: { race: RaceSimState }) {
         </Button>
       </div>
     </div>
-  );
-}
-
-/** Ritmo de pilotagem com a explicação de cada modo (modo cronometragem; na corrida visual o ritmo fica na barra fixa). */
-export function RaceModeCard({ race }: { race: RaceSimState }) {
-  const { player, category } = useCareerView();
-  const mode = useGameStore((s) => s.raceMode);
-  const setRaceMode = useGameStore((s) => s.setRaceMode);
-  const running = race.cars.find((c) => c.driverId === player.id)?.status === 'running';
-  return (
-    <Card title="Ritmo de pilotagem">
-      <div className="grid grid-cols-3 gap-1.5">
-        {RACE_MODES.map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setRaceMode(m)}
-            disabled={!running}
-            aria-pressed={mode === m}
-            className={cx(
-              'min-h-11 px-1 text-xs font-semibold transition-colors disabled:opacity-40',
-              mode === m
-                ? 'bg-apex-500/15 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-500)]'
-                : 'text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-800',
-            )}
-          >
-            {RACE_MODE_LABELS[m]}
-          </button>
-        ))}
-      </div>
-      <p className="mt-3 text-sm text-ink-400">
-        {RACE_MODE_DESCRIPTIONS[mode]}
-        {category.race.fuel ? ' O modo também muda o consumo de combustível.' : ''}
-      </p>
-      {running && race.currentLap < race.totalLaps && <p className="mt-2 text-xs text-ink-400">Vale a partir da volta {race.currentLap + 1}.</p>}
-    </Card>
   );
 }
 
