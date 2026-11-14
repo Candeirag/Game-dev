@@ -7,7 +7,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { CategoryId, Driver, Team } from '@/domain/schemas';
-import { CIRCUIT_LAYOUTS } from '@/data/circuitLayouts';
+import { CIRCUIT_LAYOUTS, type CircuitLayout } from '@/data/circuitLayouts';
+import { KART_LAYOUTS } from '@/data/kartLayouts';
 import { BR_KART_TRACKS, CIRCUITS, TRACKS, WORLD_KART_TRACKS, getTrack } from '@/data/tracks';
 import {
   CIRCUIT,
@@ -63,6 +64,38 @@ const ALL_TRACKS = [
   ...CIRCUITS.map((track) => ({ track, style: 'formula' as const })),
 ];
 
+/**
+ * Maior diferença, em metros, entre a distância em linha reta de dois pontos da volta no circuito do
+ * jogo e no traçado de origem. Comparar distâncias dispensa saber o giro e o deslocamento do desenho.
+ */
+function shapeError(c: ReturnType<typeof buildCircuit>, layout: CircuitLayout): number {
+  const n = layout.points.length / 2;
+  const cumulative = [0];
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    cumulative.push(cumulative[i]! + Math.hypot(layout.points[j * 2]! - layout.points[i * 2]!, layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!));
+  }
+  const sourceAt = (fraction: number) => {
+    const target = fraction * cumulative[n]!;
+    let i = 0;
+    while (i < n - 1 && cumulative[i + 1]! < target) i++;
+    const t = (target - cumulative[i]!) / (cumulative[i + 1]! - cumulative[i]! || 1);
+    const j = (i + 1) % n;
+    return { x: layout.points[i * 2]! + (layout.points[j * 2]! - layout.points[i * 2]!) * t, y: layout.points[i * 2 + 1]! + (layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!) * t };
+  };
+  let worst = 0;
+  for (let a = 0; a < 40; a++) {
+    for (let b = a + 1; b < 40; b++) {
+      const p = poseAt(c, a / 40);
+      const q = poseAt(c, b / 40);
+      const sp = sourceAt(a / 40);
+      const sq = sourceAt(b / 40);
+      worst = Math.max(worst, Math.abs(Math.hypot(p.x - q.x, p.y - q.y) / c.unitsPerMetre - Math.hypot(sp.x - sq.x, sp.y - sq.y)));
+    }
+  }
+  return worst;
+}
+
 describe('circuitos', () => {
   it('toda pista do jogo tem um traçado fechado, contínuo e sem trechos sobrepostos', () => {
     expect(ALL_TRACKS).toHaveLength(TRACKS.length);
@@ -115,34 +148,8 @@ describe('circuitos', () => {
       expect(Math.abs(layout.length / track.lengthMeters - 1), track.id).toBeLessThan(0.01);
       expect(Math.abs(c.length / c.unitsPerMetre / layout.length - 1), track.id).toBeLessThan(0.012);
 
-      // Forma: a distância em linha reta entre dois pontos quaisquer da volta é a do traçado real.
-      // (Comparar distâncias dispensa saber o giro e o deslocamento aplicados ao desenho.)
-      const n = layout.points.length / 2;
-      const cumulative = [0];
-      for (let i = 0; i < n; i++) {
-        const j = (i + 1) % n;
-        cumulative.push(cumulative[i]! + Math.hypot(layout.points[j * 2]! - layout.points[i * 2]!, layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!));
-      }
-      const sourceAt = (fraction: number) => {
-        const target = fraction * cumulative[n]!;
-        let i = 0;
-        while (i < n - 1 && cumulative[i + 1]! < target) i++;
-        const t = (target - cumulative[i]!) / (cumulative[i + 1]! - cumulative[i]! || 1);
-        const j = (i + 1) % n;
-        return { x: layout.points[i * 2]! + (layout.points[j * 2]! - layout.points[i * 2]!) * t, y: layout.points[i * 2 + 1]! + (layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!) * t };
-      };
-      let worst = 0;
-      for (let a = 0; a < 40; a++) {
-        for (let b = a + 1; b < 40; b++) {
-          const p = poseAt(c, a / 40);
-          const q = poseAt(c, b / 40);
-          const sp = sourceAt(a / 40);
-          const sq = sourceAt(b / 40);
-          worst = Math.max(worst, Math.abs(Math.hypot(p.x - q.x, p.y - q.y) / c.unitsPerMetre - Math.hypot(sp.x - sq.x, sp.y - sq.y)));
-        }
-      }
       // Diferença máxima de 25 m em distâncias de até 2 km (a curva suave arredonda os cantos do traçado de origem).
-      expect(worst, track.id).toBeLessThan(25);
+      expect(shapeError(c, layout), track.id).toBeLessThan(25);
 
       // Sentido da corrida (na tela, y cresce para baixo: área positiva = horário). O traçado em oito fica de fora.
       let area = 0;
@@ -154,8 +161,42 @@ describe('circuitos', () => {
       // Zonas de ultrapassagem nas retas mais longas.
       expect(c.zones.length, track.id).toBeGreaterThanOrEqual(1);
     }
-    // Os kartódromos continuam com traçado gerado.
-    expect(buildCircuit(getTrack('vale-do-sol'), 'kart').real).toBe(false);
+  });
+
+  it('os kartódromos reproduzem o traçado mapeado: forma, sentido, escala e largada numa reta', () => {
+    const karts = [...BR_KART_TRACKS, ...WORLD_KART_TRACKS];
+    // Só a pista de Al Ain não tem traçado mapeado e continua gerada por regras.
+    expect(Object.keys(KART_LAYOUTS).sort()).toEqual(karts.map((t) => t.id).filter((id) => id !== 'al-ain').sort());
+    expect(buildCircuit(getTrack('al-ain'), 'kart').real).toBe(false);
+    for (const track of karts) {
+      const layout = KART_LAYOUTS[track.id];
+      if (!layout) continue;
+      const c = buildCircuit(track, 'kart');
+      expect(c.real, track.id).toBe(true);
+      // Um kartódromo de verdade tem entre 800 m e 1,7 km.
+      expect(layout.length, track.id).toBeGreaterThan(780);
+      expect(layout.length, track.id).toBeLessThan(1750);
+      // Escala: de 3 a 5,7 unidades por metro, a mesma nas duas direções; o comprimento confere.
+      expect(c.unitsPerMetre, track.id).toBeGreaterThanOrEqual(3);
+      expect(c.unitsPerMetre, track.id).toBeLessThanOrEqual(5.7);
+      expect(Math.abs(c.length / c.unitsPerMetre / layout.length - 1), track.id).toBeLessThan(0.03);
+      // Forma: diferença máxima de 6 m (o arredondamento das junções tira um pouco dos cantos vivos).
+      expect(shapeError(c, layout), track.id).toBeLessThan(6);
+      // Sentido da corrida, igual ao do traçado de origem.
+      let area = 0;
+      for (let i = 0; i < c.count; i++) area += c.x[i]! * c.y[(i + 1) % c.count]! - c.x[(i + 1) % c.count]! * c.y[i]!;
+      expect(c.clockwise, track.id).toBe(layout.clockwise);
+      expect(area > 0, track.id).toBe(layout.clockwise);
+      // A largada fica numa reta: quase sem mudança de direção nos 12 m antes e depois da linha.
+      const reach = Math.round((12 * c.unitsPerMetre) / c.step);
+      let turn = 0;
+      for (let k = -reach; k < reach; k++) turn += Math.abs(c.curvature[((k % c.count) + c.count) % c.count]!) * c.step;
+      expect(turn, track.id).toBeLessThan(0.3);
+      // Kartódromo não tem zona de ultrapassagem marcada.
+      expect(c.zones, track.id).toHaveLength(0);
+    }
+    // A pista inglesa passa por cima de si mesma; as outras não têm viaduto.
+    expect(buildCircuit(getTrack('pfi'), 'kart').bridges).toHaveLength(1);
     expect(buildCircuit(getTrack('garda'), 'kart').bridges).toHaveLength(0);
   });
 

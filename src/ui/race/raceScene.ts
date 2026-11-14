@@ -387,7 +387,7 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const fit = portrait ? Math.min(width / circuit.height, height / circuit.width) : Math.min(width / circuit.width, height / circuit.height);
   const focus = placed.find((p) => p.row.driverId === input.focusId);
   const follow = input.camera === 'follow' && focus;
-  const goal = follow ? { x: focus.x, y: focus.y, scale: clamp(Math.min(width, height) / (circuit.real ? 310 : 250), 1.2, 2.9) } : { x: circuit.width / 2, y: circuit.height / 2, scale: fit };
+  const goal = follow ? { x: focus.x, y: focus.y, scale: clamp(Math.min(width, height) / (circuit.style === 'formula' ? 310 : 250), 1.2, 2.9) } : { x: circuit.width / 2, y: circuit.height / 2, scale: fit };
   const camera = memory.camera ?? goal;
   const pan = 1 - Math.exp(-dt * 5);
   camera.x += (goal.x - camera.x) * pan;

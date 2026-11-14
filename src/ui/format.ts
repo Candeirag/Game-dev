@@ -1,4 +1,5 @@
 /** Formatação para exibição. Não contém regras de jogo. */
+import { KART_LAYOUTS, KART_LAYOUTS_CREDIT } from '@/data/kartLayouts';
 
 export function formatLap(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '-';
@@ -67,4 +68,9 @@ export function formatMoney(value: number, options: { compact?: boolean; sign?: 
 
 export function trackLocation(track: { city: string; state: string; country: string }): string {
   return `${track.city}, ${track.state || track.country}`;
+}
+
+/** Crédito da fonte do traçado, quando a licença pede que ele apareça junto do mapa (kartódromos reais). */
+export function trackCredit(trackId: string): string | null {
+  return trackId in KART_LAYOUTS ? KART_LAYOUTS_CREDIT : null;
 }

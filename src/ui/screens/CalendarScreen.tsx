@@ -2,11 +2,12 @@ import { getTrack, raceLaps } from '@/data/tracks';
 import { fullName } from '@/engine';
 import { CircuitMap } from '../components/CircuitMap';
 import { Card, PageHeader, PositionBadge, WeatherBadge, cx } from '../components/ui';
-import { describeOvertaking, describePower, describeTyreWear, formatDate, trackLocation } from '../format';
+import { describeOvertaking, describePower, describeTyreWear, formatDate, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
 export function CalendarScreen() {
   const { career, player, drivers, category } = useCareerView();
+  const credit = career.calendar.map((event) => trackCredit(event.trackId)).find((text) => text !== null) ?? null;
   return (
     <div>
       <PageHeader eyebrow={`${category.name} · ${career.year}`} title="Calendário">
@@ -61,6 +62,7 @@ export function CalendarScreen() {
           );
         })}
       </div>
+      {credit && <p className="mt-3 text-[11px] text-ink-500">Traçados das pistas: {credit}</p>}
     </div>
   );
 }

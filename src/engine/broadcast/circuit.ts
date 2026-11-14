@@ -6,15 +6,19 @@
  * só girados e ampliados para caber na área de desenho. Curvas, retas, sentido
  * da corrida e posição da largada são os reais; os nomes das pistas são fictícios.
  *
- * Os kartódromos, que não têm traçado real cadastrado, ganham um traçado
- * próprio gerado de forma determinística a partir do id e das características
- * da pista (as mesmas que o motor de corrida usa): pistas de motor têm retas
- * longas; pistas travadas têm mais curvas e raios menores. Nesse caso o traçado
- * é um polígono com os cantos arredondados.
+ * Os kartódromos seguem o mesmo caminho, com os pontos de
+ * src/data/kartLayouts.ts (kartódromos reais mapeados no OpenStreetMap) e uma
+ * escala maior, porque são pistas bem menores (ver realCircuit).
  *
- * As medidas estão em "unidades de mundo": a área de desenho tem 1000 × 640, ou
- * um múltiplo disso nos traçados reais mais apertados (ver realCircuit). A
- * escala é esquemática de propósito. Em escala real, um carro de
+ * Uma pista sem traçado real cadastrado ganha um traçado próprio, gerado de
+ * forma determinística a partir do id e das características da pista (as
+ * mesmas que o motor de corrida usa): pistas de motor têm retas longas; pistas
+ * travadas têm mais curvas e raios menores. Nesse caso o traçado é um polígono
+ * com os cantos arredondados.
+ *
+ * As medidas estão em "unidades de mundo": a área de desenho tem 1000 × 640 nos
+ * traçados gerados e o tamanho do próprio circuito nos reais (ver realCircuit).
+ * A escala é esquemática de propósito. Em escala real, um carro de
  * 5 m numa pista de 5 km teria 2 pixels; aqui carros e largura da pista são
  * ampliados para que a disputa seja visível, como em qualquer jogo de gestão.
  * A velocidade exibida ao jogador usa o comprimento real da pista (em metros)
@@ -26,6 +30,7 @@
  */
 import type { Track } from '@/domain/schemas';
 import { CIRCUIT_LAYOUTS, type CircuitLayout } from '@/data/circuitLayouts';
+import { KART_LAYOUTS } from '@/data/kartLayouts';
 import { createRng, hashSeed, uniform, type Rng } from '../rng';
 
 export type CircuitStyle = 'kart' | 'formula';
@@ -559,7 +564,7 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
   const cy = y.reduce((s, v) => s + v, 0) / count;
   const h0 = at(heading, 0);
   const towardsCentre: 1 | -1 = (cx - at(x, 0)) * -Math.sin(h0) + (cy - at(y, 0)) * Math.cos(h0) >= 0 ? 1 : -1;
-  const insideSign: 1 | -1 = real ? (clockwise ? 1 : -1) : towardsCentre;
+  const preferredSide: 1 | -1 = real ? (clockwise ? 1 : -1) : towardsCentre;
 
   // Reta da largada: nos traçados reais vai até a primeira curva fechada de cada lado.
   let behind = spec.straight?.behind ?? 0;
@@ -575,7 +580,7 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
   }
   // Boxes. Nos traçados reais nem sempre há espaço para o pit lane inteiro e o prédio do lado de
   // dentro da reta; tenta-se do maior para o menor e fica o primeiro que não encosta em outro trecho.
-  const pitVariant = (maxEntry: number, maxExit: number, building: number): PitLane => {
+  const pitVariant = (side: 1 | -1, maxEntry: number, maxExit: number, building: number): PitLane => {
     const entryLength = Math.min(behind * 0.93, maxEntry);
     const exitLength = Math.min(ahead * 0.93, maxExit);
     const ramp = Math.min(CIRCUIT.PIT_RAMP, exitLength * 0.45);
@@ -584,13 +589,14 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
       entryEnd: 1 - (entryLength - CIRCUIT.PIT_RAMP) / length,
       exitStart: (exitLength - ramp) / length,
       exit: exitLength / length,
-      offset: insideSign * CIRCUIT.PIT_OFFSET,
+      offset: side * CIRCUIT.PIT_OFFSET,
       boxFrom: 1 - (entryLength - CIRCUIT.PIT_RAMP - 14) / length,
       boxTo: 1 - 16 / length,
       building,
     };
   };
   const pitClear = (candidate: PitLane): boolean => {
+    const side = Math.sign(candidate.offset);
     const reach = CIRCUIT.PIT_OFFSET + CIRCUIT.PIT_WIDTH / 2 + candidate.building;
     const needed = CIRCUIT.TRACK_WIDTH / 2 + (real ? 4 : 10);
     const minArc = 150 / step;
@@ -598,8 +604,8 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
     const to = Math.ceil(candidate.exit * count) + count;
     for (let k = from; k <= to; k += 3) {
       const i = k % count;
-      const px = at(x, i) - Math.sin(at(heading, i)) * reach * insideSign;
-      const py = at(y, i) + Math.cos(at(heading, i)) * reach * insideSign;
+      const px = at(x, i) - Math.sin(at(heading, i)) * reach * side;
+      const py = at(y, i) + Math.cos(at(heading, i)) * reach * side;
       for (let j = 0; j < count; j += 3) {
         const arc = Math.min(Math.abs(j - i), count - Math.abs(j - i));
         if (arc >= minArc && Math.hypot(px - at(x, j), py - at(y, j)) < needed) return false;
@@ -607,11 +613,16 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
     }
     return true;
   };
-  const variants = real
-    ? [pitVariant(330, 400, CIRCUIT.PIT_BUILDING), pitVariant(250, 130, 17), pitVariant(190, 75, 9)]
-    : [pitVariant(330, 400, CIRCUIT.PIT_BUILDING)];
+  // Num kartódromo real o miolo costuma ocupar o lado de dentro da reta, e os boxes ficam por
+  // fora: para cada tamanho, tenta-se primeiro o lado de dentro e depois o de fora.
+  const sides: readonly (1 | -1)[] = real && style === 'kart' ? [preferredSide, preferredSide === 1 ? -1 : 1] : [preferredSide];
+  const sizes: readonly (readonly [number, number, number])[] = real
+    ? [[330, 400, CIRCUIT.PIT_BUILDING], [250, 130, 17], [190, 75, 9]]
+    : [[330, 400, CIRCUIT.PIT_BUILDING]];
+  const variants = sizes.flatMap(([maxEntry, maxExit, building]) => sides.map((side) => pitVariant(side, maxEntry, maxExit, building)));
   const fitting = variants.find(pitClear);
   const pit = fitting ?? at(variants, variants.length - 1);
+  const insideSign: 1 | -1 = pit.offset >= 0 ? 1 : -1;
 
   // Viaduto: o ponto em que o traçado passa por cima de si mesmo. O trecho que vem depois na
   // volta é o que passa por cima.
@@ -718,8 +729,8 @@ function assembleGenerated(trackId: string, style: CircuitStyle, fillets: Fillet
 /* 4. Traçados reais                                                    */
 /* ------------------------------------------------------------------ */
 
-/** Curva suave que passa por todos os pontos do traçado (Catmull-Rom centrípeta), um ponto a cada ~2 m. */
-function smoothClosed(points: readonly number[]): { x: number[]; y: number[] } {
+/** Curva suave que passa por todos os pontos do traçado (Catmull-Rom centrípeta), um ponto a cada `spacing` metros. */
+function smoothClosed(points: readonly number[], spacing: number): { x: number[]; y: number[] } {
   const n = points.length / 2;
   const px = (i: number) => points[(((i % n) + n) % n) * 2] ?? 0;
   const py = (i: number) => points[(((i % n) + n) % n) * 2 + 1] ?? 0;
@@ -735,7 +746,7 @@ function smoothClosed(points: readonly number[]): { x: number[]; y: number[] } {
     const t1 = t0 + knot(p0, p1);
     const t2 = t1 + knot(p1, p2);
     const t3 = t2 + knot(p2, p3);
-    const steps = Math.max(1, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 2));
+    const steps = Math.max(1, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / spacing));
     for (let k = 0; k < steps; k++) {
       const t = t1 + ((t2 - t1) * k) / steps;
       const mix = (a: number, b: number, ta: number, tb: number) => ((tb - t) * a + (t - ta) * b) / (tb - ta);
@@ -753,13 +764,59 @@ function smoothClosed(points: readonly number[]): { x: number[]; y: number[] } {
 }
 
 /**
- * Escala dos traçados reais: unidades de mundo por metro. Com 1 unidade por metro, um carro
- * (21 unidades) aparece com quase quatro vezes o tamanho real, a mesma proporção dos kartódromos.
+ * Escala dos traçados reais: unidades de mundo por metro. Nos autódromos, com 1 unidade por
+ * metro, um carro (21 unidades) aparece com quase quatro vezes o tamanho real. Um kartódromo é
+ * umas cinco vezes menor, então leva 3 unidades por metro: a pista de 30 unidades equivale a
+ * 10 m de asfalto e o mundo fica do tamanho dos kartódromos gerados.
  * Os fatores seguintes só entram quando dois trechos vizinhos se encostariam.
  */
-const REAL_SCALE = 1;
-const REAL_FACTORS = [1, 1.1, 1.2, 1.35, 1.5] as const;
+const REAL_SCALE: Record<CircuitStyle, number> = { formula: 1, kart: 3 };
+const REAL_FACTORS: Record<CircuitStyle, readonly number[]> = { formula: [1, 1.1, 1.2, 1.35, 1.5], kart: [1, 1.1, 1.2, 1.35, 1.5, 1.7, 1.9] };
 const REAL_MARGIN = 84;
+/** Distância entre os pontos da curva suave, em metros: perto de uma unidade de mundo em cada escala. */
+const REAL_SPACING: Record<CircuitStyle, number> = { formula: 2, kart: 0.4 };
+/**
+ * Raio mínimo de uma curva de kartódromo real, em metros. O mapa de origem liga os trechos em
+ * ângulo vivo nas junções; esses cantos são relaxados até terem o raio de um grampo de kart.
+ */
+const KART_MIN_RADIUS = 4;
+
+/**
+ * Arredonda só os cantos mais fechados que `minRadius`: cada ponto de um canto vivo é puxado para
+ * o meio dos vizinhos, passada após passada, até o raio caber. O resto do traçado não é tocado.
+ */
+function relaxTightCorners(path: { x: number[]; y: number[] }, minRadius: number): { x: number[]; y: number[] } {
+  const x = path.x.slice();
+  const y = path.y.slice();
+  const n = x.length;
+  const reach = 3;
+  const wrap = (i: number) => ((i % n) + n) % n;
+  const tooTight = (i: number): boolean => {
+    const ax = at(x, i - reach);
+    const ay = at(y, i - reach);
+    const bx = at(x, i);
+    const by = at(y, i);
+    const cx = at(x, i + reach);
+    const cy = at(y, i + reach);
+    const doubleArea = Math.abs((bx - ax) * (cy - ay) - (cx - ax) * (by - ay));
+    if (doubleArea < 1e-9) return false;
+    return (Math.hypot(bx - ax, by - ay) * Math.hypot(cx - bx, cy - by) * Math.hypot(ax - cx, ay - cy)) / (2 * doubleArea) < minRadius;
+  };
+  // Só os pontos perto de um canto vivo são reexaminados a cada passada.
+  let active: number[] = Array.from({ length: n }, (_, i) => i);
+  for (let pass = 0; pass < 600 && active.length > 0; pass++) {
+    const moving = active.filter(tooTight);
+    const moved = moving.map((i) => [(at(x, i - 1) + at(x, i) * 2 + at(x, i + 1)) / 4, (at(y, i - 1) + at(y, i) * 2 + at(y, i + 1)) / 4] as const);
+    moving.forEach((i, k) => {
+      x[i] = at(moved, k)[0];
+      y[i] = at(moved, k)[1];
+    });
+    const next = new Set<number>();
+    for (const i of moving) for (let d = -reach - 1; d <= reach + 1; d++) next.add(wrap(i + d));
+    active = [...next];
+  }
+  return { x, y };
+}
 
 /**
  * Circuito de traçado real. Os pontos (em metros) são girados para deitar o traçado na área de
@@ -769,7 +826,8 @@ const REAL_MARGIN = 84;
  * se encostar; nesse caso a escala daquela pista cresce um pouco, até caberem.
  */
 function realCircuit(track: Track, style: CircuitStyle, layout: CircuitLayout): Circuit {
-  const smooth = smoothClosed(layout.points);
+  let smooth = smoothClosed(layout.points, REAL_SPACING[style]);
+  if (style === 'kart') smooth = relaxTightCorners(smooth, KART_MIN_RADIUS);
   const n = smooth.x.length;
   const aspect = CIRCUIT.WORLD_WIDTH / CIRCUIT.WORLD_HEIGHT;
 
@@ -815,8 +873,8 @@ function realCircuit(track: Track, style: CircuitStyle, layout: CircuitLayout): 
   if (at(placed.ry, 0) < (placed.minY + placed.maxY) / 2) placed = place(best.angle + Math.PI);
 
   let chosen: Circuit | null = null;
-  for (const factor of REAL_FACTORS) {
-    const k = REAL_SCALE * factor;
+  for (const factor of REAL_FACTORS[style]) {
+    const k = REAL_SCALE[style] * factor;
     const built = assemble({
       trackId: track.id,
       style,
@@ -878,7 +936,7 @@ export function buildCircuit(track: Track, style: CircuitStyle): Circuit {
   const key = `${track.id}|${style}`;
   const cached = cache.get(key);
   if (cached) return cached;
-  const layout = CIRCUIT_LAYOUTS[track.id];
+  const layout = CIRCUIT_LAYOUTS[track.id] ?? KART_LAYOUTS[track.id];
   if (layout) {
     const real = realCircuit(track, style, layout);
     cache.set(key, real);

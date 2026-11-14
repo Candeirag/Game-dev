@@ -31,3 +31,33 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Traçados dos kartódromos: OpenStreetMap
+
+Os traçados de 19 kartódromos contêm dados do
+[OpenStreetMap](https://www.openstreetmap.org/copyright),
+© OpenStreetMap contributors, disponíveis sob a
+[Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+
+- `scripts/osm-kart-tracks/*.json`: recorte dos dados de origem, um arquivo por
+  kartódromo, com as vias `highway=raceway` da pista (identificador, etiquetas e
+  nós), obtidas da API do OpenStreetMap em 14/11/2026.
+- `src/data/kartLayouts.ts`: os traçados usados pelo jogo, gerados a partir
+  desses recortes por `scripts/import-osm-kart-tracks.mjs` (escolha ou junção
+  das vias, conversão para metros, sentido e ponto de largada).
+
+Esses arquivos são bases de dados derivadas e são distribuídos sob a mesma
+licença ODbL 1.0, separadamente da licença do restante do código. Quem
+redistribuir ou adaptar esses dados deve manter o crédito
+"© OpenStreetMap contributors" e a mesma licença. O crédito aparece no jogo
+junto dos mapas dessas pistas (painel, calendário, tela do fim de semana e
+transmissão da corrida) e na tela Como jogar.
+
+Os nomes das pistas no jogo são fictícios; a geometria é a dos kartódromos
+reais: Granja Viana (Cotia), Luigi Borghesi (Londrina), Velopark (Nova Santa
+Rita), kartódromo do autódromo de Brasília, Ayrton Senna (Interlagos, São
+Paulo), Joinville, José Carlos Pace (Uberlândia), Tarumã (Viamão), Speed Park
+(Birigui), Guapimirim, South Garda (Lonato), Karting Genk, Le Mans Karting
+International, Zuera, Prokart Raceland (Wackersdorf), Åsum Ring
+(Kristianstad), PF International, Kartódromo Internacional do Algarve
+(Portimão) e Franciacorta Karting Track.

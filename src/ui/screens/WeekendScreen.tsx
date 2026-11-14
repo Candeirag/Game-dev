@@ -19,7 +19,7 @@ import { CarSprite } from '../components/CarSprite';
 import { CircuitMap } from '../components/CircuitMap';
 import { RaceBroadcast } from '../race/RaceBroadcast';
 import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
-import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackLocation } from '../format';
+import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
 const STEPS = [
@@ -300,6 +300,7 @@ function PreRacePhase() {
           <div className="p-4">
             <CircuitMap track={getTrack(event.trackId)} style={category.vehicle} detailed className="mx-auto max-h-56 w-full" />
             <p className="mt-2 text-xs text-ink-400">Sentido {circuitDirection(getTrack(event.trackId), category.vehicle)} · a seta vermelha marca a largada · {VEHICLES[category.id].name} na pista.</p>
+            {trackCredit(event.trackId) && <p className="mt-1 text-[11px] text-ink-500">Traçado: {trackCredit(event.trackId)}</p>}
           </div>
         </Card>
         <Card title="Antes da largada">

@@ -6,7 +6,7 @@ import { EventsPanel } from '../components/EventsPanel';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
 import { CircuitMap } from '../components/CircuitMap';
 import { Button, Card, Meter, PageHeader, Pill, PositionBadge, Stat, TeamSwatch, WeatherBadge, cx } from '../components/ui';
-import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackLocation } from '../format';
+import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { TutorialCard } from './HelpScreen';
 
@@ -178,6 +178,7 @@ function NextEventCard() {
     <section className="relative overflow-hidden rounded-xl border border-ink-700/70 bg-ink-900">
       <div aria-hidden className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_80%_30%,rgba(239,59,45,0.22),transparent_60%)]" />
       <CircuitMap track={track} style={category.vehicle} className="pointer-events-none absolute right-4 top-4 hidden h-[calc(100%-2rem)] w-2/5 opacity-70 md:block" />
+      {trackCredit(track.id) && <span className="pointer-events-none absolute bottom-1 right-4 hidden text-[10px] text-ink-500 md:block">Traçado: {trackCredit(track.id)}</span>}
       <div className="relative p-5 sm:p-6 md:max-w-[60%]">
         <div className="text-xs font-semibold uppercase tracking-[0.18em] text-apex-400">
           {inProgress ? 'Fim de semana em andamento' : 'Próxima etapa'} · Etapa {event.round} de {career.calendar.length}

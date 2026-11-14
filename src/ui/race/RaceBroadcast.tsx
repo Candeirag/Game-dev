@@ -15,7 +15,7 @@ import { VEHICLES } from '@/data/vehicles';
 import { CarSprite } from '../components/CarSprite';
 import { CompoundDot, EVENT_TONE, RaceResultPanel } from '../components/RaceView';
 import { Button, Card, cx } from '../components/ui';
-import { formatLap } from '../format';
+import { formatLap, trackCredit } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { RaceCanvas } from './RaceCanvas';
 import { PitStrategyCard, RaceModeCard, TeamOrderDialog } from './RaceCommands';
@@ -278,6 +278,7 @@ export function RaceBroadcast({ viewSwitch, spectator = false }: { viewSwitch?: 
               {viewSwitch}
             </div>
           </div>
+          {trackId && trackCredit(trackId) && <p className="mt-1 text-right text-[11px] text-ink-500">Traçado: {trackCredit(trackId)}</p>}
         </div>
 
       </div>

@@ -2,8 +2,10 @@ import type { Track } from '@/domain/schemas';
 import type { CategoryDefinition } from './categories';
 
 /**
- * Os 10 kartódromos do calendário. Os nomes são fictícios; as cidades e o
- * clima seguem a realidade do Sul e do Sudeste do Brasil.
+ * Os 10 kartódromos do calendário. Os nomes são fictícios; cada pista fica na
+ * cidade do kartódromo real que serve de referência para o traçado
+ * (src/data/kartLayouts.ts), e o clima segue a realidade de cada região.
+ * Os identificadores são os de sempre: os saves guardam só o id da pista.
  *
  * Como os números foram escolhidos:
  * - baseLapTime: comprimento do traçado dividido por uma velocidade média de
@@ -19,25 +21,25 @@ import type { CategoryDefinition } from './categories';
  */
 export const BR_KART_TRACKS: readonly Track[] = [
   {
-    id: 'vale-do-sol', name: 'Kartódromo Vale do Sol', city: 'Atibaia', state: 'SP', country: 'BR',
+    id: 'vale-do-sol', name: 'Kartódromo Vale do Sol', city: 'Cotia', state: 'SP', country: 'BR',
     lengthMeters: 1120, baseLapTime: 48.6, laps: 22,
     overtakingDifficulty: 0.45, tyreWear: 1.0, powerSensitivity: 0.5,
     rainChance: 0.4, baseTrackTemp: 34,
     description: 'Traçado completo e equilibrado. Boa abertura de temporada para medir forças.',
   },
   {
-    id: 'lagoa-azul', name: 'Circuito Lagoa Azul', city: 'Curitiba', state: 'PR', country: 'BR',
+    id: 'lagoa-azul', name: 'Circuito Lagoa Azul', city: 'Londrina', state: 'PR', country: 'BR',
     lengthMeters: 980, baseLapTime: 44.2, laps: 24,
     overtakingDifficulty: 0.6, tyreWear: 0.85, powerSensitivity: 0.35,
     rainChance: 0.35, baseTrackTemp: 26,
     description: 'Sinuoso e técnico. O chassi fala mais alto que o motor, e ultrapassar exige paciência.',
   },
   {
-    id: 'serra-gaucha', name: 'Kartódromo Serra Gaúcha', city: 'Caxias do Sul', state: 'RS', country: 'BR',
+    id: 'serra-gaucha', name: 'Kartódromo Vale dos Sinos', city: 'Nova Santa Rita', state: 'RS', country: 'BR',
     lengthMeters: 1210, baseLapTime: 52.1, laps: 20,
     overtakingDifficulty: 0.4, tyreWear: 1.05, powerSensitivity: 0.55,
     rainChance: 0.4, baseTrackTemp: 20,
-    description: 'Subidas e descidas fortes. Frio e chuva frequentes, em que a sensibilidade do piloto faz diferença.',
+    description: 'Longo, com retas e freadas fortes. Frio e chuva frequentes, em que a sensibilidade do piloto faz diferença.',
   },
   {
     id: 'planalto', name: 'Autódromo de Kart do Planalto', city: 'Brasília', state: 'DF', country: 'BR',
@@ -47,7 +49,7 @@ export const BR_KART_TRACKS: readonly Track[] = [
     description: 'Retas longas e muito vácuo. Motor forte e boas ultrapassagens garantem corridas movimentadas.',
   },
   {
-    id: 'mantiqueira', name: 'Kartódromo da Mantiqueira', city: 'São José dos Campos', state: 'SP', country: 'BR',
+    id: 'mantiqueira', name: 'Kartódromo das Represas', city: 'São Paulo', state: 'SP', country: 'BR',
     lengthMeters: 1050, baseLapTime: 46.9, laps: 23,
     overtakingDifficulty: 0.5, tyreWear: 0.95, powerSensitivity: 0.45,
     rainChance: 0.15, baseTrackTemp: 27,
@@ -68,21 +70,21 @@ export const BR_KART_TRACKS: readonly Track[] = [
     description: 'Asfalto abrasivo e calor extremo. A gestão de pneus decide a corrida.',
   },
   {
-    id: 'pampas', name: 'Circuito dos Pampas', city: 'Santa Maria', state: 'RS', country: 'BR',
+    id: 'pampas', name: 'Circuito dos Pampas', city: 'Viamão', state: 'RS', country: 'BR',
     lengthMeters: 1080, baseLapTime: 47.5, laps: 22,
     overtakingDifficulty: 0.55, tyreWear: 0.9, powerSensitivity: 0.4,
     rainChance: 0.4, baseTrackTemp: 15,
     description: 'Inverno gaúcho, com asfalto frio e pouca aderência. Erros são caros.',
   },
   {
-    id: 'cerrado-paulista', name: 'Kartódromo Cerrado Paulista', city: 'Ribeirão Preto', state: 'SP', country: 'BR',
+    id: 'cerrado-paulista', name: 'Kartódromo Cerrado Paulista', city: 'Birigui', state: 'SP', country: 'BR',
     lengthMeters: 1180, baseLapTime: 50.4, laps: 21,
     overtakingDifficulty: 0.38, tyreWear: 1.2, powerSensitivity: 0.6,
     rainChance: 0.1, baseTrackTemp: 36,
     description: 'Seco e quente, com duas retas de vácuo. Favorece quem ataca com inteligência.',
   },
   {
-    id: 'guanabara', name: 'Kartódromo Guanabara', city: 'Rio de Janeiro', state: 'RJ', country: 'BR',
+    id: 'guanabara', name: 'Kartódromo Guanabara', city: 'Guapimirim', state: 'RJ', country: 'BR',
     lengthMeters: 1140, baseLapTime: 49.2, laps: 22,
     overtakingDifficulty: 0.48, tyreWear: 1.05, powerSensitivity: 0.5,
     rainChance: 0.3, baseTrackTemp: 31,
@@ -99,7 +101,9 @@ const fromRows = (rows: readonly Row[]): Track[] =>
 
 /**
  * Pistas do kart internacional. Nomes fictícios em cidades com tradição real
- * no kartismo. Os critérios dos números são os mesmos das pistas brasileiras.
+ * no kartismo; o traçado é o do kartódromo real de cada cidade (menos Al Ain,
+ * sem traçado mapeado, que continua gerado por regras). Os critérios dos
+ * números são os mesmos das pistas brasileiras.
  */
 export const WORLD_KART_TRACKS: readonly Track[] = fromRows([
   ['garda', 'Pista do Lago de Garda', 'Lonato', 'IT', 1200, 46.5, 22, 0.45, 1.0, 0.5, 0.2, 28, 'O templo do kart europeu: técnica, rápida e sempre lotada.'],
