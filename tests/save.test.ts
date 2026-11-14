@@ -4,20 +4,20 @@ import { describe, expect, it } from 'vitest';
 import { CAREER_SCHEMA_VERSION, CareerStateSchema } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { IndexedDbStorage, MemoryStorage } from '@/persistence/storage';
-import {
-  SaveError,
-  createEnvelope,
-  deleteSave,
-  exportCareer,
-  importCareer,
-  listSaves,
-  loadCareer,
-  parseEnvelope,
-  saveCareer,
-} from '@/persistence/saveService';
+import { SaveError, createEnvelope, deleteSave, exportCareer, importCareer, listSaves, loadCareer, parseEnvelope, saveCareer } from '@/persistence/saveService';
 import { canonicalStringify, checksumOf } from '@/persistence/checksum';
 import { migrateCareerData } from '@/persistence/migrations';
-import { buildRaceContext, completeWeekend, computeCareerStats, createWeekendRace, driverStandings, getPlayer, isSeasonComplete, simulateRemainingRace, startNextSeason } from './engineApi';
+import {
+  buildRaceContext,
+  completeWeekend,
+  computeCareerStats,
+  createWeekendRace,
+  driverStandings,
+  getPlayer,
+  isSeasonComplete,
+  simulateRemainingRace,
+  startNextSeason,
+} from './engineApi';
 import { NOW, newCareer, pickBestOffer, playRound, playSeason, resolvePending } from './helpers';
 
 describe('checksum', () => {
@@ -120,7 +120,10 @@ describe('saves', () => {
  */
 describe('compatibilidade com saves da Fase 1', () => {
   const load = (name: string) => importCareer(readFileSync(`tests/fixtures/v1/${name}.json`, 'utf8'));
-  const raw = (name: string) => JSON.parse(readFileSync(`tests/fixtures/v1/${name}.json`, 'utf8')) as { career: { schemaVersion: number; rounds: unknown[]; reputation: number; drivers: { id: string; attributes: unknown }[]; history: unknown[] } };
+  const raw = (name: string) =>
+    JSON.parse(readFileSync(`tests/fixtures/v1/${name}.json`, 'utf8')) as {
+      career: { schemaVersion: number; rounds: unknown[]; reputation: number; drivers: { id: string; attributes: unknown }[]; history: unknown[] };
+    };
 
   it('os arquivos são mesmo da versão 1', () => {
     for (const name of ['mid-weekend', 'season-complete', 'second-season']) expect(raw(name).career.schemaVersion).toBe(1);

@@ -18,20 +18,110 @@ import type { CategoryId, Team } from '@/domain/schemas';
  */
 const REGIONAL_TEAMS: readonly Team[] = [
   // Nível 1: candidatos ao título
-  { id: 'vortex', name: 'Vortex Racing Kart', shortName: 'VRX', color: '#e11d48', car: { engine: 86, chassis: 83, reliability: 88 }, crew: 78, affiliation: null, driverTarget: 3 },
-  { id: 'trovao', name: 'Trovão Motorsport', shortName: 'TRV', color: '#f59e0b', car: { engine: 82, chassis: 87, reliability: 84 }, crew: 76, affiliation: null, driverTarget: 3 },
+  {
+    id: 'vortex',
+    name: 'Vortex Racing Kart',
+    shortName: 'VRX',
+    color: '#e11d48',
+    car: { engine: 86, chassis: 83, reliability: 88 },
+    crew: 78,
+    affiliation: null,
+    driverTarget: 3,
+  },
+  {
+    id: 'trovao',
+    name: 'Trovão Motorsport',
+    shortName: 'TRV',
+    color: '#f59e0b',
+    car: { engine: 82, chassis: 87, reliability: 84 },
+    crew: 76,
+    affiliation: null,
+    driverTarget: 3,
+  },
   // Nível 2: briga por pódios
-  { id: 'serra', name: 'Serra Kart Team', shortName: 'SER', color: '#10b981', car: { engine: 81, chassis: 78, reliability: 86 }, crew: 72, affiliation: null, driverTarget: 6 },
-  { id: 'falcao', name: 'Falcão Competições', shortName: 'FAL', color: '#3b82f6', car: { engine: 77, chassis: 81, reliability: 80 }, crew: 70, affiliation: null, driverTarget: 6 },
+  {
+    id: 'serra',
+    name: 'Serra Kart Team',
+    shortName: 'SER',
+    color: '#10b981',
+    car: { engine: 81, chassis: 78, reliability: 86 },
+    crew: 72,
+    affiliation: null,
+    driverTarget: 6,
+  },
+  {
+    id: 'falcao',
+    name: 'Falcão Competições',
+    shortName: 'FAL',
+    color: '#3b82f6',
+    car: { engine: 77, chassis: 81, reliability: 80 },
+    crew: 70,
+    affiliation: null,
+    driverTarget: 6,
+  },
   // Nível 3: pelotão intermediário
-  { id: 'riogrande', name: 'Rio Grande Racing', shortName: 'RGR', color: '#8b5cf6', car: { engine: 77, chassis: 74, reliability: 82 }, crew: 66, affiliation: null, driverTarget: 10 },
-  { id: 'atlantico', name: 'Atlântico Kart', shortName: 'ATL', color: '#06b6d4', car: { engine: 73, chassis: 77, reliability: 76 }, crew: 64, affiliation: null, driverTarget: 10 },
+  {
+    id: 'riogrande',
+    name: 'Rio Grande Racing',
+    shortName: 'RGR',
+    color: '#8b5cf6',
+    car: { engine: 77, chassis: 74, reliability: 82 },
+    crew: 66,
+    affiliation: null,
+    driverTarget: 10,
+  },
+  {
+    id: 'atlantico',
+    name: 'Atlântico Kart',
+    shortName: 'ATL',
+    color: '#06b6d4',
+    car: { engine: 73, chassis: 77, reliability: 76 },
+    crew: 64,
+    affiliation: null,
+    driverTarget: 10,
+  },
   // Nível 4: briga por pontos
-  { id: 'pampa', name: 'Pampa Speed', shortName: 'PMP', color: '#84cc16', car: { engine: 72, chassis: 70, reliability: 78 }, crew: 60, affiliation: null, driverTarget: 13 },
-  { id: 'horizonte', name: 'Horizonte Racing', shortName: 'HOR', color: '#f97316', car: { engine: 69, chassis: 72, reliability: 72 }, crew: 58, affiliation: null, driverTarget: 13 },
+  {
+    id: 'pampa',
+    name: 'Pampa Speed',
+    shortName: 'PMP',
+    color: '#84cc16',
+    car: { engine: 72, chassis: 70, reliability: 78 },
+    crew: 60,
+    affiliation: null,
+    driverTarget: 13,
+  },
+  {
+    id: 'horizonte',
+    name: 'Horizonte Racing',
+    shortName: 'HOR',
+    color: '#f97316',
+    car: { engine: 69, chassis: 72, reliability: 72 },
+    crew: 58,
+    affiliation: null,
+    driverTarget: 13,
+  },
   // Nível 5: equipes de entrada, onde o jogador começa
-  { id: 'cerrado', name: 'Cerrado Kart Club', shortName: 'CER', color: '#a16207', car: { engine: 67, chassis: 66, reliability: 74 }, crew: 54, affiliation: null, driverTarget: 16 },
-  { id: 'garagem', name: 'Garagem Nova Kart', shortName: 'GNK', color: '#64748b', car: { engine: 64, chassis: 66, reliability: 70 }, crew: 52, affiliation: null, driverTarget: 16 },
+  {
+    id: 'cerrado',
+    name: 'Cerrado Kart Club',
+    shortName: 'CER',
+    color: '#a16207',
+    car: { engine: 67, chassis: 66, reliability: 74 },
+    crew: 54,
+    affiliation: null,
+    driverTarget: 16,
+  },
+  {
+    id: 'garagem',
+    name: 'Garagem Nova Kart',
+    shortName: 'GNK',
+    color: '#64748b',
+    car: { engine: 64, chassis: 66, reliability: 70 },
+    crew: 52,
+    affiliation: null,
+    driverTarget: 16,
+  },
 ];
 
 /**
@@ -49,8 +139,16 @@ const TARGETS = [3, 3, 6, 6, 10, 10, 13, 13, 16, 16] as const;
 
 /** Equipes de F1 (fictícias), da mais forte para a mais fraca. Todas mantêm uma academia de pilotos. */
 export const F1_TEAM_NAMES = [
-  'Corsa Imperiale', 'Albion Grand Prix', 'Rheingold Racing', 'Solaris Racing', 'Azure F1 Team',
-  'Emerald GP', 'Massif Racing', 'Stallion F1', 'Kraken Motorsport', 'Orion Grand Prix',
+  'Corsa Imperiale',
+  'Albion Grand Prix',
+  'Rheingold Racing',
+  'Solaris Racing',
+  'Azure F1 Team',
+  'Emerald GP',
+  'Massif Racing',
+  'Stallion F1',
+  'Kraken Motorsport',
+  'Orion Grand Prix',
 ] as const;
 
 interface CategoryTeams {
@@ -61,29 +159,90 @@ interface CategoryTeams {
 
 const TEAM_NAMES: Record<Exclude<CategoryId, 'kart-regional'>, CategoryTeams> = {
   'kart-national': {
-    names: ['Águia Racing', 'Meridional Kart', 'Tupi Motorsport', 'Ipê Competições', 'Corsa Brasil', 'Litoral Racing Team', 'Sertão Kart', 'Paulista Speed', 'Arara Azul Racing', 'Nova Era Kart'],
+    names: [
+      'Águia Racing',
+      'Meridional Kart',
+      'Tupi Motorsport',
+      'Ipê Competições',
+      'Corsa Brasil',
+      'Litoral Racing Team',
+      'Sertão Kart',
+      'Paulista Speed',
+      'Arara Azul Racing',
+      'Nova Era Kart',
+    ],
     affiliations: [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
   },
   'kart-international': {
-    names: ['Scuderia Aurora', 'Nordic Kart Racing', 'Britannia Karts', 'Iberia Racing', 'Alpen Kart Technik', 'Riviera Corse', 'Benelux Kart Team', 'Pacific Rim Racing', 'Adria Motorsport', 'Atlas Kart Club'],
+    names: [
+      'Scuderia Aurora',
+      'Nordic Kart Racing',
+      'Britannia Karts',
+      'Iberia Racing',
+      'Alpen Kart Technik',
+      'Riviera Corse',
+      'Benelux Kart Team',
+      'Pacific Rim Racing',
+      'Adria Motorsport',
+      'Atlas Kart Club',
+    ],
     affiliations: [0, 1, -1, -1, 2, -1, -1, -1, -1, -1],
   },
   f4: {
-    names: ['Prisma Racing', 'Velocità Junior', 'Dragon Motorsport', 'Van Aalst Racing', 'Ibérica Racing', 'Kestrel Autosport', 'Riviera Junior Team', 'Lone Star Academy', 'Sakura Racing', 'Southern Cross Motorsport'],
+    names: [
+      'Prisma Racing',
+      'Velocità Junior',
+      'Dragon Motorsport',
+      'Van Aalst Racing',
+      'Ibérica Racing',
+      'Kestrel Autosport',
+      'Riviera Junior Team',
+      'Lone Star Academy',
+      'Sakura Racing',
+      'Southern Cross Motorsport',
+    ],
     affiliations: [0, 3, -1, 1, -1, 2, -1, 4, -1, -1],
   },
   f3: {
-    names: ['Artemis Grand Prix', 'Neptune Racing', 'Prisma Racing', 'Hyperion GP', 'Castilla Racing', 'Sterling Motorsport', 'Van Aalst Racing', 'Helvetia Motorsport', 'Bohemia Racing System', 'Lowlands Motorsport'],
+    names: [
+      'Artemis Grand Prix',
+      'Neptune Racing',
+      'Prisma Racing',
+      'Hyperion GP',
+      'Castilla Racing',
+      'Sterling Motorsport',
+      'Van Aalst Racing',
+      'Helvetia Motorsport',
+      'Bohemia Racing System',
+      'Lowlands Motorsport',
+    ],
     affiliations: [1, 0, 2, 3, -1, 4, 5, -1, 6, -1],
   },
   f2: {
-    names: ['Artemis Grand Prix', 'Prisma Racing', 'Sterling Motorsport', 'Victrix Racing', 'Loire Racing', 'Castilla Racing', 'Hyperion GP', 'Lowlands Motorsport', 'Neptune Racing', 'Bohemia Racing System'],
+    names: [
+      'Artemis Grand Prix',
+      'Prisma Racing',
+      'Sterling Motorsport',
+      'Victrix Racing',
+      'Loire Racing',
+      'Castilla Racing',
+      'Hyperion GP',
+      'Lowlands Motorsport',
+      'Neptune Racing',
+      'Bohemia Racing System',
+    ],
     affiliations: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
   },
   f1: { names: F1_TEAM_NAMES, affiliations: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] },
 };
 
-const slug = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+const slug = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
 
 export function f1TeamId(index: number): string {
   return `f1-${slug(F1_TEAM_NAMES[index] ?? '')}`;
@@ -102,7 +261,11 @@ function buildTeams(categoryId: Exclude<CategoryId, 'kart-regional'>): Team[] {
   return names.map((name, rank) => {
     const average = 86 - rank * 2.5;
     const bias = rank % 2 === 0 ? 2 : -2;
-    const initials = name.split(/\s+/).map((w) => w.charAt(0)).join('').toUpperCase();
+    const initials = name
+      .split(/\s+/)
+      .map((w) => w.charAt(0))
+      .join('')
+      .toUpperCase();
     return {
       id: `${categoryId}-${slug(name)}`,
       name,

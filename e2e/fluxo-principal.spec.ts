@@ -14,7 +14,10 @@ test('criar carreira, disputar uma etapa inteira e recarregar o save', async ({ 
   await page.getByRole('button', { name: 'Nova carreira' }).click();
   await page.getByLabel(/^Nome/).first().fill('Rui');
   await page.getByLabel(/Sobrenome/).fill('Prado');
-  await page.getByRole('button', { name: /Começar|Iniciar|Assinar/ }).last().click();
+  await page
+    .getByRole('button', { name: /Começar|Iniciar|Assinar/ })
+    .last()
+    .click();
   await page.waitForURL(/#\/dashboard/);
 
   // O Painel mostra a primeira etapa e o botão de avançar leva ao fim de semana.

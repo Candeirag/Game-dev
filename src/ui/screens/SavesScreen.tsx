@@ -70,7 +70,13 @@ export function SavesScreen() {
       <StorageWarning link={false} />
 
       {message && (
-        <div role="status" className={cx('rounded-lg border px-4 py-3 text-sm', message.tone === 'ok' ? 'border-go-400/30 bg-go-400/10 text-go-400' : 'border-apex-600/50 bg-apex-600/10 text-apex-400')}>
+        <div
+          role="status"
+          className={cx(
+            'rounded-lg border px-4 py-3 text-sm',
+            message.tone === 'ok' ? 'border-go-400/30 bg-go-400/10 text-go-400' : 'border-apex-600/50 bg-apex-600/10 text-apex-400',
+          )}
+        >
           {message.text}
         </div>
       )}
@@ -87,8 +93,10 @@ export function SavesScreen() {
                     {!slot || slot.status === 'empty' ? 'Vazio' : null}
                     {slot?.status === 'ok' && slot.summary && (
                       <>
-                        {slot.summary.playerName} · {slot.summary.categoryName ?? 'Kart Regional'} · {slot.summary.teamName} · {slot.summary.year} · {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas
-                        {slot.summary.championshipPosition && ` · ${slot.summary.championshipPosition}º no campeonato`} · {slot.savedAt && formatDateTime(slot.savedAt)}
+                        {slot.summary.playerName} · {slot.summary.categoryName ?? 'Kart Regional'} · {slot.summary.teamName} · {slot.summary.year} ·{' '}
+                        {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas
+                        {slot.summary.championshipPosition && ` · ${slot.summary.championshipPosition}º no campeonato`} ·{' '}
+                        {slot.savedAt && formatDateTime(slot.savedAt)}
                       </>
                     )}
                     {slot?.status === 'corrupted' && <span className="text-apex-400">Danificado: {slot.error}</span>}
@@ -96,11 +104,33 @@ export function SavesScreen() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {id !== 'auto' && <Button onClick={() => void run(() => saveToSlot(id), `Carreira salva em ${SLOT_LABELS[id]}.`)}>Salvar aqui</Button>}
-                  <Button disabled={!slot || slot.status === 'empty'} onClick={() => void run(async () => { await loadSlot(id); navigate('/dashboard'); }, 'Carreira carregada.')}>Carregar</Button>
+                  <Button
+                    disabled={!slot || slot.status === 'empty'}
+                    onClick={() =>
+                      void run(async () => {
+                        await loadSlot(id);
+                        navigate('/dashboard');
+                      }, 'Carreira carregada.')
+                    }
+                  >
+                    Carregar
+                  </Button>
                   {confirmDelete === id ? (
-                    <Button variant="danger" onClick={() => void run(async () => { await removeSlot(id); setConfirmDelete(null); }, `${SLOT_LABELS[id]} apagado.`)}>Confirmar exclusão</Button>
+                    <Button
+                      variant="danger"
+                      onClick={() =>
+                        void run(async () => {
+                          await removeSlot(id);
+                          setConfirmDelete(null);
+                        }, `${SLOT_LABELS[id]} apagado.`)
+                      }
+                    >
+                      Confirmar exclusão
+                    </Button>
                   ) : (
-                    <Button variant="ghost" disabled={!slot || slot.status === 'empty'} onClick={() => setConfirmDelete(id)}>Apagar</Button>
+                    <Button variant="ghost" disabled={!slot || slot.status === 'empty'} onClick={() => setConfirmDelete(id)}>
+                      Apagar
+                    </Button>
                   )}
                 </div>
               </li>
@@ -108,7 +138,8 @@ export function SavesScreen() {
           })}
         </ul>
         <p className="mt-4 text-xs text-ink-400">
-          O jogo salva sozinho depois de cada sessão e a cada mudança de treino. Toda gravação guarda a versão anterior como cópia de segurança, e cada save é validado (estrutura, consistência e checksum) antes de ser gravado e ao ser carregado.
+          O jogo salva sozinho depois de cada sessão e a cada mudança de treino. Toda gravação guarda a versão anterior como cópia de segurança, e cada save é
+          validado (estrutura, consistência e checksum) antes de ser gravado e ao ser carregado.
         </p>
       </Card>
 
@@ -116,19 +147,37 @@ export function SavesScreen() {
         <ExportReminder link={false} className="mb-3" />
         <div className="flex flex-wrap gap-2">
           <Button onClick={download}>Exportar carreira (.json)</Button>
-          <input ref={fileInput} type="file" accept="application/json,.json" className="hidden" onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void run(async () => { await importJson(await file.text()); navigate('/dashboard'); }, 'Carreira importada.');
-            e.target.value = '';
-          }} />
-          <Button variant="ghost" onClick={() => fileInput.current?.click()}>Importar arquivo</Button>
-          <Button disabled={!career} onClick={() => void copy()}>Copiar carreira como texto</Button>
-          <Button variant="ghost" onClick={() => setTransfer(transfer?.mode === 'paste' ? null : { mode: 'paste', text: '' })}>Colar carreira</Button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file)
+                void run(async () => {
+                  await importJson(await file.text());
+                  navigate('/dashboard');
+                }, 'Carreira importada.');
+              e.target.value = '';
+            }}
+          />
+          <Button variant="ghost" onClick={() => fileInput.current?.click()}>
+            Importar arquivo
+          </Button>
+          <Button disabled={!career} onClick={() => void copy()}>
+            Copiar carreira como texto
+          </Button>
+          <Button variant="ghost" onClick={() => setTransfer(transfer?.mode === 'paste' ? null : { mode: 'paste', text: '' })}>
+            Colar carreira
+          </Button>
         </div>
         {transfer && (
           <div className="mt-4 space-y-2">
             <label htmlFor="save-transfer" className="block text-sm text-ink-300">
-              {transfer.mode === 'copy' ? 'O navegador não liberou a área de transferência. Selecione todo o texto abaixo e copie.' : 'Cole aqui o texto de uma carreira exportada.'}
+              {transfer.mode === 'copy'
+                ? 'O navegador não liberou a área de transferência. Selecione todo o texto abaixo e copie.'
+                : 'Cole aqui o texto de uma carreira exportada.'}
             </label>
             <textarea
               id="save-transfer"
@@ -136,19 +185,38 @@ export function SavesScreen() {
               readOnly={transfer.mode === 'copy'}
               value={transfer.text}
               onChange={(e) => setTransfer({ mode: 'paste', text: e.target.value })}
-              onFocus={(e) => { if (transfer.mode === 'copy') e.target.select(); }}
+              onFocus={(e) => {
+                if (transfer.mode === 'copy') e.target.select();
+              }}
               spellCheck={false}
               className="w-full rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 font-mono text-xs text-ink-100 focus:border-apex-500 focus:outline-none"
             />
             <div className="flex flex-wrap gap-2">
               {transfer.mode === 'paste' && (
-                <Button variant="primary" disabled={!transfer.text.trim()} onClick={() => void run(async () => { await importJson(transfer.text); setTransfer(null); navigate('/dashboard'); }, 'Carreira importada.')}>Importar texto</Button>
+                <Button
+                  variant="primary"
+                  disabled={!transfer.text.trim()}
+                  onClick={() =>
+                    void run(async () => {
+                      await importJson(transfer.text);
+                      setTransfer(null);
+                      navigate('/dashboard');
+                    }, 'Carreira importada.')
+                  }
+                >
+                  Importar texto
+                </Button>
               )}
-              <Button variant="ghost" onClick={() => setTransfer(null)}>Fechar</Button>
+              <Button variant="ghost" onClick={() => setTransfer(null)}>
+                Fechar
+              </Button>
             </div>
           </div>
         )}
-        <p className="mt-3 text-xs text-ink-400">Use para fazer backup fora do navegador ou levar a carreira para outro computador. Se o download não começar (alguns aplicativos e páginas bloqueiam arquivos baixados), copie a carreira como texto. Saves alterados à mão são recusados pelo checksum.</p>
+        <p className="mt-3 text-xs text-ink-400">
+          Use para fazer backup fora do navegador ou levar a carreira para outro computador. Se o download não começar (alguns aplicativos e páginas bloqueiam
+          arquivos baixados), copie a carreira como texto. Saves alterados à mão são recusados pelo checksum.
+        </p>
       </Card>
     </div>
   );

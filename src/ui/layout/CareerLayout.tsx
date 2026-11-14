@@ -1,6 +1,29 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, Check, ChevronRight, CircleHelp, CircleUser, Ellipsis, Flag, Heart, History, LayoutDashboard, ListOrdered, LoaderCircle, LogOut, Save, Star, TrendingUp, TriangleAlert, Trophy, Users, Wallet, X, type LucideIcon } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  ChevronRight,
+  CircleHelp,
+  CircleUser,
+  Ellipsis,
+  Flag,
+  Heart,
+  History,
+  LayoutDashboard,
+  ListOrdered,
+  LoaderCircle,
+  LogOut,
+  Save,
+  Star,
+  TrendingUp,
+  TriangleAlert,
+  Trophy,
+  Users,
+  Wallet,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { getNextEvent, isSeasonComplete, managedTeam, trackName } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, cx } from '../components/ui';
@@ -59,7 +82,12 @@ function SaveIndicator() {
   const label = status.kind === 'saving' ? 'Salvando' : status.kind === 'saved' ? `Salvo em ${formatDateTime(status.at)}` : 'Save automático ativo';
   const Icon = status.kind === 'saving' ? LoaderCircle : Check;
   return (
-    <span role="img" aria-label={label} title={label} className={cx('grid h-8 w-8 shrink-0 place-items-center', status.kind === 'saved' ? 'text-go-400' : 'text-ink-400')}>
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cx('grid h-8 w-8 shrink-0 place-items-center', status.kind === 'saved' ? 'text-go-400' : 'text-ink-400')}
+    >
       <Icon size={16} aria-hidden className={status.kind === 'saving' ? 'animate-spin' : undefined} />
     </span>
   );
@@ -109,7 +137,9 @@ function CareerShell() {
   const visit = useGameStore((s) => s.visit);
   const retire = useGameStore((s) => s.retire);
   // O tutorial marca as telas que o jogador já conheceu.
-  useEffect(() => { visit(location.pathname); }, [location.pathname, visit]);
+  useEffect(() => {
+    visit(location.pathname);
+  }, [location.pathname, visit]);
   const executive = career.mode === 'executive';
   const managed = managedTeam(career);
   const teamLabel = executive ? (managed?.name ?? 'Sem equipe') : team.name;
@@ -132,7 +162,9 @@ function CareerShell() {
 
   // Posição no campeonato: a do piloto; fora das pistas, a da equipe que ele comanda.
   const standing = executive
-    ? managed ? teamStandings.find((row) => row.teamId === managed.id)?.position : undefined
+    ? managed
+      ? teamStandings.find((row) => row.teamId === managed.id)?.position
+      : undefined
     : driverStandings.find((row) => row.driverId === player.id)?.position;
   const position = career.rounds.length > 0 && standing ? `${standing}º` : '–';
 
@@ -141,19 +173,27 @@ function CareerShell() {
   const [raceBar, setRaceBar] = useState(false);
   const chrome = useMemo(() => ({ setRaceBar, wide }), [wide]);
   const [moreOpen, setMoreOpen] = useState(false);
-  useEffect(() => { setMoreOpen(false); }, [location.pathname, wide]);
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [location.pathname, wide]);
   // Cada tela abre do começo (a navegação por áreas não zera a rolagem sozinha).
-  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   useEffect(() => {
     if (!moreOpen) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMoreOpen(false); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMoreOpen(false);
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [moreOpen]);
   // A barra fixa da corrida (desenhada fora da moldura) começa onde o trilho termina.
   useEffect(() => {
     document.documentElement.style.setProperty('--rail-w', wide ? 'calc(5rem + env(safe-area-inset-left))' : '0px');
-    return () => { document.documentElement.style.removeProperty('--rail-w'); };
+    return () => {
+      document.documentElement.style.removeProperty('--rail-w');
+    };
   }, [wide]);
 
   const items = NAV.filter((item) => item.modes === 'both' || item.modes === career.mode);
@@ -166,14 +206,26 @@ function CareerShell() {
   const showAction = action !== null && (action.anchor !== undefined || location.pathname !== action.to);
   const badge = (to: string) => (
     <>
-      {to === '/dashboard' && pending > 0 && <span className="grid h-4 min-w-4 place-items-center bg-gold-400 px-1 font-display text-xs font-bold leading-none text-ink-950" aria-label={`${pending} pendentes`}>{pending}</span>}
+      {to === '/dashboard' && pending > 0 && (
+        <span
+          className="grid h-4 min-w-4 place-items-center bg-gold-400 px-1 font-display text-xs font-bold leading-none text-ink-950"
+          aria-label={`${pending} pendentes`}
+        >
+          {pending}
+        </span>
+      )}
       {to === '/career' && offers && <span className="h-2 w-2 bg-apex-500" aria-label="Há propostas" />}
     </>
   );
   const who = (
     <div className="min-w-0">
-      <div className="truncate text-sm font-semibold">{player.firstName} {player.lastName}</div>
-      <div className="truncate text-xs text-ink-400">{teamLabel}{career.dynasty.generation > 1 ? ` · ${career.dynasty.generation}ª geração` : ''}</div>
+      <div className="truncate text-sm font-semibold">
+        {player.firstName} {player.lastName}
+      </div>
+      <div className="truncate text-xs text-ink-400">
+        {teamLabel}
+        {career.dynasty.generation > 1 ? ` · ${career.dynasty.generation}ª geração` : ''}
+      </div>
     </div>
   );
   const moreLinks = (
@@ -184,14 +236,23 @@ function CareerShell() {
             key={item.label}
             to={item.to}
             onClick={() => setMoreOpen(false)}
-            className={({ isActive }) => cx('flex min-h-11 items-center gap-3 border px-3 text-sm font-semibold', isActive ? 'border-apex-500 bg-apex-500/15 text-ink-100' : 'border-ink-700 text-ink-200 hover:border-ink-500')}
+            className={({ isActive }) =>
+              cx(
+                'flex min-h-11 items-center gap-3 border px-3 text-sm font-semibold',
+                isActive ? 'border-apex-500 bg-apex-500/15 text-ink-100' : 'border-ink-700 text-ink-200 hover:border-ink-500',
+              )
+            }
           >
             <item.icon size={18} aria-hidden className="shrink-0 text-ink-400" />
             {item.label}
           </NavLink>
         ))}
       </div>
-      <button type="button" onClick={() => useGameStore.getState().exitToMenu()} className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 border border-ink-700 text-sm font-semibold text-ink-300 hover:border-ink-500">
+      <button
+        type="button"
+        onClick={() => useGameStore.getState().exitToMenu()}
+        className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 border border-ink-700 text-sm font-semibold text-ink-300 hover:border-ink-500"
+      >
         <LogOut size={16} aria-hidden /> Menu principal
       </button>
     </>
@@ -201,9 +262,19 @@ function CareerShell() {
     <>
       <StorageWarning className="mx-4 mt-4 lg:mx-6" />
       {notice && (
-        <div role="status" className="mx-4 mt-4 flex items-start justify-between gap-3 border border-gold-400/40 bg-gold-400/10 px-4 py-3 text-sm text-gold-400 lg:mx-6">
+        <div
+          role="status"
+          className="mx-4 mt-4 flex items-start justify-between gap-3 border border-gold-400/40 bg-gold-400/10 px-4 py-3 text-sm text-gold-400 lg:mx-6"
+        >
           <span>{notice}</span>
-          <button type="button" onClick={dismissNotice} className="-m-2 grid h-9 w-9 shrink-0 place-items-center text-ink-300 hover:text-ink-100" aria-label="Fechar aviso"><X size={16} aria-hidden /></button>
+          <button
+            type="button"
+            onClick={dismissNotice}
+            className="-m-2 grid h-9 w-9 shrink-0 place-items-center text-ink-300 hover:text-ink-100"
+            aria-label="Fechar aviso"
+          >
+            <X size={16} aria-hidden />
+          </button>
         </div>
       )}
       <main
@@ -214,8 +285,12 @@ function CareerShell() {
       >
         {career.status === 'retired' && !career.succession && (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border border-gold-400/40 bg-gold-400/10 px-4 py-3 text-sm text-ink-100">
-            <span>Esta carreira foi encerrada em uma versão anterior do jogo. Agora a aposentadoria das pistas não é o fim: você pode continuar como dirigente.</span>
-            <Button variant="primary" disabled={career.weekend !== null} onClick={retire}>Continuar como dirigente</Button>
+            <span>
+              Esta carreira foi encerrada em uma versão anterior do jogo. Agora a aposentadoria das pistas não é o fim: você pode continuar como dirigente.
+            </span>
+            <Button variant="primary" disabled={career.weekend !== null} onClick={retire}>
+              Continuar como dirigente
+            </Button>
           </div>
         )}
         {career.succession ? <SuccessionScreen /> : <Outlet />}
@@ -228,9 +303,17 @@ function CareerShell() {
       <ChromeContext.Provider value={chrome}>
         <div className="flex min-h-dvh">
           {/* Trilho lateral: as áreas principais, com ícone e nome, e o "Mais" para o resto. */}
-          <nav aria-label="Navegação principal" className="sticky top-0 z-40 flex h-dvh w-[calc(5rem+env(safe-area-inset-left))] shrink-0 flex-col border-r border-ink-700 bg-ink-900 pl-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)]">
+          <nav
+            aria-label="Navegação principal"
+            className="sticky top-0 z-40 flex h-dvh w-[calc(5rem+env(safe-area-inset-left))] shrink-0 flex-col border-r border-ink-700 bg-ink-900 pl-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)]"
+          >
             <div className="flex h-12 shrink-0 items-center justify-center border-b border-ink-700">
-              <span aria-label="Apex Motorsport Dynasty" className="chamfer grid h-8 w-8 place-items-center bg-apex-500 font-display text-xl font-bold italic text-white [--chamfer:7px]">A</span>
+              <span
+                aria-label="Apex Motorsport Dynasty"
+                className="chamfer grid h-8 w-8 place-items-center bg-apex-500 font-display text-xl font-bold italic text-white [--chamfer:7px]"
+              >
+                A
+              </span>
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
               {primary.map((item) => (
@@ -256,7 +339,9 @@ function CareerShell() {
                 aria-expanded={moreOpen}
                 className={cx(
                   'mt-auto flex min-h-[3.25rem] shrink-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold leading-[1.1] transition-colors',
-                  inSecondary || moreOpen ? 'bg-ink-800 text-ink-100 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'text-ink-400 hover:bg-ink-850 hover:text-ink-100',
+                  inSecondary || moreOpen
+                    ? 'bg-ink-800 text-ink-100 shadow-[inset_3px_0_0_0_var(--color-apex-500)]'
+                    : 'text-ink-400 hover:bg-ink-850 hover:text-ink-100',
                 )}
               >
                 <Ellipsis size={20} strokeWidth={1.75} aria-hidden />
@@ -270,7 +355,14 @@ function CareerShell() {
               <div className="absolute bottom-0 left-[var(--rail-w)] top-0 flex w-[min(26rem,calc(100vw-var(--rail-w)))] flex-col gap-3 overflow-y-auto border-r border-ink-700 bg-ink-900 p-4 pt-[calc(1rem+env(safe-area-inset-top))]">
                 <div className="flex items-start justify-between gap-3">
                   {who}
-                  <button type="button" onClick={() => setMoreOpen(false)} className="-m-2 grid h-11 w-11 shrink-0 place-items-center text-ink-300 hover:text-ink-100" aria-label="Fechar"><X size={18} aria-hidden /></button>
+                  <button
+                    type="button"
+                    onClick={() => setMoreOpen(false)}
+                    className="-m-2 grid h-11 w-11 shrink-0 place-items-center text-ink-300 hover:text-ink-100"
+                    aria-label="Fechar"
+                  >
+                    <X size={18} aria-hidden />
+                  </button>
                 </div>
                 <div>{moreLinks}</div>
               </div>
@@ -281,8 +373,13 @@ function CareerShell() {
             {/* Barra superior: onde a carreira está e o botão que a faz avançar, sempre à direita. */}
             <header className="sticky top-0 z-20 flex min-h-12 items-center gap-4 border-b border-ink-700 bg-ink-900/95 pl-4 pr-[calc(0.75rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] backdrop-blur lg:pl-6">
               <div className="min-w-0 flex-1 leading-none">
-                <div className="truncate font-display text-lg font-semibold uppercase leading-none tracking-wide">{category.shortName} {career.year}</div>
-                <div className="mt-1 truncate text-xs text-ink-400">{stage}<span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span></div>
+                <div className="truncate font-display text-lg font-semibold uppercase leading-none tracking-wide">
+                  {category.shortName} {career.year}
+                </div>
+                <div className="mt-1 truncate text-xs text-ink-400">
+                  {stage}
+                  <span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span>
+                </div>
               </div>
               <TopStat icon={Wallet} label="Caixa" value={formatMoney(career.finance.cash)} attention={career.finance.cash < 0} />
               <TopStat icon={Star} label="Reputação" value={Math.floor(career.reputation)} />
@@ -302,23 +399,40 @@ function CareerShell() {
     <ChromeContext.Provider value={chrome}>
       <div className="flex min-h-dvh flex-col">
         <header className="flex items-center gap-2 border-b border-ink-700 bg-ink-900 px-3 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))] text-xs">
-          <span aria-hidden className="chamfer grid h-7 w-7 shrink-0 place-items-center bg-apex-500 font-display text-base font-bold italic text-white [--chamfer:6px]">A</span>
+          <span
+            aria-hidden
+            className="chamfer grid h-7 w-7 shrink-0 place-items-center bg-apex-500 font-display text-base font-bold italic text-white [--chamfer:6px]"
+          >
+            A
+          </span>
           <div className="min-w-0 flex-1 leading-none">
-            <div className="truncate font-display text-base font-semibold uppercase leading-none tracking-wide">{category.shortName} {career.year}</div>
+            <div className="truncate font-display text-base font-semibold uppercase leading-none tracking-wide">
+              {category.shortName} {career.year}
+            </div>
             <div className="mt-0.5 truncate text-[11px] text-ink-400">{stage}</div>
           </div>
-          <span className={cx('shrink-0 font-display text-base font-semibold', career.finance.cash < 0 ? 'text-gold-400' : 'text-ink-100')}>{formatMoney(career.finance.cash)}</span>
+          <span className={cx('shrink-0 font-display text-base font-semibold', career.finance.cash < 0 ? 'text-gold-400' : 'text-ink-100')}>
+            {formatMoney(career.finance.cash)}
+          </span>
           <SaveIndicator />
         </header>
         {content}
 
         {!raceBar && (
-          <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-ink-700 bg-ink-900/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+          <nav
+            aria-label="Navegação principal"
+            className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-ink-700 bg-ink-900/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+          >
             {primary.map((item) => (
               <NavLink
                 key={item.label}
                 to={item.to}
-                className={({ isActive }) => cx('relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-[1.05]', isActive ? 'text-ink-100 shadow-[inset_0_3px_0_0_var(--color-apex-500)]' : 'text-ink-400')}
+                className={({ isActive }) =>
+                  cx(
+                    'relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-[1.05]',
+                    isActive ? 'text-ink-100 shadow-[inset_0_3px_0_0_var(--color-apex-500)]' : 'text-ink-400',
+                  )
+                }
               >
                 <item.icon size={20} strokeWidth={1.75} aria-hidden />
                 {item.label}
@@ -330,7 +444,10 @@ function CareerShell() {
               onClick={() => setMoreOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
-              className={cx('flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold leading-[1.05]', inSecondary || moreOpen ? 'text-ink-100 shadow-[inset_0_3px_0_0_var(--color-apex-500)]' : 'text-ink-400')}
+              className={cx(
+                'flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold leading-[1.05]',
+                inSecondary || moreOpen ? 'text-ink-100 shadow-[inset_0_3px_0_0_var(--color-apex-500)]' : 'text-ink-400',
+              )}
             >
               <Ellipsis size={20} strokeWidth={1.75} aria-hidden />
               Mais
@@ -343,7 +460,14 @@ function CareerShell() {
             <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto border-t border-ink-700 bg-ink-900 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               <div className="mb-2 flex items-start justify-between gap-3">
                 {who}
-                <button type="button" onClick={() => setMoreOpen(false)} className="grid h-11 w-11 shrink-0 place-items-center text-ink-300 hover:text-ink-100" aria-label="Fechar"><X size={18} aria-hidden /></button>
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen(false)}
+                  className="grid h-11 w-11 shrink-0 place-items-center text-ink-300 hover:text-ink-100"
+                  aria-label="Fechar"
+                >
+                  <X size={18} aria-hidden />
+                </button>
               </div>
               {moreLinks}
             </div>

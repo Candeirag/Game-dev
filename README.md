@@ -20,14 +20,14 @@ Abra o endereço mostrado no terminal (normalmente http://localhost:5173).
 
 ### Outros comandos
 
-| Comando | O que faz |
-| --- | --- |
-| `npm run build` | Checa os tipos e gera o build de produção em `dist/` |
-| `npm run preview` | Serve o build de produção localmente |
-| `npm test` | Roda os 215 testes automatizados (Vitest); leva cerca de 25 segundos |
-| `npm run typecheck` | Só a checagem de tipos |
+| Comando             | O que faz                                                                                                                                                                                                                                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run build`     | Checa os tipos e gera o build de produção em `dist/`                                                                                                                                                                                                                                                                                            |
+| `npm run preview`   | Serve o build de produção localmente                                                                                                                                                                                                                                                                                                            |
+| `npm test`          | Roda os 215 testes automatizados (Vitest); leva cerca de 25 segundos                                                                                                                                                                                                                                                                            |
+| `npm run typecheck` | Só a checagem de tipos                                                                                                                                                                                                                                                                                                                          |
 | `npm run calibrate` | Imprime os relatórios de balanceamento (carreiras, vidas inteiras, equipes, investimentos em 40 temporadas, saúde do mundo em 60 temporadas) e roda os testes de estresse (vidas com políticas variadas e um "macaco" que aperta botões ao acaso); leva cerca de 6 minutos (no Windows: `set CALIBRATE=1 && npx vitest run --reporter=verbose`) |
-| `npm run bench` | Mede o desempenho do motor e dos saves |
+| `npm run bench`     | Mede o desempenho do motor e dos saves                                                                                                                                                                                                                                                                                                          |
 
 O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer servidor estático.
 
@@ -68,6 +68,7 @@ O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer serv
 O painel traz uma lista de primeiros passos, e a tela "Como jogar" resume as regras.
 
 Dicas:
+
 - No começo, o dinheiro é curto: a família ajuda por cinco anos, e bons resultados atraem patrocinadores maiores. Uma categoria cara sem patrocínio vira dívida.
 - Terminar entre os três primeiros dá bolsa na vaga do degrau de cima.
 - Do kart nacional dá para ir direto para a Fórmula 4.
@@ -114,6 +115,7 @@ legacy/simdev/  projeto anterior do repositório, preservado e fora do build
 Créditos: os traçados dos autódromos vêm do conjunto de dados [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits) (licença MIT). Os traçados dos kartódromos contêm dados do [OpenStreetMap](https://www.openstreetmap.org/copyright), © OpenStreetMap contributors, sob a licença ODbL 1.0; os arquivos derivados desses dados (`scripts/osm-kart-tracks/` e `src/data/kartLayouts.ts`) seguem a mesma licença. Detalhes em [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Os sprites de veículos e de cenário foram gerados no Higgsfield.
 
 Documentação detalhada:
+
 - [ARCHITECTURE.md](ARCHITECTURE.md): camadas, motor de corrida, fluxo de dados, determinismo, persistência, compatibilidade de saves e como estender.
 - [GAME_DESIGN.md](GAME_DESIGN.md): todas as regras e fórmulas, tabelas de balanceamento, limitações e próximos passos.
 

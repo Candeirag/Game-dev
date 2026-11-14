@@ -56,13 +56,33 @@ export function stocksValue(finance: Finance): number {
 export function netWorth(finance: Finance): number {
   const sum = (items: readonly { value: number }[]) => items.reduce((total, item) => total + item.value, 0);
   const loans = finance.loans.reduce((total, l) => total + l.balance, 0);
-  return Math.round(finance.cash + finance.fixedIncome + finance.equityFund + stocksValue(finance) + sum(finance.properties) + sum(finance.businesses) + sum(finance.stakes) - loans);
+  return Math.round(
+    finance.cash +
+      finance.fixedIncome +
+      finance.equityFund +
+      stocksValue(finance) +
+      sum(finance.properties) +
+      sum(finance.businesses) +
+      sum(finance.stakes) -
+      loans,
+  );
 }
 
 export function emptyFinance(cash: number): Finance {
   return {
-    cash, fixedIncome: 0, equityFund: 0, seasonTotals: {}, transactions: [], reports: [],
-    stocks: [], stockPrices: initialStockPrices(), properties: [], businesses: [], stakes: [], loans: [], lifestyle: 'frugal',
+    cash,
+    fixedIncome: 0,
+    equityFund: 0,
+    seasonTotals: {},
+    transactions: [],
+    reports: [],
+    stocks: [],
+    stockPrices: initialStockPrices(),
+    properties: [],
+    businesses: [],
+    stakes: [],
+    loans: [],
+    lifestyle: 'frugal',
   };
 }
 
@@ -89,7 +109,8 @@ export function settleRound(career: CareerState, round: number, entry: RaceEntry
   f = post(f, season, round, 'salary', contract.salary * share, 'Salário');
   for (const sponsor of career.sponsors) {
     f = post(f, season, round, 'sponsors', sponsor.perSeason * share, sponsor.name);
-    if (entry && entry.status === 'finished' && entry.position <= 3) f = post(f, season, round, 'bonus', sponsor.podiumBonus, `Bônus de pódio: ${sponsor.name}`);
+    if (entry && entry.status === 'finished' && entry.position <= 3)
+      f = post(f, season, round, 'bonus', sponsor.podiumBonus, `Bônus de pódio: ${sponsor.name}`);
   }
   if (entry && entry.status === 'finished') {
     if (entry.position === 1) f = post(f, season, round, 'bonus', contract.bonuses.win, 'Bônus por vitória');
@@ -131,7 +152,10 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
   let f = career.finance;
   const t = f.seasonTotals;
   // Renda do trabalho (líquida do custo da vaga) mais a renda do patrimônio: dividendos, aluguéis e lucro das empresas.
-  const taxable = Math.max(0, (t.salary ?? 0) + (t.bonus ?? 0) + (t.sponsors ?? 0) + (t.academy ?? 0) + (t.seat ?? 0) + (t.dividends ?? 0) + (t.rent ?? 0) + (t.business ?? 0));
+  const taxable = Math.max(
+    0,
+    (t.salary ?? 0) + (t.bonus ?? 0) + (t.sponsors ?? 0) + (t.academy ?? 0) + (t.seat ?? 0) + (t.dividends ?? 0) + (t.rent ?? 0) + (t.business ?? 0),
+  );
   // Residência fiscal em Mônaco (cobertura de uso próprio): 25% a menos de imposto de renda.
   const residence = f.properties.some((p) => p.catalogId === 'cobertura-monaco' && p.use === 'personal') ? 0.75 : 1;
   const tax = Math.round(incomeTax(taxable) * residence);
@@ -151,7 +175,16 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
   const loanInterest = f.cash < 0 ? Math.round(-f.cash * ECONOMY.LOAN_INTEREST) : 0;
   f = post(f, season, rounds, 'interest', -loanInterest, 'Juros da dívida');
 
-  const report: SeasonFinanceReport = { season, year, totals: { ...f.seasonTotals }, taxableIncome: taxable, tax, investmentReturn, loanInterest, netWorthEnd: netWorth(f) };
+  const report: SeasonFinanceReport = {
+    season,
+    year,
+    totals: { ...f.seasonTotals },
+    taxableIncome: taxable,
+    tax,
+    investmentReturn,
+    loanInterest,
+    netWorthEnd: netWorth(f),
+  };
   return { finance: { ...f, seasonTotals: {}, reports: [...f.reports, report].slice(-12) }, report };
 }
 

@@ -82,11 +82,7 @@ export function computeDriverStandings(
   return rows.map(({ counts: _counts, ...row }, index) => ({ ...row, position: index + 1 }));
 }
 
-export function computeTeamStandings(
-  rounds: readonly RoundRecord[],
-  teams: readonly Team[],
-  adjustments: readonly PointsAdjustment[] = [],
-): TeamStanding[] {
+export function computeTeamStandings(rounds: readonly RoundRecord[], teams: readonly Team[], adjustments: readonly PointsAdjustment[] = []): TeamStanding[] {
   const rows = teams.map((team) => {
     const entries = rounds.flatMap((r) => r.race.entries.filter((e) => e.teamId === team.id));
     return {

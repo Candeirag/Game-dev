@@ -27,7 +27,17 @@ const DRY: SessionWeather = { condition: 'dry', wetness: 0, trackTemp: 30 };
 const WET: SessionWeather = { condition: 'wet', wetness: 1, trackTemp: 18 };
 const track = TRACKS[0]!;
 const car = TEAMS[0]!.car;
-const base: DriverAttributes = { pace: 70, consistency: 70, overtaking: 70, defending: 70, focus: 70, racecraft: 70, tyreManagement: 70, wetSkill: 70, experience: 70 };
+const base: DriverAttributes = {
+  pace: 70,
+  consistency: 70,
+  overtaking: 70,
+  defending: 70,
+  focus: 70,
+  racecraft: 70,
+  tyreManagement: 70,
+  wetSkill: 70,
+  experience: 70,
+};
 const lap = (a: DriverAttributes, extra: Partial<Parameters<typeof expectedLapTime>[0]> = {}) =>
   expectedLapTime({ attributes: a, car, track, weather: DRY, setupScore: 0.5, tyreWear: 0, paceModifier: 0, ...extra });
 
@@ -39,7 +49,8 @@ describe('modelo de desempenho', () => {
   it('kart melhor dá volta mais rápida', () => {
     expect(lap(base, { car: { engine: 90, chassis: 90, reliability: 90 } })).toBeLessThan(lap(base, { car: { engine: 60, chassis: 60, reliability: 90 } }));
     // Na F1 (carFactor 4), a mesma diferença de equipamento pesa quatro vezes mais.
-    const gap = (carFactor: number) => lap(base, { car: { engine: 60, chassis: 60, reliability: 90 }, carFactor }) - lap(base, { car: { engine: 90, chassis: 90, reliability: 90 }, carFactor });
+    const gap = (carFactor: number) =>
+      lap(base, { car: { engine: 60, chassis: 60, reliability: 90 }, carFactor }) - lap(base, { car: { engine: 90, chassis: 90, reliability: 90 }, carFactor });
     expect(gap(4)).toBeCloseTo(gap(1) * 4, 6);
   });
 

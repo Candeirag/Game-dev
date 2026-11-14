@@ -11,7 +11,9 @@ export function CalendarScreen() {
   return (
     <div>
       <PageHeader eyebrow={`${category.name} · ${career.year}`} title="Calendário">
-        <span className="text-sm text-ink-400">{career.rounds.length} de {career.calendar.length} etapas disputadas</span>
+        <span className="text-sm text-ink-400">
+          {career.rounds.length} de {career.calendar.length} etapas disputadas
+        </span>
       </PageHeader>
       <div className="grid gap-3">
         {career.calendar.map((event, index) => {
@@ -32,14 +34,21 @@ export function CalendarScreen() {
                     {isCurrent && <span className="rounded bg-apex-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">Em andamento</span>}
                     {isNext && <span className="rounded bg-apex-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-apex-400">Próxima</span>}
                   </div>
-                  <div className="text-sm text-ink-400">{trackLocation(track)} · {formatDate(event.date)} · {raceLaps(track, category)} voltas · {track.lengthMeters} m</div>
-                  <div className="mt-1 text-xs text-ink-500">Ultrapassagem {describeOvertaking(track.overtakingDifficulty)} · Desgaste {describeTyreWear(track.tyreWear)} · Traçado que {describePower(track.powerSensitivity)}</div>
+                  <div className="text-sm text-ink-400">
+                    {trackLocation(track)} · {formatDate(event.date)} · {raceLaps(track, category)} voltas · {track.lengthMeters} m
+                  </div>
+                  <div className="mt-1 text-xs text-ink-500">
+                    Ultrapassagem {describeOvertaking(track.overtakingDifficulty)} · Desgaste {describeTyreWear(track.tyreWear)} · Traçado que{' '}
+                    {describePower(track.powerSensitivity)}
+                  </div>
                 </div>
                 <div className="text-sm">
                   {record ? (
                     <WeatherBadge weather={record.race.weather} />
                   ) : (
-                    <span className="text-ink-400">Chance de chuva: <b className="text-ink-100 tabular">{Math.round(track.rainChance * 100)}%</b></span>
+                    <span className="text-ink-400">
+                      Chance de chuva: <b className="text-ink-100 tabular">{Math.round(track.rainChance * 100)}%</b>
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-sm md:justify-end">

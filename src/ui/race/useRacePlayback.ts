@@ -214,24 +214,30 @@ export function useRacePlayback(): RacePlayback {
     if (tl) jump(tl.finished ? endOfBroadcast(tl) : tl.horizon);
   }, [jump]);
 
-  const seekLap = useCallback((lap: number) => {
-    const tl = useGameStore.getState().raceTimeline;
-    if (!tl) return;
-    lightsRef.current = null;
-    setLights(null);
-    setPlaying(false);
-    const live = tl.finished ? endOfBroadcast(tl) : tl.horizon;
-    jump(lap <= 0 ? 0 : Math.min(live, tl.laps[lap - 1]?.start ?? live));
-  }, [jump, setPlaying]);
+  const seekLap = useCallback(
+    (lap: number) => {
+      const tl = useGameStore.getState().raceTimeline;
+      if (!tl) return;
+      lightsRef.current = null;
+      setLights(null);
+      setPlaying(false);
+      const live = tl.finished ? endOfBroadcast(tl) : tl.horizon;
+      jump(lap <= 0 ? 0 : Math.min(live, tl.laps[lap - 1]?.start ?? live));
+    },
+    [jump, setPlaying],
+  );
 
-  const seekTime = useCallback((time: number) => {
-    const tl = useGameStore.getState().raceTimeline;
-    if (!tl) return;
-    lightsRef.current = null;
-    setLights(null);
-    setPlaying(false);
-    jump(Math.max(0, Math.min(tl.finished ? endOfBroadcast(tl) : tl.horizon, time)));
-  }, [jump, setPlaying]);
+  const seekTime = useCallback(
+    (time: number) => {
+      const tl = useGameStore.getState().raceTimeline;
+      if (!tl) return;
+      lightsRef.current = null;
+      setLights(null);
+      setPlaying(false);
+      jump(Math.max(0, Math.min(tl.finished ? endOfBroadcast(tl) : tl.horizon, time)));
+    },
+    [jump, setPlaying],
+  );
 
   const skipLap = useCallback(() => {
     const store = useGameStore.getState();

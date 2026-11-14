@@ -14,7 +14,14 @@ export function ExportReminder({ link = true, className }: { link?: boolean; cla
     <p className={cx('text-xs text-ink-400', className)}>
       Os saves ficam guardados neste navegador e somem se os dados dele forem apagados. Exporte a carreira (.json) de tempos em tempos.{' '}
       <span className={lastExportAt ? 'text-ink-300' : 'text-gold-400'}>Última exportação: {lastExportAt ? formatDateTime(lastExportAt) : 'nunca'}.</span>
-      {link && <> <Link to="/saves" className="font-semibold text-ink-200 underline underline-offset-2 hover:text-ink-100">Exportar agora</Link></>}
+      {link && (
+        <>
+          {' '}
+          <Link to="/saves" className="font-semibold text-ink-200 underline underline-offset-2 hover:text-ink-100">
+            Exportar agora
+          </Link>
+        </>
+      )}
     </p>
   );
 }
@@ -25,8 +32,19 @@ export function StorageWarning({ className, link = true }: { className?: string;
   if (kind !== 'memory') return null;
   return (
     <div role="alert" className={cx('rounded-lg border border-apex-500/60 bg-apex-500/15 px-4 py-3 text-sm text-ink-100', className)}>
-      <b className="text-apex-400">O navegador não está deixando o jogo gravar.</b> A carreira está só na memória desta página: ao fechar ou recarregar, o progresso será perdido.
-      {' '}Exporte a carreira (.json) antes de sair{link ? <>, na tela <Link to="/saves" className="font-semibold underline underline-offset-2">Saves</Link></> : ''}.
+      <b className="text-apex-400">O navegador não está deixando o jogo gravar.</b> A carreira está só na memória desta página: ao fechar ou recarregar, o
+      progresso será perdido. Exporte a carreira (.json) antes de sair
+      {link ? (
+        <>
+          , na tela{' '}
+          <Link to="/saves" className="font-semibold underline underline-offset-2">
+            Saves
+          </Link>
+        </>
+      ) : (
+        ''
+      )}
+      .
     </div>
   );
 }

@@ -43,7 +43,9 @@ test('equipes: resultado previsto e ritmo de desenvolvimento, por categoria e fo
       const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
       const normal = carGainPerSeason(management, category.rounds);
       const high = carGainPerSeason({ ...management, development: { ...management.development, spend: 'high' } }, category.rounds);
-      console.log(`${category.shortName.padEnd(20)} ${rank}    ${k(sum(f.income))} ${k(sum(f.expenses))} ${k(f.net)}  ${String(Math.round((f.net / TEAM_ECONOMY[category.id].operations) * 100)).padStart(6)}%   ${((f.net / teamValue(category.id, rank)) * 100).toFixed(1).padStart(6)}% |            ${normal.toFixed(2).padStart(5)}      ${high.toFixed(2).padStart(5)}   ${TEAM_ECONOMY[category.id].fieldDevelopment.toFixed(2)}`);
+      console.log(
+        `${category.shortName.padEnd(20)} ${rank}    ${k(sum(f.income))} ${k(sum(f.expenses))} ${k(f.net)}  ${String(Math.round((f.net / TEAM_ECONOMY[category.id].operations) * 100)).padStart(6)}%   ${((f.net / teamValue(category.id, rank)) * 100).toFixed(1).padStart(6)}% |            ${normal.toFixed(2).padStart(5)}      ${high.toFixed(2).padStart(5)}   ${TEAM_ECONOMY[category.id].fieldDevelopment.toFixed(2)}`,
+      );
     }
   }
 }, 60_000);

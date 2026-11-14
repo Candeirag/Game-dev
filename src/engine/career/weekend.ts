@@ -3,15 +3,7 @@
  * Cada função recebe o estado da carreira e devolve um novo estado, sem
  * modificar o original. A UI só chama estas funções; ela nunca aplica regras.
  */
-import type {
-  CareerState,
-  PracticeProgram,
-  QualifyingApproach,
-  RoundRecord,
-  TrainingFocus,
-  TrainingIntensity,
-  WeekendState,
-} from '@/domain/schemas';
+import type { CareerState, PracticeProgram, QualifyingApproach, RoundRecord, TrainingFocus, TrainingIntensity, WeekendState } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
 import { getTrack, raceLaps, referenceLapTime } from '@/data/tracks';
 import { chooseAiPracticeProgram, chooseAiQualifyingApproach } from '../ai/decisions';
@@ -140,7 +132,12 @@ export function runQualifying(career: CareerState, playerApproach: QualifyingApp
   const participants = entrantDrivers(career, weekend).map(({ driver, team }) => {
     const entry = practice.entries.find((e) => e.driverId === driver.id);
     if (!entry) throw new Error(`Piloto ${driver.id} sem resultado de treino.`);
-    return { driver, team, approach: directedByPlayer(career, driver) ? playerApproach : chooseAiQualifyingApproach(driver.attributes, weather), modifiers: entry.modifiers };
+    return {
+      driver,
+      team,
+      approach: directedByPlayer(career, driver) ? playerApproach : chooseAiQualifyingApproach(driver.attributes, weather),
+      modifiers: entry.modifiers,
+    };
   });
   const qualifying = simulateQualifying(participants, track, weather, sessionSeed(career, weekend.round, 'qualifying'), category, career.gridPenalties);
   return { ...career, weekend: { ...weekend, phase: 'race', qualifying } };
@@ -149,14 +146,27 @@ export function runQualifying(career: CareerState, playerApproach: QualifyingApp
 export function buildRaceContext(career: CareerState): RaceContext {
   const event = career.calendar.find((e) => e.round === career.weekend?.round);
   if (!event) throw new Error('Nenhuma etapa em andamento.');
-  return { track: getTrack(event.trackId), category: getCategory(career.categoryId), drivers: driverMap(career), teams: teamMap(career), rivalries: career.relations.rivalries };
+  return {
+    track: getTrack(event.trackId),
+    category: getCategory(career.categoryId),
+    drivers: driverMap(career),
+    teams: teamMap(career),
+    rivalries: career.relations.rivalries,
+  };
 }
 
 /** Estratégias de pneus disponíveis para o jogador nesta corrida. */
 export function playerStrategyOptions(career: CareerState): StrategyOption[] {
   const { event, track, category } = requireWeekend(career, 'race');
   const player = getPlayer(career);
-  return buildStrategyOptions(category.race, track, raceLaps(track, category), referenceLapTime(track, category), player.attributes, event.weather.race.wetness);
+  return buildStrategyOptions(
+    category.race,
+    track,
+    raceLaps(track, category),
+    referenceLapTime(track, category),
+    player.attributes,
+    event.weather.race.wetness,
+  );
 }
 
 export function createWeekendRace(career: CareerState, playerPlan?: StrategyPlan): RaceSimState {
@@ -166,7 +176,12 @@ export function createWeekendRace(career: CareerState, playerPlan?: StrategyPlan
   const grid = qualifying.entries.map((q) => {
     const p = practice.entries.find((e) => e.driverId === q.driverId);
     if (!p) throw new Error(`Piloto ${q.driverId} sem resultado de treino.`);
-    return { driverId: q.driverId, teamId: q.teamId, modifiers: p.modifiers, ...(q.driverId === career.playerDriverId && playerPlan ? { plan: playerPlan } : {}) };
+    return {
+      driverId: q.driverId,
+      teamId: q.teamId,
+      modifiers: p.modifiers,
+      ...(q.driverId === career.playerDriverId && playerPlan ? { plan: playerPlan } : {}),
+    };
   });
   return createRaceSim(grid, buildRaceContext(career), event.weather.race, sessionSeed(career, weekend.round, 'race'), career.playerDriverId);
 }
@@ -183,7 +198,15 @@ export function completeWeekend(career: CareerState, race: RaceSimState): Career
   const { practice, qualifying } = weekend;
   if (!practice || !qualifying) throw new Error('Fim de semana incompleto.');
 
-  const record: RoundRecord = { season: career.season, round: weekend.round, trackId: event.trackId, date: event.date, practice, qualifying, race: finalizeRace(race, category) };
+  const record: RoundRecord = {
+    season: career.season,
+    round: weekend.round,
+    trackId: event.trackId,
+    date: event.date,
+    practice,
+    qualifying,
+    race: finalizeRace(race, category),
+  };
   const withResult: CareerState = { ...career, rounds: [...career.rounds, record], weekend: null, nextRoundIndex: career.nextRoundIndex + 1 };
   const drops = gridDropsFromRace(race);
   if (career.mode === 'executive') {

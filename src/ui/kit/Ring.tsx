@@ -40,12 +40,36 @@ export function Ring({
   return (
     <div className={cx('relative shrink-0', className)} style={{ width: size, height: size }}>
       <svg viewBox="0 0 100 100" className="h-full w-full -rotate-[225deg]" aria-hidden="true">
-        <circle cx="50" cy="50" r={radius} fill="none" strokeWidth={stroke} strokeLinecap="butt" className="stroke-ink-700" strokeDasharray={`${sweep * circumference} ${circumference}`} />
-        <circle cx="50" cy="50" r={radius} fill="none" strokeWidth={stroke} strokeLinecap="butt" className={ARC[tone]} strokeDasharray={`${filled} ${circumference}`} />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="butt"
+          className="stroke-ink-700"
+          strokeDasharray={`${sweep * circumference} ${circumference}`}
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="butt"
+          className={ARC[tone]}
+          strokeDasharray={`${filled} ${circumference}`}
+        />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-        <span className="font-display font-bold text-ink-100" style={{ fontSize: size * 0.4 }}>{value}</span>
-        {label && <span className="mt-0.5 font-medium text-ink-400" style={{ fontSize: Math.max(9, size * 0.15) }}>{label}</span>}
+        <span className="font-display font-bold text-ink-100" style={{ fontSize: size * 0.4 }}>
+          {value}
+        </span>
+        {label && (
+          <span className="mt-0.5 font-medium text-ink-400" style={{ fontSize: Math.max(9, size * 0.15) }}>
+            {label}
+          </span>
+        )}
       </div>
     </div>
   );

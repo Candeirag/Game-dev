@@ -8,7 +8,19 @@
  * promoção de categories.ts. A evolução usa `developDriver`, a mesma função
  * dos pilotos do campeonato.
  */
-import type { CareerState, CategoryId, Child, ChildRacing, ChildSeason, ChildTrait, Driver, DriverAttributes, Family, Partner, SupportLevel } from '@/domain/schemas';
+import type {
+  CareerState,
+  CategoryId,
+  Child,
+  ChildRacing,
+  ChildSeason,
+  ChildTrait,
+  Driver,
+  DriverAttributes,
+  Family,
+  Partner,
+  SupportLevel,
+} from '@/domain/schemas';
 import { CHILD_TRAITS, PARTNER_BACKGROUNDS } from '@/domain/schemas';
 import { LIFESTYLE_RULES } from '@/data/assets';
 import { LICENSE_WINDOW_SEASONS, categoryByTier, getCategory, type CategoryDefinition } from '@/data/categories';
@@ -29,7 +41,7 @@ import { rankTeams } from '../world/generation';
 import { counted } from '@/domain/text';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
-const pick = <T,>(rng: Rng, list: readonly T[]): T => list[Math.floor(rng.next() * list.length)] as T;
+const pick = <T>(rng: Rng, list: readonly T[]): T => list[Math.floor(rng.next() * list.length)] as T;
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
 
 export function emptyFamily(): Family {
@@ -108,7 +120,10 @@ export function generateChild(career: CareerState, seed: number): Child {
   const second = pick(rng, CHILD_TRAITS);
   const traits: ChildTrait[] = rng.next() < 0.6 && second !== first ? [first, second] : [first];
   const traitTalent = traits.reduce((sum, t) => sum + getTrait(t).talent, 0);
-  const inherited = FAMILY.TALENT_PARENT * parentTalent + FAMILY.TALENT_PARTNER * partnerTalent + FAMILY.TALENT_CHANCE * (FAMILY.TALENT_CHANCE_MEAN + gaussian(rng) * FAMILY.TALENT_CHANCE_SD);
+  const inherited =
+    FAMILY.TALENT_PARENT * parentTalent +
+    FAMILY.TALENT_PARTNER * partnerTalent +
+    FAMILY.TALENT_CHANCE * (FAMILY.TALENT_CHANCE_MEAN + gaussian(rng) * FAMILY.TALENT_CHANCE_SD);
   const used = new Set(career.family.children.map((c) => c.firstName));
   let firstName = pick(rng, CHILD_FIRST_NAMES);
   for (let i = 0; i < 20 && used.has(firstName); i++) firstName = pick(rng, CHILD_FIRST_NAMES);
@@ -161,7 +176,14 @@ function ownCoverage(child: Child, reputation: number): number {
 }
 
 /** Custo líquido da vaga de um filho e quanto dele cabe à família. */
-export function childSeatFunding(child: Child, category: CategoryDefinition, rank: number, reputation: number, academy: string | null, scholarship: number): { net: number; familyCost: number; funded: boolean } {
+export function childSeatFunding(
+  child: Child,
+  category: CategoryDefinition,
+  rank: number,
+  reputation: number,
+  academy: string | null,
+  scholarship: number,
+): { net: number; familyCost: number; funded: boolean } {
   const discount = Math.min(CONTRACT_RULES.MAX_TOTAL_DISCOUNT, scholarship + (academy ? FAMILY.ACADEMY_SHARE : 0));
   const net = lerp(category.economy.seatCost, rank / 9) * (1 - discount);
   const own = ownCoverage(child, reputation);
@@ -198,7 +220,17 @@ export function startChildCareer(career: CareerState, childId: string, support: 
     potential: child.talent,
     trainingFocus: chooseAiTrainingFocus(attributes),
   };
-  const racing: ChildRacing = { categoryId: category.id, teamName: teamNameAt(category.id, teamRank), teamRank, reputation: 5, license: [], academy: null, seasons: [], stalled: 0, familyCost: funding.familyCost };
+  const racing: ChildRacing = {
+    categoryId: category.id,
+    teamName: teamNameAt(category.id, teamRank),
+    teamRank,
+    reputation: 5,
+    license: [],
+    academy: null,
+    seasons: [],
+    stalled: 0,
+    familyCost: funding.familyCost,
+  };
   return updateChild(career, { ...withSupport, stage: 'racing', driver, racing });
 }
 
@@ -276,7 +308,11 @@ function winsFor(position: number, rng: Rng): number {
 }
 
 /** Fecha a temporada de um filho: resultado (real ou estimado), licença, reputação e evolução. */
-export function closeChildSeason(child: Child, career: CareerState, world: { position: number; wins: number; driver: Driver; teamName: string } | null): { child: Child; note: string } {
+export function closeChildSeason(
+  child: Child,
+  career: CareerState,
+  world: { position: number; wins: number; driver: Driver; teamName: string } | null,
+): { child: Child; note: string } {
   const racing = child.racing;
   if (!racing || !child.driver || child.stage !== 'racing') return { child, note: '' };
   const category = getCategory(racing.categoryId);
@@ -291,12 +327,20 @@ export function closeChildSeason(child: Child, career: CareerState, world: { pos
     const noise = gaussian(rng) * Math.max(1, FAMILY.SEASON_NOISE_SD + traitSum(child, 'volatility'));
     position = estimateSeasonPosition(competitiveRating(driver.attributes), category, racing.teamRank, noise);
     wins = winsFor(position, rng);
-    const multiplier = traitProduct(child, 'development') * (child.support === 'full' ? 1 : child.support === 'basic' ? 0.92 : 0.85) * (racing.academy ? FAMILY.ACADEMY_DEVELOPMENT : 1);
+    const multiplier =
+      traitProduct(child, 'development') *
+      (child.support === 'full' ? 1 : child.support === 'basic' ? 0.92 : 0.85) *
+      (racing.academy ? FAMILY.ACADEMY_DEVELOPMENT : 1);
     // Uma temporada equivale às etapas da categoria mais a pré-temporada, em três blocos:
     // a cada bloco, o treinador revê o foco do treino.
     const cycles = (category.rounds + 2) / 3;
     for (let block = 0; block < 3; block++) {
-      driver = developDriver({ ...driver, trainingFocus: coachFocus(driver) }, hashSeed(career.seed, career.season, 'child-dev', child.id, block), cycles, multiplier).driver;
+      driver = developDriver(
+        { ...driver, trainingFocus: coachFocus(driver) },
+        hashSeed(career.seed, career.season, 'child-dev', child.id, block),
+        cycles,
+        multiplier,
+      ).driver;
     }
   }
   const points = licensePointsFor(category.id, position);
@@ -304,7 +348,16 @@ export function closeChildSeason(child: Child, career: CareerState, world: { pos
   const season: ChildSeason = { season: career.season, year: career.year, categoryId: category.id, teamName, position, wins, inWorld: world !== null };
   const note = `${child.firstName} terminou a ${category.shortName} em ${position}º${wins > 0 ? `, com ${counted(wins, 'vitória', 'vitórias')}` : ''}.`;
   return {
-    child: { ...child, driver, racing: { ...racing, reputation, license: [...racing.license, { season: career.season, categoryId: category.id, position, points }], seasons: [...racing.seasons, season].slice(-30) } },
+    child: {
+      ...child,
+      driver,
+      racing: {
+        ...racing,
+        reputation,
+        license: [...racing.license, { season: career.season, categoryId: category.id, position, points }],
+        seasons: [...racing.seasons, season].slice(-30),
+      },
+    },
     note,
   };
 }
@@ -312,7 +365,12 @@ export function closeChildSeason(child: Child, career: CareerState, world: { pos
 function meetsRequirements(child: Child, racing: ChildRacing, category: CategoryDefinition, season: number): boolean {
   const req = category.requirements;
   const points = racing.license.filter((h) => h.season > season - LICENSE_WINDOW_SEASONS).reduce((sum, h) => sum + h.points, 0);
-  return (child.driver?.age ?? 0) >= req.minAge && points >= req.licensePoints && racing.reputation >= req.minReputation && Math.floor(child.driver?.attributes.experience ?? 0) >= req.minExperience;
+  return (
+    (child.driver?.age ?? 0) >= req.minAge &&
+    points >= req.licensePoints &&
+    racing.reputation >= req.minReputation &&
+    Math.floor(child.driver?.attributes.experience ?? 0) >= req.minExperience
+  );
 }
 
 /**
@@ -329,7 +387,10 @@ export function planChildSeason(child: Child, career: CareerState): { child: Chi
   const current = getCategory(racing.categoryId);
   const last = racing.seasons[racing.seasons.length - 1];
   const position = last?.position ?? 12;
-  const quit = (reason: string): { child: Child; note: string } => ({ child: { ...child, stage: 'other', racing: { ...racing, familyCost: 0 } }, note: `${child.firstName} ${reason}` });
+  const quit = (reason: string): { child: Child; note: string } => ({
+    child: { ...child, stage: 'other', racing: { ...racing, familyCost: 0 } },
+    note: `${child.firstName} ${reason}`,
+  });
 
   if (current.tier === 7) {
     const rating = overallRating(driver.attributes);
@@ -356,17 +417,37 @@ export function planChildSeason(child: Child, career: CareerState): { child: Chi
       note += `${child.firstName} tinha vaga na ${target.shortName}, mas não conseguiu pagar por ela. `;
       continue;
     }
-    return { child: { ...child, racing: { ...racing, categoryId: target.id, teamRank, teamName: teamNameAt(target.id, teamRank), academy: target.tier === 7 ? null : academy, stalled: 0, familyCost: funding.familyCost } }, note: `${note}${child.firstName} sobe para a ${target.name}, pela ${teamNameAt(target.id, teamRank)}.` };
+    return {
+      child: {
+        ...child,
+        racing: {
+          ...racing,
+          categoryId: target.id,
+          teamRank,
+          teamName: teamNameAt(target.id, teamRank),
+          academy: target.tier === 7 ? null : academy,
+          stalled: 0,
+          familyCost: funding.familyCost,
+        },
+      },
+      note: `${note}${child.firstName} sobe para a ${target.name}, pela ${teamNameAt(target.id, teamRank)}.`,
+    };
   }
 
   if (driver.age > current.field.maxAge + 1) return quit(`passou da idade da ${current.shortName} sem conseguir subir e encerrou a carreira de piloto.`);
   const teamRank = Math.round(clamp((racing.teamRank + clamp(Math.round((position - 1) / 2), 0, 9)) / 2, 0, 9));
   const funding = childSeatFunding(child, current, teamRank, racing.reputation, academy, 0);
   if (funding.funded) {
-    return { child: { ...child, racing: { ...racing, teamRank, teamName: teamNameAt(current.id, teamRank), academy, stalled: 0, familyCost: funding.familyCost } }, note: note.trim() };
+    return {
+      child: { ...child, racing: { ...racing, teamRank, teamName: teamNameAt(current.id, teamRank), academy, stalled: 0, familyCost: funding.familyCost } },
+      note: note.trim(),
+    };
   }
   if (racing.stalled + 1 >= 2) return quit('ficou sem dinheiro para seguir correndo e abandonou a carreira.');
-  return { child: { ...child, racing: { ...racing, teamRank: 9, teamName: teamNameAt(current.id, 9), academy, stalled: racing.stalled + 1, familyCost: 0 } }, note: `${note}${child.firstName} não conseguiu pagar a vaga e vai correr de favor na ${teamNameAt(current.id, 9)}. Sem apoio, a carreira dele acaba em um ano.` };
+  return {
+    child: { ...child, racing: { ...racing, teamRank: 9, teamName: teamNameAt(current.id, 9), academy, stalled: racing.stalled + 1, familyCost: 0 } },
+    note: `${note}${child.firstName} não conseguiu pagar a vaga e vai correr de favor na ${teamNameAt(current.id, 9)}. Sem apoio, a carreira dele acaba em um ano.`,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -384,7 +465,11 @@ export interface FamilyYearResult {
  * plano da temporada seguinte. `worldResults` traz o resultado real dos filhos
  * que correram no campeonato do jogador.
  */
-export function closeFamilyYear(career: CareerState, worldResults: Readonly<Record<string, { position: number; wins: number; driver: Driver; teamName: string }>> = {}, keepInWorld: ReadonlySet<string> = new Set()): FamilyYearResult {
+export function closeFamilyYear(
+  career: CareerState,
+  worldResults: Readonly<Record<string, { position: number; wins: number; driver: Driver; teamName: string }>> = {},
+  keepInWorld: ReadonlySet<string> = new Set(),
+): FamilyYearResult {
   const notes: string[] = [];
   const kartBoost = hasPersonalProperty(career.finance, 'kartodromo') ? 1.25 : 1;
   const lifestyleBond = LIFESTYLE_RULES[career.finance.lifestyle].relationship / 2;
@@ -397,7 +482,8 @@ export function closeFamilyYear(career: CareerState, worldResults: Readonly<Reco
     }
     // Aniversário.
     child = { ...child, age: child.age + 1 };
-    if (child.driver) child = { ...child, driver: applyAging({ ...child.driver, age: child.driver.age + 1 }, hashSeed(career.seed, career.season, 'child-aging', child.id)) };
+    if (child.driver)
+      child = { ...child, driver: applyAging({ ...child.driver, age: child.driver.age + 1 }, hashSeed(career.seed, career.season, 'child-aging', child.id)) };
     if (child.stage === 'karting') {
       child = { ...child, kartYears: Math.round((child.kartYears + FAMILY.KART_YIELD[child.kartFunding] * kartBoost) * 100) / 100 };
     }
@@ -411,7 +497,13 @@ export function closeFamilyYear(career: CareerState, worldResults: Readonly<Reco
     child = { ...child, bond: Math.round(clamp(child.bond + traitSum(child, 'bond') + lifestyleBond + supportBond + homeBond + (65 - child.bond) * 0.08)) };
     // Um filho rebelde e distante pode largar o automobilismo.
     const inWorld = child.driver !== null && keepInWorld.has(child.driver.id);
-    if (child.stage === 'racing' && !inWorld && child.traits.includes('rebel') && child.bond < 25 && createRng(hashSeed(career.seed, career.season, 'rebel', child.id)).next() < 0.4) {
+    if (
+      child.stage === 'racing' &&
+      !inWorld &&
+      child.traits.includes('rebel') &&
+      child.bond < 25 &&
+      createRng(hashSeed(career.seed, career.season, 'rebel', child.id)).next() < 0.4
+    ) {
       notes.push(`${child.firstName} rompeu com a família e largou as pistas.`);
       child = { ...child, stage: 'other', racing: child.racing ? { ...child.racing, familyCost: 0 } : null };
     }

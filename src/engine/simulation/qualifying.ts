@@ -34,7 +34,14 @@ const QUALIFYING_ERROR_MULTIPLIER = 4;
 const KNOCKOUT_ATTEMPTS_PER_SEGMENT = 2;
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
-function attemptLap(p: QualifyingParticipant, rng: Rng, track: Track, weather: SessionWeather, category: QualifyingCategory, evolutionStep: number): number | null {
+function attemptLap(
+  p: QualifyingParticipant,
+  rng: Rng,
+  track: Track,
+  weather: SessionWeather,
+  category: QualifyingCategory,
+  evolutionStep: number,
+): number | null {
   const effects = QUALIFYING_APPROACH_EFFECTS[p.approach];
   const cond = conditionEffects(p.driver.condition, p.driver.injury);
   const expected = expectedLapTime({
@@ -98,7 +105,9 @@ export function simulateQualifying(
     const eliminated: Row[] = [];
     (['Q1', 'Q2', 'Q3'] as const).forEach((segment, segmentIndex) => {
       for (const row of active) {
-        const laps = Array.from({ length: KNOCKOUT_ATTEMPTS_PER_SEGMENT }, (_, i) => attemptLap(row.p, rngOf(row.p.driver.id), track, weather, category, segmentIndex * KNOCKOUT_ATTEMPTS_PER_SEGMENT + i));
+        const laps = Array.from({ length: KNOCKOUT_ATTEMPTS_PER_SEGMENT }, (_, i) =>
+          attemptLap(row.p, rngOf(row.p.driver.id), track, weather, category, segmentIndex * KNOCKOUT_ATTEMPTS_PER_SEGMENT + i),
+        );
         row.attempts.push(...laps);
         row.valid = laps.filter((t): t is number => t !== null).sort((a, b) => a - b);
       }

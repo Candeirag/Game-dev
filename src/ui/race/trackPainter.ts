@@ -192,7 +192,13 @@ export function buildTrackArt(circuit: Circuit, boxColors: readonly string[], gr
   const roof = slab(circuit, buildingAt, buildingCentre + sign * Math.min(2.5, depth / 6), buildingLength - 6, Math.max(1.5, depth - 9));
   const boxes = boxColors.map((color, i) => ({
     color,
-    path: slab(circuit, pitBoxAt(circuit, i, boxColors.length), pit.offset + sign * (CIRCUIT.PIT_WIDTH / 2 + 2.6), Math.min(15, (buildingLength - 22) / Math.max(1, boxColors.length) - 2), 3.2),
+    path: slab(
+      circuit,
+      pitBoxAt(circuit, i, boxColors.length),
+      pit.offset + sign * (CIRCUIT.PIT_WIDTH / 2 + 2.6),
+      Math.min(15, (buildingLength - 22) / Math.max(1, boxColors.length) - 2),
+      3.2,
+    ),
   }));
 
   // Posições do grid: um colchete na frente de cada carro, em duas filas alternadas.

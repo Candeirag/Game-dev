@@ -32,7 +32,8 @@ export function formatMoney(value: number, currency: Currency, options: MoneyOpt
   if (options.compact && abs >= 1_000_000) return `${sign}${symbol} ${(abs / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} mi`;
   if (options.compact && abs >= 100_000) return `${sign}${symbol} ${Math.round(abs / 1000).toLocaleString('pt-BR')} mil`;
   const decimals = options.decimals ?? 0;
-  const amount = decimals > 0 ? abs.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : Math.round(abs).toLocaleString('pt-BR');
+  const amount =
+    decimals > 0 ? abs.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) : Math.round(abs).toLocaleString('pt-BR');
   return `${sign}${symbol} ${amount}`;
 }
 

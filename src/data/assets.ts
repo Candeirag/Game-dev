@@ -63,11 +63,61 @@ export interface PropertyDefinition {
 }
 
 export const PROPERTIES: readonly PropertyDefinition[] = [
-  { id: 'apartamento', name: 'Apartamento na cidade', description: 'Dois quartos perto do centro. Fácil de alugar.', price: 180_000, rentYield: 0.05, upkeep: 0.01, appreciation: 0.015, appreciationSd: 0.04, personalPerk: 'Morar nele dá +0,3 de moral por etapa.' },
-  { id: 'galpao', name: 'Galpão comercial', description: 'Oficina e depósito alugados a equipes de base.', price: 320_000, rentYield: 0.065, upkeep: 0.015, appreciation: 0.01, appreciationSd: 0.04, personalPerk: 'Usado como oficina própria: o treino custa 20% menos.' },
-  { id: 'casa-campo', name: 'Casa de campo', description: 'Refúgio longe das pistas, bom para a família.', price: 450_000, rentYield: 0.04, upkeep: 0.012, appreciation: 0.015, appreciationSd: 0.05, personalPerk: 'Uso próprio: +0,5 de moral por etapa e +3 na relação com a família por ano.' },
-  { id: 'kartodromo', name: 'Kartódromo', description: 'Pista de kart com escola e aluguel de karts.', price: 1_200_000, rentYield: 0.07, upkeep: 0.03, appreciation: 0.01, appreciationSd: 0.05, personalPerk: 'A formação dos filhos no kart custa metade e rende 25% mais.' },
-  { id: 'cobertura-monaco', name: 'Cobertura em Mônaco', description: 'Endereço dos pilotos de ponta.', price: 4_500_000, rentYield: 0.03, upkeep: 0.01, appreciation: 0.025, appreciationSd: 0.06, personalPerk: 'Residência fiscal: o imposto de renda cai 25%.' },
+  {
+    id: 'apartamento',
+    name: 'Apartamento na cidade',
+    description: 'Dois quartos perto do centro. Fácil de alugar.',
+    price: 180_000,
+    rentYield: 0.05,
+    upkeep: 0.01,
+    appreciation: 0.015,
+    appreciationSd: 0.04,
+    personalPerk: 'Morar nele dá +0,3 de moral por etapa.',
+  },
+  {
+    id: 'galpao',
+    name: 'Galpão comercial',
+    description: 'Oficina e depósito alugados a equipes de base.',
+    price: 320_000,
+    rentYield: 0.065,
+    upkeep: 0.015,
+    appreciation: 0.01,
+    appreciationSd: 0.04,
+    personalPerk: 'Usado como oficina própria: o treino custa 20% menos.',
+  },
+  {
+    id: 'casa-campo',
+    name: 'Casa de campo',
+    description: 'Refúgio longe das pistas, bom para a família.',
+    price: 450_000,
+    rentYield: 0.04,
+    upkeep: 0.012,
+    appreciation: 0.015,
+    appreciationSd: 0.05,
+    personalPerk: 'Uso próprio: +0,5 de moral por etapa e +3 na relação com a família por ano.',
+  },
+  {
+    id: 'kartodromo',
+    name: 'Kartódromo',
+    description: 'Pista de kart com escola e aluguel de karts.',
+    price: 1_200_000,
+    rentYield: 0.07,
+    upkeep: 0.03,
+    appreciation: 0.01,
+    appreciationSd: 0.05,
+    personalPerk: 'A formação dos filhos no kart custa metade e rende 25% mais.',
+  },
+  {
+    id: 'cobertura-monaco',
+    name: 'Cobertura em Mônaco',
+    description: 'Endereço dos pilotos de ponta.',
+    price: 4_500_000,
+    rentYield: 0.03,
+    upkeep: 0.01,
+    appreciation: 0.025,
+    appreciationSd: 0.06,
+    personalPerk: 'Residência fiscal: o imposto de renda cai 25%.',
+  },
 ];
 
 export interface BusinessDefinition {
@@ -89,7 +139,14 @@ export interface BusinessDefinition {
 export const BUSINESSES: readonly BusinessDefinition[] = [
   { id: 'marca', name: 'Marca de roupas', description: 'Linha de bonés e camisetas com o seu nome.', cost: 80_000, baseProfit: 9_000, minReputation: 15 },
   { id: 'escola', name: 'Escola de pilotagem', description: 'Cursos de kart e de pilotagem esportiva.', cost: 150_000, baseProfit: 18_000, minReputation: 20 },
-  { id: 'simuladores', name: 'Centro de simuladores', description: 'Simuladores profissionais alugados por hora.', cost: 280_000, baseProfit: 32_000, minReputation: 30 },
+  {
+    id: 'simuladores',
+    name: 'Centro de simuladores',
+    description: 'Simuladores profissionais alugados por hora.',
+    cost: 280_000,
+    baseProfit: 32_000,
+    minReputation: 30,
+  },
   { id: 'agencia', name: 'Agência de pilotos', description: 'Gestão de carreira de jovens talentos.', cost: 450_000, baseProfit: 55_000, minReputation: 45 },
 ];
 

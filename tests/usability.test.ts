@@ -17,7 +17,9 @@ import { NOW, newCareer, playRound, resolvePending } from './helpers';
 function installLocalStorage(): Map<string, string> {
   const data = new Map<string, string>();
   const storage = {
-    get length() { return data.size; },
+    get length() {
+      return data.size;
+    },
     key: (i: number) => [...data.keys()][i] ?? null,
     getItem: (k: string) => data.get(k) ?? null,
     setItem: (k: string, v: string) => void data.set(k, String(v)),
@@ -91,7 +93,9 @@ describe('plurais', () => {
 
   it('acerta os plurais de textos gravados por versões anteriores', () => {
     expect(fixStoredPlurals('Você somou 1 ponto(s) e fez 4 ultrapassagem(ns).')).toBe('Você somou 1 ponto e fez 4 ultrapassagens.');
-    expect(fixStoredPlurals('0 vitória(s), 2 bandeira(s) vermelha(s), 1 tentativa(s) invalidada(s).')).toBe('0 vitórias, 2 bandeiras vermelhas, 1 tentativa invalidada.');
+    expect(fixStoredPlurals('0 vitória(s), 2 bandeira(s) vermelha(s), 1 tentativa(s) invalidada(s).')).toBe(
+      '0 vitórias, 2 bandeiras vermelhas, 1 tentativa invalidada.',
+    );
     expect(fixStoredPlurals('rendeu 1.5 ano(s) de base')).toBe('rendeu 1.5 ano de base');
     expect(fixStoredPlurals('Filho(a) de Ana, lateral(s)')).toBe('Filho(a) de Ana, lateral(s)');
     const loaded = importCareer(readFileSync('tests/fixtures/v2/offseason.json', 'utf8'));
@@ -143,7 +147,18 @@ describe('corrida interrompida', () => {
     // (O registro guardado é o de antes de simular o resto; por isso é regravado aqui.)
     store().exitToMenu();
     await store().importJson(exportCareer(weekend, NOW));
-    useGameStore.setState({ raceResume: { key: raceResumeKey(career)!, plan: null, steps: modes.map((mode) => ({ mode, pit: null, skipPlannedStop: false, auto: false })), mode: 'aggressive', autoEngineer: false, shownLap: 5, shownTime: 123.4, totalLaps: interrupted.totalLaps } });
+    useGameStore.setState({
+      raceResume: {
+        key: raceResumeKey(career)!,
+        plan: null,
+        steps: modes.map((mode) => ({ mode, pit: null, skipPlannedStop: false, auto: false })),
+        mode: 'aggressive',
+        autoEngineer: false,
+        shownLap: 5,
+        shownTime: 123.4,
+        totalLaps: interrupted.totalLaps,
+      },
+    });
 
     store().resumeRace(false);
     expect(store().liveRace).toEqual(interrupted);

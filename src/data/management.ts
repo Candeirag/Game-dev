@@ -32,13 +32,90 @@ export interface TeamEconomy {
 }
 
 export const TEAM_ECONOMY: Readonly<Record<CategoryId, TeamEconomy>> = {
-  'kart-regional': { operations: 32_000, prize: [6_000, 500], sponsorBase: 9_000, staffSalary: 1_500, researchCost: 150, value: [120_000, 50_000], principalSalary: [18_000, 8_000], facilityCost: 7_000, budgetCap: null, fieldDevelopment: 0.6 },
-  'kart-national': { operations: 68_000, prize: [10_000, 1_500], sponsorBase: 24_000, staffSalary: 3_000, researchCost: 320, value: [300_000, 120_000], principalSalary: [35_000, 15_000], facilityCost: 16_000, budgetCap: null, fieldDevelopment: 0.6 },
-  'kart-international': { operations: 181_000, prize: [30_000, 4_000], sponsorBase: 60_000, staffSalary: 7_500, researchCost: 800, value: [800_000, 350_000], principalSalary: [70_000, 30_000], facilityCost: 40_000, budgetCap: null, fieldDevelopment: 0.6 },
-  f4: { operations: 505_000, prize: [140_000, 10_000], sponsorBase: 150_000, staffSalary: 20_000, researchCost: 2_000, value: [2_500_000, 1_200_000], principalSalary: [140_000, 60_000], facilityCost: 110_000, budgetCap: null, fieldDevelopment: 0.25 },
-  f3: { operations: 1_330_000, prize: [450_000, 30_000], sponsorBase: 380_000, staffSalary: 50_000, researchCost: 5_000, value: [7_000_000, 3_500_000], principalSalary: [300_000, 120_000], facilityCost: 280_000, budgetCap: null, fieldDevelopment: 0.25 },
-  f2: { operations: 3_300_000, prize: [1_200_000, 80_000], sponsorBase: 950_000, staffSalary: 120_000, researchCost: 13_000, value: [18_000_000, 9_000_000], principalSalary: [600_000, 250_000], facilityCost: 650_000, budgetCap: null, fieldDevelopment: 0.25 },
-  f1: { operations: 18_000_000, prize: [50_000_000, 20_000_000], sponsorBase: 24_000_000, staffSalary: 1_500_000, researchCost: 420_000, value: [220_000_000, 70_000_000], principalSalary: [4_000_000, 1_000_000], facilityCost: 5_000_000, budgetCap: 30_000_000, fieldDevelopment: 2 },
+  'kart-regional': {
+    operations: 32_000,
+    prize: [6_000, 500],
+    sponsorBase: 9_000,
+    staffSalary: 1_500,
+    researchCost: 150,
+    value: [120_000, 50_000],
+    principalSalary: [18_000, 8_000],
+    facilityCost: 7_000,
+    budgetCap: null,
+    fieldDevelopment: 0.6,
+  },
+  'kart-national': {
+    operations: 68_000,
+    prize: [10_000, 1_500],
+    sponsorBase: 24_000,
+    staffSalary: 3_000,
+    researchCost: 320,
+    value: [300_000, 120_000],
+    principalSalary: [35_000, 15_000],
+    facilityCost: 16_000,
+    budgetCap: null,
+    fieldDevelopment: 0.6,
+  },
+  'kart-international': {
+    operations: 181_000,
+    prize: [30_000, 4_000],
+    sponsorBase: 60_000,
+    staffSalary: 7_500,
+    researchCost: 800,
+    value: [800_000, 350_000],
+    principalSalary: [70_000, 30_000],
+    facilityCost: 40_000,
+    budgetCap: null,
+    fieldDevelopment: 0.6,
+  },
+  f4: {
+    operations: 505_000,
+    prize: [140_000, 10_000],
+    sponsorBase: 150_000,
+    staffSalary: 20_000,
+    researchCost: 2_000,
+    value: [2_500_000, 1_200_000],
+    principalSalary: [140_000, 60_000],
+    facilityCost: 110_000,
+    budgetCap: null,
+    fieldDevelopment: 0.25,
+  },
+  f3: {
+    operations: 1_330_000,
+    prize: [450_000, 30_000],
+    sponsorBase: 380_000,
+    staffSalary: 50_000,
+    researchCost: 5_000,
+    value: [7_000_000, 3_500_000],
+    principalSalary: [300_000, 120_000],
+    facilityCost: 280_000,
+    budgetCap: null,
+    fieldDevelopment: 0.25,
+  },
+  f2: {
+    operations: 3_300_000,
+    prize: [1_200_000, 80_000],
+    sponsorBase: 950_000,
+    staffSalary: 120_000,
+    researchCost: 13_000,
+    value: [18_000_000, 9_000_000],
+    principalSalary: [600_000, 250_000],
+    facilityCost: 650_000,
+    budgetCap: null,
+    fieldDevelopment: 0.25,
+  },
+  f1: {
+    operations: 18_000_000,
+    prize: [50_000_000, 20_000_000],
+    sponsorBase: 24_000_000,
+    staffSalary: 1_500_000,
+    researchCost: 420_000,
+    value: [220_000_000, 70_000_000],
+    principalSalary: [4_000_000, 1_000_000],
+    facilityCost: 5_000_000,
+    budgetCap: 30_000_000,
+    fieldDevelopment: 2,
+  },
 };
 
 export interface TechnicalRegulations {
@@ -103,7 +180,10 @@ export const MANAGEMENT = {
   SPONSOR_SHARES: [0.4, 0.33, 0.27],
   SPONSOR_TARGET_SHIFT: [-1, 1, 3],
   /** Pontos de pesquisa por etapa por nível do departamento de engenharia, e custo relativo, por ritmo. */
-  SPEND: { low: { points: 0.5, cost: 0.5 }, medium: { points: 1, cost: 1 }, high: { points: 1.6, cost: 1.9 } } satisfies Record<ResearchSpend, { points: number; cost: number }>,
+  SPEND: { low: { points: 0.5, cost: 0.5 }, medium: { points: 1, cost: 1 }, high: { points: 1.6, cost: 1.9 } } satisfies Record<
+    ResearchSpend,
+    { points: number; cost: number }
+  >,
   /** Simulador: +6% de pesquisa por nível. Túnel de vento: +10% na aerodinâmica por nível. Fábrica: +10% em fabricação e −3% no custo por nível. */
   SIMULATOR_RESEARCH: 0.06,
   WIND_TUNNEL_AERO: 0.1,
@@ -162,10 +242,57 @@ export const FACILITY_INFO: Readonly<Record<FacilityKey, { name: string; effect:
 };
 
 /** Patrocinadores de equipe (fictícios). */
-export const TEAM_SPONSOR_NAMES = ['Orbital Bank', 'Nexa Telecom', 'Vértice Seguros', 'Lumen Energia', 'Kairo Logística', 'Atlas Aço', 'Boreal Bebidas', 'Sigma Cloud', 'Rota Combustíveis', 'Zênite Relógios', 'Polar Refrigeração', 'Vento Aéreas'] as const;
+export const TEAM_SPONSOR_NAMES = [
+  'Orbital Bank',
+  'Nexa Telecom',
+  'Vértice Seguros',
+  'Lumen Energia',
+  'Kairo Logística',
+  'Atlas Aço',
+  'Boreal Bebidas',
+  'Sigma Cloud',
+  'Rota Combustíveis',
+  'Zênite Relógios',
+  'Polar Refrigeração',
+  'Vento Aéreas',
+] as const;
 
-export const STAFF_FIRST_NAMES = ['Marco', 'Helena', 'Tomás', 'Ingrid', 'Paulo', 'Sofia', 'Andrea', 'Luca', 'Renata', 'Hugo', 'Claire', 'Otto', 'Beatriz', 'Diego', 'Nadia', 'Rui'] as const;
-export const STAFF_LAST_NAMES = ['Bianchi', 'Moreau', 'Keller', 'Tavares', 'Lindqvist', 'Okafor', 'Ferraz', 'Novak', 'Haas', 'Ribeiro', 'Sato', 'Whitmore', 'Castel', 'Duarte', 'Varga', 'Monteiro'] as const;
+export const STAFF_FIRST_NAMES = [
+  'Marco',
+  'Helena',
+  'Tomás',
+  'Ingrid',
+  'Paulo',
+  'Sofia',
+  'Andrea',
+  'Luca',
+  'Renata',
+  'Hugo',
+  'Claire',
+  'Otto',
+  'Beatriz',
+  'Diego',
+  'Nadia',
+  'Rui',
+] as const;
+export const STAFF_LAST_NAMES = [
+  'Bianchi',
+  'Moreau',
+  'Keller',
+  'Tavares',
+  'Lindqvist',
+  'Okafor',
+  'Ferraz',
+  'Novak',
+  'Haas',
+  'Ribeiro',
+  'Sato',
+  'Whitmore',
+  'Castel',
+  'Duarte',
+  'Varga',
+  'Monteiro',
+] as const;
 
 /** Valor de mercado de uma equipe pela posição na ordem de forças (0 = a melhor, 9 = a pior). */
 export function teamValue(categoryId: CategoryId, rank: number): number {

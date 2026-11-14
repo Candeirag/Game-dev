@@ -234,7 +234,12 @@ export function appendRaceLap(timeline: RaceTimeline, previous: RaceSimState, ne
   const nextById = new Map(next.cars.map((c, i) => [c.driverId, { car: c, position: i + 1 }]));
   const running = previous.cars.filter((c) => c.status === 'running');
   // Na largada parada todos saem no mesmo instante; a diferença do grid vira distância.
-  const lapStart = lap === 1 ? 0 : standing ? Math.min(...running.map((c) => c.totalTime)) : Math.min(...running.map((c) => timeline.cars[c.driverId]?.laps.at(-1)?.t1 ?? c.totalTime));
+  const lapStart =
+    lap === 1
+      ? 0
+      : standing
+        ? Math.min(...running.map((c) => c.totalTime))
+        : Math.min(...running.map((c) => timeline.cars[c.driverId]?.laps.at(-1)?.t1 ?? c.totalTime));
   const reference = timeline.referenceLap;
 
   /* ---------- 1. Tempos de cada carro na volta ---------- */
@@ -248,17 +253,19 @@ export function appendRaceLap(timeline: RaceTimeline, previous: RaceSimState, ne
     const retiredNow = car.status === 'dnf';
     // Numa volta de bandeira vermelha o motor reagrupa os tempos; a pista mostra o tempo real da volta.
     const crossing = redFlag ? prev.totalTime + (car.lastLap ?? reference) : car.totalTime;
-    return [{
-      car,
-      previous: prev,
-      base,
-      t0,
-      t1: retiredNow ? t0 : Math.max(t0 + 1, crossing),
-      s0: standing ? -(slot + 0.7) * circuit.gridSlot : 0,
-      pitted: !retiredNow && car.pitStops > prev.pitStops,
-      spun: !retiredNow && newEvents.some((e) => e.type === 'spin' && e.driverId === car.driverId),
-      retiredNow,
-    }];
+    return [
+      {
+        car,
+        previous: prev,
+        base,
+        t0,
+        t1: retiredNow ? t0 : Math.max(t0 + 1, crossing),
+        s0: standing ? -(slot + 0.7) * circuit.gridSlot : 0,
+        pitted: !retiredNow && car.pitStops > prev.pitStops,
+        spun: !retiredNow && newEvents.some((e) => e.type === 'spin' && e.driverId === car.driverId),
+        retiredNow,
+      },
+    ];
   });
 
   const clean = drafts.filter((d) => !d.retiredNow && !d.pitted && !d.spun).map((d) => d.t1 - d.t0);
@@ -286,7 +293,9 @@ export function appendRaceLap(timeline: RaceTimeline, previous: RaceSimState, ne
     } else if (d.pitted) {
       // Tempo perdido na parada, pela mesma conta do motor: travessia do pit lane mais o serviço.
       const duration = t1 - t0;
-      const service = Number(/\((\d+(?:\.\d+)?)s\)/.exec(newEvents.find((e) => e.type === 'pit' && e.driverId === car.driverId)?.message ?? '')?.[1] ?? RACE.PIT_SERVICE);
+      const service = Number(
+        /\((\d+(?:\.\d+)?)s\)/.exec(newEvents.find((e) => e.type === 'pit' && e.driverId === car.driverId)?.message ?? '')?.[1] ?? RACE.PIT_SERVICE,
+      );
       const laneFactor = flag === 'sc' ? RACE.PIT_LOSS_FACTOR_SC : flag === 'vsc' ? RACE.PIT_LOSS_FACTOR_VSC : 1;
       const loss = clamp(ctx.category.race.pitLaneLoss * laneFactor + service, 0, duration * 0.75);
       const box = pitBoxAt(circuit, base.boxIndex, timeline.boxCount);
@@ -300,13 +309,22 @@ export function appendRaceLap(timeline: RaceTimeline, previous: RaceSimState, ne
       const a = t0 + drive;
       const b = a + laneIn;
       const c = b + hold;
-      segments.push({ t0, t1: a, s0, s1: circuit.pit.entry, kind }, { t0: a, t1: b, s0: circuit.pit.entry, s1: box, kind: 'lane' }, { t0: b, t1: c, s0: box, s1: box, kind: 'hold' }, { t0: c, t1, s0: box, s1: 1, kind: 'lane' });
+      segments.push(
+        { t0, t1: a, s0, s1: circuit.pit.entry, kind },
+        { t0: a, t1: b, s0: circuit.pit.entry, s1: box, kind: 'lane' },
+        { t0: b, t1: c, s0: box, s1: box, kind: 'hold' },
+        { t0: c, t1, s0: box, s1: 1, kind: 'lane' },
+      );
     } else if (d.spun) {
       const duration = t1 - t0;
       const loss = clamp(duration - typical, Math.min(1.5, duration * 0.2), Math.min(10, duration * 0.5));
       const where = clamp(0.15 + 0.7 * hash01(car.driverId, lap, 'spin'), circuit.pit.exit + 0.02, circuit.pit.entry - 0.03);
       const a = t0 + (duration - loss) * ((tauAt(circuit, where) - tau0) / (1 - tau0));
-      segments.push({ t0, t1: a, s0, s1: where, kind }, { t0: a, t1: a + loss, s0: where, s1: where, kind: 'hold' }, { t0: a + loss, t1, s0: where, s1: 1, kind: 'pace' });
+      segments.push(
+        { t0, t1: a, s0, s1: where, kind },
+        { t0: a, t1: a + loss, s0: where, s1: where, kind: 'hold' },
+        { t0: a + loss, t1, s0: where, s1: 1, kind: 'pace' },
+      );
       spin = { from: a, to: a + loss };
     } else {
       segments.push({ t0, t1, s0, s1: 1, kind });
@@ -552,19 +570,47 @@ export function sampleCar(timeline: RaceTimeline, circuit: Circuit, car: CarTime
     return { ...base, distance: s, s: wrap01(s), lap: 1, state: 'grid', inPitLane: false, speed: 0, record: null, inLap: s };
   }
   if (car.retired && t >= car.retired.time) {
-    return { ...base, gridSlot: null, inLap: car.retired.s, distance: car.retired.lap - 1 + car.retired.s, s: car.retired.s, lap: car.retired.lap, state: 'retired', inPitLane: false, speed: 0, retiredFor: t - car.retired.time, reason: car.retired.reason, record: completed(t) };
+    return {
+      ...base,
+      gridSlot: null,
+      inLap: car.retired.s,
+      distance: car.retired.lap - 1 + car.retired.s,
+      s: car.retired.s,
+      lap: car.retired.lap,
+      state: 'retired',
+      inPitLane: false,
+      speed: 0,
+      retiredFor: t - car.retired.time,
+      reason: car.retired.reason,
+      record: completed(t),
+    };
   }
   if (car.finishTime !== null && t >= car.finishTime) {
     // Volta de desaceleração depois da bandeirada.
     const duration = (lap.t1 - lap.t0) * 1.8;
     const extra = Math.min(0.9, (t - car.finishTime) / duration);
     const s = sAtTau(circuit, extra);
-    return { ...base, gridSlot: null, inLap: extra, distance: lap.lap + extra, s: wrap01(s), lap: lap.lap, state: 'finished', inPitLane: false, speed: (paceAt(circuit, s) / duration) * toKmh, record: lap };
+    return {
+      ...base,
+      gridSlot: null,
+      inLap: extra,
+      distance: lap.lap + extra,
+      s: wrap01(s),
+      lap: lap.lap,
+      state: 'finished',
+      inPitLane: false,
+      speed: (paceAt(circuit, s) / duration) * toKmh,
+      record: lap,
+    };
   }
   const segment = lap.segments.find((sg) => t < sg.t1) ?? lap.segments.at(-1);
   if (!segment) return { ...base, distance: lap.lap - 1, s: 0, lap: lap.lap, state: 'racing', inPitLane: false, speed: 0, record: completed(t) };
   const { s, rate } = segmentPosition(circuit, segment, t);
-  const inPitLane = segment.kind === 'lane' || (lap.pitIn && segment.kind === 'hold') || (lap.pitIn && s >= circuit.pit.entry) || (lap.pitOut && s >= 0 && s <= circuit.pit.exit);
+  const inPitLane =
+    segment.kind === 'lane' ||
+    (lap.pitIn && segment.kind === 'hold') ||
+    (lap.pitIn && s >= circuit.pit.entry) ||
+    (lap.pitOut && s >= 0 && s <= circuit.pit.exit);
   const spinning = lap.spin !== null && t >= lap.spin.from && t < lap.spin.to;
   const state: CarState = spinning ? 'spin' : inPitLane ? 'pit' : s < 0 && rate === 0 ? 'grid' : 'racing';
   return {

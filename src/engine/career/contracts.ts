@@ -67,7 +67,15 @@ function expectedLeadLevel(category: CategoryDefinition, rank: number): number {
   return category.field.driverLevel + category.field.driverSpread * (0.5 - rank / 9) + 1.5;
 }
 
-function buildOffer(career: CareerState, category: CategoryDefinition, team: Team, rank: number, kind: Offer['kind'], interest: number, scholarship = 0): Offer {
+function buildOffer(
+  career: CareerState,
+  category: CategoryDefinition,
+  team: Team,
+  rank: number,
+  kind: Offer['kind'],
+  interest: number,
+  scholarship = 0,
+): Offer {
   const player = getPlayer(career);
   const t = rank / 9;
   const overall = overallRating(player.attributes);
@@ -132,9 +140,23 @@ export function generateOffers(career: CareerState, reputation: number, contract
         if (contractStatus === 'active') {
           const c = career.contract;
           own.push({
-            id: `offer-s${career.season}-continue`, teamId: team.id, teamName: team.name, categoryId: category.id, kind: 'continue', role: c.role,
-            years: c.endSeason - career.season, salary: c.salary, seatCost: c.seatCost, bonuses: { ...c.bonuses }, clauses: { ...c.clauses },
-            interest: Math.round(interest), conceded: 0, patience: 0, status: 'open', firstDriverPossible: false, scholarship: 0,
+            id: `offer-s${career.season}-continue`,
+            teamId: team.id,
+            teamName: team.name,
+            categoryId: category.id,
+            kind: 'continue',
+            role: c.role,
+            years: c.endSeason - career.season,
+            salary: c.salary,
+            seatCost: c.seatCost,
+            bonuses: { ...c.bonuses },
+            clauses: { ...c.clauses },
+            interest: Math.round(interest),
+            conceded: 0,
+            patience: 0,
+            status: 'open',
+            firstDriverPossible: false,
+            scholarship: 0,
           });
         } else if (contractStatus === 'expired' && interest >= CONTRACT_RULES.MIN_INTEREST.renewal) {
           own.push(buildOffer(career, category, team, rank, 'renewal', interest));
@@ -156,7 +178,16 @@ export function generateOffers(career: CareerState, reputation: number, contract
   const safetyTeam = candidates.find((t) => !offers.some((o) => o.teamId === t.id && o.categoryId === safetyCategory.id));
   if (safetyTeam) {
     const base = buildOffer(career, safetyCategory, safetyTeam, 9, 'fallback', 40);
-    offers.push({ ...base, id: `offer-s${career.season}-fallback`, seatCost: 0, salary: 0, years: 1, role: 'second', firstDriverPossible: false, clauses: { releaseFee: 0, performanceTarget: null } });
+    offers.push({
+      ...base,
+      id: `offer-s${career.season}-fallback`,
+      seatCost: 0,
+      salary: 0,
+      years: 1,
+      role: 'second',
+      firstDriverPossible: false,
+      clauses: { releaseFee: 0, performanceTarget: null },
+    });
   }
   return offers;
 }
@@ -235,7 +266,12 @@ export function negotiate(offer: Offer, demand: NegotiationDemand): NegotiationR
   const cost = CONTRACT_RULES.DEMAND_COST[demand];
   if (impossible[demand] || negotiationMargin(offer) < cost) {
     const patience = offer.patience - 1;
-    if (patience <= 0) return { offer: { ...offer, patience: 0, status: 'withdrawn' }, accepted: false, message: `A ${offer.teamName} se cansou da negociação e retirou a proposta.` };
+    if (patience <= 0)
+      return {
+        offer: { ...offer, patience: 0, status: 'withdrawn' },
+        accepted: false,
+        message: `A ${offer.teamName} se cansou da negociação e retirou a proposta.`,
+      };
     return { offer: { ...offer, patience }, accepted: false, message: `A ${offer.teamName} recusou o pedido. A paciência da equipe está diminuindo.` };
   }
 
@@ -251,7 +287,12 @@ export function negotiate(offer: Offer, demand: NegotiationDemand): NegotiationR
       message = 'A equipe aceitou reduzir o custo da vaga.';
       break;
     case 'bonus':
-      next.bonuses = { win: Math.round(offer.bonuses.win * 1.25), podium: Math.round(offer.bonuses.podium * 1.25), point: Math.round(offer.bonuses.point * 1.25), title: Math.round(offer.bonuses.title * 1.25) };
+      next.bonuses = {
+        win: Math.round(offer.bonuses.win * 1.25),
+        podium: Math.round(offer.bonuses.podium * 1.25),
+        point: Math.round(offer.bonuses.point * 1.25),
+        title: Math.round(offer.bonuses.title * 1.25),
+      };
       message = 'A equipe aceitou melhorar os bônus.';
       break;
     case 'role':

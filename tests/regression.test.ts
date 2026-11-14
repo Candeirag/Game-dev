@@ -32,7 +32,10 @@ describe('simulação com semente fixa', () => {
       const now = current[i]!;
       const changed = (Object.keys(was) as (keyof Checkpoint)[]).filter((key) => was[key] !== now[key]);
       const visible = changed.filter((key) => key !== 'hash');
-      const detail = visible.length > 0 ? visible.map((key) => `${key}: ${String(was[key]).slice(0, 80)} → ${String(now[key]).slice(0, 80)}`).join('; ') : 'mudou algo do estado da carreira fora de resultados, pontos e finanças';
+      const detail =
+        visible.length > 0
+          ? visible.map((key) => `${key}: ${String(was[key]).slice(0, 80)} → ${String(now[key]).slice(0, 80)}`).join('; ')
+          : 'mudou algo do estado da carreira fora de resultados, pontos e finanças';
       expect(changed, `${was.label}: ${detail}`).toEqual([]);
     }
   }, 120_000);

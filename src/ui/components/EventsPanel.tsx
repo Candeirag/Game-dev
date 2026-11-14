@@ -21,12 +21,24 @@ export function EventsPanel() {
               <div className="font-display text-base font-semibold uppercase tracking-wide text-ink-100">{lastOutcome.title}</div>
               <div className="mt-0.5 text-ink-200">{lastOutcome.text}</div>
             </div>
-            <button type="button" onClick={dismissOutcome} className="-my-1 grid h-11 w-11 shrink-0 place-items-center text-ink-300 hover:text-ink-100" aria-label="Fechar"><X size={18} aria-hidden /></button>
+            <button
+              type="button"
+              onClick={dismissOutcome}
+              className="-my-1 grid h-11 w-11 shrink-0 place-items-center text-ink-300 hover:text-ink-100"
+              aria-label="Fechar"
+            >
+              <X size={18} aria-hidden />
+            </button>
           </div>
         </div>
       )}
       {career.pendingEvents.map((event) => (
-        <Panel key={event.id} tone="attention" title={<span className="text-gold-400">Decisão pendente</span>} action={<Tag tone="attention">{EVENT_CATEGORY_LABELS[event.category]}</Tag>}>
+        <Panel
+          key={event.id}
+          tone="attention"
+          title={<span className="text-gold-400">Decisão pendente</span>}
+          action={<Tag tone="attention">{EVENT_CATEGORY_LABELS[event.category]}</Tag>}
+        >
           <h3 className="font-display text-2xl font-bold uppercase leading-tight">{event.title}</h3>
           <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-300">{event.body}</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">

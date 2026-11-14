@@ -47,7 +47,9 @@ export function CareerScreen() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow={`${player.firstName} ${player.lastName} · ${player.age} anos`} title="Carreira">
-        <span className="text-sm text-ink-400">Reputação <b className="text-ink-100 tabular">{Math.floor(career.reputation)}</b>/100</span>
+        <span className="text-sm text-ink-400">
+          Reputação <b className="text-ink-100 tabular">{Math.floor(career.reputation)}</b>/100
+        </span>
       </PageHeader>
 
       {career.offseason && career.status === 'active' && (
@@ -55,22 +57,35 @@ export function CareerScreen() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
             <Stat label="Sua posição" value={`${career.offseason.playerPosition}º`} accent />
             <Stat label="Meta" value={`${career.offseason.target}º`} hint={career.offseason.objectiveMet ? 'Cumprida' : 'Não cumprida'} />
-            <Stat label="Pontos" value={career.offseason.playerPoints} hint={`${counted(career.offseason.wins, 'vitória', 'vitórias')} · ${counted(career.offseason.podiums, 'pódio', 'pódios')}`} />
+            <Stat
+              label="Pontos"
+              value={career.offseason.playerPoints}
+              hint={`${counted(career.offseason.wins, 'vitória', 'vitórias')} · ${counted(career.offseason.podiums, 'pódio', 'pódios')}`}
+            />
             <Stat label="Reputação" value={`${Math.floor(career.offseason.reputationBefore)} → ${career.offseason.reputationAfter}`} />
             <Stat label="Licença" value={`+${career.offseason.licensePointsEarned}`} hint="Pontos ganhos" />
           </div>
-          <p className="mt-3 text-sm text-ink-300">Campeão: <b className="text-ink-100">{champion ? fullName(champion) : '-'}</b>.</p>
+          <p className="mt-3 text-sm text-ink-300">
+            Campeão: <b className="text-ink-100">{champion ? fullName(champion) : '-'}</b>.
+          </p>
           {career.offseason.notes.length > 0 && (
             <ul className="mt-3 space-y-1 text-sm text-gold-400">
-              {career.offseason.notes.map((note) => <li key={note}>• {note}</li>)}
+              {career.offseason.notes.map((note) => (
+                <li key={note}>• {note}</li>
+              ))}
             </ul>
           )}
           <ExportReminder className="mt-4" />
           <h3 className="mt-6 mb-3 font-display text-sm font-semibold uppercase tracking-wider text-ink-300">Propostas para {career.year + 1}</h3>
           <div className="grid gap-4 xl:grid-cols-2">
-            {career.offseason.offers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
+            {career.offseason.offers.map((offer) => (
+              <OfferCard key={offer.id} offer={offer} />
+            ))}
           </div>
-          <p className="mt-4 text-xs text-ink-400">Ao assinar, a temporada vira: todos ficam um ano mais velhos e passam pela pré-temporada, o mercado de pilotos se movimenta e os patrocinadores satisfeitos renovam.</p>
+          <p className="mt-4 text-xs text-ink-400">
+            Ao assinar, a temporada vira: todos ficam um ano mais velhos e passam pela pré-temporada, o mercado de pilotos se movimenta e os patrocinadores
+            satisfeitos renovam.
+          </p>
         </Card>
       )}
 
@@ -80,20 +95,42 @@ export function CareerScreen() {
             const state = c.tier < category.tier ? 'done' : c.tier === category.tier ? 'current' : 'ahead';
             const seasons = career.history.filter((h) => h.categoryId === c.id).length + (c.id === category.id ? 1 : 0);
             return (
-              <li key={c.id} className={cx('rounded-lg border p-3', state === 'current' ? 'border-apex-500 bg-apex-500/10' : state === 'done' ? 'border-ink-700 bg-ink-900' : 'border-ink-800 opacity-70')}>
+              <li
+                key={c.id}
+                className={cx(
+                  'rounded-lg border p-3',
+                  state === 'current' ? 'border-apex-500 bg-apex-500/10' : state === 'done' ? 'border-ink-700 bg-ink-900' : 'border-ink-800 opacity-70',
+                )}
+              >
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Degrau {c.tier}</div>
                 <div className="font-display text-lg font-bold uppercase leading-tight [overflow-wrap:anywhere]">{c.shortName}</div>
                 {/* O veículo de cada degrau, em proporção: do kart de entrada ao F1. Na categoria atual, com a pintura da equipe. */}
                 <div className="flex h-14 items-center" title={VEHICLES[c.id].description}>
-                  <CarSprite categoryId={c.id} teamId={state === 'current' ? team.id : 'escada'} color={state === 'current' ? team.color : '#aab3c2'} driverId={state === 'current' ? player.id : undefined} style={{ width: `min(${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 100)}%, ${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 104)}px)` }} />
+                  <CarSprite
+                    categoryId={c.id}
+                    teamId={state === 'current' ? team.id : 'escada'}
+                    color={state === 'current' ? team.color : '#aab3c2'}
+                    driverId={state === 'current' ? player.id : undefined}
+                    style={{
+                      width: `min(${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 100)}%, ${Math.round((VEHICLES[c.id].length / VEHICLES.f1.length) * 104)}px)`,
+                    }}
+                  />
                 </div>
                 <div className="text-[11px] text-ink-300">{VEHICLES[c.id].name}</div>
-                <div className="mt-1 text-xs text-ink-400">{seasons > 0 ? `${counted(seasons, 'temporada', 'temporadas')}` : c.economy.seatCost[0] > 0 ? `Vaga: ${formatMoney(c.economy.seatCost[1])} a ${formatMoney(c.economy.seatCost[0])}` : 'A equipe paga salário'}</div>
+                <div className="mt-1 text-xs text-ink-400">
+                  {seasons > 0
+                    ? `${counted(seasons, 'temporada', 'temporadas')}`
+                    : c.economy.seatCost[0] > 0
+                      ? `Vaga: ${formatMoney(c.economy.seatCost[1])} a ${formatMoney(c.economy.seatCost[0])}`
+                      : 'A equipe paga salário'}
+                </div>
               </li>
             );
           })}
         </ol>
-        {career.categoryId === 'kart-national' && <p className="mt-3 text-xs text-ink-400">Do kart nacional é possível ir direto para a Fórmula 4, se você cumprir os requisitos dela.</p>}
+        {career.categoryId === 'kart-national' && (
+          <p className="mt-3 text-xs text-ink-400">Do kart nacional é possível ir direto para a Fórmula 4, se você cumprir os requisitos dela.</p>
+        )}
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -101,15 +138,24 @@ export function CareerScreen() {
           {next ? (
             <>
               <ul className="space-y-2">
-                {requirements.map((r) => <Check key={r.key} met={r.met}><b>{r.label}:</b> {r.detail}</Check>)}
+                {requirements.map((r) => (
+                  <Check key={r.key} met={r.met}>
+                    <b>{r.label}:</b> {r.detail}
+                  </Check>
+                ))}
                 <Check met={Object.entries(career.marketInterest).some(([key, value]) => key.startsWith(`${next.id}:`) && value >= 50)}>
                   <b>Proposta de uma equipe:</b> pelo menos uma equipe da {next.shortName} precisa ter interesse de 50 ou mais.
                 </Check>
               </ul>
-              <p className="mt-3 text-xs text-ink-400">A idade vale para o início da próxima temporada. Além disso, você precisa conseguir bancar a vaga (ver Finanças e as propostas no fim do ano). Os três primeiros do campeonato ganham bolsa de 60%, 35% e 20% na vaga do degrau de cima.</p>
+              <p className="mt-3 text-xs text-ink-400">
+                A idade vale para o início da próxima temporada. Além disso, você precisa conseguir bancar a vaga (ver Finanças e as propostas no fim do ano).
+                Os três primeiros do campeonato ganham bolsa de 60%, 35% e 20% na vaga do degrau de cima.
+              </p>
             </>
           ) : (
-            <p className="text-sm text-ink-300">Você chegou à Fórmula 1. Agora é disputar vitórias e títulos enquanto a idade permitir: a partir dos 31 anos, a velocidade começa a cair.</p>
+            <p className="text-sm text-ink-300">
+              Você chegou à Fórmula 1. Agora é disputar vitórias e títulos enquanto a idade permitir: a partir dos 31 anos, a velocidade começa a cair.
+            </p>
           )}
         </Card>
 
@@ -121,15 +167,23 @@ export function CareerScreen() {
           </div>
           {career.license.history.length > 0 && (
             <ul className="mt-4 space-y-1 text-sm text-ink-300">
-              {[...career.license.history].reverse().slice(0, 6).map((h) => (
-                <li key={h.season} className="flex justify-between gap-3">
-                  <span>Temporada {h.season} · {getCategory(h.categoryId).shortName} · {h.position}º</span>
-                  <span className="tabular text-ink-100">+{h.points}</span>
-                </li>
-              ))}
+              {[...career.license.history]
+                .reverse()
+                .slice(0, 6)
+                .map((h) => (
+                  <li key={h.season} className="flex justify-between gap-3">
+                    <span>
+                      Temporada {h.season} · {getCategory(h.categoryId).shortName} · {h.position}º
+                    </span>
+                    <span className="tabular text-ink-100">+{h.points}</span>
+                  </li>
+                ))}
             </ul>
           )}
-          <p className="mt-3 text-xs text-ink-400">Cada temporada rende pontos pela posição final. Toques e infrações rendem pontos de punição; com {PENALTY_POINTS_BAN}, você é suspenso por uma etapa.</p>
+          <p className="mt-3 text-xs text-ink-400">
+            Cada temporada rende pontos pela posição final. Toques e infrações rendem pontos de punição; com {PENALTY_POINTS_BAN}, você é suspenso por uma
+            etapa.
+          </p>
         </Card>
       </div>
 
@@ -137,15 +191,27 @@ export function CareerScreen() {
 
       {career.status === 'active' && (
         <Card title="Aposentadoria das pistas">
-          <p className="max-w-3xl text-sm text-ink-400">Pendurar o capacete é definitivo para este personagem, mas a carreira continua: você passa a atuar como dirigente (investidor, chefe de equipe ou dono) e acompanha os filhos. {career.offseason ? 'Como a temporada já acabou, as propostas de cargo e as equipes à venda aparecem em seguida.' : 'No meio da temporada, o reserva assume o seu carro e você acompanha o resto do campeonato de fora.'}</p>
+          <p className="max-w-3xl text-sm text-ink-400">
+            Pendurar o capacete é definitivo para este personagem, mas a carreira continua: você passa a atuar como dirigente (investidor, chefe de equipe ou
+            dono) e acompanha os filhos.{' '}
+            {career.offseason
+              ? 'Como a temporada já acabou, as propostas de cargo e as equipes à venda aparecem em seguida.'
+              : 'No meio da temporada, o reserva assume o seu carro e você acompanha o resto do campeonato de fora.'}
+          </p>
           <div className="mt-3 flex gap-2">
             {confirmRetire ? (
               <>
-                <Button variant="danger" disabled={career.weekend !== null} onClick={retire}>Confirmar: parar de correr</Button>
-                <Button variant="ghost" onClick={() => setConfirmRetire(false)}>Cancelar</Button>
+                <Button variant="danger" disabled={career.weekend !== null} onClick={retire}>
+                  Confirmar: parar de correr
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmRetire(false)}>
+                  Cancelar
+                </Button>
               </>
             ) : (
-              <Button variant="ghost" onClick={() => setConfirmRetire(true)}>Pendurar o capacete</Button>
+              <Button variant="ghost" onClick={() => setConfirmRetire(true)}>
+                Pendurar o capacete
+              </Button>
             )}
           </div>
         </Card>
@@ -171,11 +237,18 @@ function OfferCard({ offer }: { offer: Offer }) {
   const kindTone = offer.kind === 'promotion' ? 'good' : offer.kind === 'demotion' || offer.kind === 'fallback' ? 'warn' : 'neutral';
 
   return (
-    <div className={cx('rounded-xl border p-4', withdrawn ? 'border-ink-800 opacity-50' : acceptable ? 'border-ink-600 bg-ink-850' : 'border-ink-800 bg-ink-900')}>
+    <div
+      className={cx('rounded-xl border p-4', withdrawn ? 'border-ink-800 opacity-50' : acceptable ? 'border-ink-600 bg-ink-850' : 'border-ink-800 bg-ink-900')}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="flex items-center gap-2 font-semibold"><TeamSwatch team={team} />{offer.teamName}</div>
-          <div className="text-xs text-ink-400">{category.name} · {rank}ª força do grid</div>
+          <div className="flex items-center gap-2 font-semibold">
+            <TeamSwatch team={team} />
+            {offer.teamName}
+          </div>
+          <div className="text-xs text-ink-400">
+            {category.name} · {rank}ª força do grid
+          </div>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Pill tone={kindTone}>{OFFER_KIND_LABELS[offer.kind]}</Pill>
@@ -185,39 +258,89 @@ function OfferCard({ offer }: { offer: Offer }) {
       </div>
 
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-        <div className="flex justify-between"><dt className="text-ink-400">Papel</dt><dd className="font-semibold">{ROLE_LABELS[offer.role]}</dd></div>
-        <div className="flex justify-between"><dt className="text-ink-400">Duração</dt><dd>{counted(offer.years, 'ano', 'anos')}</dd></div>
-        <div className="flex justify-between"><dt className="text-ink-400">Vaga/ano</dt><dd className="tabular">{formatMoney(offer.seatCost)}</dd></div>
-        <div className="flex justify-between"><dt className="text-ink-400">Salário/ano</dt><dd className="tabular">{formatMoney(offer.salary)}</dd></div>
-        <div className="flex justify-between"><dt className="text-ink-400">Bônus vitória</dt><dd className="tabular">{formatMoney(offer.bonuses.win)}</dd></div>
-        <div className="flex justify-between"><dt className="text-ink-400">Multa</dt><dd className="tabular">{formatMoney(offer.clauses.releaseFee)}</dd></div>
-        <div className="col-span-2 flex justify-between"><dt className="text-ink-400">Cláusula de desempenho</dt><dd>{offer.clauses.performanceTarget ? `rescisão se terminar abaixo do ${offer.clauses.performanceTarget}º` : 'não há'}</dd></div>
+        <div className="flex justify-between">
+          <dt className="text-ink-400">Papel</dt>
+          <dd className="font-semibold">{ROLE_LABELS[offer.role]}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-ink-400">Duração</dt>
+          <dd>{counted(offer.years, 'ano', 'anos')}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-ink-400">Vaga/ano</dt>
+          <dd className="tabular">{formatMoney(offer.seatCost)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-ink-400">Salário/ano</dt>
+          <dd className="tabular">{formatMoney(offer.salary)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-ink-400">Bônus vitória</dt>
+          <dd className="tabular">{formatMoney(offer.bonuses.win)}</dd>
+        </div>
+        <div className="flex justify-between">
+          <dt className="text-ink-400">Multa</dt>
+          <dd className="tabular">{formatMoney(offer.clauses.releaseFee)}</dd>
+        </div>
+        <div className="col-span-2 flex justify-between">
+          <dt className="text-ink-400">Cláusula de desempenho</dt>
+          <dd>{offer.clauses.performanceTarget ? `rescisão se terminar abaixo do ${offer.clauses.performanceTarget}º` : 'não há'}</dd>
+        </div>
       </dl>
       {fee > 0 && <p className="mt-2 text-xs text-gold-400">Aceitar esta proposta rompe o contrato vigente: multa de {formatMoney(fee)}.</p>}
 
       {offer.kind !== 'continue' && offer.kind !== 'fallback' && (
-        <div className="mt-3"><Meter label="Interesse da equipe" value={offer.interest} hint={negotiable ? `Margem de negociação: ${margin >= 16 ? 'alta' : margin >= 8 ? 'média' : margin > 0 ? 'baixa' : 'nenhuma'} · paciência: ${counted(offer.patience, 'recusa', 'recusas')}` : undefined} /></div>
+        <div className="mt-3">
+          <Meter
+            label="Interesse da equipe"
+            value={offer.interest}
+            hint={
+              negotiable
+                ? `Margem de negociação: ${margin >= 16 ? 'alta' : margin >= 8 ? 'média' : margin > 0 ? 'baixa' : 'nenhuma'} · paciência: ${counted(offer.patience, 'recusa', 'recusas')}`
+                : undefined
+            }
+          />
+        </div>
       )}
 
       {requirements.length > 0 && (
         <ul className="mt-3 space-y-1.5">
-          {requirements.map((r) => <Check key={r.key} met={r.met}><b>{r.label}:</b> {r.detail}</Check>)}
+          {requirements.map((r) => (
+            <Check key={r.key} met={r.met}>
+              <b>{r.label}:</b> {r.detail}
+            </Check>
+          ))}
         </ul>
       )}
-      {offer.kind === 'fallback' && <p className="mt-3 text-xs text-ink-400">Vaga sem custo e sem exigências: a equipe aposta em você. É a rede de segurança da carreira.</p>}
+      {offer.kind === 'fallback' && (
+        <p className="mt-3 text-xs text-ink-400">Vaga sem custo e sem exigências: a equipe aposta em você. É a rede de segurança da carreira.</p>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant="primary" disabled={!acceptable} onClick={() => startNextSeason(offer.id)}>{offer.kind === 'continue' ? 'Cumprir o contrato' : 'Assinar'}</Button>
-        {negotiable && <Button variant="ghost" onClick={() => setNegotiating(!negotiating)}>{negotiating ? 'Fechar negociação' : 'Negociar'}</Button>}
+        <Button variant="primary" disabled={!acceptable} onClick={() => startNextSeason(offer.id)}>
+          {offer.kind === 'continue' ? 'Cumprir o contrato' : 'Assinar'}
+        </Button>
+        {negotiable && (
+          <Button variant="ghost" onClick={() => setNegotiating(!negotiating)}>
+            {negotiating ? 'Fechar negociação' : 'Negociar'}
+          </Button>
+        )}
       </div>
       {negotiating && negotiable && (
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
           {DEMANDS.filter((d) => d.available(offer)).map((d) => (
-            <button key={d.id} type="button" onClick={() => negotiateOffer(offer.id, d.id)} className="rounded-lg border border-ink-700 px-3 py-2 text-left text-xs font-semibold text-ink-300 hover:border-ink-500 hover:text-ink-100">
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => negotiateOffer(offer.id, d.id)}
+              className="rounded-lg border border-ink-700 px-3 py-2 text-left text-xs font-semibold text-ink-300 hover:border-ink-500 hover:text-ink-100"
+            >
               {d.label}
             </button>
           ))}
-          <p className="col-span-full text-xs text-ink-500">Cada pedido aceito consome margem. Um pedido recusado gasta a paciência da equipe; quando ela acaba, a proposta é retirada.</p>
+          <p className="col-span-full text-xs text-ink-500">
+            Cada pedido aceito consome margem. Um pedido recusado gasta a paciência da equipe; quando ela acaba, a proposta é retirada.
+          </p>
         </div>
       )}
     </div>
@@ -243,14 +366,28 @@ function MarketCard() {
               </div>
               <div className="space-y-3">
                 {teams.map(({ team, rank, interest }) => (
-                  <Meter key={team.id} label={<span className="flex items-center gap-2"><TeamSwatch team={team} />{team.name}{team.id === player.teamId && group.id === career.categoryId ? ' (sua equipe)' : ''} <span className="text-xs text-ink-500">#{rank}</span></span>} value={interest} />
+                  <Meter
+                    key={team.id}
+                    label={
+                      <span className="flex items-center gap-2">
+                        <TeamSwatch team={team} />
+                        {team.name}
+                        {team.id === player.teamId && group.id === career.categoryId ? ' (sua equipe)' : ''}{' '}
+                        <span className="text-xs text-ink-500">#{rank}</span>
+                      </span>
+                    }
+                    value={interest}
+                  />
                 ))}
               </div>
             </div>
           );
         })}
       </div>
-      <p className="mt-4 text-xs text-ink-400">Cada equipe avalia você pelo que ela mesma espera: a sua posição comparada à meta dela, o seu nível comparado ao dos pilotos dela, a reputação e a idade. Com interesse a partir de cerca de 50, ela faz proposta no fim do ano; acima disso, cresce o desconto na vaga e a margem de negociação.</p>
+      <p className="mt-4 text-xs text-ink-400">
+        Cada equipe avalia você pelo que ela mesma espera: a sua posição comparada à meta dela, o seu nível comparado ao dos pilotos dela, a reputação e a
+        idade. Com interesse a partir de cerca de 50, ela faz proposta no fim do ano; acima disso, cresce o desconto na vaga e a margem de negociação.
+      </p>
     </Card>
   );
 }

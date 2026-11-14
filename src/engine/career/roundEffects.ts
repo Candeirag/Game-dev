@@ -77,7 +77,8 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   const team = getTeam(career, playerBefore.teamId ?? '');
   const entry = record.race.entries.find((e) => e.driverId === playerBefore.id) ?? null;
   const messages: InboxMessage[] = [];
-  const msg = (id: string, category: InboxMessage['category'], title: string, body: string) => messages.push({ id: `s${season}-r${round}-${id}`, date: record.date, category, title, body });
+  const msg = (id: string, category: InboxMessage['category'], title: string, body: string) =>
+    messages.push({ id: `s${season}-r${round}-${id}`, date: record.date, category, title, body });
 
   /* 1. Economia */
   const cashBefore = career.finance.cash;
@@ -85,14 +86,22 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   // Patrimônio e família: cotações, aluguéis, parcelas de empréstimos e custos com os filhos.
   career = { ...career, finance: settleAssetsRound(career, round) };
   if (cashBefore >= 0 && career.finance.cash < 0) {
-    msg('debt', 'finance', 'Conta no vermelho', 'O seu caixa ficou negativo. A dívida paga 14% de juros no fim da temporada, e as equipes olham as suas finanças antes de oferecer uma vaga.');
+    msg(
+      'debt',
+      'finance',
+      'Conta no vermelho',
+      'O seu caixa ficou negativo. A dívida paga 14% de juros no fim da temporada, e as equipes olham as suas finanças antes de oferecer uma vaga.',
+    );
   }
 
   /* 2. Condição e lesões (todos os pilotos) */
   const trainingRng = createRng(hashSeed(career.seed, season, round, 'training-injury'));
   // Vida fora das pistas: padrão de vida, moradia e relacionamento mexem com a moral do jogador.
-  const lifeMorale = LIFESTYLE_RULES[career.finance.lifestyle].morale + partnerMoraleEffect(career.family)
-    + (hasPersonalProperty(career.finance, 'apartamento') ? 0.3 : 0) + (hasPersonalProperty(career.finance, 'casa-campo') ? 0.5 : 0);
+  const lifeMorale =
+    LIFESTYLE_RULES[career.finance.lifestyle].morale +
+    partnerMoraleEffect(career.family) +
+    (hasPersonalProperty(career.finance, 'apartamento') ? 0.3 : 0) +
+    (hasPersonalProperty(career.finance, 'casa-campo') ? 0.5 : 0);
   const healthPartner = career.family.partner?.background === 'health';
   const drivers: Driver[] = career.drivers.map((d) => {
     if (!d.teamId) return d;
@@ -110,7 +119,8 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
       if (career.trainingIntensity === 'light') condition = { ...condition, form: clamp(condition.form + 2) };
       if (career.trainingIntensity === 'intense') {
         condition = { ...condition, form: clamp(condition.form - 2) };
-        if (!injury && trainingRng.next() < RELATION_RULES.INTENSE_TRAINING_INJURY) injury = { description: 'Estiramento muscular no treino', severity: 'minor', roundsRemaining: 1 };
+        if (!injury && trainingRng.next() < RELATION_RULES.INTENSE_TRAINING_INJURY)
+          injury = { description: 'Estiramento muscular no treino', severity: 'minor', roundsRemaining: 1 };
       }
     }
     return { ...d, condition, injury };
@@ -118,9 +128,14 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   career = { ...career, drivers };
   const player = getPlayer(career);
   if (player.injury && (!playerBefore.injury || entry?.injured)) {
-    msg('injury', 'health', `Lesão: ${player.injury.description}`, player.injury.severity === 'serious'
-      ? `Os médicos vetam a sua participação ${player.injury.roundsRemaining === 1 ? 'na próxima etapa' : `nas próximas ${player.injury.roundsRemaining} etapas`}. O piloto reserva assume o ${category.machine}.`
-      : `Recuperação prevista: ${counted(player.injury.roundsRemaining, 'etapa', 'etapas')}. Você pode correr, com perda de rendimento, ou ceder a vaga ao reserva para se recuperar.`);
+    msg(
+      'injury',
+      'health',
+      `Lesão: ${player.injury.description}`,
+      player.injury.severity === 'serious'
+        ? `Os médicos vetam a sua participação ${player.injury.roundsRemaining === 1 ? 'na próxima etapa' : `nas próximas ${player.injury.roundsRemaining} etapas`}. O piloto reserva assume o ${category.machine}.`
+        : `Recuperação prevista: ${counted(player.injury.roundsRemaining, 'etapa', 'etapas')}. Você pode correr, com perda de rendimento, ou ceder a vaga ao reserva para se recuperar.`,
+    );
   } else if (playerBefore.injury && !player.injury) {
     msg('recovered', 'health', 'Alta médica', 'Você está totalmente recuperado.');
   }
@@ -189,7 +204,12 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   for (const sponsor of career.sponsors) {
     const satisfaction = satisfactionAfterRound(sponsor, position, entry);
     if (sponsor.tier > 0 && satisfaction < SPONSOR_RULES.LEAVE_THRESHOLD) {
-      msg(`sponsor-left-${sponsor.id}`, 'finance', `${sponsor.name} rompe o contrato`, `Insatisfeito com os resultados, o patrocinador ${sponsor.name} encerrou o contrato. Você deixa de receber ${money(career, sponsor.perSeason)} por temporada.`);
+      msg(
+        `sponsor-left-${sponsor.id}`,
+        'finance',
+        `${sponsor.name} rompe o contrato`,
+        `Insatisfeito com os resultados, o patrocinador ${sponsor.name} encerrou o contrato. Você deixa de receber ${money(career, sponsor.perSeason)} por temporada.`,
+      );
     } else {
       kept.push({ ...sponsor, satisfaction });
     }
@@ -208,24 +228,46 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   const track = getTrack(record.trackId);
   const winner = career.drivers.find((d) => d.id === record.race.entries[0]?.driverId);
   if (entry) {
-    const result = entry.status === 'finished'
-      ? `Você terminou em ${entry.position}º, largando de ${entry.grid}º, e somou ${counted(entry.points, 'ponto', 'pontos')}.${entry.penaltySeconds > 0 ? ` Punições: ${entry.penaltySeconds}s.` : ''}`
-      : `Você abandonou (${DNF_LABELS[entry.dnfReason ?? 'crash'].toLowerCase()}) depois de largar em ${entry.grid}º.`;
-    msg('race', 'race', `Etapa ${round}: ${track.name}`, `${result} Vencedor: ${winner ? fullName(winner) : '-'}. No campeonato, você é o ${me?.position ?? '-'}º, com ${me?.points ?? 0} pontos.`);
+    const result =
+      entry.status === 'finished'
+        ? `Você terminou em ${entry.position}º, largando de ${entry.grid}º, e somou ${counted(entry.points, 'ponto', 'pontos')}.${entry.penaltySeconds > 0 ? ` Punições: ${entry.penaltySeconds}s.` : ''}`
+        : `Você abandonou (${DNF_LABELS[entry.dnfReason ?? 'crash'].toLowerCase()}) depois de largar em ${entry.grid}º.`;
+    msg(
+      'race',
+      'race',
+      `Etapa ${round}: ${track.name}`,
+      `${result} Vencedor: ${winner ? fullName(winner) : '-'}. No campeonato, você é o ${me?.position ?? '-'}º, com ${me?.points ?? 0} pontos.`,
+    );
     let reaction: string;
-    if (entry.status === 'dnf' && (entry.dnfReason === 'crash' || entry.dnfReason === 'fuel')) reaction = 'O chefe de equipe lembra que só pontua quem termina a corrida. Erros assim custam confiança.';
-    else if (entry.status === 'dnf') reaction = entry.dnfReason === 'mechanical' ? 'A equipe assume a culpa pela quebra e promete revisar tudo antes da próxima etapa.' : 'A equipe lamenta o abandono e analisa o incidente.';
-    else if (entry.position <= Math.max(1, team.driverTarget - 2)) reaction = `A equipe está empolgada: um resultado acima do que o ${category.machine} costuma entregar.`;
+    if (entry.status === 'dnf' && (entry.dnfReason === 'crash' || entry.dnfReason === 'fuel'))
+      reaction = 'O chefe de equipe lembra que só pontua quem termina a corrida. Erros assim custam confiança.';
+    else if (entry.status === 'dnf')
+      reaction =
+        entry.dnfReason === 'mechanical'
+          ? 'A equipe assume a culpa pela quebra e promete revisar tudo antes da próxima etapa.'
+          : 'A equipe lamenta o abandono e analisa o incidente.';
+    else if (entry.position <= Math.max(1, team.driverTarget - 2))
+      reaction = `A equipe está empolgada: um resultado acima do que o ${category.machine} costuma entregar.`;
     else if (entry.position <= team.driverTarget) reaction = 'Um resultado sólido, dentro do que a equipe espera.';
     else reaction = `A equipe esperava mais. A meta é terminar a temporada entre os ${team.driverTarget} primeiros.`;
     msg('team', 'team', `${team.name}: avaliação da etapa`, `${reaction} Confiança da equipe em você: ${Math.round(career.relations.teamTrust)}/100.`);
   } else {
-    msg('race', 'race', `Etapa ${round}: ${track.name}`, `Você não disputou esta etapa. Vencedor: ${winner ? fullName(winner) : '-'}. No campeonato, você é o ${me?.position ?? '-'}º.`);
+    msg(
+      'race',
+      'race',
+      `Etapa ${round}: ${track.name}`,
+      `Você não disputou esta etapa. Vencedor: ${winner ? fullName(winner) : '-'}. No campeonato, você é o ${me?.position ?? '-'}º.`,
+    );
   }
   const delta = developed.deltas[player.id];
   if (delta) {
     const summary = formatDelta(delta);
-    msg('training', 'training', `Relatório de evolução (${TRAINING_FOCUS_LABELS[player.trainingFocus]})`, summary ? `Evolução após a etapa: ${summary}.` : 'Você está perto do seu potencial nos atributos treinados; os ganhos foram mínimos.');
+    msg(
+      'training',
+      'training',
+      `Relatório de evolução (${TRAINING_FOCUS_LABELS[player.trainingFocus]})`,
+      summary ? `Evolução após a etapa: ${summary}.` : 'Você está perto do seu potencial nos atributos treinados; os ganhos foram mínimos.',
+    );
   }
   career = { ...career, inbox: pushMessages(career.inbox, messages) };
 

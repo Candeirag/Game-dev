@@ -66,7 +66,9 @@ export function summarize(career: CareerState): SaveSummary {
   const team = career.teams.find((t) => t.id === (driving ? player.teamId : career.management?.teamId));
   const standing = driving
     ? driverStandings(career).find((s) => s.driverId === player.id)
-    : team ? teamStandings(career).find((s) => s.teamId === team.id) : undefined;
+    : team
+      ? teamStandings(career).find((s) => s.teamId === team.id)
+      : undefined;
   return {
     playerName: `${player.firstName} ${player.lastName}`,
     teamName: team?.name ?? 'Sem equipe',
@@ -149,7 +151,10 @@ export async function saveCareer(storage: StorageAdapter, slot: SaveSlotId, care
   // não detectava nada além disso.
   const parsed = CareerStateSchema.safeParse(envelope.career);
   if (!parsed.success) {
-    throw new SaveError('A carreira tem uma estrutura inválida e não foi salva.', parsed.error.issues.slice(0, 10).map((i) => `${i.path.join('.')}: ${i.message}`));
+    throw new SaveError(
+      'A carreira tem uma estrutura inválida e não foi salva.',
+      parsed.error.issues.slice(0, 10).map((i) => `${i.path.join('.')}: ${i.message}`),
+    );
   }
   const previous = await storage.get(slot);
   const entries: Record<string, unknown> = { [slot]: envelope };

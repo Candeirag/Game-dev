@@ -14,7 +14,8 @@ import { NOW, botCareer, playLifeSeason, playRound, resolvePending, type LifePol
 /** Caminho do primeiro valor diferente entre dois objetos (null se forem iguais). */
 function firstDifference(a: unknown, b: unknown, path = ''): string | null {
   if (Object.is(a, b)) return null;
-  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return `${path}: ${String(a)} ≠ ${String(b)}${Object.is(a, -0) ? ' (zero negativo)' : ''}`;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null)
+    return `${path}: ${String(a)} ≠ ${String(b)}${Object.is(a, -0) ? ' (zero negativo)' : ''}`;
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   for (const key of keys) {
     const av = (a as Record<string, unknown>)[key];
@@ -29,7 +30,8 @@ function firstDifference(a: unknown, b: unknown, path = ''): string | null {
 function check(c: CareerState, where: string) {
   const parsed = CareerStateSchema.safeParse(c);
   const problems = validateCareerIntegrity(c);
-  if (!parsed.success || problems.length) throw new Error(`${where}: ${problems.slice(0, 4).join('; ')} ${parsed.success ? '' : JSON.stringify(parsed.error.issues.slice(0, 2))}`);
+  if (!parsed.success || problems.length)
+    throw new Error(`${where}: ${problems.slice(0, 4).join('; ')} ${parsed.success ? '' : JSON.stringify(parsed.error.issues.slice(0, 2))}`);
 }
 
 test('estresse: políticas variadas e eventos forçados', () => {
@@ -62,7 +64,9 @@ test('estresse: políticas variadas e eventos forçados', () => {
       }
       steps++;
     }
-    console.log(`semente ${seed}: ${c.season - start} temporadas, ${c.dynasty.generation}ª geração, modo ${c.mode}${c.management ? ` (${c.management.position})` : ''}`);
+    console.log(
+      `semente ${seed}: ${c.season - start} temporadas, ${c.dynasty.generation}ª geração, modo ${c.mode}${c.management ? ` (${c.management.position})` : ''}`,
+    );
   }
   console.log(`passos conferidos: ${steps}`);
 }, 3_600_000);

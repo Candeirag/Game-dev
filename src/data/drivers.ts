@@ -76,10 +76,36 @@ const ROWS: readonly Row[] = [
 export const NEUTRAL_CONDITION = { form: 50, confidence: 50, morale: 55 } as const;
 
 export const AI_DRIVERS: readonly Driver[] = ROWS.map((row, index) => {
-  const [id, firstName, lastName, nationality, age, teamId, pace, consistency, overtaking, defending, focus, racecraft, tyreManagement, wetSkill, experience, potential] = row;
+  const [
+    id,
+    firstName,
+    lastName,
+    nationality,
+    age,
+    teamId,
+    pace,
+    consistency,
+    overtaking,
+    defending,
+    focus,
+    racecraft,
+    tyreManagement,
+    wetSkill,
+    experience,
+    potential,
+  ] = row;
   const attributes: DriverAttributes = { pace, consistency, overtaking, defending, focus, racecraft, tyreManagement, wetSkill, experience };
   return {
-    id, firstName, lastName, nationality, age, teamId, isPlayer: false, attributes, potential, trainingFocus: 'balanced',
+    id,
+    firstName,
+    lastName,
+    nationality,
+    age,
+    teamId,
+    isPlayer: false,
+    attributes,
+    potential,
+    trainingFocus: 'balanced',
     // O primeiro piloto listado de cada equipe é o primeiro piloto; os contratos vencem em anos alternados.
     role: index % 2 === 0 ? 'first' : 'second',
     contractEnd: index % 2 === 0 ? 2 : 1,

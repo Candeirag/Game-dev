@@ -9,7 +9,19 @@
  */
 import type { Driver, Team } from '@/domain/schemas';
 import { vehicleFor, type VehicleDefinition } from '@/data/vehicles';
-import { CIRCUIT, eventsUntil, lapInfoAt, pitLateralAt, poseAt, racingLineAt, safetyCarAt, standingsAt, type Circuit, type RaceTimeline, type StandingRow } from '@/engine';
+import {
+  CIRCUIT,
+  eventsUntil,
+  lapInfoAt,
+  pitLateralAt,
+  poseAt,
+  racingLineAt,
+  safetyCarAt,
+  standingsAt,
+  type Circuit,
+  type RaceTimeline,
+  type StandingRow,
+} from '@/engine';
 import { accentFor, drawVectorCar, helmetFor, liveryFor, safetyCarSprite } from './liveries';
 import { drawBridges, drawTrack, gridLateral, type TrackArt } from './trackPainter';
 
@@ -75,7 +87,10 @@ function hash01(text: string): number {
 
 /** Sigla de três letras do piloto, como nas transmissões ("De Groot" vira DEG). */
 export function driverCode(lastName: string): string {
-  return lastName.replace(/[^\p{L}]/gu, '').slice(0, 3).toUpperCase();
+  return lastName
+    .replace(/[^\p{L}]/gu, '')
+    .slice(0, 3)
+    .toUpperCase();
 }
 
 function textOn(hex: string): string {
@@ -120,7 +135,10 @@ interface Formation {
 function formation(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, length: number, width: number, singleFile: boolean): Formation {
   const lateral = new Map<string, number>();
   const shift = new Map<string, number>();
-  const onTrack = rows.filter((r) => (r.state === 'racing' || r.state === 'finished' || r.state === 'spin') && !r.sample.inPitLane && (r.sample.gridSlot === null || r.sample.inLap > 0.035));
+  const onTrack = rows.filter(
+    (r) =>
+      (r.state === 'racing' || r.state === 'finished' || r.state === 'spin') && !r.sample.inPitLane && (r.sample.gridSlot === null || r.sample.inLap > 0.035),
+  );
   for (const id of [...memory.side.keys()]) if (!onTrack.some((r) => r.driverId === id)) memory.side.delete(id);
   if (onTrack.length === 0) return { lateral, shift };
 
@@ -213,7 +231,14 @@ function formation(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, l
  * (da formação), com as suavizações guardadas em `memory`. `dt` é o tempo real desde o quadro
  * anterior, em segundos. Sem dependência de canvas, para poder ser testada.
  */
-export function placeCars(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, dt: number, singleFile: boolean, size: Pick<VehicleDefinition, 'length' | 'width'>): Placed[] {
+export function placeCars(
+  rows: StandingRow[],
+  circuit: Circuit,
+  memory: SceneMemory,
+  dt: number,
+  singleFile: boolean,
+  size: Pick<VehicleDefinition, 'length' | 'width'>,
+): Placed[] {
   const targets = formation(rows, circuit, memory, size.length, size.width, singleFile);
   const ease = 1 - Math.exp(-dt * 7);
   // O recuo muda mais devagar que o lado: quando o safety car entra, a fila se forma aos poucos.
@@ -340,7 +365,11 @@ function drawMiniMap(g: CanvasRenderingContext2D, input: SceneInput, placed: Pla
   g.strokeStyle = '#596275';
   g.lineWidth = 20;
   g.stroke(art.centre);
-  const order = [...placed].sort((a, b) => Number(input.mineIds.has(a.row.driverId) || a.row.driverId === input.focusId) - Number(input.mineIds.has(b.row.driverId) || b.row.driverId === input.focusId));
+  const order = [...placed].sort(
+    (a, b) =>
+      Number(input.mineIds.has(a.row.driverId) || a.row.driverId === input.focusId) -
+      Number(input.mineIds.has(b.row.driverId) || b.row.driverId === input.focusId),
+  );
   for (const car of order) {
     if (car.row.state === 'retired') continue;
     const mine = input.mineIds.has(car.row.driverId);
@@ -387,7 +416,9 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const fit = portrait ? Math.min(width / circuit.height, height / circuit.width) : Math.min(width / circuit.width, height / circuit.height);
   const focus = placed.find((p) => p.row.driverId === input.focusId);
   const follow = input.camera === 'follow' && focus;
-  const goal = follow ? { x: focus.x, y: focus.y, scale: clamp(Math.min(width, height) / (circuit.style === 'formula' ? 310 : 250), 1.2, 2.9) } : { x: circuit.width / 2, y: circuit.height / 2, scale: fit };
+  const goal = follow
+    ? { x: focus.x, y: focus.y, scale: clamp(Math.min(width, height) / (circuit.style === 'formula' ? 310 : 250), 1.2, 2.9) }
+    : { x: circuit.width / 2, y: circuit.height / 2, scale: fit };
   const camera = memory.camera ?? goal;
   const pan = 1 - Math.exp(-dt * 5);
   camera.x += (goal.x - camera.x) * pan;
@@ -413,7 +444,9 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   /* ---------- Carros ---------- */
   // Em telas pequenas o carro é ampliado para continuar legível.
   const grow = Math.max(1, 17 / (size.length * camera.scale));
-  const recent = eventsUntil(timeline, time).slice(-12).filter((e) => e.type === 'overtake' && time - e.time < timeline.referenceLap * 0.035);
+  const recent = eventsUntil(timeline, time)
+    .slice(-12)
+    .filter((e) => e.type === 'overtake' && time - e.time < timeline.referenceLap * 0.035);
   const flashing = new Set(recent.map((e) => e.driverId));
   // Abandonados por baixo, líderes por cima.
   const drawOrder = [...placed].sort((a, b) => Number(b.row.state === 'retired') - Number(a.row.state === 'retired') || b.row.position - a.row.position);
@@ -446,7 +479,13 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
         g.globalAlpha = (1 - life) * 0.3 * car.alpha;
         g.fillStyle = row.state === 'spin' ? '#cfd3da' : '#6f7682';
         g.beginPath();
-        g.arc(car.x + (hash01(`sx${i}${row.driverId}`) - 0.5) * 9, car.y - life * 9 + (hash01(`sy${i}${row.driverId}`) - 0.5) * 6, 3 + life * 8, 0, Math.PI * 2);
+        g.arc(
+          car.x + (hash01(`sx${i}${row.driverId}`) - 0.5) * 9,
+          car.y - life * 9 + (hash01(`sy${i}${row.driverId}`) - 0.5) * 6,
+          3 + life * 8,
+          0,
+          Math.PI * 2,
+        );
         g.fill();
       }
       g.globalAlpha = 1;
@@ -484,13 +523,17 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   g.restore();
 
   /* ---------- Etiquetas (em pixels de tela) ---------- */
-  memory.hits = placed.filter((p) => p.row.state !== 'retired').map((p) => {
-    const [x, y] = toScreen(p.x, p.y);
-    return { driverId: p.row.driverId, x, y };
-  });
+  memory.hits = placed
+    .filter((p) => p.row.state !== 'retired')
+    .map((p) => {
+      const [x, y] = toScreen(p.x, p.y);
+      return { driverId: p.row.driverId, x, y };
+    });
   const boxes: { x: number; y: number; w: number; h: number }[] = [];
   const priority = (p: Placed) => (p.row.driverId === input.focusId ? 0 : input.mineIds.has(p.row.driverId) ? 1 : p.row.position <= 3 ? 2 : 3);
-  const labelled = placed.filter((p) => p.row.state !== 'retired' || p.row.sample.retiredFor < 6).sort((a, b) => priority(a) - priority(b) || a.row.position - b.row.position);
+  const labelled = placed
+    .filter((p) => p.row.state !== 'retired' || p.row.sample.retiredFor < 6)
+    .sort((a, b) => priority(a) - priority(b) || a.row.position - b.row.position);
   g.textBaseline = 'middle';
   g.textAlign = 'center';
   const carPixels = size.length * grow * camera.scale;

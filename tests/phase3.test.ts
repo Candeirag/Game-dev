@@ -14,7 +14,18 @@ import { validateCareerIntegrity } from '@/persistence/integrity';
 import { exportCareer, importCareer, loadCareer, saveCareer, summarize } from '@/persistence/saveService';
 import { MemoryStorage } from '@/persistence/storage';
 import * as engine from './engineApi';
-import { NOW, botCareer, botExecutiveOffseason, newCareer, pickBestOffer, playExecutiveRound, playLifeSeason, playRound, playSeason, resolvePending } from './helpers';
+import {
+  NOW,
+  botCareer,
+  botExecutiveOffseason,
+  newCareer,
+  pickBestOffer,
+  playExecutiveRound,
+  playLifeSeason,
+  playRound,
+  playSeason,
+  resolvePending,
+} from './helpers';
 
 /** Estado válido: passa no schema e nas verificações de integridade. */
 function expectValid(career: CareerState) {
@@ -338,7 +349,12 @@ describe('família', () => {
     const kid = childOf(c, 5, { age: 16, kartYears: 6, talent: 85, traits: ['calm'] });
     const started = engine.startChildCareer({ ...c, family: { ...c.family, children: [kid] } }, kid.id, 'full').family.children[0]!;
     // Quinto colocado no kart regional, com licença e reputação para subir.
-    const racing = { ...started.racing!, reputation: 14, license: [{ season: 1, categoryId: 'kart-regional' as const, position: 5, points: 6 }], seasons: [{ season: 1, year: 2027, categoryId: 'kart-regional' as const, teamName: 'x', position: 5, wins: 0, inWorld: false }] };
+    const racing = {
+      ...started.racing!,
+      reputation: 14,
+      license: [{ season: 1, categoryId: 'kart-regional' as const, position: 5, points: 6 }],
+      seasons: [{ season: 1, year: 2027, categoryId: 'kart-regional' as const, teamName: 'x', position: 5, wins: 0, inWorld: false }],
+    };
     const driver = { ...started.driver!, attributes: { ...started.driver!.attributes, experience: 40 } };
     const supported = engine.planChildSeason({ ...started, racing, driver, support: 'full' }, c).child;
     expect(supported.racing!.categoryId).toBe('kart-national');
@@ -498,7 +514,10 @@ describe('gestão de equipe', () => {
     expect(one.finance.seasonTotals.salary).toBe(Math.round(offer.salary / c.calendar.length));
 
     // Carro sabotado para o teste: a equipe termina no fundo do grid.
-    const wreck = (state: CareerState): CareerState => ({ ...state, teams: state.teams.map((t) => (t.id === state.management!.teamId ? { ...t, car: { engine: 45, chassis: 45, reliability: 60 } } : t)) });
+    const wreck = (state: CareerState): CareerState => ({
+      ...state,
+      teams: state.teams.map((t) => (t.id === state.management!.teamId ? { ...t, car: { engine: 45, chassis: 45, reliability: 60 } } : t)),
+    });
     c = playExecutiveSeason(wreck(c));
     expect(c.executiveOffseason).toMatchObject({ objectiveMet: false, dismissed: false });
     expect(c.management!.strikes).toBe(1);
@@ -560,7 +579,10 @@ describe('desenvolvimento técnico', () => {
   it('a pesquisa vira melhorias no carro, na área escolhida', () => {
     let c = ownerCareer('f1', 9);
     c = engine.setDepartment(c, 'engineers', 5);
-    c = engine.setDevelopment({ ...c, management: { ...c.management!, budget: 200_000_000 } }, { spend: 'high', allocation: { aero: 0, chassis: 0, engine: 1, suspension: 0, manufacturing: 0 } });
+    c = engine.setDevelopment(
+      { ...c, management: { ...c.management!, budget: 200_000_000 } },
+      { spend: 'high', allocation: { aero: 0, chassis: 0, engine: 1, suspension: 0, manufacturing: 0 } },
+    );
     const before = engine.managedTeam(c)!.car;
     for (let i = 0; i < 6; i++) c = playExecutiveRound(c);
     const after = engine.managedTeam(c)!.car;
@@ -578,7 +600,10 @@ describe('desenvolvimento técnico', () => {
   it('cada melhoria seguinte custa mais pesquisa, e há um limite por área', () => {
     expect(engine.researchNeeded(1)).toBeGreaterThan(engine.researchNeeded(0));
     let c = ownerCareer('f3', 8);
-    c = engine.setDevelopment({ ...c, management: { ...c.management!, engineers: 5, budget: 50_000_000 } }, { spend: 'high', allocation: { aero: 0, chassis: 0, engine: 0, suspension: 1, manufacturing: 0 } });
+    c = engine.setDevelopment(
+      { ...c, management: { ...c.management!, engineers: 5, budget: 50_000_000 } },
+      { spend: 'high', allocation: { aero: 0, chassis: 0, engine: 0, suspension: 1, manufacturing: 0 } },
+    );
     c = playExecutiveSeason(c);
     expect(c.management!.development.gains.suspension).toBe(REGULATIONS.f3.maxGainsPerArea);
   });
@@ -593,7 +618,13 @@ describe('desenvolvimento técnico', () => {
     for (let i = 0; i < 5; i++) played = playExecutiveRound(played);
     expect(engine.managedTeam(played)!.car.engine).toBe(engineBefore);
     // No kart, o motor é lacrado, mas o chassi é livre.
-    expect(engine.normalizeAllocation('kart-regional', { aero: 1, chassis: 1, engine: 1, suspension: 0, manufacturing: 0 })).toEqual({ aero: 0, chassis: 1, engine: 0, suspension: 0, manufacturing: 0 });
+    expect(engine.normalizeAllocation('kart-regional', { aero: 1, chassis: 1, engine: 1, suspension: 0, manufacturing: 0 })).toEqual({
+      aero: 0,
+      chassis: 1,
+      engine: 0,
+      suspension: 0,
+      manufacturing: 0,
+    });
   });
 
   it('Fórmula 1: teto de gastos interrompe a pesquisa; túnel de vento rende menos para quem terminou na frente', () => {
@@ -664,8 +695,12 @@ describe('pilotos da equipe', () => {
   });
 
   it('pilotos melhores pagam menos pela vaga; na F1, pedem salário maior', () => {
-    const weak = { attributes: { pace: 70, consistency: 70, overtaking: 70, defending: 70, focus: 70, racecraft: 70, tyreManagement: 70, wetSkill: 70, experience: 70 } };
-    const strong = { attributes: { pace: 86, consistency: 86, overtaking: 86, defending: 86, focus: 86, racecraft: 86, tyreManagement: 86, wetSkill: 86, experience: 86 } };
+    const weak = {
+      attributes: { pace: 70, consistency: 70, overtaking: 70, defending: 70, focus: 70, racecraft: 70, tyreManagement: 70, wetSkill: 70, experience: 70 },
+    };
+    const strong = {
+      attributes: { pace: 86, consistency: 86, overtaking: 86, defending: 86, focus: 86, racecraft: 86, tyreManagement: 86, wetSkill: 86, experience: 86 },
+    };
     expect(engine.driverTerms('f3', 4, strong).seatFee).toBeLessThan(engine.driverTerms('f3', 4, weak).seatFee);
     expect(engine.driverTerms('f1', 4, strong).salary).toBeGreaterThan(engine.driverTerms('f1', 4, weak).salary);
     expect(engine.driverTerms('f1', 4, strong).ambition).toBeGreaterThan(engine.driverTerms('f1', 4, weak).ambition);
@@ -695,7 +730,10 @@ describe('pilotos da equipe', () => {
     expect(last.position).toBe(engine.driverStandings(c).find((s) => s.driverId === candidate.driverId)!.position);
     expect(c.executiveOffseason!.candidates.find((x) => x.driverId === candidate.driverId)).toMatchObject({ origin: 'child' });
     // Fora da escalação, ele volta a correr por conta própria e sai do campeonato do jogador.
-    const others = c.executiveOffseason!.candidates.filter((x) => x.origin !== 'child' && x.willing).slice(0, 2).map((x) => x.driverId);
+    const others = c
+      .executiveOffseason!.candidates.filter((x) => x.origin !== 'child' && x.willing)
+      .slice(0, 2)
+      .map((x) => x.driverId);
     const next = engine.startExecutiveSeason(resolvePending(engine.setLineup(c, others)), { kind: 'continue' });
     expect(next.drivers.some((d) => d.id === candidate.driverId)).toBe(false);
     expect(next.family.children[0]!.stage).toBe('racing');
@@ -762,7 +800,13 @@ describe('morte e sucessão', () => {
     const heirKid = childOf(c, 1, { id: 'kid-a', age: 17, kartYears: 6, talent: 90 });
     const sibling = childOf(c, 2, { id: 'kid-b', age: 9, firstName: 'Caçula' });
     c = engine.startChildCareer({ ...c, family: { ...c.family, children: [heirKid, sibling] } }, 'kid-a', 'full');
-    const racing = { ...c.family.children[0]!.racing!, categoryId: 'f4' as const, teamRank: 2, reputation: 40, license: [{ season: 1, categoryId: 'kart-international' as const, position: 2, points: 12 }] };
+    const racing = {
+      ...c.family.children[0]!.racing!,
+      categoryId: 'f4' as const,
+      teamRank: 2,
+      reputation: 40,
+      license: [{ season: 1, categoryId: 'kart-international' as const, position: 2, points: 12 }],
+    };
     c = { ...c, family: { ...c.family, children: [{ ...c.family.children[0]!, racing }, sibling] } };
 
     const opened = engine.beginSuccession(c, 'death');
@@ -989,7 +1033,10 @@ describe('auditoria: dívida, insolvência e brechas fechadas', () => {
     expect(broke.reputation).toBeLessThan(closed.reputation);
     // Com o mesmo valor aplicado em renda fixa e ações, a dívida é paga com os bens e nada é perdoado.
     const stock = STOCKS[0]!;
-    const rich: CareerState = { ...closed, finance: { ...closed.finance, cash: -5_000_000, fixedIncome: 3_000_000, stocks: [{ stockId: stock.id, shares: 100_000, avgCost: stock.startPrice }] } };
+    const rich: CareerState = {
+      ...closed,
+      finance: { ...closed.finance, cash: -5_000_000, fixedIncome: 3_000_000, stocks: [{ stockId: stock.id, shares: 100_000, avgCost: stock.startPrice }] },
+    };
     const settled = engine.startNextSeason(rich, offer);
     expect(settled.reputation).toBe(closed.reputation);
     expect(settled.finance.fixedIncome).toBe(0);
@@ -1170,7 +1217,11 @@ describe('saves no modo dirigente', () => {
     const spectator = engine.startExecutiveSeason(retiredCareer(83), { kind: 'spectate' });
     const owner = playExecutiveRound(ownerCareer('f3', 8, 83));
     const succession = engine.beginSuccession(resolvePending(owner), 'death');
-    for (const [slot, state] of [['slot1', spectator], ['slot2', owner], ['slot3', succession]] as const) {
+    for (const [slot, state] of [
+      ['slot1', spectator],
+      ['slot2', owner],
+      ['slot3', succession],
+    ] as const) {
       const envelope = await saveCareer(storage, slot, state, NOW);
       expect(envelope.summary.playerName).toBe('Ana Teste');
       expect((await loadCareer(storage, slot)).career).toEqual(state);
@@ -1220,7 +1271,11 @@ describe('tutorial', () => {
   it('os passos são concluídos pelo que o jogador faz', () => {
     let c = newCareer(91);
     expect(engine.tutorialActive(c)).toBe(true);
-    const done = (state: CareerState) => engine.tutorialSteps(state).filter((s) => s.done).map((s) => s.id);
+    const done = (state: CareerState) =>
+      engine
+        .tutorialSteps(state)
+        .filter((s) => s.done)
+        .map((s) => s.id);
     expect(done(c)).toEqual([]);
     c = engine.visitTutorialRoute(c, '/driver');
     expect(done(c)).toEqual(['driver']);

@@ -119,9 +119,21 @@ const lines = [
   '}',
   '',
   'export const CIRCUIT_LAYOUTS: Readonly<Record<string, CircuitLayout>> = {',
-  ...entries.map((e) => `  // Referência: ${e.name}\n  '${e.id}': { length: ${e.length}, clockwise: ${e.clockwise}, bridge: ${e.bridge}, points: [${e.points.join(', ')}] },`),
+  ...entries.map(
+    (e) =>
+      `  // Referência: ${e.name}\n  '${e.id}': { length: ${e.length}, clockwise: ${e.clockwise}, bridge: ${e.bridge}, points: [${e.points.join(', ')}] },`,
+  ),
   '};',
   '',
 ];
 writeFileSync(new URL('../src/data/circuitLayouts.ts', import.meta.url), lines.join('\n'));
-for (const e of entries) console.log(e.id.padEnd(12), String(e.points.length / 2).padStart(4), 'pontos', String(e.length).padStart(5), 'm', e.clockwise ? 'horário' : 'anti-horário', e.bridge ? '(viaduto)' : '');
+for (const e of entries)
+  console.log(
+    e.id.padEnd(12),
+    String(e.points.length / 2).padStart(4),
+    'pontos',
+    String(e.length).padStart(5),
+    'm',
+    e.clockwise ? 'horário' : 'anti-horário',
+    e.bridge ? '(viaduto)' : '',
+  );

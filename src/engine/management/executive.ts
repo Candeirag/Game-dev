@@ -13,7 +13,21 @@
  *   prêmios, impostos, família, mortalidade, propostas e mercado) →
  *   startExecutiveSeason (aplica a decisão do jogador e monta o novo ano).
  */
-import type { CareerState, CategoryId, Driver, DriverCandidate, ExecutiveOffseason, InboxMessage, JobOffer, ManagedTeam, RoundRecord, SeasonSummary, StaffMember, Team, TeamListing } from '@/domain/schemas';
+import type {
+  CareerState,
+  CategoryId,
+  Driver,
+  DriverCandidate,
+  ExecutiveOffseason,
+  InboxMessage,
+  JobOffer,
+  ManagedTeam,
+  RoundRecord,
+  SeasonSummary,
+  StaffMember,
+  Team,
+  TeamListing,
+} from '@/domain/schemas';
 import { ASSET_RULES, LIFESTYLE_RULES } from '@/data/assets';
 import { CATEGORIES, getCategory, type CategoryDefinition } from '@/data/categories';
 import { MANAGEMENT, TEAM_ECONOMY, teamValue } from '@/data/management';
@@ -25,7 +39,17 @@ import { developAfterRound, developDriver } from '../career/development';
 import { closeSeasonFinance, post } from '../career/economy';
 import { pushMessages } from '../career/inbox';
 import { runAiMarket, teamsOfCategory } from '../career/market';
-import { DEBT_SETTLEMENT_REPUTATION, REPUTATION, archiveSeason, compactRound, evolveTeams, isRegulationChange, positionPrestige, trimHistory, winter } from '../career/offseason';
+import {
+  DEBT_SETTLEMENT_REPUTATION,
+  REPUTATION,
+  archiveSeason,
+  compactRound,
+  evolveTeams,
+  isRegulationChange,
+  positionPrestige,
+  trimHistory,
+  winter,
+} from '../career/offseason';
 import { familyDriverIds, formerCharacterIds, fullName, getPlayer } from '../career/selectors';
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
@@ -35,7 +59,22 @@ import { createRng, gaussian, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, generateReserve, rankTeams } from '../world/generation';
 import { managementRoundEvent } from './events';
-import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, fieldRatings, staffSalary, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
+import {
+  buildSponsorOffers,
+  buildStaffMarket,
+  createManagedTeam,
+  driverTerms,
+  fieldRatings,
+  staffSalary,
+  managedTeam,
+  normalizeAllocation,
+  ownedTeamValue,
+  principalRating,
+  requireManagement,
+  settleTeamRound,
+  staffRating,
+  syncManagedTeam,
+} from './team';
 import { money } from '../career/selectors';
 import { counted } from '@/domain/text';
 
@@ -66,7 +105,14 @@ export function vacatePlayerSeat(career: CareerState): CareerState {
     const ranked = rankTeams(career.teams);
     const team = ranked.find((t) => t.id === teamId);
     if (team) {
-      const substitute = generateReserve(getCategory(career.categoryId), team, ranked.indexOf(team), hashSeed(career.seed, 'substitute', career.nextRoundIndex), career.season, new Set(drivers.map(fullName)));
+      const substitute = generateReserve(
+        getCategory(career.categoryId),
+        team,
+        ranked.indexOf(team),
+        hashSeed(career.seed, 'substitute', career.nextRoundIndex),
+        career.season,
+        new Set(drivers.map(fullName)),
+      );
       drivers = [...drivers, { ...substitute, id: `${substitute.id}-sub${career.nextRoundIndex}`, role, contractEnd: career.season }];
     }
   }
@@ -90,7 +136,13 @@ export function retireFromDriving(career: CareerState): CareerState {
   if (career.weekend) throw new Error('Termine o fim de semana antes de se aposentar.');
   if (career.succession) throw new Error('Resolva a sucessão primeiro.');
   const player = getPlayer(career);
-  const message: InboxMessage = { id: `s${career.season}-retired`, date: seasonDate(career), category: 'season', title: 'Aposentadoria das pistas', body: `${fullName(player)} pendurou o capacete aos ${player.age} anos. A carreira continua fora do carro: você pode investir, aceitar o comando de uma equipe, comprar ou fundar a sua e acompanhar a carreira dos filhos.` };
+  const message: InboxMessage = {
+    id: `s${career.season}-retired`,
+    date: seasonDate(career),
+    category: 'season',
+    title: 'Aposentadoria das pistas',
+    body: `${fullName(player)} pendurou o capacete aos ${player.age} anos. A carreira continua fora do carro: você pode investir, aceitar o comando de uma equipe, comprar ou fundar a sua e acompanhar a carreira dos filhos.`,
+  };
   const state = convertToExecutive(career);
   return { ...state, inbox: pushMessages(state.inbox, [message]) };
 }
@@ -104,8 +156,29 @@ export function convertToExecutive(career: CareerState): CareerState {
   if (career.mode === 'executive') return career;
   const summary = career.offseason ? archiveSeason(career) : null;
   let state = vacatePlayerSeat({ ...career, status: 'active' });
-  state = { ...state, mode: 'executive', offseason: null, academy: null, sponsors: [], marketInterest: {}, pendingEvents: state.pendingEvents.filter((e) => e.category === 'family'), license: { ...state.license, banRounds: 0 } };
-  if (summary) state = { ...state, executiveOffseason: buildExecutiveOffseason(state, summary, { teamPosition: null, target: null, objectiveMet: null, prize: 0, profit: 0, dismissed: false, notes: [] }) };
+  state = {
+    ...state,
+    mode: 'executive',
+    offseason: null,
+    academy: null,
+    sponsors: [],
+    marketInterest: {},
+    pendingEvents: state.pendingEvents.filter((e) => e.category === 'family'),
+    license: { ...state.license, banRounds: 0 },
+  };
+  if (summary)
+    state = {
+      ...state,
+      executiveOffseason: buildExecutiveOffseason(state, summary, {
+        teamPosition: null,
+        target: null,
+        objectiveMet: null,
+        prize: 0,
+        profit: 0,
+        dismissed: false,
+        notes: [],
+      }),
+    };
   return state;
 }
 
@@ -135,7 +208,8 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
   const round = record.round;
   const share = 1 / Math.max(1, career.calendar.length);
   const messages: InboxMessage[] = [];
-  const msg = (id: string, kind: InboxMessage['category'], title: string, body: string) => messages.push({ id: `s${season}-r${round}-${id}`, date: record.date, category: kind, title, body });
+  const msg = (id: string, kind: InboxMessage['category'], title: string, body: string) =>
+    messages.push({ id: `s${season}-r${round}-${id}`, date: record.date, category: kind, title, body });
 
   /* 1. Finanças pessoais: salário de chefe de equipe, custo de vida, patrimônio e família. */
   let finance = career.finance;
@@ -167,8 +241,18 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
       ...career,
       drivers: career.drivers.map((d) => {
         if (d.teamId !== m1.teamId) return d;
-        const trained = m1.facilities.simulator > 0 ? developDriver(d, hashSeed(career.seed, season, round, 'simulator', d.id), 1, m1.facilities.simulator * MANAGEMENT.SIMULATOR_DRIVER_DEV).driver : d;
-        return { ...trained, condition: { ...trained.condition, confidence: round1(clamp(trained.condition.confidence + confidence)), morale: round1(clamp(trained.condition.morale + morale)) } };
+        const trained =
+          m1.facilities.simulator > 0
+            ? developDriver(d, hashSeed(career.seed, season, round, 'simulator', d.id), 1, m1.facilities.simulator * MANAGEMENT.SIMULATOR_DRIVER_DEV).driver
+            : d;
+        return {
+          ...trained,
+          condition: {
+            ...trained.condition,
+            confidence: round1(clamp(trained.condition.confidence + confidence)),
+            morale: round1(clamp(trained.condition.morale + morale)),
+          },
+        };
       }),
     };
   }
@@ -186,7 +270,12 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
       const d = career.drivers.find((x) => x.id === e.driverId);
       return `${d ? fullName(d) : 'Piloto'}: ${e.status === 'finished' ? `${e.position}º (largou em ${e.grid}º), ${counted(e.points, 'ponto', 'pontos')}` : 'abandonou'}`;
     });
-    msg('race', 'race', `Etapa ${round}: resultado da ${team?.name ?? 'equipe'}`, `${lines.join('. ')}. Vencedor: ${winner ? fullName(winner) : '-'}. A equipe é a ${position}ª no campeonato (meta: ${result.management.boardTarget}ª). Caixa: ${money(career, result.management.budget)}.`);
+    msg(
+      'race',
+      'race',
+      `Etapa ${round}: resultado da ${team?.name ?? 'equipe'}`,
+      `${lines.join('. ')}. Vencedor: ${winner ? fullName(winner) : '-'}. A equipe é a ${position}ª no campeonato (meta: ${result.management.boardTarget}ª). Caixa: ${money(career, result.management.budget)}.`,
+    );
   } else {
     msg('race', 'race', `Etapa ${round}`, `Vencedor: ${winner ? fullName(winner) : '-'}. Você acompanha o campeonato de fora.`);
   }
@@ -247,10 +336,22 @@ export function buildJobOffers(career: CareerState): JobOffer[] {
   for (const category of [...CATEGORIES].sort((a, b) => b.tier - a.tier)) {
     if (offers.length >= 3) break;
     const ranked = rankTeams(teamsOfCategory(career, category.id));
-    const rank = ranked.findIndex((team, r) => standing >= (REPUTATION.TIER_BASE[category.tier] ?? 0) + (9 - r) * 1.5 - 8 && !(career.management?.teamId === team.id && career.management.categoryId === category.id));
+    const rank = ranked.findIndex(
+      (team, r) =>
+        standing >= (REPUTATION.TIER_BASE[category.tier] ?? 0) + (9 - r) * 1.5 - 8 &&
+        !(career.management?.teamId === team.id && career.management.categoryId === category.id),
+    );
     const team = ranked[rank];
     if (!team) continue;
-    offers.push({ id: `job-s${career.season}-${category.id}-${team.id}`, categoryId: category.id, teamId: team.id, teamName: team.name, rank, salary: Math.round(lerp(TEAM_ECONOMY[category.id].principalSalary, rank / 9) / 1000) * 1000, target: Math.min(10, rank + 2) });
+    offers.push({
+      id: `job-s${career.season}-${category.id}-${team.id}`,
+      categoryId: category.id,
+      teamId: team.id,
+      teamName: team.name,
+      rank,
+      salary: Math.round(lerp(TEAM_ECONOMY[category.id].principalSalary, rank / 9) / 1000) * 1000,
+      target: Math.min(10, rank + 2),
+    });
   }
   return offers;
 }
@@ -266,7 +367,14 @@ export function buildTeamListings(career: CareerState): TeamListing[] {
       const variation = 0.95 + (hashSeed(career.seed, career.season, 'listing', team.id) % 11) / 100;
       // O preço inclui o caixa com que a equipe é entregue.
       const cashOnHand = TEAM_ECONOMY[category.id].operations * MANAGEMENT.STARTING_BUDGET;
-      listings.push({ id: `sale-s${career.season}-${category.id}-${team.id}`, categoryId: category.id, teamId: team.id, teamName: team.name, rank, price: Math.round((teamValue(category.id, rank) * variation + cashOnHand) / 1000) * 1000 });
+      listings.push({
+        id: `sale-s${career.season}-${category.id}-${team.id}`,
+        categoryId: category.id,
+        teamId: team.id,
+        teamName: team.name,
+        rank,
+        price: Math.round((teamValue(category.id, rank) * variation + cashOnHand) / 1000) * 1000,
+      });
     }
   }
   return listings;
@@ -293,7 +401,10 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
   if (!m) return [];
   const category = getCategory(m.categoryId);
   const ranked = rankTeams(career.teams);
-  const rank = Math.max(0, ranked.findIndex((t) => t.id === m.teamId));
+  const rank = Math.max(
+    0,
+    ranked.findIndex((t) => t.id === m.teamId),
+  );
   const nextSeason = career.season + 1;
   const attractiveness = m.reputation + (staffRating(m, 'sportingDirector') - 60) * 0.3;
   const grid = fieldRatings(career);
@@ -304,22 +415,59 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
     const family = origin === 'child';
     const age = driver.age + (inWorld ? 1 : 0);
     const willing = !tooOld(age) && (family || origin === 'rookie' || attractiveness + (origin === 'current' ? 18 : 8) >= t.ambition);
-    return { driverId: driver.id, name: fullName(driver), age, rating: t.rating, origin, salary: family ? 0 : t.salary, seatFee: family ? 0 : t.seatFee, years: 1 + (hashSeed(career.seed, 'deal', driver.id, nextSeason) % 2), willing, driver: inWorld ? null : driver, childId };
+    return {
+      driverId: driver.id,
+      name: fullName(driver),
+      age,
+      rating: t.rating,
+      origin,
+      salary: family ? 0 : t.salary,
+      seatFee: family ? 0 : t.seatFee,
+      years: 1 + (hashSeed(career.seed, 'deal', driver.id, nextSeason) % 2),
+      willing,
+      driver: inWorld ? null : driver,
+      childId,
+    };
   };
 
   const list: DriverCandidate[] = [];
   const childByDriver = new Map(career.family.children.filter((c) => c.driver).map((c) => [c.driver?.id ?? '', c]));
-  for (const d of career.drivers.filter((x) => x.teamId === m.teamId)) list.push(candidate(d, childByDriver.has(d.id) ? 'child' : 'current', true, childByDriver.get(d.id)?.id ?? null));
+  for (const d of career.drivers.filter((x) => x.teamId === m.teamId))
+    list.push(candidate(d, childByDriver.has(d.id) ? 'child' : 'current', true, childByDriver.get(d.id)?.id ?? null));
   const former = formerCharacterIds(career);
   const free = career.drivers
-    .filter((d) => !d.isPlayer && !former.has(d.id) && d.teamId !== m.teamId && (d.teamId === null || d.role === 'reserve' || d.contractEnd <= career.season) && !tooOld(d.age + 1))
+    .filter(
+      (d) =>
+        !d.isPlayer &&
+        !former.has(d.id) &&
+        d.teamId !== m.teamId &&
+        (d.teamId === null || d.role === 'reserve' || d.contractEnd <= career.season) &&
+        !tooOld(d.age + 1),
+    )
     .sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes))
     .slice(0, 8);
   for (const d of free) list.push(candidate(d, 'market', true, null));
   const usedNames = new Set(career.drivers.map(fullName));
   for (let i = 0; i < 3; i++) {
     const id = `${category.id}-s${nextSeason}-cand-${i}`;
-    list.push(candidate(generateDriver({ id, seed: hashSeed(career.seed, 'driver', id), category, teamRank: 2 + i * 3, teamId: null, role: 'second', season: nextSeason, usedNames, rookie: true }), 'rookie', false, null));
+    list.push(
+      candidate(
+        generateDriver({
+          id,
+          seed: hashSeed(career.seed, 'driver', id),
+          category,
+          teamRank: 2 + i * 3,
+          teamId: null,
+          role: 'second',
+          season: nextSeason,
+          usedNames,
+          rookie: true,
+        }),
+        'rookie',
+        false,
+        null,
+      ),
+    );
   }
   for (const child of career.family.children) {
     if (child.stage !== 'racing' || !child.driver || !child.racing || career.drivers.some((d) => d.id === child.driver?.id)) continue;
@@ -333,7 +481,10 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
 function defaultLineup(career: CareerState, candidates: readonly DriverCandidate[]): string[] {
   const m = career.management;
   if (!m) return [];
-  const current = career.drivers.filter((d) => d.teamId === m.teamId && d.role !== 'reserve').sort((a) => (a.role === 'first' ? -1 : 1)).map((d) => d.id);
+  const current = career.drivers
+    .filter((d) => d.teamId === m.teamId && d.role !== 'reserve')
+    .sort((a) => (a.role === 'first' ? -1 : 1))
+    .map((d) => d.id);
   const willing = candidates.filter((c) => c.willing);
   const lineup = current.filter((id) => willing.some((c) => c.driverId === id));
   for (const c of [...willing].sort((a, b) => b.rating - a.rating)) {
@@ -404,24 +555,36 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
     const economy = TEAM_ECONOMY[management.categoryId];
     const profit = Object.entries(management.ledger).reduce((sum, [key, value]) => sum + (key === 'owner' ? 0 : value), 0);
     const prize = Math.round(lerp(economy.prize, (position - 1) / 9));
-    notes.push(`A ${team?.name ?? 'equipe'} terminou em ${position}º no campeonato de equipes (meta: ${target}º). Resultado do ano: ${money(career, profit)}. Prêmio para a próxima temporada: ${money(career, prize)}.`);
+    notes.push(
+      `A ${team?.name ?? 'equipe'} terminou em ${position}º no campeonato de equipes (meta: ${target}º). Resultado do ano: ${money(career, profit)}. Prêmio para a próxima temporada: ${money(career, prize)}.`,
+    );
 
     // Patrocinadores: quem viu a equipe muito abaixo do combinado sai; contratos vencidos só renovam com a meta cumprida.
     let brokenDeals = 0;
-    const sponsors = management.sponsors.filter((s) => {
-      if (position > s.targetPosition + 2) {
-        notes.push(`${s.name} rompeu o patrocínio: queria a equipe entre as ${s.targetPosition} primeiras. A quebra de contrato arranha a reputação da equipe.`);
-        brokenDeals += 1;
-        return false;
-      }
-      if (s.endSeason <= season && position > s.targetPosition) {
-        notes.push(`${s.name} não renovou o patrocínio.`);
-        return false;
-      }
-      return true;
-    }).map((s) => (s.endSeason <= season ? { ...s, endSeason: season + 1 } : s));
+    const sponsors = management.sponsors
+      .filter((s) => {
+        if (position > s.targetPosition + 2) {
+          notes.push(
+            `${s.name} rompeu o patrocínio: queria a equipe entre as ${s.targetPosition} primeiras. A quebra de contrato arranha a reputação da equipe.`,
+          );
+          brokenDeals += 1;
+          return false;
+        }
+        if (s.endSeason <= season && position > s.targetPosition) {
+          notes.push(`${s.name} não renovou o patrocínio.`);
+          return false;
+        }
+        return true;
+      })
+      .map((s) => (s.endSeason <= season ? { ...s, endSeason: season + 1 } : s));
 
-    const teamReputation = Math.round(clamp(management.reputation + (92 - (position - 1) * 8 - management.reputation) * MANAGEMENT.REPUTATION_SPEED * (0.8 + principalRating(career) / 250) - brokenDeals * MANAGEMENT.BROKEN_SPONSOR_REPUTATION));
+    const teamReputation = Math.round(
+      clamp(
+        management.reputation +
+          (92 - (position - 1) * 8 - management.reputation) * MANAGEMENT.REPUTATION_SPEED * (0.8 + principalRating(career) / 250) -
+          brokenDeals * MANAGEMENT.BROKEN_SPONSOR_REPUTATION,
+      ),
+    );
     let budget = management.budget;
     // Advertência: ficar duas ou mais posições abaixo da meta, ou fechar o ano no vermelho.
     let strikes = met && budget >= 0 ? 0 : management.strikes + (position > target + 1 || budget < 0 ? 1 : 0);
@@ -488,7 +651,8 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
   if (personal.cash < -ceiling) {
     const liquidation = liquidateAssets(personal, season, rounds, -personal.cash - ceiling);
     personal = liquidation.finance;
-    if (liquidation.raised > 0) notes.push(`Para cobrir a sua dívida, os credores executaram ${money(career, liquidation.raised)} do seu patrimônio (${liquidation.sold.join(', ')}).`);
+    if (liquidation.raised > 0)
+      notes.push(`Para cobrir a sua dívida, os credores executaram ${money(career, liquidation.raised)} do seu patrimônio (${liquidation.sold.join(', ')}).`);
     if (personal.cash < -ceiling && management && management.position === 'owner') {
       const team = managedTeam(career);
       const proceeds = Math.round(ownedTeamValue({ ...career, management }) * FORCED_SALE_DISCOUNT);
@@ -501,21 +665,37 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
       const forgiven = Math.round(-personal.cash - ceiling);
       personal = { ...personal, cash: -ceiling };
       reputation = Math.max(0, reputation - DEBT_SETTLEMENT_REPUTATION);
-      notes.push(`Acordo com credores: ${money(career, forgiven)} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
+      notes.push(
+        `Acordo com credores: ${money(career, forgiven)} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`,
+      );
     }
   }
   const worldResults: Record<string, { position: number; wins: number; driver: Driver; teamName: string }> = {};
   for (const child of career.family.children) {
     const driver = career.drivers.find((d) => d.id === child.driver?.id && d.teamId);
     const standing = driver ? driverStandings.find((s) => s.driverId === driver.id) : undefined;
-    if (driver && standing) worldResults[driver.id] = { position: standing.position, wins: standing.wins, driver: { ...driver, teamId: null, role: null }, teamName: career.teams.find((t) => t.id === driver.teamId)?.name ?? '' };
+    if (driver && standing)
+      worldResults[driver.id] = {
+        position: standing.position,
+        wins: standing.wins,
+        driver: { ...driver, teamId: null, role: null },
+        teamName: career.teams.find((t) => t.id === driver.teamId)?.name ?? '',
+      };
   }
   const family = closeFamilyYear(career, worldResults, new Set(Object.keys(worldResults)));
 
   let state: CareerState = { ...career, teams, finance: personal, reputation, management, executiveLog, family: family.family };
   state = syncManagedTeam(state);
   const champion = career.drivers.find((d) => d.id === driverStandings[0]?.driverId);
-  const messages: InboxMessage[] = [{ id: `s${season}-end`, date, category: 'season', title: `Fim da temporada ${career.year}`, body: `${champion ? fullName(champion) : 'O campeão'} é o campeão da ${category.shortName}. ${notes.join(' ')} Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as decisões para a próxima temporada na tela Carreira.` }];
+  const messages: InboxMessage[] = [
+    {
+      id: `s${season}-end`,
+      date,
+      category: 'season',
+      title: `Fim da temporada ${career.year}`,
+      body: `${champion ? fullName(champion) : 'O campeão'} é o campeão da ${category.shortName}. ${notes.join(' ')} Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as decisões para a próxima temporada na tela Carreira.`,
+    },
+  ];
   if (family.notes.length > 0) messages.push({ id: `s${season}-family`, date, category: 'family', title: 'A família neste ano', body: family.notes.join(' ') });
   state = { ...state, inbox: pushMessages(state.inbox, messages), executiveOffseason: buildExecutiveOffseason(state, summary, evaluation) };
   return checkMortality(state);
@@ -548,8 +728,13 @@ export function acceptTeamSponsor(career: CareerState, sponsorId: string): Caree
   const m = requireManagement(career);
   const sponsor = off.sponsorOffers.find((s) => s.id === sponsorId);
   if (!sponsor) throw new Error('Proposta de patrocínio indisponível.');
-  if (m.sponsors.length >= MANAGEMENT.SPONSOR_SLOTS) throw new Error(`A equipe só tem espaço para ${MANAGEMENT.SPONSOR_SLOTS} patrocinadores. Dispense um antes.`);
-  return { ...career, management: { ...m, sponsors: [...m.sponsors, sponsor] }, executiveOffseason: { ...off, sponsorOffers: off.sponsorOffers.filter((s) => s.id !== sponsorId) } };
+  if (m.sponsors.length >= MANAGEMENT.SPONSOR_SLOTS)
+    throw new Error(`A equipe só tem espaço para ${MANAGEMENT.SPONSOR_SLOTS} patrocinadores. Dispense um antes.`);
+  return {
+    ...career,
+    management: { ...m, sponsors: [...m.sponsors, sponsor] },
+    executiveOffseason: { ...off, sponsorOffers: off.sponsorOffers.filter((s) => s.id !== sponsorId) },
+  };
 }
 
 export function dropTeamSponsor(career: CareerState, sponsorId: string): CareerState {
@@ -568,13 +753,31 @@ export function leaveTeam(career: CareerState): CareerState {
   if (m.position === 'owner') {
     const proceeds = ownedTeamValue(career);
     finance = post(finance, career.season, rounds, 'assets', proceeds, `Venda da equipe ${team?.name ?? ''}`);
-    finance = post(finance, career.season, rounds, 'tax', -Math.max(0, Math.round((proceeds - m.purchasePrice) * ASSET_RULES.CAPITAL_GAINS_TAX)), 'Imposto sobre ganho de capital');
+    finance = post(
+      finance,
+      career.season,
+      rounds,
+      'tax',
+      -Math.max(0, Math.round((proceeds - m.purchasePrice) * ASSET_RULES.CAPITAL_GAINS_TAX)),
+      'Imposto sobre ganho de capital',
+    );
     note = `Você vendeu a ${team?.name ?? 'equipe'} por ${money(career, proceeds)}.`;
   } else {
     note = `Você deixou o comando da ${team?.name ?? 'equipe'}.`;
   }
   const state: CareerState = { ...career, finance, teams: normalizeFieldDevelopment(career), management: null };
-  return { ...state, executiveOffseason: { ...off, candidates: [], lineup: [], sponsorOffers: [], notes: [...off.notes, note], jobOffers: buildJobOffers(state), listings: buildTeamListings(state) } };
+  return {
+    ...state,
+    executiveOffseason: {
+      ...off,
+      candidates: [],
+      lineup: [],
+      sponsorOffers: [],
+      notes: [...off.notes, note],
+      jobOffers: buildJobOffers(state),
+      listings: buildTeamListings(state),
+    },
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -609,7 +812,14 @@ export function normalizeFieldDevelopment(career: CareerState): Team[] {
   };
   return career.teams.map((t) => {
     if (t.id === m.teamId) {
-      return { ...t, car: { engine: limit(carry(t.car.engine, m.baseCar.engine, mean)), chassis: limit(carry(t.car.chassis, m.baseCar.chassis, mean)), reliability: limit(carry(t.car.reliability, m.baseCar.reliability, 0)) } };
+      return {
+        ...t,
+        car: {
+          engine: limit(carry(t.car.engine, m.baseCar.engine, mean)),
+          chassis: limit(carry(t.car.chassis, m.baseCar.chassis, mean)),
+          reliability: limit(carry(t.car.reliability, m.baseCar.reliability, 0)),
+        },
+      };
     }
     return { ...t, car: { ...t.car, engine: limit(t.car.engine - mean), chassis: limit(t.car.chassis - mean) } };
   });
@@ -648,7 +858,8 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   let finance = career.finance;
 
   if (plan.kind === 'continue' && !previous) throw new Error('Você não tem equipe para comandar.');
-  if (plan.kind !== 'continue' && previous) throw new Error(previous.position === 'owner' ? 'Venda a sua equipe antes de mudar de rumo.' : 'Deixe o comando da equipe atual antes de mudar de rumo.');
+  if (plan.kind !== 'continue' && previous)
+    throw new Error(previous.position === 'owner' ? 'Venda a sua equipe antes de mudar de rumo.' : 'Deixe o comando da equipe atual antes de mudar de rumo.');
 
   // Categoria e equipe de destino.
   let categoryId = career.categoryId;
@@ -661,7 +872,9 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     categoryId = offer.categoryId;
     targetTeamId = offer.teamId;
     options = { position: 'principal', salary: offer.salary, purchasePrice: 0 };
-    news.push(`Você é o novo chefe de equipe da ${offer.teamName}, com salário de ${money(career, offer.salary)} por temporada. Meta: terminar entre as ${offer.target} primeiras.`);
+    news.push(
+      `Você é o novo chefe de equipe da ${offer.teamName}, com salário de ${money(career, offer.salary)} por temporada. Meta: terminar entre as ${offer.target} primeiras.`,
+    );
   } else if (plan.kind === 'buy') {
     const listing = off.listings.find((l) => l.id === plan.listingId);
     if (!listing) throw new Error('Equipe não está à venda.');
@@ -672,7 +885,9 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     finance = post(finance, career.season, career.calendar.length, 'team', -price, `Compra da equipe ${listing.teamName}`);
     if (stake) {
       finance = { ...finance, stakes: finance.stakes.filter((x) => x.id !== stake.id) };
-      news.push(`A sua participação de ${Math.round(stake.share * 100)}% na ${listing.teamName} entrou no negócio: você pagou ${money(career, price)} pelo restante.`);
+      news.push(
+        `A sua participação de ${Math.round(stake.share * 100)}% na ${listing.teamName} entrou no negócio: você pagou ${money(career, price)} pelo restante.`,
+      );
     }
     categoryId = listing.categoryId;
     targetTeamId = listing.teamId;
@@ -700,7 +915,8 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   let lineup: DriverCandidate[] = [];
   if (categoryId === career.categoryId) {
     teams = evolveTeamsExecutive(career);
-    if (isRegulationChange(career.seed, career.season, career.categoryId)) news.push(`Regulamento técnico novo na ${category.shortName}: as rivais refizeram o projeto e a ordem de forças entre elas pode ter mudado.`);
+    if (isRegulationChange(career.seed, career.season, career.categoryId))
+      news.push(`Regulamento técnico novo na ${category.shortName}: as rivais refizeram o projeto e a ordem de forças entre elas pode ter mudado.`);
     if (plan.kind === 'continue' && previous) {
       lineup = off.lineup.map((id) => off.candidates.find((c) => c.driverId === id)).filter((c): c is DriverCandidate => c !== undefined);
       if (lineup.length !== 2) throw new Error('Escolha os dois pilotos da equipe para a próxima temporada.');
@@ -733,8 +949,24 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     const weakest = rankTeams(teams)[teams.length - 1];
     if (!weakest) throw new Error('Categoria sem equipes.');
     const id = `own-${hashSeed(career.seed, 'team', nextSeason).toString(16)}`;
-    const initials = founding.name.split(/\s+/).map((w) => w.charAt(0)).join('').toUpperCase();
-    const team: Team = { ...weakest, id, name: founding.name, shortName: (initials.length >= 2 ? initials : founding.name.toUpperCase()).slice(0, 3), color: founding.color, affiliation: null, car: { engine: Math.max(40, weakest.car.engine - 1), chassis: Math.max(40, weakest.car.chassis - 1), reliability: Math.max(40, weakest.car.reliability - 2) } };
+    const initials = founding.name
+      .split(/\s+/)
+      .map((w) => w.charAt(0))
+      .join('')
+      .toUpperCase();
+    const team: Team = {
+      ...weakest,
+      id,
+      name: founding.name,
+      shortName: (initials.length >= 2 ? initials : founding.name.toUpperCase()).slice(0, 3),
+      color: founding.color,
+      affiliation: null,
+      car: {
+        engine: Math.max(40, weakest.car.engine - 1),
+        chassis: Math.max(40, weakest.car.chassis - 1),
+        reliability: Math.max(40, weakest.car.reliability - 2),
+      },
+    };
     teams = teams.map((t) => (t.id === weakest.id ? team : t));
     others = others.map((d) => (d.teamId === weakest.id ? { ...d, teamId: id } : d));
     targetTeamId = id;
@@ -768,7 +1000,10 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
 
   // Gestão: continua (com a virada de ano), começa em outra equipe ou não existe.
   if (plan.kind === 'continue' && previous) {
-    const rank = Math.max(0, rankTeams(teams).findIndex((t) => t.id === previous.teamId));
+    const rank = Math.max(
+      0,
+      rankTeams(teams).findIndex((t) => t.id === previous.teamId),
+    );
     const car = teams.find((t) => t.id === previous.teamId)?.car ?? previous.baseCar;
     const deals: ManagedTeam['deals'] = {};
     for (const c of lineup) deals[c.driverId] = { salary: c.salary, seatFee: c.seatFee, endSeason: nextSeason + c.years - 1 };
@@ -796,7 +1031,12 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   // Filhos: quem corre pela equipe do jogador fica no campeonato; os demais seguem a carreira por fora.
   const managed = state.management;
   const teamName = managedTeam(state)?.name ?? '';
-  const teamRank = managed ? Math.max(0, rankTeams(state.teams).findIndex((t) => t.id === managed.teamId)) : 0;
+  const teamRank = managed
+    ? Math.max(
+        0,
+        rankTeams(state.teams).findIndex((t) => t.id === managed.teamId),
+      )
+    : 0;
   const childNotes: string[] = [];
   const children = state.family.children.map((child) => {
     const id = child.driver?.id;
@@ -812,14 +1052,19 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   });
   state = { ...state, family: { ...state.family, children } };
 
-  const messages: InboxMessage[] = [{
-    id: `s${nextSeason}-start`,
-    date,
-    category: 'season',
-    title: `Temporada ${nextYear}: ${category.shortName}`,
-    body: managed ? `Você comanda a ${teamName} na ${category.name}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(career, managed.budget)}.` : `Você acompanha a ${category.name} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
-  }];
+  const messages: InboxMessage[] = [
+    {
+      id: `s${nextSeason}-start`,
+      date,
+      category: 'season',
+      title: `Temporada ${nextYear}: ${category.shortName}`,
+      body: managed
+        ? `Você comanda a ${teamName} na ${category.name}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(career, managed.budget)}.`
+        : `Você acompanha a ${category.name} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
+    },
+  ];
   if (news.length > 0) messages.push({ id: `s${nextSeason}-market`, date, category: 'contract', title: 'Movimentações', body: news.join(' ') });
-  if (childNotes.length > 0) messages.push({ id: `s${nextSeason}-children`, date, category: 'family', title: 'Carreira dos filhos', body: childNotes.join(' ') });
+  if (childNotes.length > 0)
+    messages.push({ id: `s${nextSeason}-children`, date, category: 'family', title: 'Carreira dos filhos', body: childNotes.join(' ') });
   return beginSeasonFamily({ ...state, inbox: pushMessages(career.inbox, messages) });
 }

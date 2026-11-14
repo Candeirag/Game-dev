@@ -66,7 +66,16 @@ export function loadRaceResume(career: CareerState): RaceResume | null {
     const parsed = RecordSchema.safeParse(JSON.parse(raw));
     if (!parsed.success || parsed.data.key !== key) return null;
     const { plan, steps, mode, autoEngineer, shownLap, shownTime, totalLaps } = parsed.data;
-    return { key, plan: (plan ?? null) as StrategyPlan | null, steps: steps as PlayerRaceInput[], mode, autoEngineer, shownLap, shownTime: shownTime ?? null, totalLaps };
+    return {
+      key,
+      plan: (plan ?? null) as StrategyPlan | null,
+      steps: steps as PlayerRaceInput[],
+      mode,
+      autoEngineer,
+      shownLap,
+      shownTime: shownTime ?? null,
+      totalLaps,
+    };
   } catch {
     return null;
   }

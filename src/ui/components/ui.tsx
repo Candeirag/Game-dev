@@ -7,7 +7,19 @@ export function cx(...classes: (string | false | null | undefined)[]): string {
   return classes.filter(Boolean).join(' ');
 }
 
-export function Card({ title, action, children, className, padded = true }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string; padded?: boolean }) {
+export function Card({
+  title,
+  action,
+  children,
+  className,
+  padded = true,
+}: {
+  title?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  padded?: boolean;
+}) {
   return (
     <section className={cx('rounded-xl border border-ink-700/70 bg-ink-900/80 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset]', className)}>
       {(title || action) && (
@@ -62,7 +74,12 @@ export function TeamSwatch({ team, className }: { team: Pick<Team, 'color'> | un
 }
 
 export function WeatherBadge({ weather, compact }: { weather: SessionWeather; compact?: boolean }) {
-  const tone = weather.condition === 'dry' ? 'text-gold-400 bg-gold-400/10 border-gold-400/25' : weather.condition === 'damp' ? 'text-sky-300 bg-sky-400/10 border-sky-400/25' : 'text-rain-400 bg-rain-400/15 border-rain-400/30';
+  const tone =
+    weather.condition === 'dry'
+      ? 'text-gold-400 bg-gold-400/10 border-gold-400/25'
+      : weather.condition === 'damp'
+        ? 'text-sky-300 bg-sky-400/10 border-sky-400/25'
+        : 'text-rain-400 bg-rain-400/15 border-rain-400/30';
   const icon = weather.condition === 'dry' ? '☀' : weather.condition === 'damp' ? '☁' : '☂';
   return (
     <span className={cx('inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium tabular', tone)}>
@@ -75,8 +92,21 @@ export function WeatherBadge({ weather, compact }: { weather: SessionWeather; co
 
 export function PositionBadge({ position, dnf }: { position: number; dnf?: boolean }) {
   if (dnf) return <span className="inline-flex h-7 min-w-9 items-center justify-center rounded-md bg-ink-800 px-1.5 text-xs font-bold text-ink-400">AB</span>;
-  const tone = position === 1 ? 'bg-gold-400 text-ink-950' : position === 2 ? 'bg-silver-300 text-ink-950' : position === 3 ? 'bg-bronze-400 text-ink-950' : position <= 10 ? 'bg-ink-700 text-ink-100' : 'bg-ink-800 text-ink-300';
-  return <span className={cx('inline-flex h-7 min-w-9 items-center justify-center rounded-md px-1.5 font-display text-base font-bold tabular', tone)}>{position}</span>;
+  const tone =
+    position === 1
+      ? 'bg-gold-400 text-ink-950'
+      : position === 2
+        ? 'bg-silver-300 text-ink-950'
+        : position === 3
+          ? 'bg-bronze-400 text-ink-950'
+          : position <= 10
+            ? 'bg-ink-700 text-ink-100'
+            : 'bg-ink-800 text-ink-300';
+  return (
+    <span className={cx('inline-flex h-7 min-w-9 items-center justify-center rounded-md px-1.5 font-display text-base font-bold tabular', tone)}>
+      {position}
+    </span>
+  );
 }
 
 export function RatingBar({ value, previous, max = 100 }: { value: number; previous?: number; max?: number }) {
@@ -111,7 +141,10 @@ export function Tabs<T extends string>({ value, options, onChange }: { value: T;
           type="button"
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
-          className={cx('rounded-md px-3 py-1.5 text-sm font-semibold transition-colors', value === o.value ? 'bg-ink-700 text-ink-100' : 'text-ink-400 hover:text-ink-100')}
+          className={cx(
+            'rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+            value === o.value ? 'bg-ink-700 text-ink-100' : 'text-ink-400 hover:text-ink-100',
+          )}
         >
           {o.label}
         </button>
@@ -121,7 +154,21 @@ export function Tabs<T extends string>({ value, options, onChange }: { value: T;
 }
 
 /** Cartão de opção selecionável, usado nas decisões do jogador. */
-export function ChoiceCard({ selected, onSelect, title, description, meta, disabled }: { selected: boolean; onSelect: () => void; title: ReactNode; description: ReactNode; meta?: ReactNode; disabled?: boolean }) {
+export function ChoiceCard({
+  selected,
+  onSelect,
+  title,
+  description,
+  meta,
+  disabled,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: ReactNode;
+  description: ReactNode;
+  meta?: ReactNode;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -135,7 +182,12 @@ export function ChoiceCard({ selected, onSelect, title, description, meta, disab
     >
       <div className="flex w-full items-center justify-between gap-2">
         <span className="font-semibold text-ink-100">{title}</span>
-        <span className={cx('h-4 w-4 shrink-0 rounded-full border-2', selected ? 'border-apex-500 bg-apex-500 shadow-[inset_0_0_0_2px_var(--color-ink-900)]' : 'border-ink-600')} />
+        <span
+          className={cx(
+            'h-4 w-4 shrink-0 rounded-full border-2',
+            selected ? 'border-apex-500 bg-apex-500 shadow-[inset_0_0_0_2px_var(--color-ink-900)]' : 'border-ink-600',
+          )}
+        />
       </div>
       <span className="text-sm leading-snug text-ink-300">{description}</span>
       {meta && <span className="text-xs text-ink-400">{meta}</span>}
@@ -185,13 +237,25 @@ export function Pill({ children, tone = 'neutral' }: { children: ReactNode; tone
     bad: 'bg-apex-600/15 text-apex-400 border-apex-600/40',
     accent: 'bg-apex-500 text-white border-apex-500',
   };
-  return <span className={cx('inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', tones[tone])}>{children}</span>;
+  return (
+    <span className={cx('inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', tones[tone])}>
+      {children}
+    </span>
+  );
 }
 
 export function Check({ met, children }: { met: boolean; children: ReactNode }) {
   return (
     <li className="flex items-start gap-2 text-sm">
-      <span aria-hidden className={cx('mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-bold', met ? 'bg-go-400/20 text-go-400' : 'bg-apex-600/20 text-apex-400')}>{met ? '✓' : '✕'}</span>
+      <span
+        aria-hidden
+        className={cx(
+          'mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-bold',
+          met ? 'bg-go-400/20 text-go-400' : 'bg-apex-600/20 text-apex-400',
+        )}
+      >
+        {met ? '✓' : '✕'}
+      </span>
       <span className={met ? 'text-ink-300' : 'text-ink-100'}>{children}</span>
     </li>
   );

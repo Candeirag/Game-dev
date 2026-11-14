@@ -26,14 +26,26 @@ function simulate(seed: number, talent: number, seasons: number, check: (c: Care
   const final = playCareer(botCareer(seed, talent), seasons, { approach: 'attack' }, (c) => {
     check(c);
     const p = getPlayer(c);
-    log.push({ season: c.season, tier: getCategory(c.categoryId).tier, position: c.offseason!.playerPosition, overall: overallRating(p.attributes), age: p.age, netWorth: netWorth(c.finance), reputation: c.reputation });
+    log.push({
+      season: c.season,
+      tier: getCategory(c.categoryId).tier,
+      position: c.offseason!.playerPosition,
+      overall: overallRating(p.attributes),
+      age: p.age,
+      netWorth: netWorth(c.finance),
+      reputation: c.reputation,
+    });
   });
   return { final, log };
 }
 
 describe('várias temporadas', () => {
   it('doze temporadas mantêm o save válido e íntegro em todos os fechamentos', () => {
-    for (const [seed, talent] of [[11, 0], [12, 4], [13, 8]] as const) {
+    for (const [seed, talent] of [
+      [11, 0],
+      [12, 4],
+      [13, 8],
+    ] as const) {
       const { final } = simulate(seed, talent, 12, (c) => {
         expect(validateCareerIntegrity(c)).toEqual([]);
         const parsed = CareerStateSchema.safeParse(c);
@@ -88,7 +100,9 @@ describe('várias temporadas', () => {
     const drift: number[] = [];
     simulate(51, 8, 12, (c) => {
       const category = getCategory(c.categoryId);
-      const ai = getRaceDrivers(c).filter((d) => !d.isPlayer).map((d) => overallRating(d.attributes));
+      const ai = getRaceDrivers(c)
+        .filter((d) => !d.isPlayer)
+        .map((d) => overallRating(d.attributes));
       drift.push(ai.reduce((a, b) => a + b, 0) / ai.length - category.field.driverLevel);
     });
     // A IA evolui durante a temporada, mas o grid não infla sem limite nem desaba.

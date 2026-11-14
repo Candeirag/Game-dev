@@ -17,8 +17,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
  * proporcionalmente à umidade.
  */
 export function driverPaceRating(a: DriverAttributes, weather: SessionWeather): number {
-  const dry =
-    a.pace * 0.64 + a.consistency * 0.1 + a.racecraft * 0.1 + a.focus * 0.08 + a.experience * 0.08;
+  const dry = a.pace * 0.64 + a.consistency * 0.1 + a.racecraft * 0.1 + a.focus * 0.08 + a.experience * 0.08;
   const wetShare = 0.6 * weather.wetness;
   return dry * (1 - wetShare) + a.wetSkill * wetShare;
 }
@@ -83,13 +82,7 @@ export function mechanicalFailureProbability(car: CarPerformance): number {
  * Desgaste de pneu por volta. Uma boa gestão (100) desgasta 30% menos que o
  * piloto médio; uma gestão ruim (0) desgasta 30% mais.
  */
-export function tyreWearPerLap(
-  a: DriverAttributes,
-  track: Track,
-  weather: SessionWeather,
-  modeMultiplier: number,
-  weekendFactor: number,
-): number {
+export function tyreWearPerLap(a: DriverAttributes, track: Track, weather: SessionWeather, modeMultiplier: number, weekendFactor: number): number {
   const skillFactor = 1.3 - (a.tyreManagement / 100) * 0.6;
   const wetFactor = 1 - (1 - SIM.WET_TYRE_WEAR_MULTIPLIER) * weather.wetness;
   return SIM.TYRE_WEAR_PER_LAP * track.tyreWear * skillFactor * wetFactor * modeMultiplier * weekendFactor;
@@ -175,7 +168,7 @@ export function tyreCliffPenalty(compound: TyreCompound, wear: number): number {
 
 /** Perda pelo peso do combustível: proporcional ao que resta no tanque. */
 export function fuelPenalty(fuelLaps: number, totalLaps: number): number {
-  return RACE.FUEL_FULL_TANK_PENALTY * Math.max(0, fuelLaps) / totalLaps;
+  return (RACE.FUEL_FULL_TANK_PENALTY * Math.max(0, fuelLaps)) / totalLaps;
 }
 
 export function damagePenalty(damage: number): number {

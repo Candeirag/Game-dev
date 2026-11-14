@@ -63,7 +63,8 @@ export function NewCareerScreen() {
     }
   }
 
-  const field = 'w-full rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-apex-500 focus:outline-none';
+  const field =
+    'w-full rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-apex-500 focus:outline-none';
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
@@ -91,7 +92,9 @@ export function NewCareerScreen() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">Nacionalidade</span>
                 <select className={field} value={nationality} onChange={(e) => setNationality(e.target.value)}>
                   {NATIONALITIES.map((n) => (
-                    <option key={n.code} value={n.code}>{n.name}</option>
+                    <option key={n.code} value={n.code}>
+                      {n.name}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -99,7 +102,9 @@ export function NewCareerScreen() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">Idade</span>
                 <select className={field} value={age} onChange={(e) => setAge(Number(e.target.value))}>
                   {Array.from({ length: PLAYER_MAX_AGE - PLAYER_MIN_AGE + 1 }, (_, i) => PLAYER_MIN_AGE + i).map((a) => (
-                    <option key={a} value={a}>{a} anos {a <= 15 ? '(evolui mais rápido)' : ''}</option>
+                    <option key={a} value={a}>
+                      {a} anos {a <= 15 ? '(evolui mais rápido)' : ''}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -121,17 +126,40 @@ export function NewCareerScreen() {
             </div>
           </Card>
 
-          <Card title="3 · Pontos livres" action={<span className={cx('text-sm font-semibold tabular', remaining ? 'text-gold-400' : 'text-ink-400')}>{remaining} restantes</span>}>
-            <p className="mb-4 text-sm text-ink-400">Distribua {PLAYER_BONUS_POINTS} pontos, no máximo {PLAYER_BONUS_MAX_PER_ATTRIBUTE} por atributo. A experiência só cresce competindo.</p>
+          <Card
+            title="3 · Pontos livres"
+            action={<span className={cx('text-sm font-semibold tabular', remaining ? 'text-gold-400' : 'text-ink-400')}>{remaining} restantes</span>}
+          >
+            <p className="mb-4 text-sm text-ink-400">
+              Distribua {PLAYER_BONUS_POINTS} pontos, no máximo {PLAYER_BONUS_MAX_PER_ATTRIBUTE} por atributo. A experiência só cresce competindo.
+            </p>
             <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
               {TRAINABLE_ATTRIBUTES.map((key) => (
                 <div key={key} className="flex items-center gap-3">
                   <div className="w-40 shrink-0 text-sm">{ATTRIBUTE_LABELS[key]}</div>
-                  <div className="flex-1"><RatingBar value={attributes[key]} previous={preset.attributes[key]} /></div>
+                  <div className="flex-1">
+                    <RatingBar value={attributes[key]} previous={preset.attributes[key]} />
+                  </div>
                   <div className="w-7 text-right font-semibold tabular">{attributes[key]}</div>
                   <div className="flex gap-1">
-                    <button type="button" aria-label={`Remover ponto de ${ATTRIBUTE_LABELS[key]}`} onClick={() => adjust(key, -1)} disabled={!bonus[key]} className="h-7 w-7 rounded-md border border-ink-700 text-ink-300 hover:border-ink-400 disabled:opacity-30">−</button>
-                    <button type="button" aria-label={`Adicionar ponto em ${ATTRIBUTE_LABELS[key]}`} onClick={() => adjust(key, 1)} disabled={remaining <= 0 || (bonus[key] ?? 0) >= PLAYER_BONUS_MAX_PER_ATTRIBUTE} className="h-7 w-7 rounded-md border border-ink-700 text-ink-300 hover:border-ink-400 disabled:opacity-30">+</button>
+                    <button
+                      type="button"
+                      aria-label={`Remover ponto de ${ATTRIBUTE_LABELS[key]}`}
+                      onClick={() => adjust(key, -1)}
+                      disabled={!bonus[key]}
+                      className="h-7 w-7 rounded-md border border-ink-700 text-ink-300 hover:border-ink-400 disabled:opacity-30"
+                    >
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Adicionar ponto em ${ATTRIBUTE_LABELS[key]}`}
+                      onClick={() => adjust(key, 1)}
+                      disabled={remaining <= 0 || (bonus[key] ?? 0) >= PLAYER_BONUS_MAX_PER_ATTRIBUTE}
+                      className="h-7 w-7 rounded-md border border-ink-700 text-ink-300 hover:border-ink-400 disabled:opacity-30"
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
               ))}
@@ -139,20 +167,36 @@ export function NewCareerScreen() {
           </Card>
 
           <Card title="4 · Equipe">
-            <p className="mb-4 text-sm text-ink-400">Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança e o custo da vaga. Você começa no kart regional, com as economias e o apoio da família; daí em diante, resultados atraem patrocinadores e propostas até a Fórmula 1.</p>
+            <p className="mb-4 text-sm text-ink-400">
+              Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança e o custo da vaga. Você começa no kart regional, com as
+              economias e o apoio da família; daí em diante, resultados atraem patrocinadores e propostas até a Fórmula 1.
+            </p>
             <div className="grid gap-3 md:grid-cols-3">
               {TEAMS.filter((t) => ROOKIE_TEAM_IDS.includes(t.id)).map((t) => (
                 <ChoiceCard
                   key={t.id}
                   selected={teamId === t.id}
                   onSelect={() => setTeamId(t.id)}
-                  title={<span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full" style={{ backgroundColor: t.color }} />{t.name}</span>}
+                  title={
+                    <span className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: t.color }} />
+                      {t.name}
+                    </span>
+                  }
                   description={
                     <span className="grid grid-cols-3 gap-2 pt-1 text-xs tabular">
-                      <span className="col-span-3 block py-1"><CarSprite categoryId="kart-regional" teamId={t.id} color={t.color} className="w-28" title={`Kart da ${t.name}`} /></span>
-                      <span>Motor <b className="text-ink-100">{t.car.engine}</b></span>
-                      <span>Chassi <b className="text-ink-100">{t.car.chassis}</b></span>
-                      <span>Confiab. <b className="text-ink-100">{t.car.reliability}</b></span>
+                      <span className="col-span-3 block py-1">
+                        <CarSprite categoryId="kart-regional" teamId={t.id} color={t.color} className="w-28" title={`Kart da ${t.name}`} />
+                      </span>
+                      <span>
+                        Motor <b className="text-ink-100">{t.car.engine}</b>
+                      </span>
+                      <span>
+                        Chassi <b className="text-ink-100">{t.car.chassis}</b>
+                      </span>
+                      <span>
+                        Confiab. <b className="text-ink-100">{t.car.reliability}</b>
+                      </span>
                     </span>
                   }
                   meta={`Meta: terminar entre os ${t.driverTarget} primeiros`}
@@ -164,7 +208,9 @@ export function NewCareerScreen() {
 
         <aside className="lg:sticky lg:top-6 lg:self-start">
           <Card title="Resumo">
-            <div className="text-xs uppercase tracking-wider text-ink-400">{NATIONALITIES.find((n) => n.code === nationality)?.name} · {age} anos</div>
+            <div className="text-xs uppercase tracking-wider text-ink-400">
+              {NATIONALITIES.find((n) => n.code === nationality)?.name} · {age} anos
+            </div>
             <div className="mt-1 font-display text-3xl font-bold uppercase leading-tight">
               {firstName || 'Nome'} <span className="text-apex-400">{lastName || 'Sobrenome'}</span>
             </div>
@@ -178,8 +224,14 @@ export function NewCareerScreen() {
                 <div className="font-display text-5xl font-bold tabular text-ink-400">{preset.potential}</div>
               </div>
             </div>
-            <div className="mt-4 text-sm text-ink-300">{preset.name} · {TEAMS.find((t) => t.id === teamId)?.name}</div>
-            {error && <div role="alert" className="mt-4 rounded-lg border border-apex-600/50 bg-apex-600/10 px-3 py-2 text-sm text-apex-400">{error}</div>}
+            <div className="mt-4 text-sm text-ink-300">
+              {preset.name} · {TEAMS.find((t) => t.id === teamId)?.name}
+            </div>
+            {error && (
+              <div role="alert" className="mt-4 rounded-lg border border-apex-600/50 bg-apex-600/10 px-3 py-2 text-sm text-apex-400">
+                {error}
+              </div>
+            )}
             <Button variant="primary" className="mt-6 h-12 w-full text-base" disabled={submitting} onClick={() => void submit()}>
               {submitting ? 'Criando…' : 'Começar carreira'}
             </Button>

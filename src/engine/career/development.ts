@@ -99,7 +99,11 @@ export function developAfterRound(
   const deltas: Record<string, AttributeDelta> = {};
   const next = drivers.map((d) => {
     if (!d.teamId) return d;
-    const multiplier = moraleTrainingFactor(d.condition.morale) * (d.isPlayer ? playerMultiplier : 1) * (d.role === 'reserve' ? 0.5 : 1) * (d.injury?.severity === 'serious' ? 0.3 : 1);
+    const multiplier =
+      moraleTrainingFactor(d.condition.morale) *
+      (d.isPlayer ? playerMultiplier : 1) *
+      (d.role === 'reserve' ? 0.5 : 1) *
+      (d.injury?.severity === 'serious' ? 0.3 : 1);
     const result = developDriver(d, hashSeed(careerSeed, season, round, 'development', d.id), 1, multiplier);
     deltas[d.id] = result.delta;
     return result.driver;

@@ -30,7 +30,12 @@ export function finalizeRace(state: RaceSimState, category: CategoryDefinition):
   const retired = state.cars.filter((c) => c.status === 'dnf');
 
   const unscored: Omit<RaceEntryResult, 'points'>[] = [
-    ...finishers.map(({ car, penaltySeconds, finalTime }) => ({ car, penaltySeconds, totalTime: Math.round(finalTime * 1000) / 1000, status: 'finished' as const })),
+    ...finishers.map(({ car, penaltySeconds, finalTime }) => ({
+      car,
+      penaltySeconds,
+      totalTime: Math.round(finalTime * 1000) / 1000,
+      status: 'finished' as const,
+    })),
     ...retired.map((car) => ({ car, penaltySeconds: car.penaltySeconds, totalTime: car.totalTime, status: 'dnf' as const })),
   ].map(({ car, penaltySeconds, totalTime, status }, index) => ({
     driverId: car.driverId,

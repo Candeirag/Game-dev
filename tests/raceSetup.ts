@@ -31,7 +31,12 @@ export function raceSetup(categoryId: CategoryId, trackId?: string, fieldSeed = 
   const ranked = rankTeams(field.teams);
   const playerId = drivers.find((d) => d.teamId === ranked[0]!.id && d.role === 'second')!.id;
   // Grid padrão: ordem de força das equipes, primeiro piloto à frente do segundo.
-  const defaultOrder = ranked.flatMap((t) => drivers.filter((d) => d.teamId === t.id).sort((a) => (a.role === 'first' ? -1 : 1)).map((d) => d.id));
+  const defaultOrder = ranked.flatMap((t) =>
+    drivers
+      .filter((d) => d.teamId === t.id)
+      .sort((a) => (a.role === 'first' ? -1 : 1))
+      .map((d) => d.id),
+  );
   return {
     ctx,
     drivers,

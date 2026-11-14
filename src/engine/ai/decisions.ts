@@ -3,15 +3,7 @@
  * atributos e da situação; nenhuma envolve sorteio. Assim, os rivais se
  * comportam de forma coerente com o próprio perfil.
  */
-import type {
-  DriverAttributes,
-  PracticeProgram,
-  QualifyingApproach,
-  RaceMode,
-  SessionWeather,
-  Track,
-  TrainingFocus,
-} from '@/domain/schemas';
+import type { DriverAttributes, PracticeProgram, QualifyingApproach, RaceMode, SessionWeather, Track, TrainingFocus } from '@/domain/schemas';
 import { TRAINING_GROUPS } from '../career/training';
 
 export function chooseAiPracticeProgram(a: DriverAttributes, track: Track): PracticeProgram {

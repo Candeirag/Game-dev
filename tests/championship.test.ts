@@ -9,8 +9,21 @@ const F1 = getCategory('f1');
 const pointsFor = (e: Omit<RaceEntryResult, 'points'>, fastest: string | null) => pointsForRules(e, fastest, KART);
 
 const entry = (driverId: string, teamId: string, position: number, grid: number, status: 'finished' | 'dnf' = 'finished'): Omit<RaceEntryResult, 'points'> => ({
-  driverId, teamId, position, grid, status, lapsCompleted: 20, totalTime: 1000 + position, bestLap: 50, overtakes: 0, errors: 0,
-  pitStops: 0, penaltySeconds: 0, penaltyPoints: 0, damage: 0, injured: false,
+  driverId,
+  teamId,
+  position,
+  grid,
+  status,
+  lapsCompleted: 20,
+  totalTime: 1000 + position,
+  bestLap: 50,
+  overtakes: 0,
+  errors: 0,
+  pitStops: 0,
+  penaltySeconds: 0,
+  penaltyPoints: 0,
+  damage: 0,
+  injured: false,
 });
 
 describe('pontuação', () => {
@@ -41,11 +54,21 @@ describe('pontuação', () => {
 function round(n: number, results: [string, string, number, number][]): RoundRecord {
   const weather = { condition: 'dry' as const, wetness: 0, trackTemp: 30 };
   return {
-    season: 1, round: n, trackId: 'vale-do-sol', date: '2027-03-08',
+    season: 1,
+    round: n,
+    trackId: 'vale-do-sol',
+    date: '2027-03-08',
     practice: { weather, entries: [] },
     qualifying: { weather, entries: [] },
     race: {
-      weather, totalLaps: 20, fastestLap: null, events: [], safetyCars: 0, virtualSafetyCars: 0, redFlags: 0, teamOrders: [],
+      weather,
+      totalLaps: 20,
+      fastestLap: null,
+      events: [],
+      safetyCars: 0,
+      virtualSafetyCars: 0,
+      redFlags: 0,
+      teamOrders: [],
       entries: results.map(([d, t, pos, grid]) => ({ ...entry(d, t, pos, grid), points: pointsFor(entry(d, t, pos, grid), null) })),
     },
   };
@@ -53,8 +76,16 @@ function round(n: number, results: [string, string, number, number][]): RoundRec
 
 describe('classificação do campeonato', () => {
   const rounds = [
-    round(1, [['a', 'vortex', 1, 2], ['b', 'trovao', 2, 1], ['c', 'vortex', 3, 3]]),
-    round(2, [['b', 'trovao', 1, 2], ['a', 'vortex', 2, 1], ['c', 'vortex', 3, 3]]),
+    round(1, [
+      ['a', 'vortex', 1, 2],
+      ['b', 'trovao', 2, 1],
+      ['c', 'vortex', 3, 3],
+    ]),
+    round(2, [
+      ['b', 'trovao', 1, 2],
+      ['a', 'vortex', 2, 1],
+      ['c', 'vortex', 3, 3],
+    ]),
   ];
 
   it('soma pontos e conta vitórias, pódios e poles', () => {
@@ -71,7 +102,20 @@ describe('classificação do campeonato', () => {
     const s = computeDriverStandings(rounds, []);
     expect(s.map((x) => x.driverId)).toEqual(['a', 'b', 'c']);
     const tie = computeDriverStandings(
-      [round(1, [['x', 'vortex', 1, 5], ['y', 'trovao', 3, 6]]), round(2, [['y', 'trovao', 2, 5], ['x', 'vortex', 9, 6]]), round(3, [['y', 'trovao', 2, 5], ['x', 'vortex', 10, 6]])],
+      [
+        round(1, [
+          ['x', 'vortex', 1, 5],
+          ['y', 'trovao', 3, 6],
+        ]),
+        round(2, [
+          ['y', 'trovao', 2, 5],
+          ['x', 'vortex', 9, 6],
+        ]),
+        round(3, [
+          ['y', 'trovao', 2, 5],
+          ['x', 'vortex', 10, 6],
+        ]),
+      ],
       [],
     );
     // x: 25+2+1 = 28; y: 15+18+18 = 51. Sem empate, y lidera.

@@ -70,7 +70,9 @@ function migrateV1(data: Loose): Loose {
   const base = list(data.drivers).map((d) => ({ ...d, role: null, contractEnd: 0, condition: { ...NEUTRAL_CONDITION }, injury: null }) as unknown as Driver);
   const drivers = base.map((d) => {
     if (!d.teamId) return d;
-    const mates = base.filter((x) => x.teamId === d.teamId).sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes) || a.id.localeCompare(b.id));
+    const mates = base
+      .filter((x) => x.teamId === d.teamId)
+      .sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes) || a.id.localeCompare(b.id));
     return { ...d, role: mates[0]?.id === d.id ? ('first' as const) : ('second' as const), contractEnd: season };
   });
   const ranked = rankTeams(teams);
@@ -95,18 +97,22 @@ function migrateV1(data: Loose): Loose {
   };
 
   const teamName = (id: unknown) => teams.find((t) => t.id === id)?.name ?? String(id);
-  const history = list(data.history).map((h): Loose => ({
-    ...h,
-    categoryId: category.id,
-    playerTeamName: teamName(h.playerTeamId),
-    teamColors: Object.fromEntries(teams.map((t) => [t.id, t.color])),
-    rounds: list(h.rounds).map(migrateRoundV1),
-  }));
+  const history = list(data.history).map(
+    (h): Loose => ({
+      ...h,
+      categoryId: category.id,
+      playerTeamName: teamName(h.playerTeamId),
+      teamColors: Object.fromEntries(teams.map((t) => [t.id, t.color])),
+      rounds: list(h.rounds).map(migrateRoundV1),
+    }),
+  );
 
   const weekendV1 = data.weekend === null || data.weekend === undefined ? null : obj(data.weekend);
   const weekend = weekendV1 && {
     ...weekendV1,
-    qualifying: weekendV1.qualifying ? { ...obj(weekendV1.qualifying), entries: list(obj(weekendV1.qualifying).entries).map((e) => ({ gridPenalty: 0, ...e })) } : null,
+    qualifying: weekendV1.qualifying
+      ? { ...obj(weekendV1.qualifying), entries: list(obj(weekendV1.qualifying).entries).map((e) => ({ gridPenalty: 0, ...e })) }
+      : null,
     entrants: drivers.filter((d) => d.teamId && d.role !== 'reserve').map((d) => ({ driverId: d.id, teamId: d.teamId })),
     playerParticipates: true,
   };
@@ -128,7 +134,12 @@ function migrateV1(data: Loose): Loose {
     sponsors: season <= ECONOMY.FAMILY_SUPPORT_SEASONS ? [familySupport()] : [],
     academy: null,
     license: {
-      history: history.map((h) => ({ season: Number(h.season), categoryId: category.id, position: Number(h.playerPosition), points: licensePointsFor(category.id, Number(h.playerPosition)) })),
+      history: history.map((h) => ({
+        season: Number(h.season),
+        categoryId: category.id,
+        position: Number(h.playerPosition),
+        points: licensePointsFor(category.id, Number(h.playerPosition)),
+      })),
       penaltyPoints: 0,
       banRounds: 0,
     },
@@ -155,19 +166,49 @@ function migrateV2(data: Loose): Loose {
   const name = `${text(player.firstName, 'Piloto')} ${text(player.lastName, '')}`.trim();
   const history: Loose[] = list(data.history).map((h) => ({ mode: 'driver', ...h }));
   // Categoria mais alta já disputada, para o registro da linhagem.
-  const tierOf = (id: unknown) => { try { return getCategory(id as CareerState['categoryId']).tier; } catch { return 0; } };
+  const tierOf = (id: unknown) => {
+    try {
+      return getCategory(id as CareerState['categoryId']).tier;
+    } catch {
+      return 0;
+    }
+  };
   const best = [...history.map((h) => h.categoryId), data.categoryId].reduce((top, id) => (tierOf(id) > tierOf(top) ? id : top), data.categoryId);
   const started = season > 1 || list(data.rounds).length > 0;
   return {
     ...data,
     mode: 'driver',
     history,
-    finance: { ...obj(data.finance), stocks: [], stockPrices: initialStockPrices(), properties: [], businesses: [], stakes: [], loans: [], lifestyle: 'frugal' },
+    finance: {
+      ...obj(data.finance),
+      stocks: [],
+      stockPrices: initialStockPrices(),
+      properties: [],
+      businesses: [],
+      stakes: [],
+      loans: [],
+      lifestyle: 'frugal',
+    },
     family: { partner: null, children: [], divorces: 0 },
     dynasty: {
       generation: 1,
       surname: text(player.lastName, 'Família'),
-      lineage: [{ generation: 1, driverId: text(data.playerDriverId, 'player'), name, bornYear: year - num(player.age, 16), fromSeason: 1, toSeason: null, endReason: null, bestCategoryId: best, titles: 0, wins: 0, peakReputation: Math.min(100, Math.max(0, num(data.reputation, 10))), netWorthPassed: null }],
+      lineage: [
+        {
+          generation: 1,
+          driverId: text(data.playerDriverId, 'player'),
+          name,
+          bornYear: year - num(player.age, 16),
+          fromSeason: 1,
+          toSeason: null,
+          endReason: null,
+          bestCategoryId: best,
+          titles: 0,
+          wins: 0,
+          peakReputation: Math.min(100, Math.max(0, num(data.reputation, 10))),
+          netWorthPassed: null,
+        },
+      ],
     },
     management: null,
     executiveOffseason: null,
@@ -197,7 +238,14 @@ export function migrateCareerData(raw: unknown): unknown {
   }
   // Um save da versão 1 parado no fim da temporada precisa do fechamento, que só existe a partir
   // da versão 2. Ele é calculado aqui, com os dados já no formato atual.
-  if (original === 1 && Array.isArray(data.calendar) && typeof data.nextRoundIndex === 'number' && data.nextRoundIndex >= data.calendar.length && data.weekend === null && !data.offseason) {
+  if (
+    original === 1 &&
+    Array.isArray(data.calendar) &&
+    typeof data.nextRoundIndex === 'number' &&
+    data.nextRoundIndex >= data.calendar.length &&
+    data.weekend === null &&
+    !data.offseason
+  ) {
     data = closeSeason(data as unknown as CareerState) as unknown as Loose;
   }
   return data;

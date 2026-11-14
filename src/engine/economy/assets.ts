@@ -92,7 +92,13 @@ export function sellStock(career: CareerState, stockId: string, shares: number):
   let finance = post(career.finance, career.season, round(career), 'assets', proceeds, `Venda de ${shares} ações da ${stock.name}`);
   finance = post(finance, career.season, round(career), 'tax', -tax, 'Imposto sobre ganho de capital');
   const rest = held.shares - shares;
-  return { ...career, finance: { ...finance, stocks: rest > 0 ? finance.stocks.map((h) => (h.stockId === stockId ? { ...h, shares: rest } : h)) : finance.stocks.filter((h) => h.stockId !== stockId) } };
+  return {
+    ...career,
+    finance: {
+      ...finance,
+      stocks: rest > 0 ? finance.stocks.map((h) => (h.stockId === stockId ? { ...h, shares: rest } : h)) : finance.stocks.filter((h) => h.stockId !== stockId),
+    },
+  };
 }
 
 /**
@@ -101,7 +107,13 @@ export function sellStock(career: CareerState, stockId: string, shares: number):
  * temporada). Parte do movimento é do mercado inteiro, para que as ações
  * subam e caiam juntas nas crises.
  */
-export function stepStockPrices(prices: Readonly<Record<string, number>>, careerSeed: number, season: number, roundNumber: number, roundsInSeason: number): Record<string, number> {
+export function stepStockPrices(
+  prices: Readonly<Record<string, number>>,
+  careerSeed: number,
+  season: number,
+  roundNumber: number,
+  roundsInSeason: number,
+): Record<string, number> {
   const dt = 1 / Math.max(1, roundsInSeason);
   const market = gaussian(createRng(hashSeed(careerSeed, season, roundNumber, 'market')));
   const next: Record<string, number> = {};
@@ -123,7 +135,15 @@ export function buyProperty(career: CareerState, catalogId: string, use: Propert
   const def = getPropertyDefinition(catalogId);
   if (career.finance.properties.some((p) => p.catalogId === catalogId)) throw new Error('Você já tem este imóvel.');
   requireCash(career.finance, def.price);
-  const property: Property = { id: `prop-${catalogId}-s${career.season}`, catalogId, name: def.name, cost: def.price, value: def.price, purchasedSeason: career.season, use };
+  const property: Property = {
+    id: `prop-${catalogId}-s${career.season}`,
+    catalogId,
+    name: def.name,
+    cost: def.price,
+    value: def.price,
+    purchasedSeason: career.season,
+    use,
+  };
   const finance = post(career.finance, career.season, round(career), 'assets', -def.price, `Compra: ${def.name}`);
   return { ...career, finance: { ...finance, properties: [...finance.properties, property] } };
 }
@@ -155,7 +175,16 @@ export function openBusiness(career: CareerState, catalogId: string): CareerStat
   if (career.finance.businesses.some((b) => b.catalogId === catalogId)) throw new Error('Você já tem esta empresa.');
   if (career.reputation < def.minReputation) throw new Error(`É preciso reputação ${def.minReputation} para abrir esta empresa.`);
   requireCash(career.finance, def.cost);
-  const business: Business = { id: `biz-${catalogId}-s${career.season}`, catalogId, name: def.name, invested: def.cost, value: businessValue({ invested: def.cost, lastProfit: 0 }), level: 1, foundedSeason: career.season, lastProfit: 0 };
+  const business: Business = {
+    id: `biz-${catalogId}-s${career.season}`,
+    catalogId,
+    name: def.name,
+    invested: def.cost,
+    value: businessValue({ invested: def.cost, lastProfit: 0 }),
+    level: 1,
+    foundedSeason: career.season,
+    lastProfit: 0,
+  };
   const finance = post(career.finance, career.season, round(career), 'assets', -def.cost, `Abertura: ${def.name}`);
   return { ...career, finance: { ...finance, businesses: [...finance.businesses, business] } };
 }
@@ -168,7 +197,15 @@ export function upgradeBusiness(career: CareerState, businessId: string): Career
   requireCash(career.finance, def.cost);
   const invested = business.invested + def.cost;
   const finance = post(career.finance, career.season, round(career), 'assets', -def.cost, `Expansão: ${business.name}`);
-  return { ...career, finance: { ...finance, businesses: finance.businesses.map((b) => (b.id === businessId ? { ...b, level: b.level + 1, invested, value: businessValue({ invested, lastProfit: b.lastProfit }) } : b)) } };
+  return {
+    ...career,
+    finance: {
+      ...finance,
+      businesses: finance.businesses.map((b) =>
+        b.id === businessId ? { ...b, level: b.level + 1, invested, value: businessValue({ invested, lastProfit: b.lastProfit }) } : b,
+      ),
+    },
+  };
 }
 
 export function sellBusiness(career: CareerState, businessId: string): CareerState {
@@ -208,8 +245,23 @@ export function buyStake(career: CareerState, teamId: string, share: number): Ca
   requireCash(career.finance, price);
   const rank = rankTeams(career.teams).findIndex((t) => t.id === teamId);
   const stake: TeamStake = existing
-    ? { ...existing, share: existing.share + share, cost: existing.cost + price, value: Math.round(teamValue(career.categoryId, rank) * (existing.share + share)) }
-    : { id: `stake-${career.categoryId}-${teamId}`, teamId, teamName: team.name, categoryId: career.categoryId, share, cost: price, value: Math.round(teamValue(career.categoryId, rank) * share), lastPosition: rank + 1, lastDividend: 0 };
+    ? {
+        ...existing,
+        share: existing.share + share,
+        cost: existing.cost + price,
+        value: Math.round(teamValue(career.categoryId, rank) * (existing.share + share)),
+      }
+    : {
+        id: `stake-${career.categoryId}-${teamId}`,
+        teamId,
+        teamName: team.name,
+        categoryId: career.categoryId,
+        share,
+        cost: price,
+        value: Math.round(teamValue(career.categoryId, rank) * share),
+        lastPosition: rank + 1,
+        lastDividend: 0,
+      };
   const finance = post(career.finance, career.season, round(career), 'assets', -price, `Participação de ${Math.round(share * 100)}% na ${team.name}`);
   return { ...career, finance: { ...finance, stakes: [...finance.stakes.filter((s) => s.id !== stake.id), stake] } };
 }
@@ -283,7 +335,14 @@ export function takeLoan(career: CareerState, amount: number, seasons: number): 
   if (!ASSET_RULES.LOAN_TERMS.includes(seasons as 2)) throw new Error('Prazo inválido.');
   if (value < 1000) throw new Error(`O valor mínimo de um empréstimo é ${money(career, 1000)}.`);
   if (value > loanLimit(career)) throw new Error('O banco não aprova este valor: ele passa do seu limite de crédito.');
-  const loan: Loan = { id: `loan-s${career.season}-${career.finance.loans.length}-${value}`, label: `Empréstimo de ${seasons} temporadas`, principal: value, balance: value, rate: ASSET_RULES.LOAN_RATE, annualPayment: annualPayment(value, ASSET_RULES.LOAN_RATE, seasons), seasonsRemaining: seasons,
+  const loan: Loan = {
+    id: `loan-s${career.season}-${career.finance.loans.length}-${value}`,
+    label: `Empréstimo de ${seasons} temporadas`,
+    principal: value,
+    balance: value,
+    rate: ASSET_RULES.LOAN_RATE,
+    annualPayment: annualPayment(value, ASSET_RULES.LOAN_RATE, seasons),
+    seasonsRemaining: seasons,
     // Contratado no meio do ano, só paga juros pela parte que falta: o crédito abaixo anula os juros do trecho já disputado.
     paidThisSeason: Math.round(value * ASSET_RULES.LOAN_RATE * seasonProgress(career)),
   };
@@ -475,11 +534,21 @@ export function closeAssetsYear(career: CareerState): AssetsYearResult {
   for (const stake of f.stakes) {
     const real = stake.categoryId === career.categoryId ? standings.find((s) => s.teamId === stake.teamId)?.position : undefined;
     // Equipe fora do campeonato acompanhado: a posição oscila e volta, aos poucos, para a força original dela.
-    const position = real ?? clamp(Math.round(stake.lastPosition + (stakeAnchor(stake) - stake.lastPosition) * 0.3 + gaussian(createRng(hashSeed(career.seed, season, 'stake', stake.id))) * 1.2), 1, 10);
+    const position =
+      real ??
+      clamp(
+        Math.round(
+          stake.lastPosition + (stakeAnchor(stake) - stake.lastPosition) * 0.3 + gaussian(createRng(hashSeed(career.seed, season, 'stake', stake.id))) * 1.2,
+        ),
+        1,
+        10,
+      );
     const dividend = stakeDividend(stake, position);
     f = post(f, season, rounds, 'dividends', dividend, dividend >= 0 ? `Dividendos: ${stake.teamName}` : `Aporte de sócio: ${stake.teamName}`);
     stakes.push({ ...stake, lastPosition: position, lastDividend: dividend, value: Math.round(teamValue(stake.categoryId, position - 1) * stake.share) });
-    notes.push(`${stake.teamName} terminou em ${position}º: ${dividend >= 0 ? `dividendos de ${money(career, dividend)}` : `aporte de ${money(career, -dividend)}`}.`);
+    notes.push(
+      `${stake.teamName} terminou em ${position}º: ${dividend >= 0 ? `dividendos de ${money(career, dividend)}` : `aporte de ${money(career, -dividend)}`}.`,
+    );
   }
   f = { ...f, stakes };
 

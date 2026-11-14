@@ -15,17 +15,7 @@ import { z } from 'zod';
 /** Atributo de 0 a 100. Guardado com casas decimais para permitir evolução gradual. */
 export const RatingSchema = z.number().min(0).max(100);
 
-export const ATTRIBUTE_KEYS = [
-  'pace',
-  'consistency',
-  'overtaking',
-  'defending',
-  'focus',
-  'racecraft',
-  'tyreManagement',
-  'wetSkill',
-  'experience',
-] as const;
+export const ATTRIBUTE_KEYS = ['pace', 'consistency', 'overtaking', 'defending', 'focus', 'racecraft', 'tyreManagement', 'wetSkill', 'experience'] as const;
 export const AttributeKeySchema = z.enum(ATTRIBUTE_KEYS);
 export type AttributeKey = z.infer<typeof AttributeKeySchema>;
 
@@ -248,8 +238,24 @@ export type DnfReason = z.infer<typeof DnfReasonSchema>;
 export const RaceEventSchema = z.object({
   lap: z.number().int().min(0),
   type: z.enum([
-    'start', 'overtake', 'error', 'spin', 'dnf', 'collision', 'fastestLap', 'finish',
-    'pit', 'safetyCar', 'vsc', 'redFlag', 'restart', 'penalty', 'weather', 'teamOrder', 'damage', 'fuel',
+    'start',
+    'overtake',
+    'error',
+    'spin',
+    'dnf',
+    'collision',
+    'fastestLap',
+    'finish',
+    'pit',
+    'safetyCar',
+    'vsc',
+    'redFlag',
+    'restart',
+    'penalty',
+    'weather',
+    'teamOrder',
+    'damage',
+    'fuel',
   ]),
   driverId: z.string(),
   otherDriverId: z.string().optional(),
@@ -288,9 +294,7 @@ export const RaceResultSchema = z.object({
   totalLaps: z.number().int().min(1),
   /** Ordenado pela posição final. */
   entries: z.array(RaceEntryResultSchema),
-  fastestLap: z
-    .object({ driverId: z.string(), time: z.number().positive(), lap: z.number().int().min(1) })
-    .nullable(),
+  fastestLap: z.object({ driverId: z.string(), time: z.number().positive(), lap: z.number().int().min(1) }).nullable(),
   events: z.array(RaceEventSchema),
   safetyCars: z.number().int().min(0),
   virtualSafetyCars: z.number().int().min(0),
@@ -407,10 +411,28 @@ export type Offer = z.infer<typeof OfferSchema>;
 /* ---------------- Economia ---------------- */
 
 export const LEDGER_KEYS = [
-  'salary', 'sponsors', 'bonus', 'academy', 'investment',
-  'seat', 'living', 'training', 'damage', 'tax', 'interest', 'release', 'event',
+  'salary',
+  'sponsors',
+  'bonus',
+  'academy',
+  'investment',
+  'seat',
+  'living',
+  'training',
+  'damage',
+  'tax',
+  'interest',
+  'release',
+  'event',
   // Fase 3: patrimônio, família e negócios.
-  'dividends', 'rent', 'business', 'loan', 'assets', 'family', 'team', 'inheritance',
+  'dividends',
+  'rent',
+  'business',
+  'loan',
+  'assets',
+  'family',
+  'team',
+  'inheritance',
 ] as const;
 export const LedgerKeySchema = z.enum(LEDGER_KEYS);
 export type LedgerKey = z.infer<typeof LedgerKeySchema>;
@@ -606,7 +628,12 @@ export const PartnerSchema = z.object({
 });
 export type Partner = z.infer<typeof PartnerSchema>;
 
-export const LicenseHistoryEntrySchema = z.object({ season: z.number().int(), categoryId: CategoryIdSchema, position: z.number().int().min(1), points: z.number().min(0) });
+export const LicenseHistoryEntrySchema = z.object({
+  season: z.number().int(),
+  categoryId: CategoryIdSchema,
+  position: z.number().int().min(1),
+  points: z.number().min(0),
+});
 
 export const ChildSeasonSchema = z.object({
   season: z.number().int(),
@@ -828,7 +855,14 @@ export const ManagedTeamSchema = z.object({
 export type ManagedTeam = z.infer<typeof ManagedTeamSchema>;
 
 /** Uma temporada do jogador no comando de uma equipe. */
-export const ExecutiveLogEntrySchema = z.object({ season: z.number().int(), categoryId: CategoryIdSchema, teamName: z.string(), position: z.number().int().min(1), target: z.number().int().min(1), profit: z.number() });
+export const ExecutiveLogEntrySchema = z.object({
+  season: z.number().int(),
+  categoryId: CategoryIdSchema,
+  teamName: z.string(),
+  position: z.number().int().min(1),
+  target: z.number().int().min(1),
+  profit: z.number(),
+});
 export type ExecutiveLogEntry = z.infer<typeof ExecutiveLogEntrySchema>;
 
 /* ---------------- Eventos ---------------- */
@@ -869,7 +903,18 @@ export const EffectSchema = z.discriminatedUnion('type', [
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
-export const EVENT_CATEGORIES = ['interview', 'controversy', 'rivalry', 'investigation', 'protest', 'contract', 'sponsor', 'unexpected', 'family', 'management'] as const;
+export const EVENT_CATEGORIES = [
+  'interview',
+  'controversy',
+  'rivalry',
+  'investigation',
+  'protest',
+  'contract',
+  'sponsor',
+  'unexpected',
+  'family',
+  'management',
+] as const;
 export const EventCategorySchema = z.enum(EVENT_CATEGORIES);
 export type EventCategory = z.infer<typeof EventCategorySchema>;
 

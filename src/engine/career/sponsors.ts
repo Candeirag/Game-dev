@@ -33,7 +33,16 @@ const NAMES: readonly (readonly string[])[] = [
 ];
 
 export function familySupport(): Sponsor {
-  return { id: 'family', name: 'Apoio da família', tier: 0, perSeason: ECONOMY.FAMILY_SUPPORT, podiumBonus: 0, endSeason: ECONOMY.FAMILY_SUPPORT_SEASONS, satisfaction: 100, targetPosition: 20 };
+  return {
+    id: 'family',
+    name: 'Apoio da família',
+    tier: 0,
+    perSeason: ECONOMY.FAMILY_SUPPORT,
+    podiumBonus: 0,
+    endSeason: ECONOMY.FAMILY_SUPPORT_SEASONS,
+    satisfaction: 100,
+    targetPosition: 20,
+  };
 }
 
 export const commercialSponsors = (sponsors: readonly Sponsor[]) => sponsors.filter((s) => s.tier > 0);
@@ -101,7 +110,12 @@ function rebase(sponsor: Sponsor, from: CategoryDefinition, to: CategoryDefiniti
  *   valor à nova categoria: quem patrocina um piloto em ascensão investe mais
  *   quando a vitrine cresce (e menos, se ele desce).
  */
-export function renewSponsors(sponsors: readonly Sponsor[], season: number, current: CategoryDefinition, next: CategoryDefinition): { kept: Sponsor[]; left: Sponsor[]; renewed: Sponsor[] } {
+export function renewSponsors(
+  sponsors: readonly Sponsor[],
+  season: number,
+  current: CategoryDefinition,
+  next: CategoryDefinition,
+): { kept: Sponsor[]; left: Sponsor[]; renewed: Sponsor[] } {
   const kept: Sponsor[] = [];
   const left: Sponsor[] = [];
   const renewed: Sponsor[] = [];

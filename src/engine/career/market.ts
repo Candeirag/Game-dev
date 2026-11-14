@@ -140,7 +140,8 @@ export function runAiMarket(
   }
   for (const d of ai) {
     if (leaving.has(d.id)) continue;
-    const tooOld = category.tier < 7 ? d.age > category.field.maxAge + 1 : d.age >= 38 || (d.age >= 34 && overallRating(d.attributes) < category.field.driverLevel - 5);
+    const tooOld =
+      category.tier < 7 ? d.age > category.field.maxAge + 1 : d.age >= 38 || (d.age >= 34 && overallRating(d.attributes) < category.field.driverLevel - 5);
     if (tooOld) {
       leaving.add(d.id);
       if (d.role !== 'reserve' && d.teamId) news.push(category.tier < 7 ? `${fullName(d)} deixa a categoria.` : `${fullName(d)} anuncia a aposentadoria.`);
@@ -168,7 +169,19 @@ export function runAiMarket(
   const ranked = rankTeams(teams);
   for (let i = 0; i < leaving.size + 3; i++) {
     const id = `${category.id}-s${nextSeason}-rookie-${i}`;
-    free.push(generateDriver({ id, seed: hashSeed(career.seed, 'driver', id), category, teamRank: 4 + (i % 5), teamId: null, role: 'second', season: nextSeason, usedNames, rookie: true }));
+    free.push(
+      generateDriver({
+        id,
+        seed: hashSeed(career.seed, 'driver', id),
+        category,
+        teamRank: 4 + (i % 5),
+        teamId: null,
+        role: 'second',
+        season: nextSeason,
+        usedNames,
+        rookie: true,
+      }),
+    );
   }
 
   // 4. Preenchimento das vagas, da equipe mais forte para a mais fraca.
@@ -195,7 +208,9 @@ export function runAiMarket(
   for (const team of ranked) {
     const list = [...(seats.get(team.id) ?? [])].sort((a, b) => value(b) - value(a));
     if (team.id === reserved?.teamId) {
-      reserved.drivers.slice(0, 2).forEach((d, i) => result.push({ ...d, teamId: team.id, role: i === 0 ? 'first' : 'second', contractEnd: Math.max(nextSeason, d.contractEnd) }));
+      reserved.drivers
+        .slice(0, 2)
+        .forEach((d, i) => result.push({ ...d, teamId: team.id, role: i === 0 ? 'first' : 'second', contractEnd: Math.max(nextSeason, d.contractEnd) }));
     } else if (team.id === player.teamId) {
       const mate = list[0];
       if (mate) result.push({ ...mate, role: player.role === 'first' ? 'second' : 'first' });
@@ -221,4 +236,3 @@ export function promotedRivals(career: CareerState, next: CategoryDefinition, li
   }
   return rivals;
 }
-

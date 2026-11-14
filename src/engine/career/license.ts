@@ -29,7 +29,11 @@ export interface Requirement {
  * Requisitos esportivos para disputar uma categoria na próxima temporada.
  * `nextSeason` indica que a idade considerada é a do ano seguinte.
  */
-export function categoryRequirements(career: CareerState, categoryId: CategoryId, options: { nextSeason: boolean; reputation?: number } = { nextSeason: true }): Requirement[] {
+export function categoryRequirements(
+  career: CareerState,
+  categoryId: CategoryId,
+  options: { nextSeason: boolean; reputation?: number } = { nextSeason: true },
+): Requirement[] {
   const category = getCategory(categoryId);
   const req = category.requirements;
   const player = getPlayer(career);

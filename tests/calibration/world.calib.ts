@@ -15,7 +15,17 @@ function spectator(seed: number, categoryId: CareerState['categoryId']): CareerS
   const category = engine.getCategory(categoryId);
   const field = engine.buildCategoryField(categoryId, seed, 1);
   const player = { ...engine.getPlayer(base), teamId: null, role: null, age: 20 };
-  return { ...base, mode: 'executive', categoryId, teams: field.teams, drivers: [player, ...field.drivers], calendar: engine.buildCalendar(seed, 1, base.year, category), sponsors: [], finance: { ...base.finance, cash: 50_000_000 }, tutorial: { done: [], dismissed: true } };
+  return {
+    ...base,
+    mode: 'executive',
+    categoryId,
+    teams: field.teams,
+    drivers: [player, ...field.drivers],
+    calendar: engine.buildCalendar(seed, 1, base.year, category),
+    sponsors: [],
+    finance: { ...base.finance, cash: 50_000_000 },
+    tutorial: { done: [], dismissed: true },
+  };
 }
 
 test('mundo: 60 temporadas por categoria', () => {
@@ -25,7 +35,9 @@ test('mundo: 60 temporadas por categoria', () => {
     const champions: string[] = [];
     const championTeams: string[] = [];
     console.log(`\n=== ${category.name} (nível projetado ${category.field.driverLevel}, idades ${category.field.minAge} a ${category.field.maxAge}) ===`);
-    console.log('temporada  nota: média  mín  máx | idade: média  máx | carro: melhor  pior  média | campeões distintos na década (pilotos / equipes) | livres');
+    console.log(
+      'temporada  nota: média  mín  máx | idade: média  máx | carro: melhor  pior  média | campeões distintos na década (pilotos / equipes) | livres',
+    );
     for (let season = 1; season <= 60; season++) {
       while (c.nextRoundIndex < c.calendar.length) c = playExecutiveRound(c);
       if (c.succession) c = engine.resolveSuccession(c, 'relative-adult', 'executive');
@@ -38,7 +50,9 @@ test('mundo: 60 temporadas por categoria', () => {
         const ages = race.map((d) => d.age);
         const cars = c.teams.map((t) => (t.car.engine + t.car.chassis) / 2);
         const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-        console.log(`${String(season).padStart(6)}       ${avg(ratings).toFixed(1)}  ${Math.min(...ratings).toFixed(0)}  ${Math.max(...ratings).toFixed(0)} |        ${avg(ages).toFixed(1)}  ${Math.max(...ages)} |        ${Math.max(...cars).toFixed(1)}  ${Math.min(...cars).toFixed(1)}  ${avg(cars).toFixed(1)} |      ${new Set(champions.slice(-10)).size} / ${new Set(championTeams.slice(-10)).size}                                 | ${c.drivers.filter((d) => !d.teamId && !d.isPlayer).length}`);
+        console.log(
+          `${String(season).padStart(6)}       ${avg(ratings).toFixed(1)}  ${Math.min(...ratings).toFixed(0)}  ${Math.max(...ratings).toFixed(0)} |        ${avg(ages).toFixed(1)}  ${Math.max(...ages)} |        ${Math.max(...cars).toFixed(1)}  ${Math.min(...cars).toFixed(1)}  ${avg(cars).toFixed(1)} |      ${new Set(champions.slice(-10)).size} / ${new Set(championTeams.slice(-10)).size}                                 | ${c.drivers.filter((d) => !d.teamId && !d.isPlayer).length}`,
+        );
       }
       c = engine.startExecutiveSeason(resolvePending(c), { kind: 'spectate' });
     }

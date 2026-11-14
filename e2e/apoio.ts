@@ -88,7 +88,12 @@ export async function sobreposicoes(page: Page): Promise<Sobreposicao[]> {
         const style = getComputedStyle(node);
         if (style.overflowX !== 'visible' || style.overflowY !== 'visible' || style.clipPath !== 'none') {
           const clip = node.getBoundingClientRect();
-          const next = { left: Math.max(box.left, clip.left), top: Math.max(box.top, clip.top), right: Math.min(box.right, clip.right), bottom: Math.min(box.bottom, clip.bottom) };
+          const next = {
+            left: Math.max(box.left, clip.left),
+            top: Math.max(box.top, clip.top),
+            right: Math.min(box.right, clip.right),
+            bottom: Math.min(box.bottom, clip.bottom),
+          };
           box = next.right - next.left > 0.5 && next.bottom - next.top > 0.5 ? next : null;
         }
       }
@@ -119,7 +124,12 @@ export async function sobreposicoes(page: Page): Promise<Sobreposicao[]> {
         for (const image of images) {
           if (image.element.contains(parent)) continue;
           const hit = cross(box, image.box);
-          if (hit) found.push({ imagem: name(image.element), texto: text.slice(0, 50), area: `${Math.round(hit.right - hit.left)}×${Math.round(hit.bottom - hit.top)} px` });
+          if (hit)
+            found.push({
+              imagem: name(image.element),
+              texto: text.slice(0, 50),
+              area: `${Math.round(hit.right - hit.left)}×${Math.round(hit.bottom - hit.top)} px`,
+            });
         }
       }
     }

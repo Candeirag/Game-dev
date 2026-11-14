@@ -4,7 +4,24 @@
  * regra de jogo vive aqui nem nos componentes React.
  */
 import { create } from 'zustand';
-import type { CareerState, CategoryId, DevArea, DevValues, FacilityKey, Lifestyle, PracticeProgram, Property, QualifyingApproach, RaceMode, ResearchSpend, StaffRole, SupportLevel, TrainingFocus, TrainingIntensity, TyreCompound } from '@/domain/schemas';
+import type {
+  CareerState,
+  CategoryId,
+  DevArea,
+  DevValues,
+  FacilityKey,
+  Lifestyle,
+  PracticeProgram,
+  Property,
+  QualifyingApproach,
+  RaceMode,
+  ResearchSpend,
+  StaffRole,
+  SupportLevel,
+  TrainingFocus,
+  TrainingIntensity,
+  TyreCompound,
+} from '@/domain/schemas';
 import * as engine from '@/engine';
 import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, PlayerRaceInput, RaceSimState, RaceTimeline, StrategyPlan } from '@/engine';
 import { readLastExport, writeLastExport } from '@/persistence/preferences';
@@ -205,16 +222,41 @@ export const useGameStore = create<GameStore>((set, get) => {
   }
 
   /** Ação simples: chama uma função do motor com os argumentos dados e salva. */
-  const action = <A extends unknown[]>(fn: (career: CareerState, ...args: A) => CareerState) => (...args: A) => apply((c) => fn(c, ...args), { save: true });
+  const action =
+    <A extends unknown[]>(fn: (career: CareerState, ...args: A) => CareerState) =>
+    (...args: A) =>
+      apply((c) => fn(c, ...args), { save: true });
 
-  const RACE_RESET = { liveRace: null, raceTimeline: null, raceMode: 'balanced' as RaceMode, pitRequest: null, skipPlannedStop: false, raceSteps: [] as PlayerRaceInput[], racePlan: null, raceShownLap: 0, raceShownTime: null, raceResume: null, raceSeekLap: null, raceSeekTime: null };
+  const RACE_RESET = {
+    liveRace: null,
+    raceTimeline: null,
+    raceMode: 'balanced' as RaceMode,
+    pitRequest: null,
+    skipPlannedStop: false,
+    raceSteps: [] as PlayerRaceInput[],
+    racePlan: null,
+    raceShownLap: 0,
+    raceShownTime: null,
+    raceResume: null,
+    raceSeekLap: null,
+    raceSeekTime: null,
+  };
 
   /** Guarda no navegador os comandos da corrida em andamento, para ela sobreviver a uma recarga. */
   function rememberRace(): void {
     const { career, liveRace, raceSteps, racePlan, raceMode, autoEngineer, raceShownLap, raceShownTime } = get();
     const key = career ? raceResumeKey(career) : null;
     if (!key || !liveRace || raceSteps.length === 0) return;
-    saveRaceResume({ key, plan: racePlan, steps: raceSteps, mode: raceMode, autoEngineer, shownLap: Math.min(raceShownLap, raceSteps.length), shownTime: raceShownTime, totalLaps: liveRace.totalLaps });
+    saveRaceResume({
+      key,
+      plan: racePlan,
+      steps: raceSteps,
+      mode: raceMode,
+      autoEngineer,
+      shownLap: Math.min(raceShownLap, raceSteps.length),
+      shownTime: raceShownTime,
+      totalLaps: liveRace.totalLaps,
+    });
   }
 
   /** Corrida interrompida da carreira recém-aberta, se o save está na hora da corrida. */
@@ -383,7 +425,13 @@ export const useGameStore = create<GameStore>((set, get) => {
         const race = engine.createWeekendRace(career, plan);
         // Uma largada nova substitui qualquer corrida interrompida desta etapa.
         clearRaceResume();
-        set({ ...RACE_RESET, liveRace: race, raceTimeline: engine.createRaceTimeline(race, engine.buildRaceContext(career)), racePlan: plan ?? null, notice: null });
+        set({
+          ...RACE_RESET,
+          liveRace: race,
+          raceTimeline: engine.createRaceTimeline(race, engine.buildRaceContext(career)),
+          racePlan: plan ?? null,
+          notice: null,
+        });
       } catch (error) {
         set({ notice: errorMessage(error) });
       }
@@ -421,7 +469,13 @@ export const useGameStore = create<GameStore>((set, get) => {
         ...(teamOrder ? { teamOrder } : {}),
       };
       const next = engine.stepRaceLap(liveRace, context, input);
-      set({ liveRace: next, raceTimeline: raceTimeline && engine.appendRaceLap(raceTimeline, liveRace, next, context), pitRequest: null, skipPlannedStop: false, raceSteps: [...get().raceSteps, input] });
+      set({
+        liveRace: next,
+        raceTimeline: raceTimeline && engine.appendRaceLap(raceTimeline, liveRace, next, context),
+        pitRequest: null,
+        skipPlannedStop: false,
+        raceSteps: [...get().raceSteps, input],
+      });
       rememberRace();
     },
 

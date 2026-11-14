@@ -122,7 +122,12 @@ export function botTraining(career: CareerState): CareerState {
   const p = getPlayer(career);
   const a = p.attributes;
   if (p.potential - a.pace > 4) return setTrainingFocus(career, 'speed');
-  const groups = { racecraft: (a.racecraft + a.defending + a.overtaking) / 3, consistency: (a.consistency + a.focus) / 2, tyres: a.tyreManagement, wet: a.wetSkill } as const;
+  const groups = {
+    racecraft: (a.racecraft + a.defending + a.overtaking) / 3,
+    consistency: (a.consistency + a.focus) / 2,
+    tyres: a.tyreManagement,
+    wet: a.wetSkill,
+  } as const;
   const weakest = (Object.entries(groups) as [keyof typeof groups, number][]).sort((x, y) => x[1] - y[1])[0]![0];
   return setTrainingFocus(career, weakest);
 }
@@ -189,7 +194,11 @@ export function botSuccession(career: CareerState, policy: LifePolicy = {}): Car
   const manager = heirs.find((h) => h.kind === 'child' && h.canManage) ?? heirs.find((h) => h.kind === 'partner') ?? heirs.find((h) => h.canManage);
   const pick = preferDriver ? (driver ?? manager) : (manager ?? driver);
   if (!pick) throw new Error('Sucessão sem herdeiro.');
-  return engine.resolveSuccession(career, pick.id, pick === driver && (preferDriver || !manager) ? 'driver' : pick.canManage && !(preferDriver && pick.canDrive) ? 'executive' : 'driver');
+  return engine.resolveSuccession(
+    career,
+    pick.id,
+    pick === driver && (preferDriver || !manager) ? 'driver' : pick.canManage && !(preferDriver && pick.canDrive) ? 'executive' : 'driver',
+  );
 }
 
 /**

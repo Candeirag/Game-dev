@@ -254,14 +254,24 @@ function basePolygon(rng: Rng, track: Track, style: CircuitStyle, attempt: numbe
       const depth = Math.min(uniform(rng, 0.2, 0.4), toCentre * 0.5);
       const skewIn = uniform(rng, -0.12, 0.22) * width;
       const skewOut = uniform(rng, -0.12, 0.22) * width;
-      inserted = [along(middle - width / 2, 0, TIGHT), along(middle - width / 2 + skewIn, depth, TIGHT), along(middle + width / 2 - skewOut, depth * uniform(rng, 0.7, 1), TIGHT), along(middle + width / 2, 0, TIGHT)];
+      inserted = [
+        along(middle - width / 2, 0, TIGHT),
+        along(middle - width / 2 + skewIn, depth, TIGHT),
+        along(middle + width / 2 - skewOut, depth * uniform(rng, 0.7, 1), TIGHT),
+        along(middle + width / 2, 0, TIGHT),
+      ];
     } else if (length > 0.5 && roll < (kart ? 0.68 : 0.7)) {
       // Grampo: um dedo estreito, para dentro ou (às vezes) para fora.
       const width = uniform(rng, 0.15, 0.21);
       const outward = rng.next() < 0.3;
       const depth = outward ? -uniform(rng, 0.16, 0.28) : Math.min(uniform(rng, 0.24, 0.46), toCentre * 0.55);
       const lean = uniform(rng, -0.08, 0.08);
-      inserted = [along(middle - width / 2, 0, TIGHT), along(middle - width / 2 + lean, depth, TIGHT), along(middle + width / 2 + lean, depth, TIGHT), along(middle + width / 2, 0, TIGHT)];
+      inserted = [
+        along(middle - width / 2, 0, TIGHT),
+        along(middle - width / 2 + lean, depth, TIGHT),
+        along(middle + width / 2 + lean, depth, TIGHT),
+        along(middle + width / 2, 0, TIGHT),
+      ];
     } else if (length > 0.62 && roll < 0.86) {
       // Esses: três mudanças de direção encadeadas.
       const spacing = 0.115;
@@ -528,7 +538,16 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
     let high = 1;
     for (let i = 0; i < 18; i++) {
       const mid = (low + high) / 2;
-      if (peakPace(lapFractions(speed.map((v) => v ** mid), step), count) > profile.peak) high = mid;
+      if (
+        peakPace(
+          lapFractions(
+            speed.map((v) => v ** mid),
+            step,
+          ),
+          count,
+        ) > profile.peak
+      )
+        high = mid;
       else low = mid;
     }
     for (let i = 0; i < count; i++) speed[i] = at(speed, i) ** low;
@@ -537,7 +556,13 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
 
   // Linha de corrida: os carros se aproximam do lado de dentro das curvas, com transição suave.
   const lineLimit = CIRCUIT.TRACK_WIDTH / 2 - CIRCUIT.CAR_WIDTH / 2 - 2;
-  const line = movingAverage(movingAverage(curvature.map((k) => clamp(k * 520, -lineLimit, lineLimit)), 12), 12);
+  const line = movingAverage(
+    movingAverage(
+      curvature.map((k) => clamp(k * 520, -lineLimit, lineLimit)),
+      12,
+    ),
+    12,
+  );
 
   // Curvas (para zebras e áreas de escape).
   const corners: CircuitCorner[] = [];
@@ -617,7 +642,11 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
   // fora: para cada tamanho, tenta-se primeiro o lado de dentro e depois o de fora.
   const sides: readonly (1 | -1)[] = real && style === 'kart' ? [preferredSide, preferredSide === 1 ? -1 : 1] : [preferredSide];
   const sizes: readonly (readonly [number, number, number])[] = real
-    ? [[330, 400, CIRCUIT.PIT_BUILDING], [250, 130, 17], [190, 75, 9]]
+    ? [
+        [330, 400, CIRCUIT.PIT_BUILDING],
+        [250, 130, 17],
+        [190, 75, 9],
+      ]
     : [[330, 400, CIRCUIT.PIT_BUILDING]];
   const variants = sizes.flatMap(([maxEntry, maxExit, building]) => sides.map((side) => pitVariant(side, maxEntry, maxExit, building)));
   const fitting = variants.find(pitClear);

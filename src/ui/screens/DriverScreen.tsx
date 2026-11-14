@@ -20,7 +20,9 @@ export function DriverScreen() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Perfil do piloto" title={fullName(player)}>
-        <span className="text-sm text-ink-400">{nationality} · {player.age} anos · {team.name}</span>
+        <span className="text-sm text-ink-400">
+          {nationality} · {player.age} anos · {team.name}
+        </span>
       </PageHeader>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -49,11 +51,18 @@ export function DriverScreen() {
         <div className="space-y-6">
           <Card title="Avaliação">
             <div className="grid grid-cols-3 gap-4">
-              <Stat label="Geral" value={formatRating(overall)} hint={Math.abs(overallDelta) >= 0.05 ? `${signed(overallDelta)} na temporada` : undefined} accent />
+              <Stat
+                label="Geral"
+                value={formatRating(overall)}
+                hint={Math.abs(overallDelta) >= 0.05 ? `${signed(overallDelta)} na temporada` : undefined}
+                accent
+              />
               <Stat label="Potencial" value={player.potential} hint="Teto dos atributos" />
               <Stat label="Reputação" value={career.reputation} hint="De 0 a 100" />
             </div>
-            <p className="mt-4 text-xs text-ink-400">A nota geral é uma média ponderada dos atributos, com a velocidade pesando mais. O potencial limita até onde o treino leva cada atributo.</p>
+            <p className="mt-4 text-xs text-ink-400">
+              A nota geral é uma média ponderada dos atributos, com a velocidade pesando mais. O potencial limita até onde o treino leva cada atributo.
+            </p>
           </Card>
 
           <Card title="Condição" action={player.injury ? <Pill tone="bad">Lesionado</Pill> : undefined}>
@@ -64,10 +73,16 @@ export function DriverScreen() {
             </div>
             {player.injury && (
               <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-200">
-                {player.injury.description}: {player.injury.severity === 'serious' ? 'você não pode correr' : 'você pode correr, 0,3% mais lento e com 30% mais erros'}. Recuperação em {counted(player.injury.roundsRemaining, 'etapa', 'etapas')}.
+                {player.injury.description}:{' '}
+                {player.injury.severity === 'serious' ? 'você não pode correr' : 'você pode correr, 0,3% mais lento e com 30% mais erros'}. Recuperação em{' '}
+                {counted(player.injury.roundsRemaining, 'etapa', 'etapas')}.
               </p>
             )}
-            {player.age >= 31 && <p className="mt-4 text-xs text-gold-400">Aos {player.age} anos, a velocidade, a concentração e a ultrapassagem caem um pouco a cada temporada.</p>}
+            {player.age >= 31 && (
+              <p className="mt-4 text-xs text-gold-400">
+                Aos {player.age} anos, a velocidade, a concentração e a ultrapassagem caem um pouco a cada temporada.
+              </p>
+            )}
           </Card>
 
           <Card title="Estatísticas de carreira">

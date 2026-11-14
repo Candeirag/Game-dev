@@ -12,7 +12,20 @@ import { getTrack } from '@/data/tracks';
 import { vehicleFor } from '@/data/vehicles';
 import { createSceneMemory, driverCode, placeCars } from '@/ui/race/raceScene';
 import { lapSecondsFor } from '@/ui/race/useRacePlayback';
-import { CIRCUIT, buildCategoryField, buildRaceTimeline, circuitForRace, createRaceSim, getCategory, isRaceFinished, lapInfoAt, standingsAt, stepRaceLap, type RaceContext, type RaceSimState } from './engineApi';
+import {
+  CIRCUIT,
+  buildCategoryField,
+  buildRaceTimeline,
+  circuitForRace,
+  createRaceSim,
+  getCategory,
+  isRaceFinished,
+  lapInfoAt,
+  standingsAt,
+  stepRaceLap,
+  type RaceContext,
+  type RaceSimState,
+} from './engineApi';
 
 function fieldRace(categoryId: CategoryId, trackId: string, seed: number, wetness = 0) {
   const category = getCategory(categoryId);
@@ -70,7 +83,7 @@ function play(race: ReturnType<typeof fieldRace>, from: number, to: number, spee
         const b = racing[j]!;
         stats.pairs++;
         // Sobrepostos: menos de 70% de um carro de distância, na mesma faixa.
-        const along = Math.abs((((a.along - b.along) % 1) + 1.5) % 1 - 0.5) * circuit.length;
+        const along = Math.abs(((((a.along - b.along) % 1) + 1.5) % 1) - 0.5) * circuit.length;
         if (along < size.length * 0.7 && Math.abs(a.lateral - b.lateral) < size.width * 0.6) stats.overlapping++;
       }
     }

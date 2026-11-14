@@ -81,7 +81,10 @@ function shapeError(c: ReturnType<typeof buildCircuit>, layout: CircuitLayout): 
     while (i < n - 1 && cumulative[i + 1]! < target) i++;
     const t = (target - cumulative[i]!) / (cumulative[i + 1]! - cumulative[i]! || 1);
     const j = (i + 1) % n;
-    return { x: layout.points[i * 2]! + (layout.points[j * 2]! - layout.points[i * 2]!) * t, y: layout.points[i * 2 + 1]! + (layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!) * t };
+    return {
+      x: layout.points[i * 2]! + (layout.points[j * 2]! - layout.points[i * 2]!) * t,
+      y: layout.points[i * 2 + 1]! + (layout.points[j * 2 + 1]! - layout.points[i * 2 + 1]!) * t,
+    };
   };
   let worst = 0;
   for (let a = 0; a < 40; a++) {
@@ -166,7 +169,12 @@ describe('circuitos', () => {
   it('os kartódromos reproduzem o traçado mapeado: forma, sentido, escala e largada numa reta', () => {
     const karts = [...BR_KART_TRACKS, ...WORLD_KART_TRACKS];
     // Só a pista de Al Ain não tem traçado mapeado e continua gerada por regras.
-    expect(Object.keys(KART_LAYOUTS).sort()).toEqual(karts.map((t) => t.id).filter((id) => id !== 'al-ain').sort());
+    expect(Object.keys(KART_LAYOUTS).sort()).toEqual(
+      karts
+        .map((t) => t.id)
+        .filter((id) => id !== 'al-ain')
+        .sort(),
+    );
     expect(buildCircuit(getTrack('al-ain'), 'kart').real).toBe(false);
     for (const track of karts) {
       const layout = KART_LAYOUTS[track.id];
@@ -222,7 +230,14 @@ describe('circuitos', () => {
     const a = buildCircuit(getTrack('monza'), 'formula');
     const b = buildCircuit(getTrack('monza'), 'formula');
     expect(a).toBe(b);
-    const shapes = new Set(ALL_TRACKS.map(({ track, style }) => buildCircuit(track, style).x.filter((_, i) => i % 40 === 0).map((v) => v.toFixed(0)).join(',')));
+    const shapes = new Set(
+      ALL_TRACKS.map(({ track, style }) =>
+        buildCircuit(track, style)
+          .x.filter((_, i) => i % 40 === 0)
+          .map((v) => v.toFixed(0))
+          .join(','),
+      ),
+    );
     expect(shapes.size).toBe(ALL_TRACKS.length);
   });
 
@@ -284,7 +299,9 @@ function expectFaithful(states: RaceSimState[], ctx: RaceContext): RaceTimeline 
     const teamOrder = state.events.some((e) => e.lap === lap && e.type === 'teamOrder');
     if (redFlag || teamOrder || running.length === 0) continue;
     // Ordem em que os carros cruzam a linha = ordem do motor.
-    const crossing = [...running].sort((a, b) => timeline.cars[a.driverId]!.laps.find((l) => l.lap === lap)!.t1 - timeline.cars[b.driverId]!.laps.find((l) => l.lap === lap)!.t1);
+    const crossing = [...running].sort(
+      (a, b) => timeline.cars[a.driverId]!.laps.find((l) => l.lap === lap)!.t1 - timeline.cars[b.driverId]!.laps.find((l) => l.lap === lap)!.t1,
+    );
     expect(crossing.map((c) => c.driverId)).toEqual(running.map((c) => c.driverId));
   }
   return timeline;
@@ -303,8 +320,17 @@ describe('linha do tempo da corrida', () => {
   it('monopostos com chuva, paradas, safety car e bandeira vermelha continuam fiéis ao motor', () => {
     const seen = { pit: 0, sc: 0, red: 0, dnf: 0, spin: 0 };
     for (const [categoryId, trackId, seed, wetness] of [
-      ['f1', 'monaco', 21, 0], ['f1', 'spa', 22, 0.7], ['f2', 'monza', 23, 0], ['f3', 'silverstone', 24, 0.3], ['f4', 'sao-paulo', 25, 0],
-      ['f1', 'montreal', 26, 0.9], ['f1', 'singapura', 27, 0], ['f2', 'budapest', 28, 0.6], ['f1', 'suzuka', 41, 1], ['f2', 'montreal', 40, 1], ['f3', 'imola', 44, 1],
+      ['f1', 'monaco', 21, 0],
+      ['f1', 'spa', 22, 0.7],
+      ['f2', 'monza', 23, 0],
+      ['f3', 'silverstone', 24, 0.3],
+      ['f4', 'sao-paulo', 25, 0],
+      ['f1', 'montreal', 26, 0.9],
+      ['f1', 'singapura', 27, 0],
+      ['f2', 'budapest', 28, 0.6],
+      ['f1', 'suzuka', 41, 1],
+      ['f2', 'montreal', 40, 1],
+      ['f3', 'imola', 44, 1],
     ] as const) {
       const { ctx, states } = fieldRace(categoryId, trackId, seed, wetness);
       const timeline = expectFaithful(states, ctx);
@@ -381,7 +407,10 @@ describe('linha do tempo da corrida', () => {
       expect(lastCrossing).toBeGreaterThanOrEqual(leaderCrossing);
     }
     const final = standingsAt(timeline, circuit, timeline.endTime! + 5);
-    const onTrack = states.at(-1)!.cars.filter((c) => c.status === 'running').map((c) => c.driverId);
+    const onTrack = states
+      .at(-1)!
+      .cars.filter((c) => c.status === 'running')
+      .map((c) => c.driverId);
     expect(final.filter((r) => r.state === 'finished').map((r) => r.driverId)).toEqual(onTrack);
     // As diferenças finais são as do motor.
     const leaderTime = states.at(-1)!.cars[0]!.totalTime;
@@ -408,7 +437,8 @@ describe('linha do tempo da corrida', () => {
       expect(row.gap!).toBeGreaterThan(0);
       expect(row.interval!).toBeGreaterThanOrEqual(0);
     }
-    for (let i = 1; i < rows.length; i++) if (rows[i]!.state === 'racing' && rows[i - 1]!.state === 'racing') expect(rows[i]!.sample.distance).toBeLessThanOrEqual(rows[i - 1]!.sample.distance);
+    for (let i = 1; i < rows.length; i++)
+      if (rows[i]!.state === 'racing' && rows[i - 1]!.state === 'racing') expect(rows[i]!.sample.distance).toBeLessThanOrEqual(rows[i - 1]!.sample.distance);
   });
 
   it('paradas passam pelo pit lane, com o carro parado no box da equipe', () => {

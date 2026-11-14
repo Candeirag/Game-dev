@@ -14,11 +14,33 @@ export function TutorialCard({ compact = true }: { compact?: boolean }) {
   const done = steps.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done);
   return (
-    <Card title={<span className="text-sky-300">Primeiros passos · {done} de {steps.length}</span>} action={compact && !career.tutorial.dismissed ? <button type="button" onClick={dismiss} className="text-xs font-semibold text-ink-400 hover:text-ink-100">Dispensar</button> : undefined} className="border-sky-400/30">
+    <Card
+      title={
+        <span className="text-sky-300">
+          Primeiros passos · {done} de {steps.length}
+        </span>
+      }
+      action={
+        compact && !career.tutorial.dismissed ? (
+          <button type="button" onClick={dismiss} className="text-xs font-semibold text-ink-400 hover:text-ink-100">
+            Dispensar
+          </button>
+        ) : undefined
+      }
+      className="border-sky-400/30"
+    >
       <ol className="space-y-2">
         {steps.map((step) => (
           <li key={step.id} className="flex items-start gap-3 text-sm">
-            <span aria-hidden className={cx('mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold', step.done ? 'bg-go-400/20 text-go-400' : step === next ? 'bg-sky-400 text-ink-950' : 'bg-ink-800 text-ink-400')}>{step.done ? '✓' : steps.indexOf(step) + 1}</span>
+            <span
+              aria-hidden
+              className={cx(
+                'mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold',
+                step.done ? 'bg-go-400/20 text-go-400' : step === next ? 'bg-sky-400 text-ink-950' : 'bg-ink-800 text-ink-400',
+              )}
+            >
+              {step.done ? '✓' : steps.indexOf(step) + 1}
+            </span>
             <div className="min-w-0 flex-1">
               <div className={cx('font-semibold', step.done ? 'text-ink-400 line-through' : 'text-ink-100')}>{step.title}</div>
               {(!compact || step === next) && <div className="text-ink-300">{step.text}</div>}
@@ -93,7 +115,11 @@ export function HelpScreen() {
       <div className="grid gap-6 lg:grid-cols-2">
         {TOPICS.map((topic) => (
           <Card key={topic.title} title={topic.title}>
-            <ul className="list-disc space-y-2 pl-5 text-sm text-ink-300">{topic.items.map((item) => <li key={item}>{item}</li>)}</ul>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-ink-300">
+              {topic.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </Card>
         ))}
       </div>

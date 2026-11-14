@@ -10,10 +10,41 @@ export interface NamePool {
 }
 
 export const NAME_POOLS: readonly NamePool[] = [
-  { code: 'BR', first: ['Lucas', 'Pedro', 'Rafael', 'Thiago', 'Bruno', 'Caio', 'Felipe', 'Gustavo', 'Vitor', 'Murilo', 'Davi', 'Otávio', 'Renan', 'Igor'], last: ['Azevedo', 'Barros', 'Camargo', 'Dantas', 'Esteves', 'Figueiredo', 'Guimarães', 'Leme', 'Marins', 'Novaes', 'Queiroz', 'Rezende', 'Siqueira', 'Vasconcelos'] },
-  { code: 'AR', first: ['Mateo', 'Franco', 'Santiago', 'Tomás', 'Joaquín', 'Agustín'], last: ['Acosta', 'Benítez', 'Cabrera', 'Domínguez', 'Ferreyra', 'Giménez'] },
-  { code: 'IT', first: ['Lorenzo', 'Matteo', 'Andrea', 'Davide', 'Riccardo', 'Gabriele', 'Federico'], last: ['Bianchi', 'Colombo', 'De Luca', 'Ferri', 'Galli', 'Marchetti', 'Rinaldi'] },
-  { code: 'GB', first: ['Oliver', 'Harry', 'George', 'Callum', 'Jamie', 'Alfie', 'Freddie'], last: ['Ashworth', 'Bennett', 'Carter', 'Dawson', 'Fletcher', 'Hughes', 'Whitaker'] },
+  {
+    code: 'BR',
+    first: ['Lucas', 'Pedro', 'Rafael', 'Thiago', 'Bruno', 'Caio', 'Felipe', 'Gustavo', 'Vitor', 'Murilo', 'Davi', 'Otávio', 'Renan', 'Igor'],
+    last: [
+      'Azevedo',
+      'Barros',
+      'Camargo',
+      'Dantas',
+      'Esteves',
+      'Figueiredo',
+      'Guimarães',
+      'Leme',
+      'Marins',
+      'Novaes',
+      'Queiroz',
+      'Rezende',
+      'Siqueira',
+      'Vasconcelos',
+    ],
+  },
+  {
+    code: 'AR',
+    first: ['Mateo', 'Franco', 'Santiago', 'Tomás', 'Joaquín', 'Agustín'],
+    last: ['Acosta', 'Benítez', 'Cabrera', 'Domínguez', 'Ferreyra', 'Giménez'],
+  },
+  {
+    code: 'IT',
+    first: ['Lorenzo', 'Matteo', 'Andrea', 'Davide', 'Riccardo', 'Gabriele', 'Federico'],
+    last: ['Bianchi', 'Colombo', 'De Luca', 'Ferri', 'Galli', 'Marchetti', 'Rinaldi'],
+  },
+  {
+    code: 'GB',
+    first: ['Oliver', 'Harry', 'George', 'Callum', 'Jamie', 'Alfie', 'Freddie'],
+    last: ['Ashworth', 'Bennett', 'Carter', 'Dawson', 'Fletcher', 'Hughes', 'Whitaker'],
+  },
   { code: 'FR', first: ['Hugo', 'Louis', 'Théo', 'Jules', 'Antoine', 'Maxime'], last: ['Blanchard', 'Chevalier', 'Dufour', 'Fontaine', 'Lambert', 'Moreau'] },
   { code: 'DE', first: ['Lukas', 'Jonas', 'Felix', 'Niklas', 'Moritz', 'Tim'], last: ['Albrecht', 'Brandt', 'Fischer', 'Hartmann', 'Keller', 'Vogel'] },
   { code: 'ES', first: ['Álvaro', 'Pablo', 'Marc', 'Íker', 'Daniel', 'Adrián'], last: ['Aguilar', 'Castaño', 'Herrero', 'Molina', 'Navarro', 'Vidal'] },

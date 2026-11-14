@@ -54,5 +54,14 @@ export function CarSprite({ categoryId, teamId, color, driverId = 'neutro', numb
     };
   }, [categoryId, teamId, color, driverId, number, vehicle.kind]);
 
-  return <canvas ref={canvas} role="img" aria-label={title ?? vehicle.name} title={title ?? vehicle.name} className={cx('block h-auto', className)} style={{ aspectRatio: String(spriteAspect(categoryId)), ...style }} />;
+  return (
+    <canvas
+      ref={canvas}
+      role="img"
+      aria-label={title ?? vehicle.name}
+      title={title ?? vehicle.name}
+      className={cx('block h-auto', className)}
+      style={{ aspectRatio: String(spriteAspect(categoryId)), ...style }}
+    />
+  );
 }

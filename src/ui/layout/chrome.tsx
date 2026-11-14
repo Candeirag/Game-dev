@@ -64,7 +64,8 @@ export function primaryAction(career: CareerState): PrimaryAction | null {
   if (career.succession || career.status === 'retired') return null;
   const pending = career.pendingEvents.length;
   if (career.weekend) return { label: 'Continuar fim de semana', to: '/weekend', tone: 'accent' };
-  if (pending > 0) return { label: pending === 1 ? 'Resolver decisão' : `Resolver ${pending} decisões`, to: '/dashboard', tone: 'attention', anchor: 'decisoes' };
+  if (pending > 0)
+    return { label: pending === 1 ? 'Resolver decisão' : `Resolver ${pending} decisões`, to: '/dashboard', tone: 'attention', anchor: 'decisoes' };
   if (career.executiveOffseason) return { label: 'Planejar a temporada', to: '/career', tone: 'accent' };
   if (career.offseason) return { label: 'Ver propostas', to: '/career', tone: 'accent' };
   if (isSeasonComplete(career)) return { label: 'Fechar a temporada', to: '/career', tone: 'accent' };

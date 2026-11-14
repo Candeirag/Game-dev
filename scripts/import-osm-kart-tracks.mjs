@@ -132,7 +132,15 @@ function findLoops(ways, position, options) {
       }
       if (!allowed || !isJunction.has(current)) continue;
       const points = nodes.map((node) => position.get(node));
-      arcs.push({ from, to: current, nodes, points, length: pathLength(points, false), drawn, key: `${Math.min(nodes[0], nodes[nodes.length - 1])}:${nodes.length}:${Math.min(nodes[1], nodes[nodes.length - 2])}` });
+      arcs.push({
+        from,
+        to: current,
+        nodes,
+        points,
+        length: pathLength(points, false),
+        drawn,
+        key: `${Math.min(nodes[0], nodes[nodes.length - 1])}:${nodes.length}:${Math.min(nodes[1], nodes[nodes.length - 2])}`,
+      });
     }
   }
   const outgoing = new Map();
@@ -231,7 +239,17 @@ for (const track of TRACKS) {
     const chosen = twin ?? best;
     nodes = chosen.nodes;
     note = `${loops.length} percursos, ${chosen.arcs} trechos`;
-    if (debugFile) debug[track.id] = { candidates: loops.slice(0, 12).map((loop) => ({ length: Math.round(loop.length), arcs: loop.arcs, drawn: Math.round(loop.drawn), points: loop.nodes.map((node) => position.get(node).map((v) => Math.round(v * 10) / 10)) })) };
+    if (debugFile)
+      debug[track.id] = {
+        candidates: loops
+          .slice(0, 12)
+          .map((loop) => ({
+            length: Math.round(loop.length),
+            arcs: loop.arcs,
+            drawn: Math.round(loop.drawn),
+            points: loop.nodes.map((node) => position.get(node).map((v) => Math.round(v * 10) / 10)),
+          })),
+      };
   }
   let points = nodes.map((node) => position.get(node));
   points = points.filter((point, i) => i === 0 || distance(point, points[i - 1]) > 0.05);
@@ -276,8 +294,19 @@ for (const track of TRACKS) {
     points: points.flatMap(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10]),
   };
   entries.push(entry);
-  if (debugFile) debug[track.id] = { ...(debug[track.id] ?? {}), points: entry.points, length: entry.length, straight: Math.round(straight.length), venue: track.venue };
-  console.log(track.id.padEnd(17), String(points.length).padStart(4), 'pontos', String(entry.length).padStart(5), 'm', (entry.clockwise ? 'horário' : 'anti-horário').padEnd(13), `reta ${Math.round(straight.length)} m`, entry.bridge ? '(viaduto)' : '', note);
+  if (debugFile)
+    debug[track.id] = { ...(debug[track.id] ?? {}), points: entry.points, length: entry.length, straight: Math.round(straight.length), venue: track.venue };
+  console.log(
+    track.id.padEnd(17),
+    String(points.length).padStart(4),
+    'pontos',
+    String(entry.length).padStart(5),
+    'm',
+    (entry.clockwise ? 'horário' : 'anti-horário').padEnd(13),
+    `reta ${Math.round(straight.length)} m`,
+    entry.bridge ? '(viaduto)' : '',
+    note,
+  );
 }
 
 if (debugFile) writeFileSync(debugFile, JSON.stringify(debug));
@@ -304,7 +333,10 @@ if (!only) {
     "export const KART_LAYOUTS_CREDIT = '© OpenStreetMap contributors';",
     '',
     'export const KART_LAYOUTS: Readonly<Record<string, CircuitLayout>> = {',
-    ...entries.map((e) => `  // Referência: ${e.venue}\n  '${e.id}': { length: ${e.length}, clockwise: ${e.clockwise}, bridge: ${e.bridge}, points: [${e.points.join(', ')}] },`),
+    ...entries.map(
+      (e) =>
+        `  // Referência: ${e.venue}\n  '${e.id}': { length: ${e.length}, clockwise: ${e.clockwise}, bridge: ${e.bridge}, points: [${e.points.join(', ')}] },`,
+    ),
     '};',
     '',
   ];

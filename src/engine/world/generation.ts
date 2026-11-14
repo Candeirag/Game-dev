@@ -129,7 +129,12 @@ export function rankTeams(teams: readonly Team[]): Team[] {
 }
 
 /** Grid completo de uma categoria: 10 equipes, cada uma com dois titulares e um reserva. */
-export function buildCategoryField(categoryId: CategoryId, careerSeed: number, season: number, usedNames: Set<string> = new Set()): { teams: Team[]; drivers: Driver[] } {
+export function buildCategoryField(
+  categoryId: CategoryId,
+  careerSeed: number,
+  season: number,
+  usedNames: Set<string> = new Set(),
+): { teams: Team[]; drivers: Driver[] } {
   const category = getCategory(categoryId);
   const teams = initialTeams(categoryId);
   const drivers: Driver[] = [];
@@ -143,7 +148,14 @@ export function buildCategoryField(categoryId: CategoryId, careerSeed: number, s
 }
 
 /** Reserva gerado para uma equipe que não tem um. */
-export function generateReserve(category: CategoryDefinition, team: Team, teamRank: number, careerSeed: number, season: number, usedNames: Set<string>): Driver {
+export function generateReserve(
+  category: CategoryDefinition,
+  team: Team,
+  teamRank: number,
+  careerSeed: number,
+  season: number,
+  usedNames: Set<string>,
+): Driver {
   const id = `${category.id}-s${season}-${team.id}-reserve`;
   return generateDriver({ id, seed: hashSeed(careerSeed, 'driver', id), category, teamRank, teamId: team.id, role: 'reserve', season, usedNames });
 }

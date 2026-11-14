@@ -31,9 +31,21 @@ export function CircuitMap({ track, style, className, detailed = false }: { trac
   const stroke = detailed ? CIRCUIT.TRACK_WIDTH : Math.max(CIRCUIT.TRACK_WIDTH, circuit.width / 46);
   const arrow = stroke * 1.5;
   return (
-    <svg viewBox={`0 0 ${circuit.width} ${circuit.height}`} role="img" aria-label={`Traçado de ${track.name}, sentido ${circuit.clockwise ? 'horário' : 'anti-horário'}`} className={cx('block', className)}>
+    <svg
+      viewBox={`0 0 ${circuit.width} ${circuit.height}`}
+      role="img"
+      aria-label={`Traçado de ${track.name}, sentido ${circuit.clockwise ? 'horário' : 'anti-horário'}`}
+      className={cx('block', className)}
+    >
       {detailed && <polyline points={map.pit} fill="none" stroke="#3a4253" strokeWidth={CIRCUIT.PIT_WIDTH} strokeLinejoin="round" />}
-      <polygon points={map.points} fill="none" stroke="#e6ebf3" strokeOpacity={0.16} strokeWidth={stroke + (detailed ? 8 : stroke * 0.5)} strokeLinejoin="round" />
+      <polygon
+        points={map.points}
+        fill="none"
+        stroke="#e6ebf3"
+        strokeOpacity={0.16}
+        strokeWidth={stroke + (detailed ? 8 : stroke * 0.5)}
+        strokeLinejoin="round"
+      />
       <polygon points={map.points} fill="none" stroke="#97a3b8" strokeWidth={stroke} strokeLinejoin="round" />
       <line x1={map.line.a.x} y1={map.line.a.y} x2={map.line.b.x} y2={map.line.b.y} stroke="#ef3b2d" strokeWidth={stroke * 0.55} />
       <polygon

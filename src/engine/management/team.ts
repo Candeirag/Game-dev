@@ -7,7 +7,22 @@
  * muda esses números por regras: melhorias de pesquisa mexem no carro,
  * mecânicos e chefias mexem nos boxes. Nada aqui toca o motor de corrida.
  */
-import type { CareerState, CarPerformance, Driver, DevArea, DevValues, FacilityKey, InboxMessage, ManagedTeam, ResearchSpend, RoundRecord, StaffMember, StaffRole, Team, TeamSponsor } from '@/domain/schemas';
+import type {
+  CareerState,
+  CarPerformance,
+  Driver,
+  DevArea,
+  DevValues,
+  FacilityKey,
+  InboxMessage,
+  ManagedTeam,
+  ResearchSpend,
+  RoundRecord,
+  StaffMember,
+  StaffRole,
+  Team,
+  TeamSponsor,
+} from '@/domain/schemas';
 import { DEV_AREAS, STAFF_ROLES } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
 import { DEV_EFFECTS, MANAGEMENT, REGULATIONS, STAFF_FIRST_NAMES, STAFF_LAST_NAMES, TEAM_ECONOMY, TEAM_SPONSOR_NAMES, teamValue } from '@/data/management';
@@ -60,7 +75,9 @@ export function principalRating(career: CareerState): number {
 
 /** Equipe de box: mecânicos, chefe dos mecânicos, diretor esportivo e fábrica. */
 export function crewRating(m: ManagedTeam): number {
-  return Math.round(clamp(35 + m.mechanics * 7 + staffRating(m, 'chiefMechanic') * 0.25 + staffRating(m, 'sportingDirector') * 0.1 + m.facilities.factory, 30, 97));
+  return Math.round(
+    clamp(35 + m.mechanics * 7 + staffRating(m, 'chiefMechanic') * 0.25 + staffRating(m, 'sportingDirector') * 0.1 + m.facilities.factory, 30, 97),
+  );
 }
 
 /** Capacidade do departamento de engenharia: 2 pontos de base mais 0,6 por nível. */
@@ -77,7 +94,13 @@ export function researchRate(m: ManagedTeam): number {
 /** Custo da pesquisa em uma etapa. */
 export function researchCostPerRound(m: ManagedTeam): number {
   const economy = TEAM_ECONOMY[m.categoryId];
-  return Math.round(economy.researchCost * MANAGEMENT.RESEARCH_COST_SCALE * engineeringCapacity(m) * MANAGEMENT.SPEND[m.development.spend].cost * (1 - m.facilities.factory * MANAGEMENT.FACTORY_COST_DISCOUNT));
+  return Math.round(
+    economy.researchCost *
+      MANAGEMENT.RESEARCH_COST_SCALE *
+      engineeringCapacity(m) *
+      MANAGEMENT.SPEND[m.development.spend].cost *
+      (1 - m.facilities.factory * MANAGEMENT.FACTORY_COST_DISCOUNT),
+  );
 }
 
 /** Pontos de pesquisa para a próxima melhoria de uma área que já teve `gains` melhorias no ano. */
@@ -126,7 +149,14 @@ export function generateStaff(seed: number, role: StaffRole, level: number, cate
   const rng = createRng(seed);
   const rating = Math.round(clamp(level + gaussian(rng) * 5, 30, 96));
   const name = `${STAFF_FIRST_NAMES[Math.floor(rng.next() * STAFF_FIRST_NAMES.length)]} ${STAFF_LAST_NAMES[Math.floor(rng.next() * STAFF_LAST_NAMES.length)]}`;
-  return { id: `staff-${seed.toString(16)}`, name, role, rating, salary: staffSalary(categoryId, rating, role), contractEnd: season + 1 + Math.floor(rng.next() * 2) };
+  return {
+    id: `staff-${seed.toString(16)}`,
+    name,
+    role,
+    rating,
+    salary: staffSalary(categoryId, rating, role),
+    contractEnd: season + 1 + Math.floor(rng.next() * 2),
+  };
 }
 
 /**
@@ -148,7 +178,13 @@ function teamSponsor(seed: number, perSeason: number, season: number, target: nu
   const rng = createRng(seed);
   const pool = TEAM_SPONSOR_NAMES.filter((n) => !taken.has(n));
   const name = pool[Math.floor(rng.next() * pool.length)] ?? `Patrocinador ${seed % 97}`;
-  return { id: `tsp-${seed.toString(16)}`, name, perSeason: Math.round(perSeason / 100) * 100, endSeason: season + Math.floor(rng.next() * 2), targetPosition: target };
+  return {
+    id: `tsp-${seed.toString(16)}`,
+    name,
+    perSeason: Math.round(perSeason / 100) * 100,
+    endSeason: season + Math.floor(rng.next() * 2),
+    targetPosition: target,
+  };
 }
 
 /** Patrocínio total que o mercado paga a uma equipe, pela reputação dela. */
@@ -161,12 +197,22 @@ export function sponsorMarket(categoryId: ManagedTeam['categoryId'], reputation:
  * mercado paga (40%, 33% e 27%). Cada proposta troca dinheiro por exigência:
  * a maior cobra uma posição melhor que a meta da equipe.
  */
-export function buildSponsorOffers(careerSeed: number, season: number, m: Pick<ManagedTeam, 'categoryId' | 'reputation' | 'boardTarget' | 'sponsors'>): TeamSponsor[] {
+export function buildSponsorOffers(
+  careerSeed: number,
+  season: number,
+  m: Pick<ManagedTeam, 'categoryId' | 'reputation' | 'boardTarget' | 'sponsors'>,
+): TeamSponsor[] {
   const total = sponsorMarket(m.categoryId, m.reputation);
   const taken = new Set(m.sponsors.map((s) => s.name));
   const offers: TeamSponsor[] = [];
   MANAGEMENT.SPONSOR_SHARES.forEach((share, i) => {
-    const offer = teamSponsor(hashSeed(careerSeed, season, 'team-sponsor', i), total * share, season + 1, Math.round(clamp(m.boardTarget + (MANAGEMENT.SPONSOR_TARGET_SHIFT[i] ?? 0), 1, 10)), taken);
+    const offer = teamSponsor(
+      hashSeed(careerSeed, season, 'team-sponsor', i),
+      total * share,
+      season + 1,
+      Math.round(clamp(m.boardTarget + (MANAGEMENT.SPONSOR_TARGET_SHIFT[i] ?? 0), 1, 10)),
+      taken,
+    );
     taken.add(offer.name);
     offers.push(offer);
   });
@@ -191,9 +237,10 @@ export function driverTerms(
   const category = getCategory(categoryId);
   const rating = overallRating(driver.attributes);
   // Qualidade de 0 a 1: a fração do grid que ele supera. Sem o grid à mão, vale o nível nominal da categoria.
-  const q = fieldRatings && fieldRatings.length > 0
-    ? fieldRatings.filter((r) => r < rating).length / fieldRatings.length
-    : clamp((rating - (category.field.driverLevel - category.field.driverSpread / 2 - 2)) / (category.field.driverSpread + 4), 0, 1);
+  const q =
+    fieldRatings && fieldRatings.length > 0
+      ? fieldRatings.filter((r) => r < rating).length / fieldRatings.length
+      : clamp((rating - (category.field.driverLevel - category.field.driverSpread / 2 - 2)) / (category.field.driverSpread + 4), 0, 1);
   const [top, bottom] = category.economy.salary;
   return {
     rating: round1(rating),
@@ -237,7 +284,9 @@ export function createManagedTeam(career: CareerState, teamId: string, options: 
   const level = (seedKey: string) => clamp(Math.round(4 - rank * 0.4 + gaussian(createRng(hashSeed(career.seed, teamId, seedKey))) * 0.6), 0, 5);
   const staff = options.founded
     ? []
-    : STAFF_ROLES.filter((r) => r !== 'principal').map((role) => generateStaff(hashSeed(career.seed, teamId, 'staff', role), role, 74 - rank * 3.5, categoryId, season));
+    : STAFF_ROLES.filter((r) => r !== 'principal').map((role) =>
+        generateStaff(hashSeed(career.seed, teamId, 'staff', role), role, 74 - rank * 3.5, categoryId, season),
+      );
   const departments = options.founded ? 1 : clamp(Math.round(4.5 - rank * 0.35), 1, 5);
 
   const deals: ManagedTeam['deals'] = {};
@@ -264,9 +313,17 @@ export function createManagedTeam(career: CareerState, teamId: string, options: 
     staffMarket: buildStaffMarket(career.seed, season, categoryId, reputation),
     engineers: departments,
     mechanics: departments,
-    facilities: options.founded ? { simulator: 0, windTunnel: 0, factory: 0 } : { simulator: level('simulator'), windTunnel: categoryId === 'f1' ? level('windTunnel') : 0, factory: level('factory') },
+    facilities: options.founded
+      ? { simulator: 0, windTunnel: 0, factory: 0 }
+      : { simulator: level('simulator'), windTunnel: categoryId === 'f1' ? level('windTunnel') : 0, factory: level('factory') },
     baseCar: { ...team.car },
-    development: { allocation: normalizeAllocation(categoryId, { aero: 1, chassis: 1, engine: 1, suspension: 1, manufacturing: 1 }), spend: 'medium', progress: zeroDev(), gains: zeroDev(), spent: 0 },
+    development: {
+      allocation: normalizeAllocation(categoryId, { aero: 1, chassis: 1, engine: 1, suspension: 1, manufacturing: 1 }),
+      spend: 'medium',
+      progress: zeroDev(),
+      gains: zeroDev(),
+      spent: 0,
+    },
     fieldGains: {},
     sponsors: [],
     deals,
@@ -291,7 +348,8 @@ export function ownedTeamValue(career: CareerState): number {
   const m = career.management;
   if (!m || m.position !== 'owner') return 0;
   const rank = rankTeams(career.teams).findIndex((t) => t.id === m.teamId);
-  const facilities = (m.facilities.simulator + m.facilities.windTunnel + m.facilities.factory) * TEAM_ECONOMY[m.categoryId].facilityCost * MANAGEMENT.RESALE_FACILITIES;
+  const facilities =
+    (m.facilities.simulator + m.facilities.windTunnel + m.facilities.factory) * TEAM_ECONOMY[m.categoryId].facilityCost * MANAGEMENT.RESALE_FACILITIES;
   return Math.round(teamValue(m.categoryId, Math.max(0, rank)) * (MANAGEMENT.RESALE_BASE + m.reputation / 200) + facilities + Math.max(0, m.budget));
 }
 
@@ -339,7 +397,8 @@ export function facilityUpgradeCost(m: ManagedTeam, key: FacilityKey): number {
 export function upgradeFacility(career: CareerState, key: FacilityKey): CareerState {
   const m = requireManagement(career);
   if (m.facilities[key] >= 5) throw new Error('A instalação já está no nível máximo.');
-  if (key === 'windTunnel' && !REGULATIONS[m.categoryId].open.aero) throw new Error('O regulamento desta categoria não permite desenvolvimento aerodinâmico: um túnel de vento não teria uso.');
+  if (key === 'windTunnel' && !REGULATIONS[m.categoryId].open.aero)
+    throw new Error('O regulamento desta categoria não permite desenvolvimento aerodinâmico: um túnel de vento não teria uso.');
   const cost = facilityUpgradeCost(m, key);
   if (cost > m.budget) throw new Error('O caixa da equipe não cobre esta obra.');
   const next = spend(m, 'facilities', -cost);
@@ -381,7 +440,11 @@ export function ownerTransfer(career: CareerState, amount: number): CareerState 
   }
   const reserve = TEAM_ECONOMY[m.categoryId].operations * MANAGEMENT.RESERVE;
   if (m.budget + value < reserve) throw new Error(`A equipe precisa manter uma reserva de ${money(career, reserve)}.`);
-  return { ...career, finance: post(career.finance, career.season, round, 'dividends', -value, 'Retirada de lucros da equipe'), management: spend(m, 'owner', value) };
+  return {
+    ...career,
+    finance: post(career.finance, career.season, round, 'dividends', -value, 'Retirada de lucros da equipe'),
+    management: spend(m, 'owner', value),
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -413,7 +476,11 @@ export function teamBudgetForecast(career: CareerState): TeamBudgetForecast {
   const expenses = {
     drivers: deals.reduce((sum, d) => sum + d.salary, 0),
     // Função vaga não sai de graça: um interino recebe o salário de mercado da nota dele.
-    staff: Math.round(m.staff.reduce((sum, s) => sum + s.salary, 0) + vacantRoles(m).reduce((sum, role) => sum + staffSalary(m.categoryId, VACANT_RATING, role), 0) + (m.engineers + m.mechanics) * economy.staffSalary * MANAGEMENT.DEPARTMENT_SALARY),
+    staff: Math.round(
+      m.staff.reduce((sum, s) => sum + s.salary, 0) +
+        vacantRoles(m).reduce((sum, role) => sum + staffSalary(m.categoryId, VACANT_RATING, role), 0) +
+        (m.engineers + m.mechanics) * economy.staffSalary * MANAGEMENT.DEPARTMENT_SALARY,
+    ),
     principal: m.salary,
     operations: economy.operations,
     facilities: Math.round((m.facilities.simulator + m.facilities.windTunnel + m.facilities.factory) * economy.facilityCost * MANAGEMENT.FACILITY_UPKEEP),
@@ -429,7 +496,11 @@ export function teamBudgetForecast(career: CareerState): TeamBudgetForecast {
 
 function applyGain(car: CarPerformance, area: DevArea): CarPerformance {
   const effect = DEV_EFFECTS[area];
-  return { engine: round1(Math.min(99, car.engine + effect.engine)), chassis: round1(Math.min(99, car.chassis + effect.chassis)), reliability: round1(Math.min(99, car.reliability + effect.reliability)) };
+  return {
+    engine: round1(Math.min(99, car.engine + effect.engine)),
+    chassis: round1(Math.min(99, car.chassis + effect.chassis)),
+    reliability: round1(Math.min(99, car.reliability + effect.reliability)),
+  };
 }
 
 /**
@@ -493,13 +564,23 @@ export function settleTeamRound(career: CareerState, record: RoundRecord): TeamR
   const cost = researchCostPerRound(m);
   const capReached = economy.budgetCap !== null && m.development.spent + cost > economy.budgetCap;
   if (m.budget <= 0) {
-    messages.push({ id: 'research-paused', category: 'business', title: 'Pesquisa parada por falta de caixa', body: 'O caixa da equipe está negativo. O desenvolvimento do carro fica parado até as contas voltarem ao azul.' });
+    messages.push({
+      id: 'research-paused',
+      category: 'business',
+      title: 'Pesquisa parada por falta de caixa',
+      body: 'O caixa da equipe está negativo. O desenvolvimento do carro fica parado até as contas voltarem ao azul.',
+    });
   } else if (capReached) {
     // A primeira vez que o teto barra a pesquisa: avisa e marca o gasto no teto, para não repetir o aviso.
     const cap = economy.budgetCap ?? 0;
     if (m.development.spent < cap) {
       m = { ...m, development: { ...m.development, spent: cap } };
-      messages.push({ id: 'budget-cap', category: 'business', title: 'Teto de gastos atingido', body: `A equipe chegou ao teto de gastos com desenvolvimento (${money(career, cap)}). A pesquisa só volta na próxima temporada.` });
+      messages.push({
+        id: 'budget-cap',
+        category: 'business',
+        title: 'Teto de gastos atingido',
+        body: `A equipe chegou ao teto de gastos com desenvolvimento (${money(career, cap)}). A pesquisa só volta na próxima temporada.`,
+      });
     }
   } else {
     m = spend(m, 'research', -cost);
@@ -509,7 +590,12 @@ export function settleTeamRound(career: CareerState, record: RoundRecord): TeamR
     if (car && research.delivered.length > 0) {
       const updated = research.car;
       teams = teams.map((t) => (t.id === m.teamId ? { ...t, car: updated } : t));
-      messages.push({ id: 'upgrade', category: 'business', title: 'Atualização entregue pela fábrica', body: `O departamento técnico entregou ${counted(research.delivered.length, 'melhoria', 'melhorias')} nesta etapa. O carro agora tem motor ${updated.engine}, chassi ${updated.chassis} e confiabilidade ${updated.reliability}.` });
+      messages.push({
+        id: 'upgrade',
+        category: 'business',
+        title: 'Atualização entregue pela fábrica',
+        body: `O departamento técnico entregou ${counted(research.delivered.length, 'melhoria', 'melhorias')} nesta etapa. O carro agora tem motor ${updated.engine}, chassi ${updated.chassis} e confiabilidade ${updated.reliability}.`,
+      });
     }
   }
 
@@ -520,12 +606,27 @@ export function settleTeamRound(career: CareerState, record: RoundRecord): TeamR
     if (t.id === m.teamId) return t;
     const gain = economy.fieldDevelopment * share;
     fieldGains[t.id] = Math.round(((fieldGains[t.id] ?? 0) + gain) * 1000) / 1000;
-    return { ...t, car: { ...t.car, engine: Math.min(97, Math.round((t.car.engine + gain) * 100) / 100), chassis: Math.min(97, Math.round((t.car.chassis + gain) * 100) / 100) } };
+    return {
+      ...t,
+      car: {
+        ...t.car,
+        engine: Math.min(97, Math.round((t.car.engine + gain) * 100) / 100),
+        chassis: Math.min(97, Math.round((t.car.chassis + gain) * 100) / 100),
+      },
+    };
   });
   m = { ...m, fieldGains };
 
   if (original.budget > 0 && m.budget <= 0) {
-    messages.push({ id: 'team-debt', category: 'business', title: 'Caixa da equipe no vermelho', body: m.position === 'owner' ? 'A equipe gastou mais do que arrecadou. Faça um aporte ou corte custos: no fim da temporada, o saldo negativo sai do seu bolso.' : 'A equipe gastou mais do que arrecadou. A diretoria vai cobrar isso no fim da temporada.' });
+    messages.push({
+      id: 'team-debt',
+      category: 'business',
+      title: 'Caixa da equipe no vermelho',
+      body:
+        m.position === 'owner'
+          ? 'A equipe gastou mais do que arrecadou. Faça um aporte ou corte custos: no fim da temporada, o saldo negativo sai do seu bolso.'
+          : 'A equipe gastou mais do que arrecadou. A diretoria vai cobrar isso no fim da temporada.',
+    });
   }
   return { management: m, teams, messages };
 }

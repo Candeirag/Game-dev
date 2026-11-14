@@ -52,7 +52,14 @@ function instantiate(career: CareerState, record: RoundRecord | null, round: num
   if (timesThisSeason(career, definition.id) >= definition.maxPerSeason) return null;
   const content = definition.build(buildContext(career, record, round, definition));
   if (!content) return null;
-  return { id: `s${career.season}-r${round}-${definition.id}`, definitionId: definition.id, category: definition.category, season: career.season, round, ...content };
+  return {
+    id: `s${career.season}-r${round}-${definition.id}`,
+    definitionId: definition.id,
+    category: definition.category,
+    season: career.season,
+    round,
+    ...content,
+  };
 }
 
 /** Cria um evento específico, se a condição dele valer agora (usado no início da temporada). */
@@ -121,7 +128,16 @@ export function resolveEvent(career: CareerState, eventId: string, choiceId: str
   }
   if (!outcome) throw new Error('Evento sem desfecho.');
 
-  const entry: EventLogEntry = { id: event.id, definitionId: event.definitionId, category: event.category, season: event.season, round: event.round, title: event.title, choiceLabel: choice.label, outcome: outcome.text };
+  const entry: EventLogEntry = {
+    id: event.id,
+    definitionId: event.definitionId,
+    category: event.category,
+    season: event.season,
+    round: event.round,
+    title: event.title,
+    choiceLabel: choice.label,
+    outcome: outcome.text,
+  };
   let next: CareerState = {
     ...career,
     pendingEvents: career.pendingEvents.filter((e) => e.id !== eventId),
@@ -129,6 +145,11 @@ export function resolveEvent(career: CareerState, eventId: string, choiceId: str
   };
   next = applyEffects(next, outcome.effects, event.round);
   const date = career.calendar[Math.max(0, event.round - 1)]?.date ?? `${career.year}-01-01`;
-  next = { ...next, inbox: pushMessages(next.inbox, [{ id: `${event.id}-outcome`, date, category: 'media', title: event.title, body: `Você escolheu: ${choice.label}. ${outcome.text}` }]) };
+  next = {
+    ...next,
+    inbox: pushMessages(next.inbox, [
+      { id: `${event.id}-outcome`, date, category: 'media', title: event.title, body: `Você escolheu: ${choice.label}. ${outcome.text}` },
+    ]),
+  };
   return { career: next, outcome: outcome.text };
 }

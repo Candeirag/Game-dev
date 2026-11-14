@@ -18,7 +18,9 @@
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 160 },
-  "javascript": { "formatter": { "quoteStyle": "single", "jsxQuoteStyle": "double", "semicolons": "always", "trailingCommas": "all", "arrowParentheses": "always" } },
+  "javascript": {
+    "formatter": { "quoteStyle": "single", "jsxQuoteStyle": "double", "semicolons": "always", "trailingCommas": "all", "arrowParentheses": "always" }
+  },
   "css": { "parser": { "tailwindDirectives": true } },
   "linter": { "enabled": true, "rules": { "preset": "recommended" } },
   "assist": { "actions": { "source": { "organizeImports": "off" } } }

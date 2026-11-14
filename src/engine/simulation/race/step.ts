@@ -66,13 +66,7 @@ function driverName(ctx: RaceContext, id: string): string {
 }
 
 /** Monta o estado inicial da corrida a partir do grid. */
-export function createRaceSim(
-  grid: readonly GridSlot[],
-  ctx: RaceContext,
-  weather: SessionWeather,
-  seed: number,
-  playerDriverId: string,
-): RaceSimState {
+export function createRaceSim(grid: readonly GridSlot[], ctx: RaceContext, weather: SessionWeather, seed: number, playerDriverId: string): RaceSimState {
   const { track, category } = ctx;
   const rules = category.race;
   const totalLaps = raceLaps(track, category);
@@ -182,7 +176,14 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
   const retiredBefore = state.cars.filter((c) => c.status === 'dnf');
 
   if (lap > 1 && conditionFor(previousWetness) !== weather.condition) {
-    const text = weather.condition === 'dry' ? 'A pista secou.' : weather.condition === 'damp' ? (wetness > previousWetness ? 'Começa a chover: pista úmida.' : 'A chuva diminui: pista úmida.') : 'Chuva forte: pista encharcada.';
+    const text =
+      weather.condition === 'dry'
+        ? 'A pista secou.'
+        : weather.condition === 'damp'
+          ? wetness > previousWetness
+            ? 'Começa a chover: pista úmida.'
+            : 'A chuva diminui: pista úmida.'
+          : 'Chuva forte: pista encharcada.';
     events.push({ lap, type: 'weather', driverId: running[0]?.driverId ?? '', message: text });
   }
 
@@ -196,9 +197,21 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       teamOrders.push({ lap, teamId, askedDriverId: state.playerDriverId, favouredDriverId, obeyed });
       if (obeyed) {
         running = swapForTeamOrder(running, askedIndex);
-        events.push({ lap, type: 'teamOrder', driverId: state.playerDriverId, otherDriverId: favouredDriverId, message: `${name(state.playerDriverId)} obedece à equipe e deixa ${name(favouredDriverId)} passar.` });
+        events.push({
+          lap,
+          type: 'teamOrder',
+          driverId: state.playerDriverId,
+          otherDriverId: favouredDriverId,
+          message: `${name(state.playerDriverId)} obedece à equipe e deixa ${name(favouredDriverId)} passar.`,
+        });
       } else {
-        events.push({ lap, type: 'teamOrder', driverId: state.playerDriverId, otherDriverId: favouredDriverId, message: `${name(state.playerDriverId)} ignora a ordem da equipe e mantém a posição.` });
+        events.push({
+          lap,
+          type: 'teamOrder',
+          driverId: state.playerDriverId,
+          otherDriverId: favouredDriverId,
+          message: `${name(state.playerDriverId)} ignora a ordem da equipe e mantém a posição.`,
+        });
       }
     }
   }
@@ -254,7 +267,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       if (automatic) {
         // Pilotos de boa leitura reagem à pista desta volta; os demais, à da volta anterior.
         const decisionWetness = a.racecraft >= 75 ? wetness : previousWetness;
-        pitCompound = decidePit(car, rules, { lap, totalLaps: state.totalLaps, wetness: decisionWetness, neutralized: neutral !== 'none', needsSecondCompound });
+        pitCompound = decidePit(car, rules, {
+          lap,
+          totalLaps: state.totalLaps,
+          wetness: decisionWetness,
+          neutralized: neutral !== 'none',
+          needsSecondCompound,
+        });
       } else if (input.pit) {
         pitCompound = input.pit;
       } else {
@@ -301,7 +320,12 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       lapTime += START_LAP_EXTRA + Math.max(startReaction, RACE.JUMP_START_THRESHOLD) * spread;
       if (startReaction < RACE.JUMP_START_THRESHOLD) {
         car = { ...car, penaltySeconds: car.penaltySeconds + RACE.JUMP_START_PENALTY };
-        events.push({ lap, type: 'penalty', driverId: car.driverId, message: `${name(car.driverId)} queima a largada: ${RACE.JUMP_START_PENALTY}s de punição.` });
+        events.push({
+          lap,
+          type: 'penalty',
+          driverId: car.driverId,
+          message: `${name(car.driverId)} queima a largada: ${RACE.JUMP_START_PENALTY}s de punição.`,
+        });
       }
     }
 
@@ -326,7 +350,12 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         events.push({ lap, type: 'error', driverId: car.driverId, message: `${who} erra a freada e perde ${incidentLoss.toFixed(1)}s.` });
         if (rules.trackLimits && car.minorErrors >= RACE.TRACK_LIMITS_STRIKES && (car.minorErrors - RACE.TRACK_LIMITS_STRIKES) % 2 === 0) {
           car = { ...car, penaltySeconds: car.penaltySeconds + RACE.TRACK_LIMITS_PENALTY };
-          events.push({ lap, type: 'penalty', driverId: car.driverId, message: `${who} excede os limites de pista: ${RACE.TRACK_LIMITS_PENALTY}s de punição.` });
+          events.push({
+            lap,
+            type: 'penalty',
+            driverId: car.driverId,
+            message: `${who} excede os limites de pista: ${RACE.TRACK_LIMITS_PENALTY}s de punição.`,
+          });
         }
       } else if (severityRoll < severity.minor + severity.spin) {
         incidentLoss = lerp(SIM.SPIN_LOSS, lossRoll);
@@ -342,7 +371,12 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         incidents.push('crash');
         const injured = injuryRoll < injuryChance(ctx);
         car = { ...car, injured, damageTotal: car.damageTotal + 1 };
-        events.push({ lap, type: 'dnf', driverId: car.driverId, message: `${who} bate e está fora da corrida.${injured ? ' O piloto é levado ao centro médico.' : ''}` });
+        events.push({
+          lap,
+          type: 'dnf',
+          driverId: car.driverId,
+          message: `${who} bate e está fora da corrida.${injured ? ' O piloto é levado ao centro médico.' : ''}`,
+        });
       }
       lapTime += incidentLoss;
     }
@@ -368,7 +402,12 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         penaltySeconds += RACE.PIT_PENALTY;
         events.push({ lap, type: 'penalty', driverId: car.driverId, message: `Liberação insegura de ${who} nos boxes: ${RACE.PIT_PENALTY}s de punição.` });
       }
-      events.push({ lap, type: 'pit', driverId: car.driverId, message: `${who} para nos boxes: pneu ${TYRES[pitCompound].label.toLowerCase()}${repairing ? ' e reparo' : ''} (${service.toFixed(1)}s).` });
+      events.push({
+        lap,
+        type: 'pit',
+        driverId: car.driverId,
+        message: `${who} para nos boxes: pneu ${TYRES[pitCompound].label.toLowerCase()}${repairing ? ' e reparo' : ''} (${service.toFixed(1)}s).`,
+      });
       car = {
         ...car,
         tyre: { compound: pitCompound, wear: 0, age: 0 },
@@ -451,8 +490,7 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     }
   } else {
     const difficulty =
-      track.overtakingDifficulty *
-      (standingStart ? SIM.FIRST_LAP_DIFFICULTY_FACTOR : state.restart === 'rolling' ? RACE.RESTART_DIFFICULTY_FACTOR : 1);
+      track.overtakingDifficulty * (standingStart ? SIM.FIRST_LAP_DIFFICULTY_FACTOR : state.restart === 'rolling' ? RACE.RESTART_DIFFICULTY_FACTOR : 1);
 
     for (const w of work) {
       if (w.retired) {
@@ -510,7 +548,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
           resolved[idx - 1] = w;
           resolved[idx] = ahead;
           w.car = { ...w.car, overtakes: w.car.overtakes + 1 };
-          events.push({ lap, type: 'overtake', driverId: w.car.driverId, otherDriverId: ahead.car.driverId, message: `${attacker} ultrapassa ${defender} e assume a ${idx}ª posição.` });
+          events.push({
+            lap,
+            type: 'overtake',
+            driverId: w.car.driverId,
+            otherDriverId: ahead.car.driverId,
+            message: `${attacker} ultrapassa ${defender} e assume a ${idx}ª posição.`,
+          });
           idx--;
           passes++;
           continue;
@@ -519,8 +563,7 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         // Tentativa frustrada: risco de toque. Cresce com a agressividade e com a
         // rivalidade entre os dois; cai com a leitura de corrida do atacante.
         const rivalry = rivalryBetween(ctx, state.playerDriverId, w.car.driverId, ahead.car.driverId);
-        const collisionChance =
-          SIM.COLLISION_ON_FAILED_PASS * attackFx.collision * (1.2 - w.driver.attributes.racecraft / 100) * (1 + rivalry / 100);
+        const collisionChance = SIM.COLLISION_ON_FAILED_PASS * attackFx.collision * (1.2 - w.driver.attributes.racecraft / 100) * (1 + rivalry / 100);
         if (collisionRoll < collisionChance) {
           incidents.push('collision');
           const attackerAtFault = faultRoll < RACE.COLLISION_FAULT_CHANCE;
@@ -545,7 +588,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
                 penaltyPoints: w.car.penaltyPoints + 2,
                 gridDropNext: w.car.gridDropNext + RACE.COLLISION_DNF_GRID_DROP,
               };
-              events.push({ lap, type: 'penalty', driverId: w.car.driverId, otherDriverId: ahead.car.driverId, message: `${attacker} é punido por causar o acidente: ${RACE.COLLISION_DNF_PENALTY}s e ${RACE.COLLISION_DNF_GRID_DROP} posições no próximo grid.` });
+              events.push({
+                lap,
+                type: 'penalty',
+                driverId: w.car.driverId,
+                otherDriverId: ahead.car.driverId,
+                message: `${attacker} é punido por causar o acidente: ${RACE.COLLISION_DNF_PENALTY}s e ${RACE.COLLISION_DNF_GRID_DROP} posições no próximo grid.`,
+              });
             }
             if (victim === w) {
               resolved.splice(idx, 1);
@@ -563,10 +612,22 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
           ahead.newTotal += 0.8;
           w.car = { ...w.car, damage: w.car.damage + dmgA, damageTotal: w.car.damageTotal + dmgA };
           ahead.car = { ...ahead.car, damage: ahead.car.damage + dmgD, damageTotal: ahead.car.damageTotal + dmgD };
-          events.push({ lap, type: 'collision', driverId: w.car.driverId, otherDriverId: ahead.car.driverId, message: `${attacker} toca em ${defender}. Os dois perdem tempo e saem com danos.` });
+          events.push({
+            lap,
+            type: 'collision',
+            driverId: w.car.driverId,
+            otherDriverId: ahead.car.driverId,
+            message: `${attacker} toca em ${defender}. Os dois perdem tempo e saem com danos.`,
+          });
           if (attackerAtFault) {
             w.car = { ...w.car, penaltySeconds: w.car.penaltySeconds + RACE.COLLISION_PENALTY, penaltyPoints: w.car.penaltyPoints + 1 };
-            events.push({ lap, type: 'penalty', driverId: w.car.driverId, otherDriverId: ahead.car.driverId, message: `${attacker} recebe ${RACE.COLLISION_PENALTY}s por causar o toque.` });
+            events.push({
+              lap,
+              type: 'penalty',
+              driverId: w.car.driverId,
+              otherDriverId: ahead.car.driverId,
+              message: `${attacker} recebe ${RACE.COLLISION_PENALTY}s por causar o toque.`,
+            });
           }
         }
         w.newTotal = Math.max(w.newTotal, ahead.newTotal + SIM.MIN_GAP + SIM.FAILED_PASS_LOSS);
@@ -593,7 +654,12 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     return { ...w.car, totalTime: round3(w.newTotal), lapsCompleted: lap, lastLap: actualLap, bestLap };
   });
   if (fastestLap && fastestLap !== state.fastestLap && lap >= 3) {
-    events.push({ lap, type: 'fastestLap', driverId: fastestLap.driverId, message: `${name(fastestLap.driverId)} marca a volta mais rápida: ${fastestLap.time.toFixed(3)}s.` });
+    events.push({
+      lap,
+      type: 'fastestLap',
+      driverId: fastestLap.driverId,
+      message: `${name(fastestLap.driverId)} marca a volta mais rápida: ${fastestLap.time.toFixed(3)}s.`,
+    });
   }
   const newlyRetired: RaceCar[] = retiredNow.map((w) => ({ ...w.car, status: 'dnf', dnfReason: w.retired ?? 'crash', lapsCompleted: lap - 1, lastLap: null }));
 
@@ -602,7 +668,16 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     if (leader) events.unshift({ lap, type: 'start', driverId: leader.driverId, message: `Largada! ${name(leader.driverId)} lidera a primeira volta.` });
   } else if (state.restart !== 'none') {
     const leader = runningCars[0];
-    if (leader) events.unshift({ lap, type: 'restart', driverId: leader.driverId, message: state.restart === 'standing' ? `Relargada parada! ${name(leader.driverId)} mantém a ponta.` : `Bandeira verde! ${name(leader.driverId)} comanda a relargada.` });
+    if (leader)
+      events.unshift({
+        lap,
+        type: 'restart',
+        driverId: leader.driverId,
+        message:
+          state.restart === 'standing'
+            ? `Relargada parada! ${name(leader.driverId)} mantém a ponta.`
+            : `Bandeira verde! ${name(leader.driverId)} comanda a relargada.`,
+      });
   }
 
   /* ---------- 4. Direção de prova ---------- */
@@ -633,7 +708,11 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       const roll = rng.next();
       const heavyRainRoll = rng.next();
       let outcome: RaceControlCall = 'none';
-      if (rules.redFlag && (roll < red || (wetness >= 0.9 && incident !== 'mechanical' && incident !== 'spin' && heavyRainRoll < RACE.RED_FLAG_HEAVY_RAIN_CHANCE))) outcome = 'red';
+      if (
+        rules.redFlag &&
+        (roll < red || (wetness >= 0.9 && incident !== 'mechanical' && incident !== 'spin' && heavyRainRoll < RACE.RED_FLAG_HEAVY_RAIN_CHANCE))
+      )
+        outcome = 'red';
       else if (rules.safetyCar && roll < red + sc) outcome = 'sc';
       else if (roll < red + sc + vsc) outcome = rules.virtualSafetyCar ? 'vsc' : 'none';
       if (rank[outcome] > rank[call]) call = outcome;
@@ -663,7 +742,12 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
             plan: changed && car.plan[0]?.compound === compound ? car.plan.slice(1) : car.plan,
           };
         });
-        events.push({ lap, type: 'redFlag', driverId: leaderId, message: 'Bandeira vermelha! Corrida interrompida. Haverá relargada parada, com reparos e troca de pneus liberados.' });
+        events.push({
+          lap,
+          type: 'redFlag',
+          driverId: leaderId,
+          message: 'Bandeira vermelha! Corrida interrompida. Haverá relargada parada, com reparos e troca de pneus liberados.',
+        });
       }
     } else if (call === 'sc') {
       if (neutralization.type === 'sc') {
@@ -697,16 +781,34 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
 
       if (front.driverId === state.playerDriverId) {
         pendingTeamOrder = { teamId: front.teamId, favouredDriverId: back.driverId };
-        events.push({ lap, type: 'teamOrder', driverId: front.driverId, otherDriverId: back.driverId, message: `Rádio da equipe: "${name(back.driverId)} está mais rápido. Deixe-o passar."` });
+        events.push({
+          lap,
+          type: 'teamOrder',
+          driverId: front.driverId,
+          otherDriverId: back.driverId,
+          message: `Rádio da equipe: "${name(back.driverId)} está mais rápido. Deixe-o passar."`,
+        });
         break;
       }
       const obeyed = createRng(hashSeed(state.seed, lap, 'team-order', front.driverId)).next() < RACE.TEAM_ORDER_AI_OBEY;
       teamOrders.push({ lap, teamId: front.teamId, askedDriverId: front.driverId, favouredDriverId: back.driverId, obeyed });
       if (obeyed) {
         runningCars = swapForTeamOrder(runningCars, i);
-        events.push({ lap, type: 'teamOrder', driverId: front.driverId, otherDriverId: back.driverId, message: `Ordem de equipe: ${name(front.driverId)} deixa ${name(back.driverId)} passar.` });
+        events.push({
+          lap,
+          type: 'teamOrder',
+          driverId: front.driverId,
+          otherDriverId: back.driverId,
+          message: `Ordem de equipe: ${name(front.driverId)} deixa ${name(back.driverId)} passar.`,
+        });
       } else {
-        events.push({ lap, type: 'teamOrder', driverId: front.driverId, otherDriverId: back.driverId, message: `${name(front.driverId)} ignora a ordem da equipe para deixar ${name(back.driverId)} passar.` });
+        events.push({
+          lap,
+          type: 'teamOrder',
+          driverId: front.driverId,
+          otherDriverId: back.driverId,
+          message: `${name(front.driverId)} ignora a ordem da equipe para deixar ${name(back.driverId)} passar.`,
+        });
       }
     }
   }

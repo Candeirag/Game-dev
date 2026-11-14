@@ -34,7 +34,19 @@ export interface RaceControlBarProps {
   speeds: readonly { label: string; active: boolean; select(): void }[];
 }
 
-export function RaceControlBar({ position, lap, mode, onMode, modeDisabled, modeFromLap, playing, playLabel, onToggle, toggleDisabled, speeds }: RaceControlBarProps) {
+export function RaceControlBar({
+  position,
+  lap,
+  mode,
+  onMode,
+  modeDisabled,
+  modeFromLap,
+  playing,
+  playLabel,
+  onToggle,
+  toggleDisabled,
+  speeds,
+}: RaceControlBarProps) {
   useRaceBarSpace(true);
   // Vai direto para o corpo da página: assim nenhum espaçamento ou transformação da tela desloca a barra.
   return createPortal(
@@ -49,7 +61,11 @@ export function RaceControlBar({ position, lap, mode, onMode, modeDisabled, mode
           <div className="mt-0.5 whitespace-nowrap text-[11px] font-semibold text-ink-300 tabular md:mt-0 md:text-sm">{lap}</div>
         </div>
 
-        <div role="group" aria-label="Ritmo de pilotagem" className="order-last col-span-3 grid grid-cols-3 gap-1.5 md:order-none md:ml-1 md:min-w-0 md:max-w-[23rem] md:flex-1">
+        <div
+          role="group"
+          aria-label="Ritmo de pilotagem"
+          className="order-last col-span-3 grid grid-cols-3 gap-1.5 md:order-none md:ml-1 md:min-w-0 md:max-w-[23rem] md:flex-1"
+        >
           {RACE_MODES.map((m) => (
             <button
               key={m}
@@ -66,7 +82,9 @@ export function RaceControlBar({ position, lap, mode, onMode, modeDisabled, mode
             </button>
           ))}
         </div>
-        <span className="hidden whitespace-nowrap text-xs text-ink-500 xl:inline">{modeFromLap !== null && !modeDisabled ? `Ritmo vale a partir da volta ${modeFromLap}` : ''}</span>
+        <span className="hidden whitespace-nowrap text-xs text-ink-500 xl:inline">
+          {modeFromLap !== null && !modeDisabled ? `Ritmo vale a partir da volta ${modeFromLap}` : ''}
+        </span>
 
         <button
           type="button"
@@ -77,7 +95,9 @@ export function RaceControlBar({ position, lap, mode, onMode, modeDisabled, mode
             playing ? 'border border-ink-600 bg-ink-800 text-ink-100 hover:bg-ink-700' : 'bg-apex-500 text-white hover:bg-apex-400',
           )}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0 fill-current"><path d={playing ? PAUSE : PLAY} /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0 fill-current">
+            <path d={playing ? PAUSE : PLAY} />
+          </svg>
           <span className="max-[379px]:sr-only">{playing ? 'Pausar' : playLabel}</span>
         </button>
 
@@ -88,7 +108,10 @@ export function RaceControlBar({ position, lap, mode, onMode, modeDisabled, mode
               type="button"
               onClick={s.select}
               aria-pressed={s.active}
-              className={cx('min-h-11 min-w-11 rounded-md px-1 text-sm font-semibold tabular', s.active ? 'bg-apex-500 text-white' : 'text-ink-300 hover:text-ink-100')}
+              className={cx(
+                'min-h-11 min-w-11 rounded-md px-1 text-sm font-semibold tabular',
+                s.active ? 'bg-apex-500 text-white' : 'text-ink-300 hover:text-ink-100',
+              )}
             >
               {s.label}
             </button>

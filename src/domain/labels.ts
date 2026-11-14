@@ -1,13 +1,5 @@
 /** Rótulos em português, compartilhados pelas mensagens do motor e pela interface. */
-import type {
-  AttributeKey,
-  DnfReason,
-  PracticeProgram,
-  QualifyingApproach,
-  RaceMode,
-  TrainingFocus,
-  WeatherCondition,
-} from './schemas';
+import type { AttributeKey, DnfReason, PracticeProgram, QualifyingApproach, RaceMode, TrainingFocus, WeatherCondition } from './schemas';
 
 export const ATTRIBUTE_LABELS: Record<AttributeKey, string> = {
   pace: 'Velocidade',

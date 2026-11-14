@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type PracticeProgram, type QualifyingApproach, type RoundRecord } from '@/domain/schemas';
-import {
-  PRACTICE_PROGRAM_DESCRIPTIONS,
-  PRACTICE_PROGRAM_LABELS,
-  QUALIFYING_APPROACH_DESCRIPTIONS,
-  QUALIFYING_APPROACH_LABELS,
-} from '@/domain/labels';
+import { PRACTICE_PROGRAM_DESCRIPTIONS, PRACTICE_PROGRAM_LABELS, QUALIFYING_APPROACH_DESCRIPTIONS, QUALIFYING_APPROACH_LABELS } from '@/domain/labels';
 import { getTrack, raceLaps } from '@/data/tracks';
 import { buildWetnessProfile, fullName, getNextEvent, isSeasonComplete, playerAvailability, playerStrategyOptions, sessionSeed } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
@@ -57,7 +52,9 @@ export function WeekendScreen() {
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-ink-400">Próxima etapa · {formatDate(event.date)}</div>
                 <div className="font-display text-2xl font-bold uppercase">{getTrack(event.trackId).name}</div>
-                <div className="mt-1 flex flex-wrap gap-2 text-sm text-ink-400">Previsão: <WeatherBadge weather={event.weather.race} /></div>
+                <div className="mt-1 flex flex-wrap gap-2 text-sm text-ink-400">
+                  Previsão: <WeatherBadge weather={event.weather.race} />
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {availability.available ? (
@@ -65,21 +62,31 @@ export function WeekendScreen() {
                     <Button variant="primary" disabled={career.pendingEvents.length > 0} onClick={() => startWeekend()}>
                       {availability.canRest ? 'Correr mesmo lesionado' : 'Iniciar fim de semana'}
                     </Button>
-                    {availability.canRest && <Button disabled={career.pendingEvents.length > 0} onClick={() => startWeekend({ rest: true })}>Descansar e ceder a vaga ao reserva</Button>}
+                    {availability.canRest && (
+                      <Button disabled={career.pendingEvents.length > 0} onClick={() => startWeekend({ rest: true })}>
+                        Descansar e ceder a vaga ao reserva
+                      </Button>
+                    )}
                   </>
                 ) : (
-                  <Button variant="primary" disabled={career.pendingEvents.length > 0} onClick={() => startWeekend()}>Acompanhar a etapa dos boxes</Button>
+                  <Button variant="primary" disabled={career.pendingEvents.length > 0} onClick={() => startWeekend()}>
+                    Acompanhar a etapa dos boxes
+                  </Button>
                 )}
               </div>
             </div>
             {!availability.available && (
               <p className="mt-3 text-sm text-rose-200">
-                {availability.reason === 'ban' ? 'Você está suspenso desta etapa por pontos na licença.' : `Você está fora por lesão (${player.injury?.description}).`} O piloto reserva corre no seu lugar.
+                {availability.reason === 'ban'
+                  ? 'Você está suspenso desta etapa por pontos na licença.'
+                  : `Você está fora por lesão (${player.injury?.description}).`}{' '}
+                O piloto reserva corre no seu lugar.
               </p>
             )}
             {availability.canRest && (
               <p className="mt-3 text-sm text-ink-400">
-                Lesão leve ({player.injury?.description}): correndo, você perde rendimento e erra mais. Descansando, não pontua, mas não arrisca um resultado ruim.
+                Lesão leve ({player.injury?.description}): correndo, você perde rendimento e erra mais. Descansando, não pontua, mas não arrisca um resultado
+                ruim.
               </p>
             )}
             {career.pendingEvents.length > 0 && <p className="mt-3 text-sm text-gold-400">Resolva as decisões pendentes acima para liberar o fim de semana.</p>}
@@ -88,7 +95,11 @@ export function WeekendScreen() {
           isSeasonComplete(career) && (
             <EmptyState title="Todas as etapas foram disputadas">
               Veja o fechamento da temporada e as propostas na tela Carreira.
-              <div className="mt-4"><Button variant="primary" onClick={() => navigate('/career')}>Ver propostas</Button></div>
+              <div className="mt-4">
+                <Button variant="primary" onClick={() => navigate('/career')}>
+                  Ver propostas
+                </Button>
+              </div>
             </EmptyState>
           )
         )}
@@ -106,36 +117,58 @@ export function WeekendScreen() {
       {liveRace ? (
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="font-display text-2xl font-bold uppercase leading-none tracking-wide">{track.name}</h1>
-          <span className="text-xs text-ink-400">{category.shortName} · Etapa {event.round} de {career.calendar.length} · {trackLocation(track)} · {raceLaps(track, category)} voltas</span>
+          <span className="text-xs text-ink-400">
+            {category.shortName} · Etapa {event.round} de {career.calendar.length} · {trackLocation(track)} · {raceLaps(track, category)} voltas
+          </span>
         </div>
       ) : (
         <PageHeader eyebrow={`${category.shortName} · Etapa ${event.round} de ${career.calendar.length} · ${formatDate(event.date)}`} title={track.name}>
-          <span className="text-sm text-ink-400">{trackLocation(track)} · {raceLaps(track, category)} voltas</span>
+          <span className="text-sm text-ink-400">
+            {trackLocation(track)} · {raceLaps(track, category)} voltas
+          </span>
         </PageHeader>
       )}
 
-      {!liveRace && <ol className="grid grid-cols-3 gap-2">
-        {STEPS.map((step, i) => {
-          const weather = event.weather[step.key];
-          return (
-            <li key={step.key} className={cx('rounded-lg border px-3 py-2.5', i === activeIndex ? 'border-apex-500 bg-apex-500/10' : i < activeIndex ? 'border-ink-700 bg-ink-900' : 'border-ink-800 bg-ink-950 opacity-70')}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-ink-300">{i < activeIndex ? '✓ ' : ''}{step.label}</span>
-                <span className="hidden sm:inline"><WeatherBadge weather={weather} compact /></span>
-              </div>
-            </li>
-          );
-        })}
-      </ol>}
+      {!liveRace && (
+        <ol className="grid grid-cols-3 gap-2">
+          {STEPS.map((step, i) => {
+            const weather = event.weather[step.key];
+            return (
+              <li
+                key={step.key}
+                className={cx(
+                  'rounded-lg border px-3 py-2.5',
+                  i === activeIndex ? 'border-apex-500 bg-apex-500/10' : i < activeIndex ? 'border-ink-700 bg-ink-900' : 'border-ink-800 bg-ink-950 opacity-70',
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-ink-300">
+                    {i < activeIndex ? '✓ ' : ''}
+                    {step.label}
+                  </span>
+                  <span className="hidden sm:inline">
+                    <WeatherBadge weather={weather} compact />
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
 
       {!weekend.playerParticipates ? (
         liveRace ? (
           <RaceBroadcast spectator />
         ) : (
           <Card title="Você não disputa esta etapa">
-            <p className="text-sm text-ink-300">O piloto reserva da equipe corre no seu lugar. Você pode assistir à corrida dos boxes ou ir direto ao resultado; o resultado é o mesmo nos dois casos.</p>
+            <p className="text-sm text-ink-300">
+              O piloto reserva da equipe corre no seu lugar. Você pode assistir à corrida dos boxes ou ir direto ao resultado; o resultado é o mesmo nos dois
+              casos.
+            </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button variant="primary" onClick={() => watchAbsentWeekend()}>Assistir à corrida</Button>
+              <Button variant="primary" onClick={() => watchAbsentWeekend()}>
+                Assistir à corrida
+              </Button>
               <Button onClick={() => simulateAbsentWeekend()}>Simular a etapa</Button>
             </div>
           </Card>
@@ -161,15 +194,23 @@ function PracticePhase() {
   return (
     <Card title="Programa do treino livre">
       <p className="mb-4 text-sm text-ink-400">
-        O treino define o trabalho do fim de semana. Esta pista tem desgaste de pneus {describeTyreWear(track.tyreWear)}, ultrapassagem {describeOvertaking(track.overtakingDifficulty)} e clima previsto para o treino:{' '}
-        <WeatherBadge weather={event.weather.practice} />
+        O treino define o trabalho do fim de semana. Esta pista tem desgaste de pneus {describeTyreWear(track.tyreWear)}, ultrapassagem{' '}
+        {describeOvertaking(track.overtakingDifficulty)} e clima previsto para o treino: <WeatherBadge weather={event.weather.practice} />
       </p>
       <div className="grid gap-3 md:grid-cols-3">
         {PRACTICE_PROGRAMS.map((p) => (
-          <ChoiceCard key={p} selected={program === p} onSelect={() => setProgram(p)} title={PRACTICE_PROGRAM_LABELS[p]} description={PRACTICE_PROGRAM_DESCRIPTIONS[p]} />
+          <ChoiceCard
+            key={p}
+            selected={program === p}
+            onSelect={() => setProgram(p)}
+            title={PRACTICE_PROGRAM_LABELS[p]}
+            description={PRACTICE_PROGRAM_DESCRIPTIONS[p]}
+          />
         ))}
       </div>
-      <Button variant="primary" className="mt-5" onClick={() => runPractice(program)}>Disputar treino livre</Button>
+      <Button variant="primary" className="mt-5" onClick={() => runPractice(program)}>
+        Disputar treino livre
+      </Button>
     </Card>
   );
 }
@@ -189,20 +230,41 @@ function QualifyingPhase() {
       <Card title="Resultado do treino livre" padded={false}>
         {mine && (
           <div className="grid grid-cols-3 gap-4 border-b border-ink-800 p-4">
-            <div><div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Sua posição</div><div className="font-display text-2xl font-bold tabular">{myPos}º</div></div>
-            <div><div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Qualidade do acerto</div><div className="font-display text-2xl font-bold tabular">{Math.round(mine.modifiers.setupScore * 100)}%</div></div>
-            <div><div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Programa</div><div className="text-sm font-semibold">{PRACTICE_PROGRAM_LABELS[mine.program]}</div></div>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Sua posição</div>
+              <div className="font-display text-2xl font-bold tabular">{myPos}º</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Qualidade do acerto</div>
+              <div className="font-display text-2xl font-bold tabular">{Math.round(mine.modifiers.setupScore * 100)}%</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Programa</div>
+              <div className="text-sm font-semibold">{PRACTICE_PROGRAM_LABELS[mine.program]}</div>
+            </div>
           </div>
         )}
         <div className="max-h-[420px] overflow-y-auto px-4">
           <TableWrap>
             <table className="w-full">
-              <thead className="sticky top-0 bg-ink-900"><tr><th className={th}>#</th><th className={th}>Piloto</th><th className={cx(th, 'text-right')}>Melhor volta</th><th className={cx(th, 'text-right')}>Dif.</th></tr></thead>
+              <thead className="sticky top-0 bg-ink-900">
+                <tr>
+                  <th className={th}>#</th>
+                  <th className={th}>Piloto</th>
+                  <th className={cx(th, 'text-right')}>Melhor volta</th>
+                  <th className={cx(th, 'text-right')}>Dif.</th>
+                </tr>
+              </thead>
               <tbody>
                 {practice.entries.map((e, i) => (
                   <tr key={e.driverId} className={cx('border-t border-ink-800', e.driverId === player.id && 'bg-apex-500/10')}>
                     <td className={cx(td, 'tabular text-ink-400')}>{i + 1}</td>
-                    <td className={td}><span className="flex items-center gap-2"><TeamSwatch team={teams[e.teamId]} />{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span></td>
+                    <td className={td}>
+                      <span className="flex items-center gap-2">
+                        <TeamSwatch team={teams[e.teamId]} />
+                        {drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
+                      </span>
+                    </td>
                     <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
                     <td className={cx(td, 'text-right tabular text-ink-400')}>{i === 0 ? '' : `+${(e.bestLap - best).toFixed(3)}`}</td>
                   </tr>
@@ -219,13 +281,25 @@ function QualifyingPhase() {
             : 'São 3 tentativas lançadas; vale a melhor volta.'}{' '}
           Um erro invalida a tentativa. Sua consistência é {Math.floor(player.attributes.consistency)}.
         </p>
-        {gridPenalty > 0 && <p className="mb-4 rounded-lg border border-gold-400/30 bg-gold-400/10 px-3 py-2 text-sm text-gold-400">Você cumpre uma punição: perde {gridPenalty} posições no grid depois da classificação.</p>}
+        {gridPenalty > 0 && (
+          <p className="mb-4 rounded-lg border border-gold-400/30 bg-gold-400/10 px-3 py-2 text-sm text-gold-400">
+            Você cumpre uma punição: perde {gridPenalty} posições no grid depois da classificação.
+          </p>
+        )}
         <div className="grid gap-3">
           {QUALIFYING_APPROACHES.map((a) => (
-            <ChoiceCard key={a} selected={approach === a} onSelect={() => setApproach(a)} title={QUALIFYING_APPROACH_LABELS[a]} description={QUALIFYING_APPROACH_DESCRIPTIONS[a]} />
+            <ChoiceCard
+              key={a}
+              selected={approach === a}
+              onSelect={() => setApproach(a)}
+              title={QUALIFYING_APPROACH_LABELS[a]}
+              description={QUALIFYING_APPROACH_DESCRIPTIONS[a]}
+            />
           ))}
         </div>
-        <Button variant="primary" className="mt-5" onClick={() => runQualifying(approach)}>Disputar classificação</Button>
+        <Button variant="primary" className="mt-5" onClick={() => runQualifying(approach)}>
+          Disputar classificação
+        </Button>
       </Card>
     </div>
   );
@@ -244,7 +318,13 @@ function PreRacePhase() {
     if (!event || !career.weekend) return null;
     const track = getTrack(event.trackId);
     // Mesma previsão que a corrida vai usar: vem da semente da sessão.
-    return buildWetnessProfile(sessionSeed(career, career.weekend.round, 'race'), track, event.weather.race, raceLaps(track, category), category.race.changingWeather).forecast;
+    return buildWetnessProfile(
+      sessionSeed(career, career.weekend.round, 'race'),
+      track,
+      event.weather.race,
+      raceLaps(track, category),
+      category.race.changingWeather,
+    ).forecast;
   }, [career, event, category]);
   if (!qualifying || !event) return null;
   const pole = qualifying.entries[0]?.bestLap ?? null;
@@ -259,93 +339,145 @@ function PreRacePhase() {
         <div role="status" className="rounded-xl border border-gold-400/50 bg-gold-400/10 p-4">
           <div className="text-sm font-semibold text-gold-400">Corrida interrompida</div>
           <p className="mt-1 text-sm text-ink-200">
-            A página foi fechada ou recarregada com a corrida em andamento: {resume.steps.length >= resume.totalLaps ? 'todas as voltas já tinham sido disputadas' : `a corrida estava na volta ${Math.max(1, Math.min(resume.shownLap, resume.totalLaps))} de ${resume.totalLaps}`}. Os seus comandos ficaram guardados; a corrida é a mesma.
+            A página foi fechada ou recarregada com a corrida em andamento:{' '}
+            {resume.steps.length >= resume.totalLaps
+              ? 'todas as voltas já tinham sido disputadas'
+              : `a corrida estava na volta ${Math.max(1, Math.min(resume.shownLap, resume.totalLaps))} de ${resume.totalLaps}`}
+            . Os seus comandos ficaram guardados; a corrida é a mesma.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <Button variant="primary" className="h-12 text-base" onClick={() => resumeRace(false)}>Continuar de onde parou</Button>
-            <Button className="h-12 text-base" onClick={() => resumeRace(true)} title="O engenheiro assume paradas e combustível nas voltas que faltam">Ver resultado</Button>
+            <Button variant="primary" className="h-12 text-base" onClick={() => resumeRace(false)}>
+              Continuar de onde parou
+            </Button>
+            <Button className="h-12 text-base" onClick={() => resumeRace(true)} title="O engenheiro assume paradas e combustível nas voltas que faltam">
+              Ver resultado
+            </Button>
           </div>
         </div>
       )}
-    <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-      <Card title="Grid de largada" padded={false}>
-        <div className="px-4">
-          <TableWrap>
-            <table className="w-full">
-              <thead><tr><th className={th}>Pos</th><th className={th}>Piloto</th><th className={cx(th, 'hidden sm:table-cell')}>Tentativas</th><th className={cx(th, 'text-right')}>Melhor</th><th className={cx(th, 'text-right')}>Dif.</th></tr></thead>
-              <tbody>
-                {qualifying.entries.map((e) => (
-                  <tr key={e.driverId} className={cx('border-t border-ink-800', e.driverId === player.id && 'bg-apex-500/10')}>
-                    <td className={cx(td, 'font-semibold tabular')}>{e.position}</td>
-                    <td className={td}>
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="flex items-center gap-2">
-                          <CarSprite categoryId={category.id} teamId={e.teamId} color={teams[e.teamId]?.color ?? '#9aa3b2'} driverId={e.driverId} number={carNumbers[e.driverId]} className="w-12 shrink-0" />
-                          <span className="w-6 text-right text-xs tabular text-ink-400">{carNumbers[e.driverId]}</span>
-                          {drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
-                        </span>
-                        {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
-                        {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
-                      </span>
-                    </td>
-                    <td className={cx(td, 'hidden text-xs tabular text-ink-400 sm:table-cell')}>{e.attempts.map((t) => (t === null ? '✕' : formatLap(t))).join(' · ')}</td>
-                    <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
-                    <td className={cx(td, 'text-right tabular text-ink-400')}>{e.position === 1 || e.bestLap === null || pole === null || e.eliminatedIn ? '' : `+${(e.bestLap - pole).toFixed(3)}`}</td>
+      <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+        <Card title="Grid de largada" padded={false}>
+          <div className="px-4">
+            <TableWrap>
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className={th}>Pos</th>
+                    <th className={th}>Piloto</th>
+                    <th className={cx(th, 'hidden sm:table-cell')}>Tentativas</th>
+                    <th className={cx(th, 'text-right')}>Melhor</th>
+                    <th className={cx(th, 'text-right')}>Dif.</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </TableWrap>
-        </div>
-      </Card>
+                </thead>
+                <tbody>
+                  {qualifying.entries.map((e) => (
+                    <tr key={e.driverId} className={cx('border-t border-ink-800', e.driverId === player.id && 'bg-apex-500/10')}>
+                      <td className={cx(td, 'font-semibold tabular')}>{e.position}</td>
+                      <td className={td}>
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="flex items-center gap-2">
+                            <CarSprite
+                              categoryId={category.id}
+                              teamId={e.teamId}
+                              color={teams[e.teamId]?.color ?? '#9aa3b2'}
+                              driverId={e.driverId}
+                              number={carNumbers[e.driverId]}
+                              className="w-12 shrink-0"
+                            />
+                            <span className="w-6 text-right text-xs tabular text-ink-400">{carNumbers[e.driverId]}</span>
+                            {drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
+                          </span>
+                          {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
+                          {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
+                        </span>
+                      </td>
+                      <td className={cx(td, 'hidden text-xs tabular text-ink-400 sm:table-cell')}>
+                        {e.attempts.map((t) => (t === null ? '✕' : formatLap(t))).join(' · ')}
+                      </td>
+                      <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
+                      <td className={cx(td, 'text-right tabular text-ink-400')}>
+                        {e.position === 1 || e.bestLap === null || pole === null || e.eliminatedIn ? '' : `+${(e.bestLap - pole).toFixed(3)}`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableWrap>
+          </div>
+        </Card>
 
-      <div className="space-y-6">
-        {rules.pitStops && (
-          <Card title="Estratégia de pneus">
-            <p className="mb-3 text-sm text-ink-400">
-              {rules.mandatoryTwoCompounds ? 'No seco, é obrigatório usar dois compostos diferentes. ' : ''}
-              A perda estimada soma desgaste, ritmo de cada composto e tempo de box; quanto menor, melhor. As paradas planejadas acontecem sozinhas, e você pode mudar o plano durante a corrida.
-            </p>
-            <div className="grid gap-2">
-              {options.map((o, i) => (
-                <ChoiceCard key={o.id} selected={selected === i} onSelect={() => setSelected(i)} title={o.label} description={options.length > 1 ? `Perda estimada: ${o.estimatedLoss.toFixed(1)}s${i === 0 ? ' (a mais rápida no papel)' : ` (+${(o.estimatedLoss - (options[0]?.estimatedLoss ?? 0)).toFixed(1)}s)`}` : 'Reaja às condições da pista durante a corrida.'} />
-              ))}
+        <div className="space-y-6">
+          {rules.pitStops && (
+            <Card title="Estratégia de pneus">
+              <p className="mb-3 text-sm text-ink-400">
+                {rules.mandatoryTwoCompounds ? 'No seco, é obrigatório usar dois compostos diferentes. ' : ''}A perda estimada soma desgaste, ritmo de cada
+                composto e tempo de box; quanto menor, melhor. As paradas planejadas acontecem sozinhas, e você pode mudar o plano durante a corrida.
+              </p>
+              <div className="grid gap-2">
+                {options.map((o, i) => (
+                  <ChoiceCard
+                    key={o.id}
+                    selected={selected === i}
+                    onSelect={() => setSelected(i)}
+                    title={o.label}
+                    description={
+                      options.length > 1
+                        ? `Perda estimada: ${o.estimatedLoss.toFixed(1)}s${i === 0 ? ' (a mais rápida no papel)' : ` (+${(o.estimatedLoss - (options[0]?.estimatedLoss ?? 0)).toFixed(1)}s)`}`
+                        : 'Reaja às condições da pista durante a corrida.'
+                    }
+                  />
+                ))}
+              </div>
+            </Card>
+          )}
+          <Card title="O circuito" padded={false}>
+            <div className="p-4">
+              <CircuitMap track={getTrack(event.trackId)} style={category.vehicle} detailed className="mx-auto max-h-56 w-full" />
+              <p className="mt-2 text-xs text-ink-400">
+                Sentido {circuitDirection(getTrack(event.trackId), category.vehicle)} · a seta vermelha marca a largada · {VEHICLES[category.id].name} na pista.
+              </p>
+              {trackCredit(event.trackId) && <p className="mt-1 text-[11px] text-ink-500">Traçado: {trackCredit(event.trackId)}</p>}
             </div>
           </Card>
-        )}
-        <Card title="O circuito" padded={false}>
-          <div className="p-4">
-            <CircuitMap track={getTrack(event.trackId)} style={category.vehicle} detailed className="mx-auto max-h-56 w-full" />
-            <p className="mt-2 text-xs text-ink-400">Sentido {circuitDirection(getTrack(event.trackId), category.vehicle)} · a seta vermelha marca a largada · {VEHICLES[category.id].name} na pista.</p>
-            {trackCredit(event.trackId) && <p className="mt-1 text-[11px] text-ink-500">Traçado: {trackCredit(event.trackId)}</p>}
-          </div>
-        </Card>
-        <Card title="Antes da largada">
-          {mine && (
-            <p className="text-sm text-ink-300">
-              Você larga em <b className="text-ink-100">{mine.position}º</b>
-              {mine.attempts.some((t) => t === null) && `, com ${counted(mine.attempts.filter((t) => t === null).length, 'tentativa invalidada', 'tentativas invalidadas')}`}.
-            </p>
-          )}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-400">
-            Largada: <WeatherBadge weather={event.weather.race} />
-            {forecast && forecast.kind !== 'stable' && <span className="text-rain-400">{forecast.kind === 'rain' ? 'Risco de chuva' : 'Pista deve secar'} por volta da volta {forecast.aroundLap}.</span>}
-            {forecast && forecast.kind === 'stable' && rules.changingWeather && <span>Sem mudança prevista.</span>}
-          </div>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-400">
-            <li>O ritmo de pilotagem pode ser trocado a cada volta.</li>
-            {rules.fuel && <li>O combustível é contado: atacar o tempo todo acaba com o tanque antes do fim.</li>}
-            {rules.safetyCar && <li>Acidentes podem trazer safety car{rules.virtualSafetyCar ? ', safety car virtual' : ''}{rules.redFlag ? ' ou bandeira vermelha' : ''}.</li>}
-            {rules.teamOrders && <li>A equipe pode pedir que você ceda a posição ao companheiro.</li>}
-          </ul>
-          {resume ? (
-            <p className="mt-5 text-sm text-gold-400">Há uma corrida interrompida nesta etapa: use os botões no alto da tela.</p>
-          ) : (
-            <Button variant="primary" className="mt-5 h-12 w-full text-base" onClick={() => beginRace(plan)}>Ir para a largada</Button>
-          )}
-        </Card>
+          <Card title="Antes da largada">
+            {mine && (
+              <p className="text-sm text-ink-300">
+                Você larga em <b className="text-ink-100">{mine.position}º</b>
+                {mine.attempts.some((t) => t === null) &&
+                  `, com ${counted(mine.attempts.filter((t) => t === null).length, 'tentativa invalidada', 'tentativas invalidadas')}`}
+                .
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-400">
+              Largada: <WeatherBadge weather={event.weather.race} />
+              {forecast && forecast.kind !== 'stable' && (
+                <span className="text-rain-400">
+                  {forecast.kind === 'rain' ? 'Risco de chuva' : 'Pista deve secar'} por volta da volta {forecast.aroundLap}.
+                </span>
+              )}
+              {forecast && forecast.kind === 'stable' && rules.changingWeather && <span>Sem mudança prevista.</span>}
+            </div>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-400">
+              <li>O ritmo de pilotagem pode ser trocado a cada volta.</li>
+              {rules.fuel && <li>O combustível é contado: atacar o tempo todo acaba com o tanque antes do fim.</li>}
+              {rules.safetyCar && (
+                <li>
+                  Acidentes podem trazer safety car{rules.virtualSafetyCar ? ', safety car virtual' : ''}
+                  {rules.redFlag ? ' ou bandeira vermelha' : ''}.
+                </li>
+              )}
+              {rules.teamOrders && <li>A equipe pode pedir que você ceda a posição ao companheiro.</li>}
+            </ul>
+            {resume ? (
+              <p className="mt-5 text-sm text-gold-400">Há uma corrida interrompida nesta etapa: use os botões no alto da tela.</p>
+            ) : (
+              <Button variant="primary" className="mt-5 h-12 w-full text-base" onClick={() => beginRace(plan)}>
+                Ir para a largada
+              </Button>
+            )}
+          </Card>
+        </div>
       </div>
-    </div>
     </div>
   );
 }
@@ -357,12 +489,24 @@ function RoundSummary({ record }: { record: RoundRecord }) {
     <Card title={`Resultado da etapa ${record.round} · ${getTrack(record.trackId).name}`} padded={false}>
       <div className="border-b border-ink-800 p-4 text-sm text-ink-300">
         {mine ? (
-          <>Você {mine.status === 'finished' ? <>terminou em <b className="text-ink-100">{mine.position}º</b></> : 'abandonou'}, largando em {mine.grid}º, e somou <b className="text-ink-100">{mine.points}</b> {pluralWord(mine.points, 'ponto', 'pontos')}.</>
+          <>
+            Você{' '}
+            {mine.status === 'finished' ? (
+              <>
+                terminou em <b className="text-ink-100">{mine.position}º</b>
+              </>
+            ) : (
+              'abandonou'
+            )}
+            , largando em {mine.grid}º, e somou <b className="text-ink-100">{mine.points}</b> {pluralWord(mine.points, 'ponto', 'pontos')}.
+          </>
         ) : (
           'Você não disputou esta etapa.'
         )}
       </div>
-      <div className="px-4"><RaceResultTable result={record.race} /></div>
+      <div className="px-4">
+        <RaceResultTable result={record.race} />
+      </div>
     </Card>
   );
 }

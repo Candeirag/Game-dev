@@ -38,8 +38,23 @@ import {
 import { newCareer, playRound, playSeason, resolvePending } from './helpers';
 
 const entry = (position: number, extra: Record<string, unknown> = {}) => ({
-  driverId: 'player', teamId: 'cerrado', position, grid: 10, status: 'finished' as const, lapsCompleted: 20, totalTime: 1000, bestLap: 50,
-  overtakes: 0, errors: 0, points: 0, pitStops: 0, penaltySeconds: 0, penaltyPoints: 0, damage: 0, injured: false, ...extra,
+  driverId: 'player',
+  teamId: 'cerrado',
+  position,
+  grid: 10,
+  status: 'finished' as const,
+  lapsCompleted: 20,
+  totalTime: 1000,
+  bestLap: 50,
+  overtakes: 0,
+  errors: 0,
+  points: 0,
+  pitStops: 0,
+  penaltySeconds: 0,
+  penaltyPoints: 0,
+  damage: 0,
+  injured: false,
+  ...extra,
 });
 
 describe('economia', () => {
@@ -134,7 +149,10 @@ describe('condição, lesões e suspensão', () => {
 
   it('com lesão grave, o reserva corre no lugar do jogador e a etapa conta', () => {
     const base = newCareer(5);
-    const injured: CareerState = { ...base, drivers: base.drivers.map((d) => (d.isPlayer ? { ...d, injury: { description: 'Fratura', severity: 'serious' as const, roundsRemaining: 2 } } : d)) };
+    const injured: CareerState = {
+      ...base,
+      drivers: base.drivers.map((d) => (d.isPlayer ? { ...d, injury: { description: 'Fratura', severity: 'serious' as const, roundsRemaining: 2 } } : d)),
+    };
     expect(playerAvailability(injured)).toEqual({ available: false, reason: 'injury', canRest: false });
     const weekend = startWeekend(injured);
     const reserve = getReserve(injured, 'cerrado')!;
@@ -152,7 +170,10 @@ describe('condição, lesões e suspensão', () => {
 
   it('com lesão leve, o jogador escolhe entre correr e descansar', () => {
     const base = newCareer(5);
-    const hurt: CareerState = { ...base, drivers: base.drivers.map((d) => (d.isPlayer ? { ...d, injury: { description: 'Contusão', severity: 'minor' as const, roundsRemaining: 2 } } : d)) };
+    const hurt: CareerState = {
+      ...base,
+      drivers: base.drivers.map((d) => (d.isPlayer ? { ...d, injury: { description: 'Contusão', severity: 'minor' as const, roundsRemaining: 2 } } : d)),
+    };
     expect(playerAvailability(hurt)).toEqual({ available: true, reason: null, canRest: true });
     expect(startWeekend(hurt).weekend!.playerParticipates).toBe(true);
     expect(startWeekend(hurt, { rest: true }).weekend!.playerParticipates).toBe(false);
@@ -203,9 +224,23 @@ describe('contratos e negociação', () => {
   const season = playSeason(newCareer(42));
   const offseason = season.offseason!;
   const sample: Offer = {
-    id: 'o', teamId: 't', teamName: 'Equipe', categoryId: 'f3', kind: 'transfer', role: 'second', years: 2, salary: 100_000, seatCost: 400_000,
-    bonuses: { win: 1000, podium: 400, point: 20, title: 5000 }, clauses: { releaseFee: 50_000, performanceTarget: 12 },
-    interest: 70, conceded: 0, patience: 3, status: 'open', firstDriverPossible: true, scholarship: 0,
+    id: 'o',
+    teamId: 't',
+    teamName: 'Equipe',
+    categoryId: 'f3',
+    kind: 'transfer',
+    role: 'second',
+    years: 2,
+    salary: 100_000,
+    seatCost: 400_000,
+    bonuses: { win: 1000, podium: 400, point: 20, title: 5000 },
+    clauses: { releaseFee: 50_000, performanceTarget: 12 },
+    interest: 70,
+    conceded: 0,
+    patience: 3,
+    status: 'open',
+    firstDriverPossible: true,
+    scholarship: 0,
   };
 
   it('toda temporada termina com ao menos uma proposta aceitável', () => {
@@ -359,23 +394,27 @@ describe('eventos', () => {
   it('cada tipo de efeito altera o sistema correspondente', () => {
     const c = newCareer(1);
     const sponsor = buildSponsor(c, 2, 9);
-    const after = applyEffects(c, [
-      { type: 'stat', stat: 'morale', value: -10 },
-      { type: 'stat', stat: 'reputation', value: 5 },
-      { type: 'stat', stat: 'teamTrust', value: 7 },
-      { type: 'cash', value: -1000, ledger: 'event', label: 'Multa' },
-      { type: 'rivalry', driverId: 'andrade', value: 30 },
-      { type: 'addSponsor', sponsor },
-      { type: 'sponsorSatisfaction', sponsorId: sponsor.id, value: -20 },
-      { type: 'penaltyPoints', value: 2 },
-      { type: 'gridPenalty', driverId: 'player', places: 3 },
-      { type: 'pointsAdjustment', driverId: 'player', points: -10, reason: 'teste' },
-      { type: 'interest', teamKey: 'kart-regional:vortex', value: 15 },
-      { type: 'attribute', key: 'experience', value: 1 },
-      { type: 'carUpgrade', value: 2 },
-      { type: 'seatCost', value: 500 },
-      { type: 'releaseFee', factor: 0 },
-    ], 3);
+    const after = applyEffects(
+      c,
+      [
+        { type: 'stat', stat: 'morale', value: -10 },
+        { type: 'stat', stat: 'reputation', value: 5 },
+        { type: 'stat', stat: 'teamTrust', value: 7 },
+        { type: 'cash', value: -1000, ledger: 'event', label: 'Multa' },
+        { type: 'rivalry', driverId: 'andrade', value: 30 },
+        { type: 'addSponsor', sponsor },
+        { type: 'sponsorSatisfaction', sponsorId: sponsor.id, value: -20 },
+        { type: 'penaltyPoints', value: 2 },
+        { type: 'gridPenalty', driverId: 'player', places: 3 },
+        { type: 'pointsAdjustment', driverId: 'player', points: -10, reason: 'teste' },
+        { type: 'interest', teamKey: 'kart-regional:vortex', value: 15 },
+        { type: 'attribute', key: 'experience', value: 1 },
+        { type: 'carUpgrade', value: 2 },
+        { type: 'seatCost', value: 500 },
+        { type: 'releaseFee', factor: 0 },
+      ],
+      3,
+    );
     const p0 = getPlayer(c);
     const p1 = getPlayer(after);
     expect(p1.condition.morale).toBe(p0.condition.morale - 10);

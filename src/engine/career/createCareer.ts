@@ -62,7 +62,12 @@ export function validateNewCareerInput(input: NewCareerInput): string[] {
   return problems;
 }
 
-export function buildCalendar(careerSeed: number, season: number, year: number, category: CategoryDefinition = getCategory('kart-regional')): ChampionshipEvent[] {
+export function buildCalendar(
+  careerSeed: number,
+  season: number,
+  year: number,
+  category: CategoryDefinition = getCategory('kart-regional'),
+): ChampionshipEvent[] {
   const dates = calendarDates(year, category.rounds);
   return category.trackIds.slice(0, category.rounds).map((trackId, index) => ({
     round: index + 1,
@@ -118,9 +123,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
   if (!team) throw new Error('Equipe inválida.');
   const ranked = rankTeams(teams);
   const usedNames = new Set([fullName(player), ...aiDrivers.map(fullName)]);
-  const reserves = ranked
-    .filter((t) => t.id !== input.teamId)
-    .map((t) => generateReserve(category, t, ranked.indexOf(t), seed, 1, usedNames));
+  const reserves = ranked.filter((t) => t.id !== input.teamId).map((t) => generateReserve(category, t, ranked.indexOf(t), seed, 1, usedNames));
 
   const rank = ranked.findIndex((t) => t.id === team.id);
   const [seatTop, seatBottom] = category.economy.seatCost;
@@ -179,7 +182,22 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     dynasty: {
       generation: 1,
       surname: player.lastName,
-      lineage: [{ generation: 1, driverId: player.id, name: fullName(player), bornYear: year - player.age, fromSeason: 1, toSeason: null, endReason: null, bestCategoryId: category.id, titles: 0, wins: 0, peakReputation: STARTING_REPUTATION, netWorthPassed: null }],
+      lineage: [
+        {
+          generation: 1,
+          driverId: player.id,
+          name: fullName(player),
+          bornYear: year - player.age,
+          fromSeason: 1,
+          toSeason: null,
+          endReason: null,
+          bestCategoryId: category.id,
+          titles: 0,
+          wins: 0,
+          peakReputation: STARTING_REPUTATION,
+          netWorthPassed: null,
+        },
+      ],
     },
     management: null,
     executiveOffseason: null,

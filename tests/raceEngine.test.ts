@@ -272,7 +272,9 @@ describe('corrida de F1', () => {
     expect(obeyed.teamOrders.slice(-1)[0]).toMatchObject({ askedDriverId: f1.playerId, favouredDriverId: favoured, obeyed: true });
     expect(ignored.teamOrders.slice(-1)[0]).toMatchObject({ askedDriverId: f1.playerId, obeyed: false });
     expect(obeyed.pendingTeamOrder).toBeNull();
-    expect(finalizeRace(simulateRemainingRace(obeyed, f1.ctx, AUTO), f1.ctx.category).teamOrders.some((o) => o.askedDriverId === f1.playerId && o.obeyed)).toBe(true);
+    expect(finalizeRace(simulateRemainingRace(obeyed, f1.ctx, AUTO), f1.ctx.category).teamOrders.some((o) => o.askedDriverId === f1.playerId && o.obeyed)).toBe(
+      true,
+    );
   });
 
   it('quando a chuva chega, os carros trocam para pneus de chuva', () => {
@@ -314,7 +316,12 @@ describe('todas as categorias', () => {
 });
 
 describe('classificação eliminatória e punições de grid', () => {
-  const participants = f1.drivers.map((driver) => ({ driver, team: f1.ctx.teams[driver.teamId!]!, approach: 'balanced' as const, modifiers: NEUTRAL_MODIFIERS }));
+  const participants = f1.drivers.map((driver) => ({
+    driver,
+    team: f1.ctx.teams[driver.teamId!]!,
+    approach: 'balanced' as const,
+    modifiers: NEUTRAL_MODIFIERS,
+  }));
   const category = getCategory('f1');
 
   it('elimina um quarto do grid em cada uma das duas primeiras fases', () => {

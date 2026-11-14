@@ -83,7 +83,14 @@ export function buildStrategyOptions(
   }
   const startBest = bestCompoundFor(rules, startWetness);
   if (TYRES[startBest].rain) {
-    return [{ id: 'wet-start', label: `Largar com pneu ${TYRES[startBest].label.toLowerCase()} e reagir à pista`, plan: { startCompound: startBest, stops: [] }, estimatedLoss: 0 }];
+    return [
+      {
+        id: 'wet-start',
+        label: `Largar com pneu ${TYRES[startBest].label.toLowerCase()} e reagir à pista`,
+        plan: { startCompound: startBest, stops: [] },
+        estimatedLoss: 0,
+      },
+    ];
   }
 
   const dry = rules.dryCompounds;
@@ -173,7 +180,11 @@ export function decidePit(car: RaceCar, rules: RaceRules, s: PitSituation): Tyre
     // Sem plano: o composto mais macio que aguenta até o fim; se nenhum aguenta, o mais durável.
     const unused = rules.dryCompounds.filter((c) => !car.compoundsUsed.includes(c));
     const pool = s.needsSecondCompound && unused.length ? unused : rules.dryCompounds;
-    return [...pool].sort((a, b) => TYRES[a].pace - TYRES[b].pace).find((c) => RACE.TYRE_CLIFF / (SIM.TYRE_WEAR_PER_LAP * TYRES[c].wear) >= lapsRemaining) ?? pool[pool.length - 1] ?? car.tyre.compound;
+    return (
+      [...pool].sort((a, b) => TYRES[a].pace - TYRES[b].pace).find((c) => RACE.TYRE_CLIFF / (SIM.TYRE_WEAR_PER_LAP * TYRES[c].wear) >= lapsRemaining) ??
+      pool[pool.length - 1] ??
+      car.tyre.compound
+    );
   };
   const sameType = (): TyreCompound => (TYRES[car.tyre.compound].rain ? car.tyre.compound : dryPick());
 

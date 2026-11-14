@@ -293,14 +293,28 @@ export function spriteAspect(categoryId: CategoryId): number {
  * Carro em vetor, usado quando o sprite não está disponível. Desenha no
  * sistema do carro: origem no centro, nariz para +x, comprimento e largura dados.
  */
-export function drawVectorCar(g: CanvasRenderingContext2D, style: 'kart' | 'formula', length: number, width: number, primary: string, accent: string, helmet: string): void {
+export function drawVectorCar(
+  g: CanvasRenderingContext2D,
+  style: 'kart' | 'formula',
+  length: number,
+  width: number,
+  primary: string,
+  accent: string,
+  helmet: string,
+): void {
   const l = length / 2;
   const w = width / 2;
   g.fillStyle = '#0d0f13';
   // Rodas.
   const wheelL = length * 0.2;
   const wheelW = width * 0.26;
-  for (const [x, y] of [[l * 0.52, -w], [l * 0.52, w - wheelW], [-l * 0.72, -w], [-l * 0.72, w - wheelW]] as const) g.fillRect(x - wheelL / 2, y, wheelL, wheelW);
+  for (const [x, y] of [
+    [l * 0.52, -w],
+    [l * 0.52, w - wheelW],
+    [-l * 0.72, -w],
+    [-l * 0.72, w - wheelW],
+  ] as const)
+    g.fillRect(x - wheelL / 2, y, wheelL, wheelW);
   if (style === 'formula') {
     // Asas.
     g.fillStyle = '#1b1e25';
