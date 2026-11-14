@@ -28,7 +28,7 @@ import { applyAging, developDriver } from './development';
 import { closeFamilyYear } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality, touchLineage } from '../dynasty/succession';
-import { closeAssetsYear } from '../economy/assets';
+import { closeAssetsYear, settleDebts } from '../economy/assets';
 import { closeSeasonFinance, post } from './economy';
 import { pushMessages } from './inbox';
 import { licensePointsFor } from './license';
@@ -40,7 +40,7 @@ import { renewSponsors } from './sponsors';
 const OFFSEASON_TRAINING_CYCLES = 2;
 /** Teto da dívida, como fração da vaga mais cara da categoria seguinte, e custo do acordo em reputação. */
 const DEBT_CEILING_SHARE = 0.5;
-const DEBT_SETTLEMENT_REPUTATION = 4;
+export const DEBT_SETTLEMENT_REPUTATION = 4;
 /** Confiança abaixo da qual a equipe rescinde um contrato vigente. */
 const TRUST_TERMINATION = 18;
 
@@ -337,16 +337,18 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     news.push(`Você pagou € ${fee.toLocaleString('pt-BR')} de multa para deixar o contrato anterior.`);
   }
 
-  // Acordo com credores: uma dívida maior que metade da vaga mais cara da categoria em que o
-  // piloto vai correr é impagável naquele nível. Os credores aceitam reduzi-la a esse teto,
-  // e a notícia arranha a reputação.
+  // Acerto com credores: uma dívida maior que metade da vaga mais cara da categoria em que o
+  // piloto vai correr é impagável naquele nível. Primeiro os bens do piloto são executados
+  // (aplicações, ações, imóveis, empresas, participações); só o que sobrar acima do teto é
+  // perdoado, e a notícia arranha a reputação.
   let reputation = career.reputation;
   const debtCeiling = Math.max(next.economy.seatCost[0] * DEBT_CEILING_SHARE, next.economy.living * 2);
-  if (finance.cash < -debtCeiling) {
-    const forgiven = Math.round(-finance.cash - debtCeiling);
-    finance = { ...finance, cash: -debtCeiling };
+  const settlement = settleDebts(finance, career.season, career.calendar.length, debtCeiling);
+  finance = settlement.finance;
+  if (settlement.raised > 0) news.push(`Para cobrir a dívida, os credores executaram € ${settlement.raised.toLocaleString('pt-BR')} do seu patrimônio (${settlement.sold.join(', ')}).`);
+  if (settlement.forgiven > 0) {
     reputation = Math.max(0, reputation - DEBT_SETTLEMENT_REPUTATION);
-    news.push(`Acordo com credores: € ${forgiven.toLocaleString('pt-BR')} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
+    news.push(`Acordo com credores: € ${settlement.forgiven.toLocaleString('pt-BR')} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
   }
 
   const sponsors = renewSponsors(career.sponsors, career.season, getCategory(career.categoryId), next);

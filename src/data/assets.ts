@@ -25,15 +25,21 @@ export interface StockDefinition {
 
 /**
  * Seis ações com perfis distintos: o retorno esperado cresce com o risco, e as
- * empresas maduras compensam o retorno menor com dividendos.
+ * empresas maduras compensam a valorização menor com dividendos.
+ *
+ * O jogo não tem inflação (vagas, salários e equipes custam sempre o mesmo),
+ * então estes são retornos reais. O retorno total (valorização + dividendos)
+ * vai de 3,5% a 6% ao ano. Com números de bolsa "de verdade" (10% ou mais), o
+ * patrimônio de uma geração multiplicava por dezenas até a seguinte e o
+ * dinheiro deixava de importar (medido em tests/calibration/economy.calib.ts).
  */
 export const STOCKS: readonly StockDefinition[] = [
-  { id: 'banco-box', name: 'Banco Box', sector: 'Banco', startPrice: 42, drift: 0.05, volatility: 0.16, dividendYield: 0.06 },
-  { id: 'tecnopneu', name: 'Tecnopneu', sector: 'Pneus', startPrice: 28, drift: 0.05, volatility: 0.15, dividendYield: 0.05 },
-  { id: 'apex-energia', name: 'Apex Energia', sector: 'Energia', startPrice: 65, drift: 0.06, volatility: 0.22, dividendYield: 0.04 },
-  { id: 'veloce-motors', name: 'Veloce Motors', sector: 'Montadora', startPrice: 120, drift: 0.07, volatility: 0.26, dividendYield: 0.03 },
-  { id: 'pista-midia', name: 'Pista Mídia', sector: 'Mídia esportiva', startPrice: 18, drift: 0.1, volatility: 0.32, dividendYield: 0.01 },
-  { id: 'grid-tech', name: 'Grid Tech', sector: 'Tecnologia', startPrice: 85, drift: 0.13, volatility: 0.4, dividendYield: 0 },
+  { id: 'banco-box', name: 'Banco Box', sector: 'Banco', startPrice: 42, drift: 0, volatility: 0.14, dividendYield: 0.035 },
+  { id: 'tecnopneu', name: 'Tecnopneu', sector: 'Pneus', startPrice: 28, drift: 0.005, volatility: 0.13, dividendYield: 0.03 },
+  { id: 'apex-energia', name: 'Apex Energia', sector: 'Energia', startPrice: 65, drift: 0.015, volatility: 0.2, dividendYield: 0.025 },
+  { id: 'veloce-motors', name: 'Veloce Motors', sector: 'Montadora', startPrice: 120, drift: 0.025, volatility: 0.24, dividendYield: 0.02 },
+  { id: 'pista-midia', name: 'Pista Mídia', sector: 'Mídia esportiva', startPrice: 18, drift: 0.045, volatility: 0.3, dividendYield: 0.005 },
+  { id: 'grid-tech', name: 'Grid Tech', sector: 'Tecnologia', startPrice: 85, drift: 0.06, volatility: 0.36, dividendYield: 0 },
 ];
 
 export function initialStockPrices(): Record<string, number> {
@@ -57,11 +63,11 @@ export interface PropertyDefinition {
 }
 
 export const PROPERTIES: readonly PropertyDefinition[] = [
-  { id: 'apartamento', name: 'Apartamento na cidade', description: 'Dois quartos perto do centro. Fácil de alugar.', price: 180_000, rentYield: 0.05, upkeep: 0.01, appreciation: 0.03, appreciationSd: 0.04, personalPerk: 'Morar nele dá +0,3 de moral por etapa.' },
-  { id: 'galpao', name: 'Galpão comercial', description: 'Oficina e depósito alugados a equipes de base.', price: 320_000, rentYield: 0.065, upkeep: 0.015, appreciation: 0.025, appreciationSd: 0.04, personalPerk: 'Usado como oficina própria: o treino custa 20% menos.' },
-  { id: 'casa-campo', name: 'Casa de campo', description: 'Refúgio longe das pistas, bom para a família.', price: 450_000, rentYield: 0.04, upkeep: 0.012, appreciation: 0.035, appreciationSd: 0.05, personalPerk: 'Uso próprio: +0,5 de moral por etapa e +3 na relação com a família por ano.' },
-  { id: 'kartodromo', name: 'Kartódromo', description: 'Pista de kart com escola e aluguel de karts.', price: 1_200_000, rentYield: 0.07, upkeep: 0.03, appreciation: 0.02, appreciationSd: 0.05, personalPerk: 'A formação dos filhos no kart custa metade e rende 25% mais.' },
-  { id: 'cobertura-monaco', name: 'Cobertura em Mônaco', description: 'Endereço dos pilotos de ponta.', price: 4_500_000, rentYield: 0.03, upkeep: 0.01, appreciation: 0.05, appreciationSd: 0.06, personalPerk: 'Residência fiscal: o imposto de renda cai 25%.' },
+  { id: 'apartamento', name: 'Apartamento na cidade', description: 'Dois quartos perto do centro. Fácil de alugar.', price: 180_000, rentYield: 0.05, upkeep: 0.01, appreciation: 0.015, appreciationSd: 0.04, personalPerk: 'Morar nele dá +0,3 de moral por etapa.' },
+  { id: 'galpao', name: 'Galpão comercial', description: 'Oficina e depósito alugados a equipes de base.', price: 320_000, rentYield: 0.065, upkeep: 0.015, appreciation: 0.01, appreciationSd: 0.04, personalPerk: 'Usado como oficina própria: o treino custa 20% menos.' },
+  { id: 'casa-campo', name: 'Casa de campo', description: 'Refúgio longe das pistas, bom para a família.', price: 450_000, rentYield: 0.04, upkeep: 0.012, appreciation: 0.015, appreciationSd: 0.05, personalPerk: 'Uso próprio: +0,5 de moral por etapa e +3 na relação com a família por ano.' },
+  { id: 'kartodromo', name: 'Kartódromo', description: 'Pista de kart com escola e aluguel de karts.', price: 1_200_000, rentYield: 0.07, upkeep: 0.03, appreciation: 0.01, appreciationSd: 0.05, personalPerk: 'A formação dos filhos no kart custa metade e rende 25% mais.' },
+  { id: 'cobertura-monaco', name: 'Cobertura em Mônaco', description: 'Endereço dos pilotos de ponta.', price: 4_500_000, rentYield: 0.03, upkeep: 0.01, appreciation: 0.025, appreciationSd: 0.06, personalPerk: 'Residência fiscal: o imposto de renda cai 25%.' },
 ];
 
 export interface BusinessDefinition {
@@ -116,9 +122,16 @@ export const ASSET_RULES = {
   /** Ágio pago para comprar uma participação e fatias oferecidas. */
   STAKE_PREMIUM: 1.1,
   STAKE_SHARES: [0.05, 0.1, 0.25],
-  /** Venda de empresa: 70% do investido mais 3 anos do último lucro. */
-  BUSINESS_VALUE_INVESTED: 0.7,
-  BUSINESS_VALUE_PROFIT_YEARS: 3,
+  /**
+   * Venda de empresa: 60% do investido mais 2 anos do último lucro. Mesmo com
+   * a reputação no máximo, o valor mal chega ao que foi investido: uma empresa
+   * serve para dar renda, não para ser revendida com lucro.
+   */
+  BUSINESS_VALUE_INVESTED: 0.6,
+  BUSINESS_VALUE_PROFIT_YEARS: 2,
+  /** Participações: a campeã distribui 6% do seu valor; cada posição abaixo, 0,8 ponto a menos (a última pede 1,2% de aporte). */
+  STAKE_DIVIDEND_TOP: 0.06,
+  STAKE_DIVIDEND_STEP: 0.008,
   /** Imposto de herança sobre o que passa do valor isento; doação em vida paga menos. */
   INHERITANCE_TAX: 0.08,
   HANDOVER_TAX: 0.04,

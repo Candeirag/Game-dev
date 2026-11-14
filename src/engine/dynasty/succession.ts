@@ -27,7 +27,7 @@ import { updateMarketInterest } from '../career/market';
 import { archiveSeason, trimHistory } from '../career/offseason';
 import { familyDriverIds, fullName, getPlayer } from '../career/selectors';
 import { instantiateEvent } from '../events/engine';
-import { buildExecutiveOffseason, buildJobOffers, convertToExecutive, executiveSummary, vacatePlayerSeat } from '../management/executive';
+import { buildExecutiveOffseason, buildJobOffers, convertToExecutive, executiveSummary, normalizeFieldDevelopment, vacatePlayerSeat } from '../management/executive';
 import { ownedTeamValue } from '../management/team';
 import { createRng, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
@@ -177,8 +177,10 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
   let state: CareerState = { ...career, succession: null };
 
   // No meio da temporada (acidente), fecha o ano dos filhos para o herdeiro chegar com a temporada dele concluída.
+  // Só no caminho das pistas: ali a temporada em curso é abandonada. No dos negócios, o ano
+  // segue e a família fecha o ano normalmente, no fim da temporada.
   const midSeason = !state.offseason && !state.executiveOffseason;
-  if (midSeason) state = { ...state, family: closeFamilyYear(state).family };
+  if (midSeason && path === 'driver') state = { ...state, family: closeFamilyYear(state).family };
   const child = option.childId ? state.family.children.find((c) => c.id === option.childId) : undefined;
   const heirDriver = child?.driver ?? option.driver;
   const heirRacing = child?.racing ?? option.racing;
@@ -199,7 +201,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     index === all.length - 1 ? { ...entry, toSeason: state.season, endReason: succession.cause, titles: record.titles, wins: record.wins, peakReputation: Math.max(entry.peakReputation, state.reputation), netWorthPassed: Math.round(succession.estate - succession.tax - siblingsShare) } : entry,
   );
   const generation = state.dynasty.generation + 1;
-  const newEntry = (driverId: string, name: string, age: number): LineageEntry => ({ generation, driverId, name, bornYear: state.year - age, fromSeason: state.season + 1, toSeason: null, endReason: null, bestCategoryId: null, titles: 0, wins: 0, peakReputation: 0, netWorthPassed: null });
+  const newEntry = (driverId: string, name: string, age: number, year: number): LineageEntry => ({ generation, driverId, name, bornYear: year - age, fromSeason: state.season + 1, toSeason: null, endReason: null, bestCategoryId: null, titles: 0, wins: 0, peakReputation: 0, netWorthPassed: null });
   const family = option.kind === 'child' ? emptyFamily() : { ...state.family, partner: option.kind === 'partner' ? null : state.family.partner };
   const inheritedNote = `Patrimônio recebido: ${money(succession.estate - succession.tax - siblingsShare)} (imposto de ${money(succession.tax)}${siblingsShare > 0 ? `; ${money(siblingsShare)} para os irmãos` : ''}).`;
 
@@ -224,12 +226,14 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     state = {
       ...state,
       reputation,
+      // O cargo de chefe contratado não é herdado; ao deixá-lo, os ganhos do ano das equipes são acertados.
+      teams: keepsTeam ? state.teams : normalizeFieldDevelopment(state),
       management: keepsTeam ? state.management : null,
       executiveLog: [],
       license: { history: heirRacing?.license ?? [], penaltyPoints: 0, banRounds: 0 },
       relations: { teamTrust: 50, teammate: 50, rivalries: {} },
       family,
-      dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(base.id, option.name, option.age)] },
+      dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(base.id, option.name, option.age, state.year)] },
     };
     if (state.executiveOffseason) {
       // O fechamento é refeito para o novo personagem: propostas de cargo pelo prestígio dele e,
@@ -311,7 +315,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     management: null,
     history: trimHistory([...state.history, summary], familyDriverIds(state)),
     family,
-    dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(player.id, fullName(player), player.age)] },
+    dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(player.id, fullName(player), player.age, nextYear)] },
   };
   next = { ...next, marketInterest: updateMarketInterest(next, 1) };
   const sponsorOffer = instantiateEvent(next, 'sponsor-offer', 0);

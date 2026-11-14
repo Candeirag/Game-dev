@@ -108,7 +108,8 @@ export const FAMILY = {
     { upTo: 69, risk: 0.015 },
     { upTo: 79, risk: 0.05 },
     { upTo: 89, risk: 0.14 },
-    { upTo: 200, risk: 0.3 },
+    { upTo: 99, risk: 0.3 },
+    { upTo: 200, risk: 1 },
   ],
   /** Chance de uma lesão grave em corrida ser fatal. */
   FATAL_ACCIDENT_CHANCE: 0.02,

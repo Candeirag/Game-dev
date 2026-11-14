@@ -12,6 +12,7 @@ import { getCategory } from '@/data/categories';
 import { FAMILY, PARTNER_BACKGROUND_INFO, getTrait } from '@/data/family';
 import { getPlayer } from '../career/selectors';
 import { createRng, hashSeed } from '../rng';
+import { livingCostBase } from '../management/executive';
 import { generateChild, generatePartner } from './family';
 
 const stat = (name: Extract<Effect, { type: 'stat' }>['stat'], value: number): Effect => ({ type: 'stat', stat: name, value });
@@ -25,7 +26,7 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
   const events: PendingEvent[] = [];
   const player = getPlayer(career);
   const { partner, children } = career.family;
-  const living = getCategory(career.categoryId).economy.living * LIFESTYLE_RULES[career.finance.lifestyle].cost;
+  const living = livingCostBase(career) * LIFESTYLE_RULES[career.finance.lifestyle].cost;
   const rng = createRng(hashSeed(career.seed, career.season, 'family-events'));
   const partnerRoll = rng.next();
   const childRoll = rng.next();

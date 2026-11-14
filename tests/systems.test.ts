@@ -80,7 +80,7 @@ describe('economia', () => {
     const { finance, report } = closeSeasonFinance(rich);
     expect(report.taxableIncome).toBe(400_000);
     expect(report.tax).toBe(incomeTax(400_000));
-    expect(finance.fixedIncome).toBe(104_000);
+    expect(finance.fixedIncome).toBe(Math.round(100_000 * (1 + ECONOMY.FIXED_INCOME_RETURN)));
     expect(finance.seasonTotals).toEqual({});
     expect(finance.reports).toHaveLength(1);
     const broke = closeSeasonFinance({ ...c, finance: emptyFinance(-50_000) });

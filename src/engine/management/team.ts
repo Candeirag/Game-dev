@@ -104,7 +104,8 @@ export function normalizeAllocation(categoryId: ManagedTeam['categoryId'], alloc
 /* Pessoas                                                             */
 /* ------------------------------------------------------------------ */
 
-function staffSalary(categoryId: ManagedTeam['categoryId'], rating: number, role: StaffRole): number {
+/** Salário de mercado de um profissional: cresce com a nota (elevada a 2,5); diretor técnico e chefe de equipe ganham 40% a mais. */
+export function staffSalary(categoryId: ManagedTeam['categoryId'], rating: number, role: StaffRole): number {
   const base = TEAM_ECONOMY[categoryId].staffSalary * (role === 'principal' || role === 'technicalDirector' ? 1.4 : 1);
   return Math.round((base * Math.pow(rating / 70, 2.5)) / 100) * 100;
 }

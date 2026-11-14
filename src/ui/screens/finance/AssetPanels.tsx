@@ -4,7 +4,7 @@ import { LIFESTYLES } from '@/domain/schemas';
 import { LIFESTYLE_LABELS } from '@/domain/labels';
 import { ASSET_RULES, BUSINESSES, LIFESTYLE_RULES, PROPERTIES, STOCKS } from '@/data/assets';
 import { getCategory } from '@/data/categories';
-import { loanLimit, loanPayoff, annualPayment, rankTeams, stakePrice, stockPrice, stocksValue, teamStandings } from '@/engine';
+import { livingCostBase, loanLimit, loanPayoff, annualPayment, rankTeams, stakePrice, stockPrice, stocksValue, teamStandings } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, ChoiceCard, Pill, Stat, TableWrap, TeamSwatch, cx, td, th } from '../../components/ui';
 import { formatMoney } from '../../format';
@@ -214,7 +214,7 @@ export function CreditPanel() {
   const [term, setTerm] = useState<number>(ASSET_RULES.LOAN_TERMS[1]);
   const f = career.finance;
   const value = Math.max(0, Math.round(Number(amount) || 0));
-  const living = getCategory(career.categoryId).economy.living;
+  const living = livingCostBase(career);
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card title="Empréstimos">
@@ -258,7 +258,7 @@ export function CreditPanel() {
                 selected={f.lifestyle === id}
                 onSelect={() => setLifestyle(id)}
                 title={LIFESTYLE_LABELS[id]}
-                description={`Custo de vida de ${formatMoney(living * rule.cost)} por temporada nesta categoria.`}
+                description={`Custo de vida de ${formatMoney(living * rule.cost)} por temporada.`}
                 meta={`Moral ${rule.morale > 0 ? `+${rule.morale.toLocaleString('pt-BR')}` : '0'} por etapa · relação com o parceiro ${rule.relationship > 0 ? '+' : ''}${rule.relationship} por ano`}
               />
             );

@@ -25,22 +25,24 @@ import { developAfterRound, developDriver } from '../career/development';
 import { closeSeasonFinance, post } from '../career/economy';
 import { pushMessages } from '../career/inbox';
 import { runAiMarket, teamsOfCategory } from '../career/market';
-import { REPUTATION, archiveSeason, compactRound, evolveTeams, positionPrestige, trimHistory, winter } from '../career/offseason';
+import { DEBT_SETTLEMENT_REPUTATION, REPUTATION, archiveSeason, compactRound, evolveTeams, positionPrestige, trimHistory, winter } from '../career/offseason';
 import { familyDriverIds, formerCharacterIds, fullName, getPlayer } from '../career/selectors';
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality } from '../dynasty/succession';
-import { closeAssetsYear, settleAssetsRound } from '../economy/assets';
+import { closeAssetsYear, liquidateAssets, settleAssetsRound } from '../economy/assets';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, generateReserve, rankTeams } from '../world/generation';
 import { managementRoundEvent } from './events';
-import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, fieldRatings, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
+import { buildSponsorOffers, buildStaffMarket, createManagedTeam, driverTerms, fieldRatings, staffSalary, managedTeam, normalizeAllocation, ownedTeamValue, principalRating, requireManagement, settleTeamRound, staffRating, syncManagedTeam } from './team';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
 const money = (v: number) => `€ ${Math.round(v).toLocaleString('pt-BR')}`;
+/** Venda forçada da equipe por dívida: 90% do valor de mercado. */
+const FORCED_SALE_DISCOUNT = 0.9;
 
 /* ------------------------------------------------------------------ */
 /* Aposentadoria das pistas                                            */
@@ -106,13 +108,28 @@ export function convertToExecutive(career: CareerState): CareerState {
   return state;
 }
 
+/**
+ * Custo de vida de referência do personagem (antes do padrão de vida). Como
+ * piloto, é o da categoria em que corre. Fora das pistas, acompanha o
+ * prestígio dele: o da categoria mais alta cuja nota-base de reputação ele já
+ * alcança. Um ex-campeão de F1 não passa a viver com o custo do kart só por
+ * acompanhar o kart.
+ */
+export function livingCostBase(career: CareerState): number {
+  if (career.mode === 'driver') return getCategory(career.categoryId).economy.living;
+  let living = 0;
+  for (const category of CATEGORIES) {
+    if (living === 0 || career.reputation >= (REPUTATION.TIER_BASE[category.tier] ?? 0)) living = Math.max(living, category.economy.living);
+  }
+  return living;
+}
+
 /* ------------------------------------------------------------------ */
 /* Etapa                                                               */
 /* ------------------------------------------------------------------ */
 
 export function applyExecutiveRoundEffects(input: CareerState, record: RoundRecord, gridDrops: Readonly<Record<string, number>>): CareerState {
   let career = input;
-  const category = getCategory(career.categoryId);
   const { season } = career;
   const round = record.round;
   const share = 1 / Math.max(1, career.calendar.length);
@@ -123,7 +140,7 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
   let finance = career.finance;
   const m0 = career.management;
   if (m0 && m0.position === 'principal') finance = post(finance, season, round, 'salary', m0.salary * share, 'Salário de chefe de equipe');
-  finance = post(finance, season, round, 'living', -category.economy.living * LIFESTYLE_RULES[finance.lifestyle].cost * share, 'Custo de vida');
+  finance = post(finance, season, round, 'living', -livingCostBase(career) * LIFESTYLE_RULES[finance.lifestyle].cost * share, 'Custo de vida');
   career = { ...career, finance };
   career = { ...career, finance: settleAssetsRound(career, round) };
 
@@ -350,7 +367,8 @@ function staffYearEnd(career: CareerState, m: ManagedTeam, notes: string[]): Sta
         notes.push(`${person.name} não renovou e deixou a equipe. A função fica vaga até você contratar alguém.`);
         continue;
       }
-      staff.push({ ...person, rating, contractEnd: career.season + 2, salary: Math.round((person.salary * 1.05) / 100) * 100 });
+      // Na renovação, o salário volta ao valor de mercado da nota atual (sem reajuste acumulado).
+      staff.push({ ...person, rating, contractEnd: career.season + 2, salary: staffSalary(m.categoryId, rating, person.role) });
     } else {
       staff.push({ ...person, rating });
     }
@@ -455,6 +473,31 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
   const assets = closeAssetsYear({ ...career, finance });
   notes.push(...assets.notes);
   const closed = closeSeasonFinance({ ...career, finance: assets.finance });
+  let personal = closed.finance;
+  let teams = career.teams;
+
+  // Dívida pessoal acima de dois anos de custo de vida: os credores executam os bens; se não bastar,
+  // a equipe própria é vendida à força; e só o que ainda sobrar é perdoado, com dano à reputação.
+  const ceiling = livingCostBase(career) * 2;
+  if (personal.cash < -ceiling) {
+    const liquidation = liquidateAssets(personal, season, rounds, -personal.cash - ceiling);
+    personal = liquidation.finance;
+    if (liquidation.raised > 0) notes.push(`Para cobrir a sua dívida, os credores executaram ${money(liquidation.raised)} do seu patrimônio (${liquidation.sold.join(', ')}).`);
+    if (personal.cash < -ceiling && management && management.position === 'owner') {
+      const team = managedTeam(career);
+      const proceeds = Math.round(ownedTeamValue({ ...career, management }) * FORCED_SALE_DISCOUNT);
+      personal = post(personal, season, rounds, 'assets', proceeds, `Venda forçada da equipe ${team?.name ?? ''}`);
+      notes.push(`Sem ter como pagar o que deve, você foi obrigado a vender a ${team?.name ?? 'equipe'} por ${money(proceeds)}.`);
+      teams = normalizeFieldDevelopment({ ...career, management });
+      management = null;
+    }
+    if (personal.cash < -ceiling) {
+      const forgiven = Math.round(-personal.cash - ceiling);
+      personal = { ...personal, cash: -ceiling };
+      reputation = Math.max(0, reputation - DEBT_SETTLEMENT_REPUTATION);
+      notes.push(`Acordo com credores: ${money(forgiven)} da sua dívida foram perdoados, ao custo de ${DEBT_SETTLEMENT_REPUTATION} pontos de reputação.`);
+    }
+  }
   const worldResults: Record<string, { position: number; wins: number; driver: Driver; teamName: string }> = {};
   for (const child of career.family.children) {
     const driver = career.drivers.find((d) => d.id === child.driver?.id && d.teamId);
@@ -463,7 +506,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
   }
   const family = closeFamilyYear(career, worldResults, new Set(Object.keys(worldResults)));
 
-  let state: CareerState = { ...career, finance: closed.finance, reputation, management, executiveLog, family: family.family };
+  let state: CareerState = { ...career, teams, finance: personal, reputation, management, executiveLog, family: family.family };
   state = syncManagedTeam(state);
   const champion = career.drivers.find((d) => d.id === driverStandings[0]?.driverId);
   const messages: InboxMessage[] = [{ id: `s${season}-end`, date, category: 'season', title: `Fim da temporada ${career.year}`, body: `${champion ? fullName(champion) : 'O campeão'} é o campeão da ${category.shortName}. ${notes.join(' ')} Imposto de renda do ano: ${money(closed.report.tax)}. Veja as decisões para a próxima temporada na tela Carreira.` }];
@@ -524,7 +567,7 @@ export function leaveTeam(career: CareerState): CareerState {
   } else {
     note = `Você deixou o comando da ${team?.name ?? 'equipe'}.`;
   }
-  const state: CareerState = { ...career, finance, management: null };
+  const state: CareerState = { ...career, finance, teams: normalizeFieldDevelopment(career), management: null };
   return { ...state, executiveOffseason: { ...off, candidates: [], lineup: [], sponsorOffers: [], notes: [...off.notes, note], jobOffers: buildJobOffers(state), listings: buildTeamListings(state) } };
 }
 
@@ -540,31 +583,44 @@ export type ExecutivePlan =
   | { kind: 'found'; categoryId: CategoryId; name: string; color: string };
 
 /**
- * Evolução das equipes quando o jogador dirige uma delas. As rivais seguem a
- * regra de sempre (ganham ou perdem até 2 pontos pelo resultado). A equipe do
- * jogador não recebe esse ajuste: o carro dela é o que a pesquisa construiu.
- * Como todas evoluíram durante o ano, a média dessa evolução é descontada de
- * todos (o regulamento e a concorrência "consomem" o ganho), e o que a equipe
- * do jogador ganhou acima da média perde 30%.
+ * Acerto de fim de ano do desenvolvimento, quando o jogador dirige uma equipe.
+ * Como todas as equipes evoluíram durante a temporada, a média dessa evolução
+ * é descontada de todas (o regulamento e a concorrência "consomem" o ganho), e
+ * o que a equipe do jogador ganhou acima da média perde 30%. Sem equipe
+ * administrada, não há o que acertar. Usada na virada do ano e sempre que o
+ * jogador deixa a equipe (venda, demissão, sucessão), para os ganhos do ano
+ * não ficarem embutidos nos carros.
  */
-function evolveTeamsExecutive(career: CareerState): Team[] {
-  const evolved = evolveTeams(career.teams, career);
+export function normalizeFieldDevelopment(career: CareerState): Team[] {
   const m = career.management;
-  if (!m) return evolved;
+  if (!m) return career.teams;
   const gains = Object.values(m.fieldGains);
   const mean = gains.length ? gains.reduce((a, b) => a + b, 0) / gains.length : 0;
   const limit = (v: number) => clamp(round1(v), 40, 97);
-  const current = career.teams.find((t) => t.id === m.teamId);
   const carry = (now: number, base: number, shift: number) => {
     const excess = now - base - shift;
     return base + (excess > 0 ? excess * MANAGEMENT.CARRY_OVER : excess);
   };
-  const teams = evolved.map((t) => {
-    if (t.id === m.teamId && current) {
-      return { ...t, car: { engine: limit(carry(current.car.engine, m.baseCar.engine, mean)), chassis: limit(carry(current.car.chassis, m.baseCar.chassis, mean)), reliability: limit(carry(current.car.reliability, m.baseCar.reliability, 0)) } };
+  return career.teams.map((t) => {
+    if (t.id === m.teamId) {
+      return { ...t, car: { engine: limit(carry(t.car.engine, m.baseCar.engine, mean)), chassis: limit(carry(t.car.chassis, m.baseCar.chassis, mean)), reliability: limit(carry(t.car.reliability, m.baseCar.reliability, 0)) } };
     }
     return { ...t, car: { ...t.car, engine: limit(t.car.engine - mean), chassis: limit(t.car.chassis - mean) } };
   });
+}
+
+/**
+ * Evolução das equipes na virada do ano. As rivais seguem a regra de sempre
+ * (ganham ou perdem até 2 pontos pelo resultado). A equipe do jogador não
+ * recebe esse ajuste: o carro dela é o que a pesquisa construiu.
+ */
+function evolveTeamsExecutive(career: CareerState): Team[] {
+  const m = career.management;
+  const normalized = normalizeFieldDevelopment(career);
+  const evolved = evolveTeams(normalized, career);
+  if (!m) return evolved;
+  const mine = normalized.find((t) => t.id === m.teamId);
+  const teams = evolved.map((t) => (mine && t.id === mine.id ? { ...t, car: mine.car } : t));
   const order = rankTeams(teams).map((t) => t.id);
   return teams.map((t) => ({ ...t, driverTarget: TEAM_TARGETS[order.indexOf(t.id)] ?? 16 }));
 }
@@ -603,12 +659,19 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   } else if (plan.kind === 'buy') {
     const listing = off.listings.find((l) => l.id === plan.listingId);
     if (!listing) throw new Error('Equipe não está à venda.');
-    if (listing.price > finance.cash) throw new Error('Saldo em caixa insuficiente para comprar a equipe.');
-    finance = post(finance, career.season, career.calendar.length, 'team', -listing.price, `Compra da equipe ${listing.teamName}`);
+    // Quem já é sócio paga só a parte que falta: a participação é absorvida na compra.
+    const stake = finance.stakes.find((x) => x.teamId === listing.teamId && x.categoryId === listing.categoryId);
+    const price = Math.max(0, listing.price - (stake?.value ?? 0));
+    if (price > finance.cash) throw new Error('Saldo em caixa insuficiente para comprar a equipe.');
+    finance = post(finance, career.season, career.calendar.length, 'team', -price, `Compra da equipe ${listing.teamName}`);
+    if (stake) {
+      finance = { ...finance, stakes: finance.stakes.filter((x) => x.id !== stake.id) };
+      news.push(`A sua participação de ${Math.round(stake.share * 100)}% na ${listing.teamName} entrou no negócio: você pagou ${money(price)} pelo restante.`);
+    }
     categoryId = listing.categoryId;
     targetTeamId = listing.teamId;
     options = { position: 'owner', salary: 0, purchasePrice: listing.price };
-    news.push(`Você comprou a ${listing.teamName} por ${money(listing.price)}.`);
+    if (!stake) news.push(`Você comprou a ${listing.teamName} por ${money(listing.price)}.`);
   } else if (plan.kind === 'found') {
     const cost = foundingCost(plan.categoryId);
     if (!/^#[0-9a-fA-F]{6}$/.test(plan.color)) throw new Error('Cor inválida.');

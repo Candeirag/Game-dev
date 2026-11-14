@@ -949,6 +949,149 @@ describe('compatibilidade com saves da Fase 2', () => {
 
 /* ------------------------------------------------------------------ */
 
+describe('auditoria: dívida, insolvência e brechas fechadas', () => {
+  it('dívida de piloto: quem tem bens não tem dívida perdoada; os credores executam o patrimônio', () => {
+    const closed = resolvePending(playSeason(newCareer(93)));
+    const offer = pickBestOffer(closed);
+    // Sem bens: a dívida acima do teto é perdoada, com dano à reputação (regra da Fase 2).
+    const broke = engine.startNextSeason(withCash(closed, -5_000_000), offer);
+    expect(broke.finance.cash).toBeGreaterThan(-200_000);
+    expect(broke.reputation).toBeLessThan(closed.reputation);
+    // Com o mesmo valor aplicado em renda fixa e ações, a dívida é paga com os bens e nada é perdoado.
+    const stock = STOCKS[0]!;
+    const rich: CareerState = { ...closed, finance: { ...closed.finance, cash: -5_000_000, fixedIncome: 3_000_000, stocks: [{ stockId: stock.id, shares: 100_000, avgCost: stock.startPrice }] } };
+    const settled = engine.startNextSeason(rich, offer);
+    expect(settled.reputation).toBe(closed.reputation);
+    expect(settled.finance.fixedIncome).toBe(0);
+    expect(settled.finance.stocks[0]!.shares).toBeLessThan(100_000);
+    expect(engine.netWorth(settled.finance)).toBeGreaterThan(engine.netWorth(rich.finance) - 400_000);
+    expect(settled.inbox.some((m) => /credores executaram/.test(m.body))).toBe(true);
+    expectValid(settled);
+  });
+
+  it('execução de bens: aplicações primeiro, depois ações, imóveis, empresas e participações', () => {
+    let c = withReputation(withCash(newCareer(95), 3_000_000), 50);
+    c = engine.buyProperty(engine.openBusiness(engine.invest(c, { product: 'fixedIncome', amount: 100_000 }), 'escola'), 'apartamento', 'rented');
+    const little = engine.liquidateAssets(c.finance, 1, 1, 60_000);
+    expect(little).toMatchObject({ raised: 60_000, sold: ['renda fixa'] });
+    expect(little.finance.fixedIncome).toBe(40_000);
+    expect(little.finance.properties).toHaveLength(1);
+    const more = engine.liquidateAssets(c.finance, 1, 1, 150_000);
+    expect(more.sold).toEqual(['renda fixa', 'Apartamento na cidade']);
+    expect(more.finance.businesses).toHaveLength(1);
+    expect(more.raised).toBeGreaterThanOrEqual(150_000);
+    const settlement = engine.settleDebts({ ...c.finance, cash: -1_000_000 }, 1, 1, 10_000);
+    expect(settlement.finance.properties).toHaveLength(0);
+    expect(settlement.finance.businesses).toHaveLength(0);
+    expect(settlement.finance.cash).toBe(-10_000);
+    expect(settlement.forgiven).toBeGreaterThan(0);
+  });
+
+  it('dirigente insolvente: bens executados, equipe vendida à força e, por último, acordo com credores', () => {
+    const owner = ownerCareer('f3', 8, 97);
+    const team = engine.managedTeam(owner)!;
+    const debt = playExecutiveSeason(withCash(owner, -80_000_000));
+    expect(debt.management).toBeNull();
+    expect(debt.executiveOffseason!.candidates).toEqual([]);
+    expect(debt.executiveOffseason!.notes.some((n) => n.includes(`vender a ${team.name}`))).toBe(true);
+    expect(debt.finance.cash).toBe(-engine.livingCostBase(debt) * 2);
+    expect(debt.reputation).toBeLessThan(owner.reputation);
+    expectValid(debt);
+    expectValid(botExecutiveOffseason(debt));
+    // Uma dívida pequena não custa a equipe.
+    const fine = playExecutiveSeason(withCash(owner, -20_000));
+    expect(fine.management).not.toBeNull();
+  });
+
+  it('custo de vida fora das pistas acompanha o prestígio, não a categoria acompanhada', () => {
+    const star = engine.startExecutiveSeason(retiredCareer(99, 1_000_000, 90), { kind: 'spectate' });
+    expect(star.categoryId).toBe('kart-regional');
+    expect(engine.livingCostBase(star)).toBe(engine.getCategory('f1').economy.living);
+    expect(engine.livingCostBase(withReputation(star, 8))).toBe(engine.getCategory('kart-regional').economy.living);
+    const played = playExecutiveRound(star);
+    expect(played.finance.seasonTotals.living).toBe(-Math.round(engine.getCategory('f1').economy.living / 10));
+  });
+
+  it('empréstimo contratado no meio do ano só paga juros pela parte que falta', () => {
+    let c = withCash(newCareer(101), 50_000);
+    for (let i = 0; i < 5; i++) c = playRound(c);
+    c = resolvePending(c);
+    const cash = c.finance.cash;
+    const loaned = engine.takeLoan(c, 20_000, 2);
+    const loan = loaned.finance.loans[0]!;
+    // Quitar na mesma hora devolve exatamente o que foi emprestado.
+    expect(engine.loanPayoff(loaned, loan)).toBe(20_000);
+    expect(engine.repayLoan(loaned, loan.id).finance.cash).toBe(cash);
+    // No fechamento, metade do ano de juros.
+    const closed = playSeason(loaned);
+    const after = closed.finance.loans[0]!;
+    const paid = Math.round(loan.annualPayment / 10) * 5;
+    expect(after.balance).toBe(Math.round(20_000 * (1 + ASSET_RULES.LOAN_RATE) - Math.round(20_000 * ASSET_RULES.LOAN_RATE * 0.5) - paid));
+    // No fechamento da temporada, um empréstimo novo não carrega juros do ano que acabou.
+    const late = engine.takeLoan(closed, 10_000, 2);
+    expect(engine.loanPayoff(late, late.finance.loans[1]!)).toBe(10_000);
+  });
+
+  it('comprar uma equipe da qual já se é sócio: a participação entra no negócio', () => {
+    const retired = retiredCareer(103, 5_000_000, 40);
+    const listing = retired.executiveOffseason!.listings.find((l) => l.categoryId === 'kart-regional' && l.rank === 8)!;
+    const partner = engine.buyStake(retired, listing.teamId, 0.25);
+    const stake = partner.finance.stakes[0]!;
+    const owner = engine.startExecutiveSeason(partner, { kind: 'buy', listingId: listing.id });
+    expect(owner.finance.stakes).toEqual([]);
+    expect(owner.finance.cash).toBe(partner.finance.cash - (listing.price - stake.value));
+    expect(owner.management).toMatchObject({ position: 'owner', teamId: listing.teamId });
+    expectValid(owner);
+  });
+
+  it('ao deixar a equipe, os ganhos do ano das rivais são descontados (os carros não inflam)', () => {
+    const c = playExecutiveSeason(ownerCareer('f1', 9, 105));
+    const m = c.management!;
+    const gains = Object.values(m.fieldGains);
+    const mean = gains.reduce((a, b) => a + b, 0) / gains.length;
+    expect(mean).toBeGreaterThan(1);
+    const rival = c.teams.find((t) => t.id !== m.teamId && t.car.engine < 95)!;
+    const sold = engine.leaveTeam(c);
+    expect(sold.teams.find((t) => t.id === rival.id)!.car.engine).toBeCloseTo(rival.car.engine - mean, 1);
+    expect(engine.normalizeFieldDevelopment(sold)).toBe(sold.teams);
+  });
+
+  it('equipe técnica: a renovação não acumula reajustes de salário', () => {
+    let c = ownerCareer('f3', 8, 107);
+    for (let year = 0; year < 8; year++) c = playExecutiveSeason(year === 0 ? c : botExecutiveOffseason(c));
+    for (const person of c.management!.staff) expect(person.salary).toBeLessThanOrEqual(engine.staffSalary('f3', 97, person.role));
+  }, 60_000);
+
+  it('participação em equipe fora do campeonato acompanhado: a posição volta para a força original da equipe', () => {
+    const c = withCash(newCareer(109), 5_000_000);
+    const best = engine.rankTeams(c.teams)[0]!;
+    let state = engine.buyStake(c, best.id, 0.25);
+    // O jogador muda de categoria: a equipe do kart regional deixa de ser simulada.
+    state = { ...state, categoryId: 'kart-national' };
+    const positions: number[] = [];
+    for (let year = 0; year < 30; year++) {
+      state = { ...state, season: state.season + 1, finance: engine.closeAssetsYear(state).finance };
+      positions.push(state.finance.stakes[0]!.lastPosition);
+    }
+    const average = positions.reduce((a, b) => a + b, 0) / positions.length;
+    expect(average).toBeLessThan(3);
+    expect(Math.max(...positions)).toBeLessThanOrEqual(6);
+  });
+
+  it('mortalidade e idade: ninguém passa dos 100 anos, e quem largou as pistas não guarda dados de piloto', () => {
+    expect(engine.mortalityRisk(99)).toBe(0.3);
+    expect(engine.mortalityRisk(100)).toBe(1);
+    const c = careerWithPartner(111);
+    const kid = childOf(c, 3, { id: 'kid-q', age: 16, kartYears: 6 });
+    const racing = engine.startChildCareer({ ...c, family: { ...c.family, children: [kid] } }, 'kid-q', 'full');
+    const quit = { ...racing, family: { ...racing.family, children: racing.family.children.map((k) => ({ ...k, stage: 'other' as const })) } };
+    const after = engine.closeFamilyYear(quit).family.children[0]!;
+    expect(after.driver).toBeNull();
+    expect(after.racing).not.toBeNull();
+    expectValid({ ...quit, family: engine.closeFamilyYear(quit).family });
+  });
+});
+
 describe('saves no modo dirigente', () => {
   it('salvar e carregar funciona fora das pistas: sem equipe, como dono e com sucessão aberta', async () => {
     const storage = new MemoryStorage();

@@ -18,6 +18,7 @@ import type { Business, CareerState, Finance, Lifestyle, Loan, Property, StockHo
 import { ASSET_RULES, BUSINESSES, PROPERTIES, STOCKS, type BusinessDefinition, type PropertyDefinition, type StockDefinition } from '@/data/assets';
 import { FAMILY } from '@/data/family';
 import { teamValue } from '@/data/management';
+import { initialTeams } from '@/data/teams';
 import { computeTeamStandings } from '../championship/standings';
 import { netWorth, post } from '../career/economy';
 import { createRng, gaussian, hashSeed } from '../rng';
@@ -221,13 +222,23 @@ export function sellStake(career: CareerState, stakeId: string): CareerState {
 }
 
 /**
- * Dividendo anual de uma participação: a equipe distribui de 10% do seu valor
- * (campeã) a −0,8% (última, que pede aporte aos sócios), 1,2 ponto a menos por
+ * Dividendo anual de uma participação: a equipe distribui de 6% do seu valor
+ * (campeã) a −1,2% (última, que pede aporte aos sócios), 0,8 ponto a menos por
  * posição.
  */
 export function stakeDividend(stake: TeamStake, position: number): number {
   const fullValue = teamValue(stake.categoryId, position - 1);
-  return Math.round(fullValue * stake.share * (0.1 - 0.012 * (position - 1)));
+  return Math.round(fullValue * stake.share * (ASSET_RULES.STAKE_DIVIDEND_TOP - ASSET_RULES.STAKE_DIVIDEND_STEP * (position - 1)));
+}
+
+/**
+ * Posição esperada, no longo prazo, de uma equipe que o jogo não está
+ * simulando: a força original dela na categoria (equipes criadas pelo jogador
+ * tendem ao meio do grid, com gestores contratados).
+ */
+function stakeAnchor(stake: TeamStake): number {
+  const rank = rankTeams(initialTeams(stake.categoryId)).findIndex((t) => t.id === stake.teamId);
+  return rank >= 0 ? rank + 1 : 5.5;
 }
 
 /* ------------------------------------------------------------------ */
@@ -257,20 +268,31 @@ export function annualPayment(amount: number, rate: number, seasons: number): nu
   return Math.round((amount * rate) / (1 - Math.pow(1 + rate, -seasons)));
 }
 
+/**
+ * Fração da temporada já disputada. No fechamento vale zero: as contas do ano
+ * já foram feitas e o que for contratado agora começa a contar no ano seguinte.
+ */
+function seasonProgress(career: CareerState): number {
+  if (career.offseason || career.executiveOffseason || career.calendar.length === 0) return 0;
+  return career.nextRoundIndex / career.calendar.length;
+}
+
 export function takeLoan(career: CareerState, amount: number, seasons: number): CareerState {
   const value = Math.round(amount);
   if (!ASSET_RULES.LOAN_TERMS.includes(seasons as 2)) throw new Error('Prazo inválido.');
   if (value < 1000) throw new Error('O valor mínimo de um empréstimo é € 1.000.');
   if (value > loanLimit(career)) throw new Error('O banco não aprova este valor: ele passa do seu limite de crédito.');
-  const loan: Loan = { id: `loan-s${career.season}-${career.finance.loans.length}-${value}`, label: `Empréstimo de ${seasons} temporadas`, principal: value, balance: value, rate: ASSET_RULES.LOAN_RATE, annualPayment: annualPayment(value, ASSET_RULES.LOAN_RATE, seasons), seasonsRemaining: seasons, paidThisSeason: 0 };
+  const loan: Loan = { id: `loan-s${career.season}-${career.finance.loans.length}-${value}`, label: `Empréstimo de ${seasons} temporadas`, principal: value, balance: value, rate: ASSET_RULES.LOAN_RATE, annualPayment: annualPayment(value, ASSET_RULES.LOAN_RATE, seasons), seasonsRemaining: seasons,
+    // Contratado no meio do ano, só paga juros pela parte que falta: o crédito abaixo anula os juros do trecho já disputado.
+    paidThisSeason: Math.round(value * ASSET_RULES.LOAN_RATE * seasonProgress(career)),
+  };
   const finance = post(career.finance, career.season, round(career), 'loan', value, 'Empréstimo bancário');
   return { ...career, finance: { ...finance, loans: [...finance.loans, loan] } };
 }
 
 /** Valor para quitar um empréstimo agora: saldo com os juros do ano até aqui, menos o que já foi pago nesta temporada. */
 export function loanPayoff(career: CareerState, loan: Loan): number {
-  const progress = career.calendar.length > 0 ? career.nextRoundIndex / career.calendar.length : 1;
-  return Math.max(0, Math.round(loan.balance * (1 + loan.rate * progress) - loan.paidThisSeason));
+  return Math.max(0, Math.round(loan.balance * (1 + loan.rate * seasonProgress(career)) - loan.paidThisSeason));
 }
 
 export function repayLoan(career: CareerState, loanId: string): CareerState {
@@ -284,6 +306,83 @@ export function repayLoan(career: CareerState, loanId: string): CareerState {
 
 export function setLifestyle(career: CareerState, lifestyle: Lifestyle): CareerState {
   return { ...career, finance: { ...career.finance, lifestyle } };
+}
+
+/* ------------------------------------------------------------------ */
+/* Dívida e execução de bens                                           */
+/* ------------------------------------------------------------------ */
+
+export interface Liquidation {
+  finance: Finance;
+  /** Quanto foi levantado. */
+  raised: number;
+  /** O que foi vendido, para o aviso ao jogador. */
+  sold: string[];
+}
+
+/**
+ * Execução de bens por credores: resgata aplicações e vende ações, imóveis,
+ * empresas e participações, nessa ordem, até levantar o valor pedido. Imóveis,
+ * empresas e participações são vendidos inteiros.
+ */
+export function liquidateAssets(finance: Finance, season: number, round: number, needed: number): Liquidation {
+  let f = finance;
+  let remaining = Math.ceil(needed);
+  const sold: string[] = [];
+  for (const product of ['fixedIncome', 'equityFund'] as const) {
+    const amount = Math.min(Math.floor(f[product]), Math.max(0, remaining));
+    if (amount <= 0) continue;
+    f = { ...f, cash: f.cash + amount, [product]: f[product] - amount };
+    remaining -= amount;
+    sold.push(product === 'fixedIncome' ? 'renda fixa' : 'fundo de ações');
+  }
+  for (const holding of f.stocks) {
+    if (remaining <= 0) break;
+    const price = stockPrice(f, holding.stockId);
+    const shares = Math.min(holding.shares, Math.ceil(remaining / price));
+    const proceeds = Math.round(price * shares);
+    f = post(f, season, round, 'assets', proceeds, `Execução: ações da ${getStock(holding.stockId).name}`);
+    f = { ...f, stocks: f.stocks.map((h) => (h.stockId === holding.stockId ? { ...h, shares: h.shares - shares } : h)).filter((h) => h.shares > 0) };
+    remaining -= proceeds;
+    sold.push(`ações da ${getStock(holding.stockId).name}`);
+  }
+  for (const property of f.properties) {
+    if (remaining <= 0) break;
+    const proceeds = Math.round(property.value * (1 - ASSET_RULES.PROPERTY_SALE_FEE));
+    f = { ...post(f, season, round, 'assets', proceeds, `Execução: ${property.name}`), properties: f.properties.filter((p) => p.id !== property.id) };
+    remaining -= proceeds;
+    sold.push(property.name);
+  }
+  for (const business of f.businesses) {
+    if (remaining <= 0) break;
+    f = { ...post(f, season, round, 'assets', business.value, `Execução: ${business.name}`), businesses: f.businesses.filter((b) => b.id !== business.id) };
+    remaining -= business.value;
+    sold.push(business.name);
+  }
+  for (const stake of f.stakes) {
+    if (remaining <= 0) break;
+    f = { ...post(f, season, round, 'assets', stake.value, `Execução: participação na ${stake.teamName}`), stakes: f.stakes.filter((s) => s.id !== stake.id) };
+    remaining -= stake.value;
+    sold.push(`participação na ${stake.teamName}`);
+  }
+  return { finance: f, raised: Math.ceil(needed) - remaining, sold };
+}
+
+export interface DebtSettlement extends Liquidation {
+  /** Dívida perdoada depois de executados todos os bens. */
+  forgiven: number;
+}
+
+/**
+ * Acerto com credores quando a dívida em caixa passa do teto: primeiro os bens
+ * são executados; só o que continuar acima do teto é perdoado. Quem tem
+ * patrimônio não tem dívida perdoada.
+ */
+export function settleDebts(finance: Finance, season: number, round: number, ceiling: number): DebtSettlement {
+  if (finance.cash >= -ceiling) return { finance, raised: 0, sold: [], forgiven: 0 };
+  const liquidation = liquidateAssets(finance, season, round, -finance.cash - ceiling);
+  const forgiven = Math.max(0, Math.round(-liquidation.finance.cash - ceiling));
+  return { ...liquidation, finance: forgiven > 0 ? { ...liquidation.finance, cash: -ceiling } : liquidation.finance, forgiven };
 }
 
 /* ------------------------------------------------------------------ */
@@ -375,8 +474,8 @@ export function closeAssetsYear(career: CareerState): AssetsYearResult {
   const stakes: TeamStake[] = [];
   for (const stake of f.stakes) {
     const real = stake.categoryId === career.categoryId ? standings.find((s) => s.teamId === stake.teamId)?.position : undefined;
-    // Equipe fora do campeonato acompanhado: a posição oscila em torno da última conhecida.
-    const position = real ?? clamp(stake.lastPosition + Math.round(gaussian(createRng(hashSeed(career.seed, season, 'stake', stake.id))) * 1.5), 1, 10);
+    // Equipe fora do campeonato acompanhado: a posição oscila e volta, aos poucos, para a força original dela.
+    const position = real ?? clamp(Math.round(stake.lastPosition + (stakeAnchor(stake) - stake.lastPosition) * 0.3 + gaussian(createRng(hashSeed(career.seed, season, 'stake', stake.id))) * 1.2), 1, 10);
     const dividend = stakeDividend(stake, position);
     f = post(f, season, rounds, 'dividends', dividend, dividend >= 0 ? `Dividendos: ${stake.teamName}` : `Aporte de sócio: ${stake.teamName}`);
     stakes.push({ ...stake, lastPosition: position, lastDividend: dividend, value: Math.round(teamValue(stake.categoryId, position - 1) * stake.share) });

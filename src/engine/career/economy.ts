@@ -27,10 +27,12 @@ export const ECONOMY = {
     { upTo: 3_000_000, rate: 0.275 },
     { upTo: Infinity, rate: 0.37 },
   ],
-  /** Renda fixa: 4% ao ano, sem risco. */
-  FIXED_INCOME_RETURN: 0.04,
-  /** Fundo de ações: média de 9% ao ano, desvio de 16% (pode perder). */
-  EQUITY_MEAN: 0.09,
+  /**
+   * Retornos reais (o jogo não tem inflação). Renda fixa: 2,5% ao ano, sem
+   * risco. Fundo de ações: média de 5% ao ano, desvio de 16% (pode perder).
+   */
+  FIXED_INCOME_RETURN: 0.025,
+  EQUITY_MEAN: 0.05,
   EQUITY_SD: 0.16,
   /** Juros anuais sobre o saldo negativo. */
   LOAN_INTEREST: 0.14,

@@ -409,7 +409,8 @@ export function closeFamilyYear(career: CareerState, worldResults: Readonly<Reco
     const homeBond = (career.mode === 'executive' ? 1 : career.calendar.length > 12 ? -1 : 0) + (hasPersonalProperty(career.finance, 'casa-campo') ? 3 : 0);
     child = { ...child, bond: Math.round(clamp(child.bond + traitSum(child, 'bond') + lifestyleBond + supportBond + homeBond + (65 - child.bond) * 0.08)) };
     // Um filho rebelde e distante pode largar o automobilismo.
-    if (child.stage === 'racing' && child.traits.includes('rebel') && child.bond < 25 && createRng(hashSeed(career.seed, career.season, 'rebel', child.id)).next() < 0.4) {
+    const inWorld = child.driver !== null && keepInWorld.has(child.driver.id);
+    if (child.stage === 'racing' && !inWorld && child.traits.includes('rebel') && child.bond < 25 && createRng(hashSeed(career.seed, career.season, 'rebel', child.id)).next() < 0.4) {
       notes.push(`${child.firstName} rompeu com a família e largou as pistas.`);
       child = { ...child, stage: 'other', racing: child.racing ? { ...child.racing, familyCost: 0 } : null };
     }
@@ -418,6 +419,8 @@ export function closeFamilyYear(career: CareerState, worldResults: Readonly<Reco
       child = planned.child;
       if (planned.note) notes.push(planned.note);
     }
+    // Quem deixou as pistas não guarda mais os dados de piloto (o histórico da carreira fica em `racing`).
+    if (child.stage === 'other' && child.driver) child = { ...child, driver: null };
     return child;
   });
 
