@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RACE_MODES, type TyreCompound } from '@/domain/schemas';
+import type { ReactNode } from 'react';
+import { RACE_MODES, type RaceResult, type TyreCompound } from '@/domain/schemas';
 import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/domain/labels';
-import { TYRES, conditionFor, finalizeRace, fullName, gapToLeader, isRaceFinished } from '@/engine';
+import { TYRES, conditionFor, finalizeRace, fullName, gapToLeader, isRaceFinished, type RaceSimState } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { RaceResultTable } from './RaceResultTable';
 import { Button, Card, Pill, TableWrap, TeamSwatch, cx, td, th } from './ui';
@@ -16,7 +17,7 @@ const SPEEDS = [
   { label: '8×', ms: 120 },
 ];
 
-const EVENT_TONE: Record<string, string> = {
+export const EVENT_TONE: Record<string, string> = {
   overtake: 'text-go-400',
   error: 'text-gold-400',
   spin: 'text-gold-400',
@@ -46,8 +47,41 @@ const COMPOUND_STYLE: Record<TyreCompound, string> = {
   wet: 'bg-rain-400 text-ink-950',
 };
 
-function CompoundDot({ compound }: { compound: TyreCompound }) {
+export function CompoundDot({ compound }: { compound: TyreCompound }) {
   return <span title={TYRES[compound].label} className={cx('inline-grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold', COMPOUND_STYLE[compound])}>{TYRES[compound].label.charAt(0)}</span>;
+}
+
+/** Resultado oficial da corrida, com o botão que conclui a etapa. Usado pelos dois modos de exibição. */
+export function RaceResultPanel({ race, result, extra }: { race: RaceSimState; result: RaceResult; extra?: ReactNode }) {
+  const { player, drivers } = useCareerView();
+  const completeWeekend = useGameStore((s) => s.completeWeekend);
+  const nameOf = (id: string) => (drivers[id] ? fullName(drivers[id]!) : id);
+  const mine = result.entries.find((e) => e.driverId === player.id);
+  return (
+    <div className="space-y-6">
+      <Card title={race.endedEarly ? 'Corrida encerrada com bandeira vermelha' : 'Bandeirada'} className="border-gold-400/30">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="font-display text-3xl font-bold uppercase">
+              {!mine ? 'Corrida encerrada' : mine.status === 'finished' ? `Você terminou em ${mine.position}º` : 'Você abandonou a corrida'}
+            </div>
+            {mine && (
+              <div className="text-sm text-ink-400">
+                Largou em {mine.grid}º · {mine.points} ponto(s) · {mine.overtakes} ultrapassagem(ns)
+                {mine.pitStops > 0 && ` · ${mine.pitStops} parada(s)`}
+                {mine.penaltySeconds > 0 && ` · ${mine.penaltySeconds}s de punição`} · Vencedor: {nameOf(result.entries[0]?.driverId ?? '')}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {extra}
+            <Button variant="primary" className="h-12 px-6 text-base" onClick={completeWeekend}>Concluir etapa e salvar</Button>
+          </div>
+        </div>
+      </Card>
+      <Card title="Resultado oficial" padded={false}><div className="px-4"><RaceResultTable result={result} /></div></Card>
+    </div>
+  );
 }
 
 export function RaceView() {
@@ -57,7 +91,7 @@ export function RaceView() {
   const pitRequest = useGameStore((s) => s.pitRequest);
   const skipPlannedStop = useGameStore((s) => s.skipPlannedStop);
   const autoEngineer = useGameStore((s) => s.autoEngineer);
-  const { setRaceMode, stepRace, simulateRestOfRace, completeWeekend, requestPit, setSkipPlannedStop, setAutoEngineer } = useGameStore.getState();
+  const { setRaceMode, stepRace, simulateRestOfRace, requestPit, setSkipPlannedStop, setAutoEngineer } = useGameStore.getState();
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(0);
 
@@ -89,31 +123,7 @@ export function RaceView() {
   const fuelMargin = me ? me.fuel - lapsRemaining : 0;
   const redFlagRestart = race.restart === 'standing' && race.currentLap > 0;
 
-  if (result) {
-    const mine = result.entries.find((e) => e.driverId === player.id);
-    return (
-      <div className="space-y-6">
-        <Card title={race.endedEarly ? 'Corrida encerrada com bandeira vermelha' : 'Bandeirada'} className="border-gold-400/30">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="font-display text-3xl font-bold uppercase">
-                {!mine ? 'Corrida encerrada' : mine.status === 'finished' ? `Você terminou em ${mine.position}º` : 'Você abandonou a corrida'}
-              </div>
-              {mine && (
-                <div className="text-sm text-ink-400">
-                  Largou em {mine.grid}º · {mine.points} ponto(s) · {mine.overtakes} ultrapassagem(ns)
-                  {mine.pitStops > 0 && ` · ${mine.pitStops} parada(s)`}
-                  {mine.penaltySeconds > 0 && ` · ${mine.penaltySeconds}s de punição`} · Vencedor: {nameOf(result.entries[0]?.driverId ?? '')}
-                </div>
-              )}
-            </div>
-            <Button variant="primary" className="h-12 px-6 text-base" onClick={completeWeekend}>Concluir etapa e salvar</Button>
-          </div>
-        </Card>
-        <Card title="Resultado oficial" padded={false}><div className="px-4"><RaceResultTable result={result} /></div></Card>
-      </div>
-    );
-  }
+  if (result) return <RaceResultPanel race={race} result={result} />;
 
   return (
     <div className="space-y-4">

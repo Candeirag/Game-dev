@@ -501,6 +501,10 @@ export interface CarSample {
   reason: DnfReason | null;
   /** Último registro de volta completa (pneus, paradas, punições). */
   record: CarLap | null;
+  /** Posição no grid (0 = pole) enquanto a volta em andamento é uma largada parada; null nas demais. */
+  gridSlot: number | null;
+  /** Fração da volta em andamento (negativa atrás da linha, na largada). */
+  inLap: number;
 }
 
 function lapAt(car: CarTimeline, t: number): CarLap | null {
@@ -524,21 +528,23 @@ export function sampleCar(timeline: RaceTimeline, circuit: Circuit, car: CarTime
     }
     return null;
   };
-  const base = { driverId: car.driverId, spinPhase: null, retiredFor: 0, reason: null, inBox: false } as const;
+  const first = lap?.segments[0];
+  const gridSlot = !lap ? car.grid - 1 : first && first.kind === 'launch' ? Math.round(-first.s0 / circuit.gridSlot - 0.7) : null;
+  const base = { driverId: car.driverId, spinPhase: null, retiredFor: 0, reason: null, inBox: false, gridSlot, inLap: 0 } as const;
   if (!lap) {
     // Antes de o motor simular a primeira volta: carro parado no grid.
     const s = -(car.grid - 0.3) * circuit.gridSlot;
-    return { ...base, distance: s, s: wrap01(s), lap: 1, state: 'grid', inPitLane: false, speed: 0, record: null };
+    return { ...base, distance: s, s: wrap01(s), lap: 1, state: 'grid', inPitLane: false, speed: 0, record: null, inLap: s };
   }
   if (car.retired && t >= car.retired.time) {
-    return { ...base, distance: car.retired.lap - 1 + car.retired.s, s: car.retired.s, lap: car.retired.lap, state: 'retired', inPitLane: false, speed: 0, retiredFor: t - car.retired.time, reason: car.retired.reason, record: completed(t) };
+    return { ...base, gridSlot: null, inLap: car.retired.s, distance: car.retired.lap - 1 + car.retired.s, s: car.retired.s, lap: car.retired.lap, state: 'retired', inPitLane: false, speed: 0, retiredFor: t - car.retired.time, reason: car.retired.reason, record: completed(t) };
   }
   if (car.finishTime !== null && t >= car.finishTime) {
     // Volta de desaceleração depois da bandeirada.
     const duration = (lap.t1 - lap.t0) * 1.8;
     const extra = Math.min(0.9, (t - car.finishTime) / duration);
     const s = sAtTau(circuit, extra);
-    return { ...base, distance: lap.lap + extra, s: wrap01(s), lap: lap.lap, state: 'finished', inPitLane: false, speed: (paceAt(circuit, s) / duration) * toKmh, record: lap };
+    return { ...base, gridSlot: null, inLap: extra, distance: lap.lap + extra, s: wrap01(s), lap: lap.lap, state: 'finished', inPitLane: false, speed: (paceAt(circuit, s) / duration) * toKmh, record: lap };
   }
   const segment = lap.segments.find((sg) => t < sg.t1) ?? lap.segments.at(-1);
   if (!segment) return { ...base, distance: lap.lap - 1, s: 0, lap: lap.lap, state: 'racing', inPitLane: false, speed: 0, record: completed(t) };
@@ -548,6 +554,7 @@ export function sampleCar(timeline: RaceTimeline, circuit: Circuit, car: CarTime
   const state: CarState = spinning ? 'spin' : inPitLane ? 'pit' : s < 0 && rate === 0 ? 'grid' : 'racing';
   return {
     ...base,
+    inLap: s,
     distance: lap.lap - 1 + s,
     s: wrap01(s),
     lap: lap.lap,

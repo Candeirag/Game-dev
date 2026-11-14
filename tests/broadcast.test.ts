@@ -140,7 +140,6 @@ describe('circuitos', () => {
 /** Confere, volta a volta, que a pista mostra a ordem do motor. */
 function expectFaithful(states: RaceSimState[], ctx: RaceContext): RaceTimeline {
   const timeline = buildRaceTimeline(states, ctx)!;
-  const circuit = circuitForRace(ctx);
   expect(timeline.lapsBuilt).toBe(states.length - 1);
   for (let lap = 1; lap < states.length; lap++) {
     const state = states[lap]!;
@@ -413,7 +412,7 @@ describe('integração com a carreira', () => {
     let career = botCareer(4242, 4);
     career = playRound(career);
     while (career.pendingEvents.length > 0) career = resolveEvent(career, career.pendingEvents[0]!.id, career.pendingEvents[0]!.choices[0]!.id).career;
-    let weekend = runQualifying(runPractice(startWeekend(career), 'setup'), 'balanced');
+    const weekend = runQualifying(runPractice(startWeekend(career), 'setup'), 'balanced');
     const ctx = buildRaceContext(weekend);
     const states = [createWeekendRace(weekend)];
     let timeline = createRaceTimeline(states[0]!, ctx);
@@ -429,6 +428,5 @@ describe('integração com a carreira', () => {
     const numbers = Object.values(timeline.cars).map((c) => c.number);
     expect(new Set(numbers).size).toBe(numbers.length);
     expect(createRaceTimeline(states[0]!, ctx).cars[weekend.playerDriverId]!.number).toBe(timeline.cars[weekend.playerDriverId]!.number);
-    weekend = weekend;
   });
 });

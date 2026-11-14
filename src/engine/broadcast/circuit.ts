@@ -45,8 +45,8 @@ export const CIRCUIT = {
   /** Espaço de cada carro no grid, ao longo da pista. */
   GRID_SLOT: 15,
   /** Comprimento e largura do carro desenhado. */
-  CAR_LENGTH: 25,
-  CAR_WIDTH: 10.5,
+  CAR_LENGTH: 21,
+  CAR_WIDTH: 8.9,
 } as const;
 
 /** Perfil de velocidade por tipo de veículo (valores relativos à velocidade máxima). */

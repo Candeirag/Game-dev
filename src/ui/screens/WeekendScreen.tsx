@@ -13,6 +13,7 @@ import { useGameStore } from '@/store/gameStore';
 import { EventsPanel } from '../components/EventsPanel';
 import { RaceResultTable } from '../components/RaceResultTable';
 import { RaceView } from '../components/RaceView';
+import { RaceBroadcast } from '../race/RaceBroadcast';
 import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
 import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
@@ -94,12 +95,20 @@ export function WeekendScreen() {
   const activeIndex = STEPS.findIndex((s) => s.key === weekend.phase);
 
   return (
-    <div className="space-y-6">
-      <PageHeader eyebrow={`${category.shortName} · Etapa ${event.round} de ${career.calendar.length} · ${formatDate(event.date)}`} title={track.name}>
-        <span className="text-sm text-ink-400">{trackLocation(track)} · {raceLaps(track, category)} voltas</span>
-      </PageHeader>
+    <div className={liveRace ? 'space-y-3' : 'space-y-6'}>
+      {/* Com a corrida na tela, o cabeçalho e as etapas do fim de semana dão lugar à pista. */}
+      {liveRace ? (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h1 className="font-display text-2xl font-bold uppercase leading-none tracking-wide">{track.name}</h1>
+          <span className="text-xs text-ink-400">{category.shortName} · Etapa {event.round} de {career.calendar.length} · {trackLocation(track)} · {raceLaps(track, category)} voltas</span>
+        </div>
+      ) : (
+        <PageHeader eyebrow={`${category.shortName} · Etapa ${event.round} de ${career.calendar.length} · ${formatDate(event.date)}`} title={track.name}>
+          <span className="text-sm text-ink-400">{trackLocation(track)} · {raceLaps(track, category)} voltas</span>
+        </PageHeader>
+      )}
 
-      <ol className="grid grid-cols-3 gap-2">
+      {!liveRace && <ol className="grid grid-cols-3 gap-2">
         {STEPS.map((step, i) => {
           const weather = event.weather[step.key];
           return (
@@ -111,7 +120,7 @@ export function WeekendScreen() {
             </li>
           );
         })}
-      </ol>
+      </ol>}
 
       {!weekend.playerParticipates ? (
         <Card title="Você não disputa esta etapa">
@@ -122,7 +131,7 @@ export function WeekendScreen() {
         <>
           {weekend.phase === 'practice' && <PracticePhase />}
           {weekend.phase === 'qualifying' && <QualifyingPhase />}
-          {weekend.phase === 'race' && (liveRace ? <RaceView /> : <PreRacePhase />)}
+          {weekend.phase === 'race' && (liveRace ? <RaceStage /> : <PreRacePhase />)}
         </>
       )}
     </div>
@@ -310,5 +319,38 @@ function RoundSummary({ record }: { record: RoundRecord }) {
       </div>
       <div className="px-4"><RaceResultTable result={record.race} /></div>
     </Card>
+  );
+}
+
+const RACE_VIEW_KEY = 'apex.raceView';
+
+/** Corrida em andamento: transmissão visual (padrão) ou a tabela de cronometragem. A escolha fica guardada no navegador. */
+function RaceStage() {
+  const [view, setView] = useState<'broadcast' | 'timing'>(() => {
+    try {
+      return localStorage.getItem(RACE_VIEW_KEY) === 'timing' ? 'timing' : 'broadcast';
+    } catch {
+      return 'broadcast';
+    }
+  });
+  const choose = (next: 'broadcast' | 'timing') => {
+    setView(next);
+    try {
+      localStorage.setItem(RACE_VIEW_KEY, next);
+    } catch {
+      // Sem armazenamento disponível, a escolha vale só para esta corrida.
+    }
+  };
+  const toggle = (
+    <Button variant="ghost" onClick={() => choose(view === 'broadcast' ? 'timing' : 'broadcast')}>
+      {view === 'broadcast' ? 'Modo cronometragem' : 'Voltar à corrida visual'}
+    </Button>
+  );
+  if (view === 'broadcast') return <RaceBroadcast viewSwitch={toggle} />;
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">{toggle}</div>
+      <RaceView />
+    </div>
   );
 }
