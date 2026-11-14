@@ -24,7 +24,7 @@ export function LifeScreen() {
   return (
     <div>
       <PageHeader title="Vida" eyebrow={`${player.firstName} ${player.lastName} · fora das pistas`} />
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_13rem] lg:grid-cols-[minmax(0,1fr)_18rem]">
         <Panel flush>
           <ul className="divide-y divide-ink-700/70">
             <Row
@@ -153,7 +153,7 @@ export function LifeScreen() {
           </ul>
         </Panel>
 
-        <Panel title="Patrimônio" bodyClassName="grid grid-cols-2 gap-4 lg:grid-cols-1">
+        <Panel title="Patrimônio" bodyClassName="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-1">
           <Stat
             label="Patrimônio líquido"
             value={<span className={life.finance.netWorth + teamValue < 0 ? 'text-gold-400' : ''}>{formatMoney(life.finance.netWorth + teamValue)}</span>}
@@ -192,14 +192,14 @@ function Row({
 }) {
   return (
     <li>
-      <Link to={to} className="group flex min-h-14 items-center gap-3 px-4 py-2 transition-colors hover:bg-ink-800 focus-visible:outline-offset-[-2px]">
+      <Link to={to} className="group flex min-h-11 items-center gap-3 px-4 py-1.5 transition-colors hover:bg-ink-800 focus-visible:outline-offset-[-2px]">
         <Icon size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-ink-400" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-display text-lg font-semibold uppercase leading-none tracking-wide">{title}</span>
             {tag}
           </div>
-          <div className="mt-1 text-xs leading-snug text-ink-300">{summary}</div>
+          <div className="mt-0.5 text-xs leading-snug text-ink-300">{summary}</div>
         </div>
         <div className={cx('shrink-0 text-right font-display text-xl font-semibold leading-none', attention ? 'text-gold-400' : 'text-ink-100')}>{value}</div>
         <ChevronRight size={18} aria-hidden className="shrink-0 text-ink-500 transition-colors group-hover:text-ink-100" />

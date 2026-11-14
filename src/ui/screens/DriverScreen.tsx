@@ -1,109 +1,156 @@
-import { useMemo } from 'react';
-import { ATTRIBUTE_KEYS } from '@/domain/schemas';
+import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ATTRIBUTE_KEYS, type AttributeKey } from '@/domain/schemas';
 import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
 import { computeCareerStats, fullName, overallRating } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { Card, Meter, PageHeader, Pill, RatingBar, Stat, cx } from '../components/ui';
+import { Card, Meter, PageHeader, Pill, RatingBar, Stat, Tabs, cx } from '../components/ui';
+import { Ring } from '../kit/Ring';
 import { formatRating, signed } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
 
+type DriverTab = 'attributes' | 'condition' | 'stats';
+const TABS: { value: DriverTab; label: string }[] = [
+  { value: 'attributes', label: 'Atributos' },
+  { value: 'condition', label: 'Condição e treino' },
+  { value: 'stats', label: 'Números' },
+];
+
+/** Variação de um atributo na temporada: ganho em verde, perda em âmbar. Nada quando não mudou. */
+function Delta({ value, suffix, className = 'text-xs' }: { value: number; suffix?: string; className?: string }) {
+  if (Math.abs(value) < 0.05) return null;
+  return (
+    <span className={cx(className, value > 0 ? 'text-go-400' : 'text-gold-400')}>
+      {signed(value)}
+      {suffix}
+    </span>
+  );
+}
+
 export function DriverScreen() {
   const { career, player, team } = useCareerView();
   const stats = useMemo(() => computeCareerStats(career, player.id), [career, player.id]);
+  // A aba fica no endereço (?tab=...), como nas outras telas com abas.
+  const [params, setParams] = useSearchParams();
+  const requested = params.get('tab');
+  const tab: DriverTab = TABS.find((t) => t.value === requested)?.value ?? 'attributes';
+  const setTab = (next: DriverTab) => setParams(next === 'attributes' ? {} : { tab: next }, { replace: true });
+  // Atributo aberto no quadro de explicação (só no formato largo; em pé, a explicação vai na lista).
+  const [selected, setSelected] = useState<AttributeKey | null>(null);
   const start = career.playerSeasonStartAttributes;
   const overall = overallRating(player.attributes);
   const overallDelta = overall - overallRating(start);
   const nationality = NATIONALITIES.find((n) => n.code === player.nationality)?.name ?? player.nationality;
 
   return (
-    <div className="space-y-6">
-      <PageHeader eyebrow="Perfil do piloto" title={fullName(player)}>
-        <span className="text-sm text-ink-400">
-          {nationality} · {player.age} anos · {team.name}
-        </span>
+    <div className="space-y-3">
+      <PageHeader eyebrow={`${nationality} · ${player.age} anos · ${team.name}`} title={fullName(player)}>
+        <Tabs value={tab} options={TABS} onChange={setTab} />
       </PageHeader>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Card title="Atributos" action={<span className="text-xs text-ink-400">Variação desde o início da temporada</span>}>
-          <ul className="space-y-4">
-            {ATTRIBUTE_KEYS.map((key) => {
-              const value = player.attributes[key];
-              const delta = value - start[key];
-              return (
-                <li key={key}>
-                  <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                    <span className="text-sm font-semibold">{ATTRIBUTE_LABELS[key]}</span>
-                    <span className="flex items-baseline gap-2">
-                      {Math.abs(delta) >= 0.05 && <span className={cx('text-xs tabular', delta > 0 ? 'text-go-400' : 'text-apex-400')}>{signed(delta)}</span>}
-                      <span className="w-8 text-right font-display text-xl font-bold tabular">{formatRating(value)}</span>
-                    </span>
-                  </div>
-                  <RatingBar value={value} previous={start[key]} />
-                  <p className="mt-1 text-xs text-ink-400">{ATTRIBUTE_DESCRIPTIONS[key]}</p>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-
-        <div className="space-y-6">
-          <Card title="Avaliação">
-            <div className="grid grid-cols-3 gap-4">
-              <Stat
-                label="Geral"
-                value={formatRating(overall)}
-                hint={Math.abs(overallDelta) >= 0.05 ? `${signed(overallDelta)} na temporada` : undefined}
-                accent
-              />
-              <Stat label="Potencial" value={player.potential} hint="Teto dos atributos" />
-              <Stat label="Reputação" value={career.reputation} hint="De 0 a 100" />
-            </div>
-            <p className="mt-4 text-xs text-ink-400">
-              A nota geral é uma média ponderada dos atributos, com a velocidade pesando mais. O potencial limita até onde o treino leva cada atributo.
-            </p>
+      {tab === 'attributes' && (
+        <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          <Card title="Atributos" action={<span className="text-xs text-ink-400">Variação desde o início da temporada</span>} bodyClassName="px-2 py-1">
+            <ul className="grid gap-x-3 md:grid-cols-2">
+              {ATTRIBUTE_KEYS.map((key) => {
+                const value = player.attributes[key];
+                const active = selected === key;
+                return (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setSelected(active ? null : key)}
+                      className={cx(
+                        'block min-h-11 w-full px-2 py-1 text-left transition-colors',
+                        active ? 'md:bg-ink-800 md:shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'md:hover:bg-ink-850',
+                      )}
+                    >
+                      <span className="mb-1 flex h-5 items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">{ATTRIBUTE_LABELS[key]}</span>
+                        <span className="shrink-0 font-display text-xl font-bold leading-none">{formatRating(value)}</span>
+                      </span>
+                      {/* A variação tem lugar reservado, para as barras terem todas o mesmo comprimento. */}
+                      <span className="flex items-center gap-2">
+                        <span className="block min-w-0 flex-1">
+                          <RatingBar value={value} previous={start[key]} />
+                        </span>
+                        <span className="h-3 w-7 shrink-0 text-right">
+                          <Delta value={value - start[key]} className="block text-[11px] leading-3" />
+                        </span>
+                      </span>
+                      <span className="mt-1 block text-xs font-normal text-ink-400 md:hidden">{ATTRIBUTE_DESCRIPTIONS[key]}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </Card>
 
-          <Card title="Condição" action={player.injury ? <Pill tone="bad">Lesionado</Pill> : undefined}>
-            <div className="space-y-4">
-              <Meter label="Fase" value={player.condition.form} hint="Média dos resultados recentes em relação à meta. Vale até ±0,12% no tempo de volta." />
-              <Meter label="Confiança" value={player.condition.confidence} hint="Muda a chance de erro (de −25% a +25%) e o sucesso nas disputas de posição." />
-              <Meter label="Moral" value={player.condition.morale} hint="Muda a regularidade das voltas e o rendimento do treino (de −20% a +20%)." />
+          <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" />} bodyClassName="p-3">
+            <div className="flex items-center gap-4">
+              <Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} tone="accent" size={76} />
+              <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
+                <Stat label="Potencial" value={player.potential} />
+                <Stat label="Reputação" value={career.reputation} />
+              </div>
             </div>
+            <div className="mt-3 border-t border-ink-700 pt-3 text-xs text-ink-400 md:min-h-[6.25rem]">
+              {selected && (
+                <div className="hidden md:block">
+                  <h3 className="font-display text-sm font-semibold uppercase tracking-[0.06em] text-ink-200">{ATTRIBUTE_LABELS[selected]}</h3>
+                  <p className="mt-1 text-ink-300">{ATTRIBUTE_DESCRIPTIONS[selected]}</p>
+                </div>
+              )}
+              <p className={cx(selected && 'md:hidden')}>
+                A nota geral é uma média ponderada dos atributos, com a velocidade pesando mais. O potencial é o teto dos atributos no treino; a reputação vai
+                de 0 a 100. <span className="hidden md:inline">Toque em um atributo para ver o que ele faz.</span>
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {tab === 'condition' && (
+        <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+          <Card title="Condição" action={player.injury ? <Pill tone="bad">Lesionado</Pill> : undefined} bodyClassName="space-y-3 p-3">
+            <Meter label="Fase" value={player.condition.form} hint="Média dos resultados recentes em relação à meta. Vale até ±0,12% no tempo de volta." />
+            <Meter label="Confiança" value={player.condition.confidence} hint="Muda a chance de erro (de −25% a +25%) e o sucesso nas disputas de posição." />
+            <Meter label="Moral" value={player.condition.morale} hint="Muda a regularidade das voltas e o rendimento do treino (de −20% a +20%)." />
             {player.injury && (
-              <p className="mt-4 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-sm text-rose-200">
+              <p className="border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-ink-100">
                 {player.injury.description}:{' '}
                 {player.injury.severity === 'serious' ? 'você não pode correr' : 'você pode correr, 0,3% mais lento e com 30% mais erros'}. Recuperação em{' '}
                 {counted(player.injury.roundsRemaining, 'etapa', 'etapas')}.
               </p>
             )}
             {player.age >= 31 && (
-              <p className="mt-4 text-xs text-gold-400">
-                Aos {player.age} anos, a velocidade, a concentração e a ultrapassagem caem um pouco a cada temporada.
-              </p>
+              <p className="text-xs text-gold-400">Aos {player.age} anos, a velocidade, a concentração e a ultrapassagem caem um pouco a cada temporada.</p>
             )}
           </Card>
 
-          <Card title="Estatísticas de carreira">
-            <div className="grid grid-cols-3 gap-4">
-              <Stat label="Corridas" value={stats.starts} />
-              <Stat label="Vitórias" value={stats.wins} />
-              <Stat label="Pódios" value={stats.podiums} />
-              <Stat label="Poles" value={stats.poles} />
-              <Stat label="Voltas + rápidas" value={stats.fastestLaps} />
-              <Stat label="Pontos" value={stats.points} />
-              <Stat label="Melhor resultado" value={stats.bestFinish ? `${stats.bestFinish}º` : '-'} />
-              <Stat label="Abandonos" value={stats.dnfs} />
-              <Stat label="Títulos" value={stats.titles} />
-            </div>
-          </Card>
-
-          <Card title="Programa de treino">
+          <Card title="Programa de treino" bodyClassName="p-3">
             <TrainingFocusPicker />
           </Card>
         </div>
-      </div>
+      )}
+
+      {tab === 'stats' && (
+        <Card title="Estatísticas de carreira" bodyClassName="grid grid-cols-3 gap-x-4 gap-y-5 p-4 md:grid-cols-5">
+          <Stat label="Corridas" value={stats.starts} />
+          <Stat label="Vitórias" value={stats.wins} />
+          <Stat label="Pódios" value={stats.podiums} />
+          <Stat label="Poles" value={stats.poles} />
+          <Stat label="Voltas + rápidas" value={stats.fastestLaps} />
+          <Stat label="Pontos" value={stats.points} />
+          <Stat label="Melhor resultado" value={stats.bestFinish ? `${stats.bestFinish}º` : '-'} />
+          <Stat label="Abandonos" value={stats.dnfs} />
+          <Stat label="Ultrapassagens" value={stats.overtakes} />
+          <Stat label="Títulos" value={stats.titles} />
+        </Card>
+      )}
     </div>
   );
 }
