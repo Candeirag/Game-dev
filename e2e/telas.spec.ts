@@ -79,23 +79,33 @@ for (const formato of TELAS) {
       const erros = vigiarErros(page);
       await abrirSave(page, SAVES.formula);
       await conferirTela(page, 'painel-formula', formato.nome);
-      for (const [nome, arquivo] of [
-        ['Fim de semana', 'fim-de-semana'],
-        ['Piloto', 'piloto'],
-        ['Equipe', 'equipe'],
-        ['Carreira', 'carreira'],
-        ['Vida', 'vida'],
-        ['Calendário', 'calendario'],
-        ['Classificação', 'classificacao'],
-        ['Histórico', 'historico'],
-        ['Saves', 'saves'],
-        ['Como jogar', 'como-jogar'],
+      // Cada tela e, nas que têm abas, cada aba.
+      for (const [nome, arquivo, abas] of [
+        ['Fim de semana', 'fim-de-semana', []],
+        ['Piloto', 'piloto', ['Condição e treino', 'Números']],
+        ['Equipe', 'equipe', ['Contrato', 'Pilotos']],
+        ['Carreira', 'carreira', ['Licença', 'Interesse']],
+        ['Vida', 'vida', []],
+        ['Calendário', 'calendario', []],
+        ['Classificação', 'classificacao', ['Equipes']],
+        ['Histórico', 'historico', []],
+        ['Saves', 'saves', []],
+        ['Como jogar', 'como-jogar', ['Fim de semana', 'Dinheiro']],
       ] as const) {
         await irPara(page, nome);
         await conferirTela(page, arquivo, formato.nome);
+        for (const aba of abas) {
+          await page.getByRole('main').getByRole('tab', { name: aba, exact: true }).click();
+          await conferirTela(page, `${arquivo}-${aba.toLowerCase().replaceAll(' ', '-')}`, formato.nome);
+        }
       }
+      expect(erros).toEqual([]);
+    });
+
+    test('vida: finanças e família', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.formula);
       // Finanças e Família ficam dentro de Vida: cada linha da lista leva a uma área.
-      await irPara(page, 'Vida');
       for (const [linha, arquivo] of [
         ['Finanças', 'financas'],
         ['Patrocínios', 'financas-patrocinios'],
@@ -105,13 +115,51 @@ for (const formato of TELAS) {
         ['Crédito e padrão de vida', 'financas-credito'],
         ['Família', 'familia'],
       ] as const) {
+        await irPara(page, 'Vida');
         await page
           .getByRole('main')
           .getByRole('link', { name: new RegExp(`^${linha}`) })
           .click();
         await conferirTela(page, arquivo, formato.nome);
-        await irPara(page, 'Vida');
       }
+      for (const aba of ['Filhos', 'Linhagem']) {
+        await page.getByRole('main').getByRole('tab', { name: aba, exact: true }).click();
+        await conferirTela(page, `familia-${aba.toLowerCase()}`, formato.nome);
+      }
+      // O caminho de volta leva à tela Vida.
+      await page.getByRole('main').getByRole('link', { name: 'Vida' }).click();
+      await expect(page.getByRole('heading', { name: 'Vida', level: 1 })).toBeVisible();
+      expect(erros).toEqual([]);
+    });
+
+    test('telas do dirigente, depois de pendurar o capacete', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.fimDeTemporada);
+      await irPara(page, 'Carreira');
+      await page.getByRole('button', { name: 'Pendurar o capacete' }).click();
+      await page.getByRole('button', { name: 'Confirmar: parar de correr' }).click();
+      // Sem equipe, no fechamento da temporada: propostas de cargo, equipes à venda e fundar a própria.
+      await irPara(page, 'Carreira');
+      await conferirTela(page, 'dirigente-carreira', formato.nome);
+      for (const aba of ['À venda', 'Fundar']) {
+        await page.getByRole('main').getByRole('tab', { name: aba, exact: true }).click();
+        await conferirTela(page, `dirigente-carreira-${aba === 'Fundar' ? 'fundar' : 'a-venda'}`, formato.nome);
+      }
+      await page.getByRole('main').getByRole('tab', { name: 'Resumo', exact: true }).click();
+      await page.getByRole('button', { name: 'Aceitar o cargo' }).first().click();
+      // Com equipe: painel, gestão (todas as abas), fim de semana e carreira.
+      await irPara(page, 'Painel');
+      await conferirTela(page, 'dirigente-painel', formato.nome);
+      await irPara(page, 'Gestão');
+      await conferirTela(page, 'dirigente-gestao', formato.nome);
+      for (const aba of ['Equipe técnica', 'Instalações', 'Desenvolvimento', 'Pilotos']) {
+        await page.getByRole('main').getByRole('tab', { name: aba, exact: true }).click();
+        await conferirTela(page, `dirigente-gestao-${aba.toLowerCase().replaceAll(' ', '-')}`, formato.nome);
+      }
+      await irPara(page, 'Fim de semana');
+      await conferirTela(page, 'dirigente-fim-de-semana', formato.nome);
+      await irPara(page, 'Carreira');
+      await conferirTela(page, 'dirigente-carreira-com-equipe', formato.nome);
       expect(erros).toEqual([]);
     });
   });

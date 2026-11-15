@@ -45,6 +45,8 @@ export async function abrirSave(page: Page, arquivo: string): Promise<void> {
 export async function irPara(page: Page, nome: string): Promise<void> {
   // O nome do link pode vir seguido de um aviso ("Carreira Há propostas"), por isso a busca é pelo começo.
   const link = new RegExp(`^${nome}`);
+  // Logo depois de abrir um save a moldura ainda pode estar entrando: espera a navegação aparecer.
+  await page.getByRole('navigation', { name: 'Navegação principal' }).first().waitFor();
   const direto = page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: link });
   if (await direto.count()) await direto.first().click();
   else {
