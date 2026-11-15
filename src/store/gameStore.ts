@@ -26,7 +26,11 @@ import * as engine from '@/engine';
 import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, PlayerRaceInput, RaceSimState, RaceTimeline, StrategyPlan } from '@/engine';
 import { readLastExport, writeLastExport } from '@/persistence/preferences';
 import { clearRaceResume, loadRaceResume, raceResumeKey, saveRaceResume, type RaceResume } from '@/persistence/raceResume';
-import { createDefaultStorage, probeStorage, type StorageAdapter } from '@/persistence/storage';
+import { reportError } from '@/monitoring/crashReporting';
+import { DeviceFileStorage, migrateStorage } from '@/persistence/deviceStorage';
+import { IndexedDbStorage, LocalStorageAdapter, createDefaultStorage, probeStorage, type StorageAdapter } from '@/persistence/storage';
+import { capacitorFiles } from '@/platform/deviceFiles';
+import { isNativeApp } from '@/platform/native';
 import {
   SaveError,
   deleteSave,
@@ -276,9 +280,21 @@ export const useGameStore = create<GameStore>((set, get) => {
     lastExportAt: readLastExport(),
 
     async initStorage() {
-      const storage = await probeStorage();
+      // No aplicativo, os saves ficam em arquivos do aparelho; no navegador, no IndexedDB.
+      const storage = await probeStorage(isNativeApp() ? [() => new DeviceFileStorage(capacitorFiles())] : []);
       // Só troca se a carreira ainda não começou a ser gravada em outro lugar nesta sessão.
       if (storage.kind !== get().storage.kind) set({ storage });
+      if (storage.kind === 'device') {
+        // Saves que uma versão anterior do aplicativo deixou no IndexedDB ou no localStorage vêm para o aparelho.
+        for (const old of [typeof indexedDB !== 'undefined' ? () => new IndexedDbStorage() : null, () => new LocalStorageAdapter()]) {
+          try {
+            if (old) await migrateStorage(old(), storage);
+          } catch (error) {
+            // A origem fica intacta e a migração é tentada de novo na próxima abertura.
+            reportError(error, { source: 'migração dos saves' });
+          }
+        }
+      }
       await get().refreshSlots();
     },
 
