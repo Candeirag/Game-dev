@@ -148,6 +148,12 @@ function CareerShell() {
   const offers = career.offseason !== null || career.executiveOffseason !== null;
   const notice = useGameStore((s) => s.notice);
   const dismissNotice = useGameStore((s) => s.dismissNotice);
+  // O aviso passageiro sai sozinho depois de alguns segundos (ou no toque em fechar).
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(dismissNotice, 6000);
+    return () => window.clearTimeout(id);
+  }, [notice, dismissNotice]);
   const next = getNextEvent(career);
   const current = career.weekend ? career.calendar.find((e) => e.round === career.weekend?.round) : next;
   const stage = career.succession
