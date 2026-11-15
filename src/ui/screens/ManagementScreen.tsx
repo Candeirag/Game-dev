@@ -131,14 +131,14 @@ function Overview({ m }: { m: ManagedTeam }) {
         />
       </Card>
 
-      <div className="grid items-start gap-3 md:grid-cols-2">
+      <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <Card title="Receitas e despesas" padded={false}>
           <div className="px-2">
             <table className="w-full">
               <thead>
                 <tr>
                   <th className={cx(th, tight)}>Conta</th>
-                  <th className={cx(th, tight, 'text-right')}>Previsto no ano</th>
+                  <th className={cx(th, tight, 'whitespace-nowrap text-right')}>Previsto no ano</th>
                   <th className={cx(th, tight, 'text-right')}>Realizado</th>
                 </tr>
               </thead>
@@ -146,17 +146,17 @@ function Overview({ m }: { m: ManagedTeam }) {
                 {rows.map((r) => (
                   <tr key={r.key} className="border-t border-ink-800">
                     <td className={cx(td, tight)}>{TEAM_LEDGER_LABELS[r.key] ?? r.key}</td>
-                    <td className={cx(td, tight, 'text-right tabular', r.planned < 0 ? 'text-gold-400' : 'text-go-400')}>
+                    <td className={cx(td, tight, 'whitespace-nowrap text-right tabular', r.planned < 0 ? 'text-gold-400' : 'text-go-400')}>
                       {formatMoney(r.planned, { sign: true })}
                     </td>
-                    <td className={cx(td, tight, 'text-right tabular text-ink-300')}>{formatMoney(m.ledger[r.key] ?? 0, { sign: true })}</td>
+                    <td className={cx(td, tight, 'whitespace-nowrap text-right tabular text-ink-300')}>{formatMoney(m.ledger[r.key] ?? 0, { sign: true })}</td>
                   </tr>
                 ))}
                 {extra.map((key) => (
                   <tr key={key} className="border-t border-ink-800">
                     <td className={cx(td, tight)}>{TEAM_LEDGER_LABELS[key] ?? key}</td>
                     <td className={cx(td, tight, 'text-right text-ink-500')}>-</td>
-                    <td className={cx(td, tight, 'text-right tabular text-ink-300')}>{formatMoney(m.ledger[key] ?? 0, { sign: true })}</td>
+                    <td className={cx(td, tight, 'whitespace-nowrap text-right tabular text-ink-300')}>{formatMoney(m.ledger[key] ?? 0, { sign: true })}</td>
                   </tr>
                 ))}
               </tbody>
@@ -429,7 +429,7 @@ function Development({ m }: { m: ManagedTeam }) {
   const setShare = (area: DevArea, value: number) => setAreaShare(area, value);
   return (
     <div className="space-y-3">
-      <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
         <div className="space-y-3">
           <Card title="Ritmo da pesquisa" bodyClassName="!p-3">
             <div className="grid grid-cols-3 gap-1.5">
@@ -442,14 +442,14 @@ function Development({ m }: { m: ManagedTeam }) {
                     aria-pressed={selected}
                     onClick={() => setDevelopment({ spend })}
                     className={cx(
-                      'chamfer-br flex min-h-11 flex-col items-start gap-0.5 px-2.5 py-2 text-left transition-colors',
+                      'chamfer-br flex min-h-11 min-w-0 flex-col items-start gap-0.5 px-2 py-2 text-left transition-colors',
                       selected
                         ? 'bg-apex-500/15 shadow-[inset_0_0_0_1px_var(--color-apex-500)]'
                         : 'bg-ink-800 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-700',
                     )}
                   >
                     <span className="text-sm font-semibold text-ink-100">{RESEARCH_SPEND_LABELS[spend]}</span>
-                    <span className="text-[11px] leading-tight text-ink-300">
+                    <span className="whitespace-nowrap text-[11px] leading-tight text-ink-300">
                       pesquisa {number(MANAGEMENT.SPEND[spend].points)}×
                       <br />
                       custo {number(MANAGEMENT.SPEND[spend].cost)}×

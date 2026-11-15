@@ -8,7 +8,7 @@
  */
 import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORY_IDS, PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type CategoryId, type PracticeProgram, type QualifyingApproach } from '@/domain/schemas';
 import { PRACTICE_PROGRAM_LABELS, QUALIFYING_APPROACH_LABELS } from '@/domain/labels';
 import { counted } from '@/domain/text';
@@ -310,7 +310,7 @@ export function ExecutiveWeekendScreen() {
   return (
     <div className="space-y-3">
       <PageHeader
-        eyebrow={planning ? `${who} · ${trackLocation(track)} · ${formatDate(next.date)}` : who}
+        eyebrow={who}
         title={seasonOver ? 'Temporada encerrada' : next && track ? `Etapa ${next.round}: ${track.name}` : 'Fim de semana'}
       >
         {planning && (
@@ -347,6 +347,9 @@ export function ExecutiveWeekendScreen() {
             title="Plano do fim de semana"
             action={
               <span className="flex items-center gap-2 text-xs text-ink-400">
+                <span className="hidden sm:inline">
+                  {trackLocation(track)} · {formatDate(next.date)} ·
+                </span>
                 Corrida: <WeatherBadge weather={next.weather.race} />
               </span>
             }
@@ -355,8 +358,9 @@ export function ExecutiveWeekendScreen() {
             {m ? (
               <div className="space-y-2.5">
                 <div>
-                  <div className={cx(groupLabel, 'mb-1.5 flex items-center gap-2')}>
-                    Treino livre dos seus pilotos <WeatherBadge weather={next.weather.practice} compact />
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className={groupLabel}>Treino livre dos seus pilotos</span>
+                    <WeatherBadge weather={next.weather.practice} compact />
                   </div>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {PRACTICE_PROGRAMS.map((p) => (
@@ -371,8 +375,9 @@ export function ExecutiveWeekendScreen() {
                   </div>
                 </div>
                 <div>
-                  <div className={cx(groupLabel, 'mb-1.5 flex items-center gap-2')}>
-                    Classificação <WeatherBadge weather={next.weather.qualifying} compact />
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className={groupLabel}>Classificação</span>
+                    <WeatherBadge weather={next.weather.qualifying} compact />
                   </div>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {QUALIFYING_APPROACHES.map((a) => (
@@ -650,7 +655,12 @@ export function ExecutiveCareerScreen() {
             )}
           </div>
           {career.executiveLog.length > 0 && <LogTable />}
-          <ExportReminder />
+          <div className="flex flex-wrap items-center gap-x-3">
+            <ExportReminder link={false} className="min-w-0 flex-1 basis-72" />
+            <Link to="/saves" className="inline-flex min-h-11 items-center text-xs font-semibold text-ink-200 underline underline-offset-2 hover:text-ink-100">
+              Exportar agora
+            </Link>
+          </div>
         </>
       )}
 
@@ -760,28 +770,29 @@ export function ExecutiveCareerScreen() {
               <section key={group.id}>
                 <h3 className={groupLabel}>{getCategory(group.id).shortName}</h3>
                 <ul className="mt-1">
-                  {group.items.map((l) => (
-                    <li key={l.id} className="flex min-h-8 items-center gap-2 border-t border-ink-800 text-sm">
-                      <span className="min-w-0 flex-1 truncate font-semibold">{l.teamName}</span>
-                      <span className="shrink-0 text-xs tabular text-ink-400">{l.rank + 1}ª de 10</span>
-                      <span className="w-20 shrink-0 text-right tabular">{formatMoney(l.price)}</span>
-                      <span className="flex w-24 shrink-0 justify-end">
-                        {l.price > cash ? (
-                          <span className="text-xs text-ink-500">Sem caixa</span>
-                        ) : (
-                          <Button className="my-1" disabled={pending} onClick={() => store.startExecutiveSeason({ kind: 'buy', listingId: l.id })}>
+                  {group.items.map((l) => {
+                    const affordable = l.price <= cash;
+                    return (
+                      <li key={l.id} className={cx('flex min-h-8 items-center gap-2 border-t border-ink-800 text-sm', !affordable && 'text-ink-400')}>
+                        <span className={cx('min-w-0 flex-1 truncate', affordable && 'font-semibold')}>{l.teamName}</span>
+                        <span className="shrink-0 whitespace-nowrap text-xs tabular text-ink-400">{l.rank + 1}ª de 10</span>
+                        <span className="min-w-[4.75rem] shrink-0 whitespace-nowrap text-right tabular">{formatMoney(l.price)}</span>
+                        {affordable ? (
+                          <Button className="my-1 shrink-0" disabled={pending} onClick={() => store.startExecutiveSeason({ kind: 'buy', listingId: l.id })}>
                             Comprar
                           </Button>
+                        ) : (
+                          <span className="sr-only">Sem caixa</span>
                         )}
-                      </span>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
             ))}
           </div>
           <p className="mt-3 text-xs text-ink-400">
-            Ao lado do nome, a força da equipe no grid da categoria. A compra é paga com o seu caixa pessoal (um empréstimo, na tela Finanças, pode completar o
+            Ao lado do nome, a força da equipe no grid da categoria; em cinza, as que o seu caixa não paga. A compra é paga com o seu caixa pessoal (um empréstimo, na tela Finanças, pode completar o
             valor). Dono fica com o lucro, cobre o prejuízo e deixa a equipe para os herdeiros.
           </p>
         </Card>
