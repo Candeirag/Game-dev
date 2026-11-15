@@ -11,6 +11,7 @@ export * from './career/license';
 export * from './career/sponsors';
 export { ECONOMY, netWorth, incomeTax, stocksValue, type InvestmentMove, type InvestmentProduct } from './career/economy';
 export * from './economy/assets';
+export * from './economy/summary';
 export * from './dynasty/family';
 export { familySeasonEvents, beginSeasonFamily } from './dynasty/familyEvents';
 export * from './dynasty/succession';

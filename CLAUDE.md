@@ -41,10 +41,11 @@ Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
 - **Saves.** Os de `tests/fixtures/` (versões 1, 2 e 3) têm de continuar abrindo e jogáveis.
   Mudou o formato do save? Suba `CAREER_SCHEMA_VERSION`, escreva a migração em
   `src/persistence/migrations.ts` e grave um save novo em `tests/fixtures/`.
-- **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 390×844 e 844×390, tira um
-  print de cada (em `test-results/telas/`) e falha se uma imagem cruzar um texto ou se a
-  página passar da largura. Tela nova entra nessa lista. Sobreposição proposital (texto sobre
-  a pista na transmissão) leva o atributo `data-overlay-ok`.
+- **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
+  390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
+  imagem cruzar um texto, se a página passar da largura ou se houver área de toque menor que
+  44 px. Tela nova entra nessa lista. Sobreposição proposital (texto sobre a pista na
+  transmissão) leva o atributo `data-overlay-ok`.
 
 ## Arquitetura (resumo; detalhes em ARCHITECTURE.md)
 
@@ -61,7 +62,9 @@ determinístico) → `src/persistence` (saves) → `src/store` (Zustand, camada 
 - Movimento: entradas e saídas de 150 a 300 ms, por transição de CSS (interrompível), e nada
   para quem usa `prefers-reduced-motion` (ver `src/ui/motion.ts`). Indicador de progresso só
   onde há espera de verdade (abrir save, carregar imagens).
-- Áreas de toque de no mínimo 44 px. O aplicativo é pensado para a tela deitada (844×390).
+- Áreas de toque de no mínimo 44 px. O aplicativo é pensado para a tela deitada (844×390):
+  colunas a partir de `md:`, abas (na URL, `?tab=`) quando a tela fica comprida, e o passo que
+  faz a carreira avançar sempre na barra superior (`src/ui/layout/ScreenAction.tsx`).
 - Relatório de travamentos (Sentry) preparado e desligado: `src/monitoring/crashReporting.ts`.
 
 ## Convenções

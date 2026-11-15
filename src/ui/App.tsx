@@ -13,6 +13,7 @@ import { FamilyScreen } from './screens/FamilyScreen';
 import { FinanceScreen } from './screens/FinanceScreen';
 import { HelpScreen } from './screens/HelpScreen';
 import { HistoryScreen } from './screens/HistoryScreen';
+import { LifeScreen } from './screens/LifeScreen';
 import { MainMenuScreen } from './screens/MainMenuScreen';
 import { ManagementScreen } from './screens/ManagementScreen';
 import { NewCareerScreen } from './screens/NewCareerScreen';
@@ -50,6 +51,7 @@ export function App() {
           <Route path="/driver" element={<ByMode driver={<DriverScreen />} executive={<Navigate to="/dashboard" replace />} />} />
           <Route path="/team" element={<ByMode driver={<TeamScreen />} executive={<ManagementScreen />} />} />
           <Route path="/career" element={<ByMode driver={<CareerScreen />} executive={<ExecutiveCareerScreen />} />} />
+          <Route path="/life" element={<LifeScreen />} />
           <Route path="/finance" element={<FinanceScreen />} />
           <Route path="/family" element={<FamilyScreen />} />
           <Route path="/help" element={<HelpScreen />} />

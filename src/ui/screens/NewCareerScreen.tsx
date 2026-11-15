@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Minus, Plus } from 'lucide-react';
 import type { AttributeKey } from '@/domain/schemas';
 import { ATTRIBUTE_LABELS } from '@/domain/labels';
+import { counted } from '@/domain/text';
 import {
   NATIONALITIES,
   PLAYER_BACKGROUNDS,
@@ -15,8 +17,15 @@ import { ROOKIE_TEAM_IDS, TEAMS } from '@/data/teams';
 import { TRAINABLE_ATTRIBUTES, overallRating, validateNewCareerInput, type NewCareerInput } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
-import { Button, Card, ChoiceCard, RatingBar, cx } from '../components/ui';
+import { Card, ChoiceCard, RatingBar, TeamSwatch, cx } from '../components/ui';
 import { formatRating } from '../format';
+import { ScreenAction } from '../layout/ScreenAction';
+import { WIDE_QUERY, useMediaQuery } from '../layout/chrome';
+
+const field =
+  'min-h-11 w-full border border-ink-700 bg-ink-850 px-3 text-sm text-ink-100 placeholder:text-ink-500 transition-colors focus:border-apex-500 focus:outline-none';
+const fieldLabel = 'block text-[11px] font-medium text-ink-400';
+const stepButton = 'grid h-11 w-11 shrink-0 place-items-center border border-ink-700 text-ink-300 transition-colors hover:border-ink-400 disabled:opacity-30';
 
 export function NewCareerScreen() {
   const navigate = useNavigate();
@@ -30,6 +39,8 @@ export function NewCareerScreen() {
   const [teamId, setTeamId] = useState<string>(ROOKIE_TEAM_IDS[1] ?? 'cerrado');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // O mesmo corte da moldura da carreira: tela deitada (ou larga) põe o formulário em duas colunas.
+  const wide = useMediaQuery(WIDE_QUERY);
 
   const preset = PLAYER_BACKGROUNDS.find((b) => b.id === background) ?? PLAYER_BACKGROUNDS[0]!;
   const used = Object.values(bonus).reduce((a, b) => a + (b ?? 0), 0);
@@ -63,34 +74,71 @@ export function NewCareerScreen() {
     }
   }
 
-  const field =
-    'w-full rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 text-sm text-ink-100 placeholder:text-ink-500 focus:border-apex-500 focus:outline-none';
+  const safeX = 'pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]';
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8">
-      <button type="button" onClick={() => navigate('/')} className="mb-4 text-sm font-semibold text-ink-400 hover:text-ink-100">
-        ← Voltar
-      </button>
-      <div className="mb-8">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-apex-400">Nova carreira</div>
-        <h1 className="font-display text-4xl font-bold uppercase tracking-wide">Crie seu piloto</h1>
-      </div>
+    <div className="min-h-dvh">
+      {/* Faixa fixa: o resumo do piloto e o botão de começar ficam à vista enquanto o formulário rola. */}
+      <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-900 pt-[env(safe-area-inset-top)]">
+        <div className={cx('mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 py-1.5', safeX)}>
+          <button
+            type="button"
+            aria-label="Voltar"
+            onClick={() => navigate('/')}
+            className="-ml-2 grid h-11 w-11 shrink-0 place-items-center text-ink-300 transition-colors hover:text-ink-100"
+          >
+            <ArrowLeft size={20} aria-hidden />
+          </button>
+          <div className="min-w-40 flex-1">
+            <div className="flex items-baseline gap-x-3">
+              <h1 className="font-display text-2xl font-bold uppercase leading-none tracking-wide">Crie seu piloto</h1>
+              <span className="truncate text-xs font-medium text-ink-400">Nova carreira</span>
+            </div>
+            <div className="mt-1 truncate text-xs text-ink-300">
+              {problems.length > 0 ? (
+                <span className="text-ink-400">{problems[0]}</span>
+              ) : (
+                <>
+                  <span className="font-semibold text-apex-400">
+                    {firstName.trim()} {lastName.trim()}
+                  </span>{' '}
+                  · {NATIONALITIES.find((n) => n.code === nationality)?.name} · {age} anos · {preset.name} · {TEAMS.find((t) => t.id === teamId)?.name}
+                </>
+              )}
+            </div>
+          </div>
+          <div className={cx('flex items-center gap-4', !wide && 'w-full justify-between')}>
+            <div className="flex items-center gap-4">
+              <HeaderStat label="Geral" value={formatRating(overallRating(attributes))} />
+              <HeaderStat label="Potencial" value={preset.potential} muted />
+            </div>
+            <ScreenAction onClick={() => void submit()} disabled={submitting}>
+              {submitting ? 'Criando…' : 'Começar carreira'}
+            </ScreenAction>
+          </div>
+        </div>
+        {error && (
+          <div role="alert" className="border-t border-gold-400/40 bg-gold-400/10 py-2 text-sm text-gold-400">
+            <div className={cx('mx-auto max-w-6xl', safeX)}>{error}</div>
+          </div>
+        )}
+      </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div className="space-y-6">
-          <Card title="1 · Identidade">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">Nome</span>
+      <div className={cx('mx-auto grid max-w-6xl items-start gap-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4', safeX, wide && 'grid-cols-2')}>
+        <div className="space-y-4">
+          <Card title="1 · Identidade" bodyClassName="p-3">
+            <div className="grid grid-cols-10 gap-x-3 gap-y-2.5">
+              <label className="col-span-5 space-y-1">
+                <span className={fieldLabel}>Nome</span>
                 <input className={field} value={firstName} maxLength={20} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex.: Ana" />
               </label>
-              <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">Sobrenome</span>
+              <label className="col-span-5 space-y-1">
+                <span className={fieldLabel}>Sobrenome</span>
                 <input className={field} value={lastName} maxLength={24} onChange={(e) => setLastName(e.target.value)} placeholder="Ex.: Ribeiro" />
               </label>
-              <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">Nacionalidade</span>
-                <select className={field} value={nationality} onChange={(e) => setNationality(e.target.value)}>
+              <label className="col-span-4 space-y-1">
+                <span className={fieldLabel}>Nacionalidade</span>
+                <select className={cx(field, 'px-2')} value={nationality} onChange={(e) => setNationality(e.target.value)}>
                   {NATIONALITIES.map((n) => (
                     <option key={n.code} value={n.code}>
                       {n.name}
@@ -98,21 +146,35 @@ export function NewCareerScreen() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-ink-400">Idade</span>
-                <select className={field} value={age} onChange={(e) => setAge(Number(e.target.value))}>
+              <div className="col-span-6 space-y-1">
+                {/* A dica fica fora das opções: o texto do campo fechado cabe inteiro. */}
+                <div className="flex items-baseline gap-1.5 text-[11px]">
+                  <label htmlFor="new-career-age" className="font-medium text-ink-400">
+                    Idade
+                  </label>
+                  <span id="new-career-age-hint" className="truncate text-ink-500">
+                    até 15 anos, evolui mais rápido
+                  </span>
+                </div>
+                <select
+                  id="new-career-age"
+                  aria-describedby="new-career-age-hint"
+                  className={cx(field, 'px-2')}
+                  value={age}
+                  onChange={(e) => setAge(Number(e.target.value))}
+                >
                   {Array.from({ length: PLAYER_MAX_AGE - PLAYER_MIN_AGE + 1 }, (_, i) => PLAYER_MIN_AGE + i).map((a) => (
                     <option key={a} value={a}>
-                      {a} anos {a <= 15 ? '(evolui mais rápido)' : ''}
+                      {a} anos
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             </div>
           </Card>
 
-          <Card title="2 · Perfil de piloto">
-            <div className="grid gap-3 md:grid-cols-3">
+          <Card title="2 · Perfil de piloto" bodyClassName="p-3">
+            <div className="grid gap-2">
               {PLAYER_BACKGROUNDS.map((b) => (
                 <ChoiceCard
                   key={b.id}
@@ -125,120 +187,108 @@ export function NewCareerScreen() {
               ))}
             </div>
           </Card>
+        </div>
 
+        <div className="space-y-4">
           <Card
             title="3 · Pontos livres"
-            action={<span className={cx('text-sm font-semibold tabular', remaining ? 'text-gold-400' : 'text-ink-400')}>{remaining} restantes</span>}
+            action={
+              <span className={cx('font-display text-base font-semibold', remaining ? 'text-gold-400' : 'text-ink-400')}>
+                {counted(remaining, 'restante', 'restantes')}
+              </span>
+            }
+            bodyClassName="p-3"
           >
-            <p className="mb-4 text-sm text-ink-400">
+            <p className="mb-2 text-xs text-ink-400">
               Distribua {PLAYER_BONUS_POINTS} pontos, no máximo {PLAYER_BONUS_MAX_PER_ATTRIBUTE} por atributo. A experiência só cresce competindo.
             </p>
-            <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+            <div className="grid gap-1">
               {TRAINABLE_ATTRIBUTES.map((key) => (
-                <div key={key} className="flex items-center gap-3">
-                  <div className="w-40 shrink-0 text-sm">{ATTRIBUTE_LABELS[key]}</div>
-                  <div className="flex-1">
+                <div key={key} className="flex items-center gap-2">
+                  <div className="w-[7.5rem] shrink-0 text-sm leading-tight">{ATTRIBUTE_LABELS[key]}</div>
+                  <div className="min-w-8 flex-1">
                     <RatingBar value={attributes[key]} previous={preset.attributes[key]} />
                   </div>
-                  <div className="w-7 text-right font-semibold tabular">{attributes[key]}</div>
-                  <div className="flex gap-1">
+                  <div className="w-7 shrink-0 text-right font-display text-lg font-semibold leading-none">{attributes[key]}</div>
+                  <div className="flex shrink-0 gap-1">
                     <button
                       type="button"
                       aria-label={`Remover ponto de ${ATTRIBUTE_LABELS[key]}`}
                       onClick={() => adjust(key, -1)}
                       disabled={!bonus[key]}
-                      className="h-7 w-7 rounded-md border border-ink-700 text-ink-300 hover:border-ink-400 disabled:opacity-30"
+                      className={stepButton}
                     >
-                      −
+                      <Minus size={16} aria-hidden />
                     </button>
                     <button
                       type="button"
                       aria-label={`Adicionar ponto em ${ATTRIBUTE_LABELS[key]}`}
                       onClick={() => adjust(key, 1)}
                       disabled={remaining <= 0 || (bonus[key] ?? 0) >= PLAYER_BONUS_MAX_PER_ATTRIBUTE}
-                      className="h-7 w-7 rounded-md border border-ink-700 text-ink-300 hover:border-ink-400 disabled:opacity-30"
+                      className={stepButton}
                     >
-                      +
+                      <Plus size={16} aria-hidden />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           </Card>
-
-          <Card title="4 · Equipe">
-            <p className="mb-4 text-sm text-ink-400">
-              Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança e o custo da vaga. Você começa no kart regional, com as
-              economias e o apoio da família; daí em diante, resultados atraem patrocinadores e propostas até a Fórmula 1.
-            </p>
-            <div className="grid gap-3 md:grid-cols-3">
-              {TEAMS.filter((t) => ROOKIE_TEAM_IDS.includes(t.id)).map((t) => (
-                <ChoiceCard
-                  key={t.id}
-                  selected={teamId === t.id}
-                  onSelect={() => setTeamId(t.id)}
-                  title={
-                    <span className="flex items-center gap-2">
-                      <span className="h-3 w-3 rounded-full" style={{ backgroundColor: t.color }} />
-                      {t.name}
-                    </span>
-                  }
-                  description={
-                    <span className="grid grid-cols-3 gap-2 pt-1 text-xs tabular">
-                      <span className="col-span-3 block py-1">
-                        <CarSprite categoryId="kart-regional" teamId={t.id} color={t.color} className="w-28" title={`Kart da ${t.name}`} />
-                      </span>
-                      <span>
-                        Motor <b className="text-ink-100">{t.car.engine}</b>
-                      </span>
-                      <span>
-                        Chassi <b className="text-ink-100">{t.car.chassis}</b>
-                      </span>
-                      <span>
-                        Confiab. <b className="text-ink-100">{t.car.reliability}</b>
-                      </span>
-                    </span>
-                  }
-                  meta={`Meta: terminar entre os ${t.driverTarget} primeiros`}
-                />
-              ))}
-            </div>
-          </Card>
         </div>
 
-        <aside className="lg:sticky lg:top-6 lg:self-start">
-          <Card title="Resumo">
-            <div className="text-xs uppercase tracking-wider text-ink-400">
-              {NATIONALITIES.find((n) => n.code === nationality)?.name} · {age} anos
-            </div>
-            <div className="mt-1 font-display text-3xl font-bold uppercase leading-tight">
-              {firstName || 'Nome'} <span className="text-apex-400">{lastName || 'Sobrenome'}</span>
-            </div>
-            <div className="mt-4 flex items-end gap-6">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Geral</div>
-                <div className="font-display text-5xl font-bold tabular">{formatRating(overallRating(attributes))}</div>
-              </div>
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-ink-400">Potencial</div>
-                <div className="font-display text-5xl font-bold tabular text-ink-400">{preset.potential}</div>
-              </div>
-            </div>
-            <div className="mt-4 text-sm text-ink-300">
-              {preset.name} · {TEAMS.find((t) => t.id === teamId)?.name}
-            </div>
-            {error && (
-              <div role="alert" className="mt-4 rounded-lg border border-apex-600/50 bg-apex-600/10 px-3 py-2 text-sm text-apex-400">
-                {error}
-              </div>
-            )}
-            <Button variant="primary" className="mt-6 h-12 w-full text-base" disabled={submitting} onClick={() => void submit()}>
-              {submitting ? 'Criando…' : 'Começar carreira'}
-            </Button>
-            {problems.length > 0 && !error && <div className="mt-2 text-xs text-ink-400">{problems[0]}</div>}
-          </Card>
-        </aside>
+        <Card title="4 · Equipe" bodyClassName="p-3" className={cx(wide && 'col-span-2')}>
+          <p className="mb-2 text-xs text-ink-400">
+            Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança e o custo da vaga.
+          </p>
+          <div className={cx('grid gap-2', wide && 'grid-cols-3')}>
+            {TEAMS.filter((t) => ROOKIE_TEAM_IDS.includes(t.id)).map((t) => (
+              <ChoiceCard
+                key={t.id}
+                selected={teamId === t.id}
+                onSelect={() => setTeamId(t.id)}
+                title={
+                  <span className="flex items-center gap-2">
+                    <TeamSwatch team={t} />
+                    {t.name}
+                  </span>
+                }
+                description={
+                  <span className="flex items-center gap-3">
+                    {/* Largura fixa: o kart nunca encosta nos números ao lado. */}
+                    <CarSprite categoryId="kart-regional" teamId={t.id} color={t.color} className="w-[min(32%,6rem)] shrink-0" title={`Kart da ${t.name}`} />
+                    <span className="flex min-w-0 flex-1 gap-x-3">
+                      <CarNumber label="Motor" value={t.car.engine} />
+                      <CarNumber label="Chassi" value={t.car.chassis} />
+                      <CarNumber label="Confiab." value={t.car.reliability} />
+                    </span>
+                  </span>
+                }
+                meta={`Meta: terminar entre os ${t.driverTarget} primeiros`}
+              />
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
+  );
+}
+
+/** Um número do resumo, na faixa do topo. */
+function HeaderStat({ label, value, muted = false }: { label: string; value: string | number; muted?: boolean }) {
+  return (
+    <div className="leading-none">
+      <div className="text-[10px] font-medium text-ink-400">{label}</div>
+      <div className={cx('mt-0.5 font-display text-2xl font-bold leading-none', muted ? 'text-ink-400' : 'text-ink-100')}>{value}</div>
+    </div>
+  );
+}
+
+/** Um número do kart da equipe (0 a 100). */
+function CarNumber({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="block">
+      <span className="block whitespace-nowrap text-[11px] font-medium text-ink-400">{label}</span>
+      <span className="block font-display text-lg font-semibold leading-tight text-ink-100">{value}</span>
+    </span>
   );
 }

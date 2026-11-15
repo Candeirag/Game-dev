@@ -192,7 +192,7 @@ export function DashboardScreen() {
         <EventsPanel />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid items-start gap-3 md:grid-cols-2 lg:grid-cols-3">
         <Panel
           title="Classificação"
           flush
@@ -275,6 +275,7 @@ export function DashboardScreen() {
         <Panel
           title="Mensagens"
           flush
+          className="md:col-span-2 lg:col-span-1"
           action={
             <span className="text-xs text-ink-400">
               Patrimônio{' '}

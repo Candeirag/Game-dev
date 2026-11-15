@@ -7,22 +7,25 @@ import { useGameStore } from '@/store/gameStore';
 import { cx } from './ui';
 import { formatDateTime } from '../format';
 
+/** Link de ação dos avisos: área de toque de 44 px. */
+const ACTION_LINK =
+  'inline-flex min-h-11 shrink-0 items-center px-3 text-sm font-semibold text-ink-100 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-800';
+
 /** Lembrete discreto: os saves moram no navegador, que pode apagá-los. */
 export function ExportReminder({ link = true, className }: { link?: boolean; className?: string }) {
   const lastExportAt = useGameStore((s) => s.lastExportAt);
   return (
-    <p className={cx('text-xs text-ink-400', className)}>
-      Os saves ficam guardados neste navegador e somem se os dados dele forem apagados. Exporte a carreira (.json) de tempos em tempos.{' '}
-      <span className={lastExportAt ? 'text-ink-300' : 'text-gold-400'}>Última exportação: {lastExportAt ? formatDateTime(lastExportAt) : 'nunca'}.</span>
+    <div className={cx('flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-400', className)}>
+      <p className="min-w-0 flex-1 basis-64">
+        Os saves ficam guardados neste navegador e somem se os dados dele forem apagados. Exporte a carreira (.json) de tempos em tempos.{' '}
+        <span className={lastExportAt ? 'text-ink-300' : 'text-gold-400'}>Última exportação: {lastExportAt ? formatDateTime(lastExportAt) : 'nunca'}.</span>
+      </p>
       {link && (
-        <>
-          {' '}
-          <Link to="/saves" className="font-semibold text-ink-200 underline underline-offset-2 hover:text-ink-100">
-            Exportar agora
-          </Link>
-        </>
+        <Link to="/saves" className={ACTION_LINK}>
+          Exportar agora
+        </Link>
       )}
-    </p>
+    </div>
   );
 }
 
@@ -31,20 +34,22 @@ export function StorageWarning({ className, link = true }: { className?: string;
   const kind = useGameStore((s) => s.storage.kind);
   if (kind !== 'memory') return null;
   return (
-    <div role="alert" className={cx('enter border border-gold-400/60 bg-gold-400/10 px-4 py-3 text-sm text-ink-100', className)}>
-      <b className="text-gold-400">O navegador não está deixando o jogo gravar.</b> A carreira está só na memória desta página: ao fechar ou recarregar, o
-      progresso será perdido. Exporte a carreira (.json) antes de sair
-      {link ? (
-        <>
-          , na tela{' '}
-          <Link to="/saves" className="font-semibold underline underline-offset-2">
-            Saves
-          </Link>
-        </>
-      ) : (
-        ''
+    <div
+      role="alert"
+      className={cx(
+        'enter flex flex-wrap items-center gap-x-3 gap-y-1 bg-gold-400/10 px-4 py-2 text-sm text-ink-100 shadow-[inset_3px_0_0_0_var(--color-gold-400)]',
+        className,
       )}
-      .
+    >
+      <p className="min-w-0 flex-1 basis-64">
+        <b className="text-gold-400">O navegador não está deixando o jogo gravar.</b> A carreira está só na memória desta página: ao fechar ou recarregar, o
+        progresso será perdido. Exporte a carreira (.json) antes de sair.
+      </p>
+      {link && (
+        <Link to="/saves" className={ACTION_LINK}>
+          Abrir Saves
+        </Link>
+      )}
     </div>
   );
 }

@@ -1,19 +1,11 @@
 /**
- * Painel: a superfície básica do "muro dos boxes". É uma chapa de canto chanfrado, com uma
- * barra de título opcional. A borda é a própria chapa de baixo aparecendo 1 px em volta, o
- * que mantém a linha também no chanfro (uma borda comum seria cortada junto com o canto).
+ * Painel e etiqueta do visual "muro dos boxes". O painel é o mesmo cartão de
+ * `components/ui.tsx`; fica aqui com o nome usado nas telas refeitas.
  */
 import type { ReactNode } from 'react';
-import { cx } from '../components/ui';
+import { Card, cx, type Tone } from '../components/ui';
 
-export type Tone = 'neutral' | 'good' | 'attention' | 'accent';
-
-const EDGE: Record<Tone, string> = {
-  neutral: 'bg-ink-700',
-  good: 'bg-go-400/60',
-  attention: 'bg-gold-400/70',
-  accent: 'bg-apex-500/80',
-};
+export type { Tone };
 
 export function Panel({
   title,
@@ -36,17 +28,9 @@ export function Panel({
   flush?: boolean;
 }) {
   return (
-    <section className={cx('chamfer p-px', EDGE[tone], className)}>
-      <div className="chamfer flex h-full flex-col bg-ink-900">
-        {(title || action) && (
-          <header className="flex min-h-9 shrink-0 items-center justify-between gap-3 bg-ink-800 pl-4 pr-3">
-            {title && <h2 className="font-display text-[15px] font-semibold uppercase leading-none tracking-[0.06em] text-ink-200">{title}</h2>}
-            {action}
-          </header>
-        )}
-        <div className={cx('min-h-0 flex-1', !flush && 'p-4', bodyClassName)}>{children}</div>
-      </div>
-    </section>
+    <Card title={title} action={action} className={className} bodyClassName={bodyClassName} padded={!flush} tone={tone}>
+      {children}
+    </Card>
   );
 }
 

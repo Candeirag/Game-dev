@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { FileUp, LoaderCircle, Play, Plus } from 'lucide-react';
 import { CHAMPIONSHIP_NAME } from '@/data/rules';
 import type { SaveSlotId, SlotInfo } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
-import { Button, cx } from '../components/ui';
+import { Button, Card, cx } from '../components/ui';
 import { formatDateTime } from '../format';
 import { StorageWarning } from '../components/SaveNotices';
-import { LoaderCircle } from 'lucide-react';
+import { WIDE_QUERY, useMediaQuery } from '../layout/chrome';
 
 const SLOT_LABELS: Record<SaveSlotId, string> = { auto: 'Save automático', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
 
@@ -18,6 +19,8 @@ export function MainMenuScreen() {
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // O mesmo corte da moldura da carreira: tela deitada (ou larga) divide o menu em duas colunas.
+  const wide = useMediaQuery(WIDE_QUERY);
 
   // Abrir um save é espera de verdade (leitura do armazenamento, validação e migração): o botão
   // mostra o progresso e os outros ficam travados até terminar.
@@ -53,59 +56,95 @@ export function MainMenuScreen() {
     }
   }
 
+  const autoDetail = auto
+    ? `${auto.summary?.playerName} · ${auto.summary?.categoryName ?? 'Kart Regional'} ${auto.summary?.year} · Etapa ${auto.summary?.roundsCompleted}/${auto.summary?.totalRounds}`
+    : '';
+
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-dvh overflow-hidden">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(239,59,45,0.18),transparent_55%),radial-gradient(ellipse_at_bottom_left,rgba(96,165,250,0.08),transparent_50%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklab,var(--color-apex-500)_18%,transparent),transparent_55%)]"
       />
       <div
         aria-hidden
         className="pointer-events-none absolute -right-40 top-0 h-full w-[60%] -skew-x-12 bg-[repeating-linear-gradient(90deg,transparent_0,transparent_38px,rgba(255,255,255,0.025)_38px,rgba(255,255,255,0.025)_40px)]"
       />
-      <div className="relative mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-6 py-12 lg:grid-cols-[1.1fr_1fr]">
-        <div>
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-apex-500/40 bg-apex-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-apex-400">
-            Fase 2 · Carreira completa
+      {/* As margens respeitam as áreas seguras: deitado, o recorte da câmera fica num dos lados. */}
+      <div
+        className={cx(
+          'relative mx-auto grid min-h-dvh w-full max-w-6xl gap-x-8 gap-y-5',
+          'pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]',
+          wide
+            ? 'grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]'
+            : 'content-start pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]',
+        )}
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="chamfer grid h-7 w-7 shrink-0 place-items-center bg-apex-500 font-display text-lg font-bold italic leading-none text-white [--chamfer:6px]"
+            >
+              A
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-apex-400">Carreira e gestão no automobilismo</span>
           </div>
-          {/* O tamanho acompanha a largura da tela: "Motorsport" cabe numa linha mesmo com a fonte reserva, que é mais larga. */}
-          <h1 className="font-display text-[clamp(2rem,11.5vw,3.75rem)] font-bold uppercase leading-[0.9] tracking-tight [overflow-wrap:anywhere] sm:text-7xl">
+          {/* O tamanho acompanha a altura e a largura da tela: o nome cabe em três linhas no celular deitado, e "Motorsport" cabe numa linha mesmo com a fonte reserva, que é mais larga. */}
+          <h1 className="mt-2 font-display text-[clamp(2rem,min(12vh,11.5vw),4.5rem)] font-bold uppercase leading-[0.9] tracking-tight [overflow-wrap:anywhere]">
             Apex
             <br />
             <span className="text-apex-500">Motorsport</span>
             <br />
             Dynasty
           </h1>
-          <p className="mt-6 max-w-md text-base leading-relaxed text-ink-300">
-            Comece no {CHAMPIONSHIP_NAME}, em uma equipe modesta, e suba a escada até a Fórmula 1: sete categorias, contratos, patrocinadores, finanças,
-            rivalidades e corridas decididas volta a volta.
+          <p className="mt-2.5 max-w-md text-sm leading-snug text-ink-300 lg:mt-4 lg:text-base">
+            Do {CHAMPIONSHIP_NAME} à Fórmula 1: sete categorias, contratos, patrocinadores, finanças, rivalidades e corridas decididas volta a volta.
           </p>
-        </div>
 
-        <div className="space-y-4">
-          <StorageWarning link={false} />
-          <div className="grid gap-3">
-            <Button variant="primary" className="h-14 text-base" onClick={() => navigate('/new')}>
-              Nova carreira
-            </Button>
+          <div className="mt-3 grid max-w-md gap-2 lg:mt-6">
             {auto && (
-              <Button className="h-14 text-base" disabled={opening !== null} aria-busy={opening === 'auto'} onClick={() => void load('auto')}>
-                {opening === 'auto' && <LoaderCircle size={18} aria-hidden className="animate-spin" />}
-                Continuar: {auto.summary?.playerName} · {auto.summary?.categoryName ?? 'Kart Regional'} {auto.summary?.year} · Etapa{' '}
-                {auto.summary?.roundsCompleted}/{auto.summary?.totalRounds}
+              <Button
+                variant="primary"
+                className="min-h-12 justify-start text-left"
+                disabled={opening !== null}
+                aria-busy={opening === 'auto'}
+                aria-label={`Continuar: ${autoDetail}`}
+                onClick={() => void load('auto')}
+              >
+                {opening === 'auto' ? (
+                  <LoaderCircle size={20} aria-hidden className="shrink-0 animate-spin" />
+                ) : (
+                  <Play size={20} aria-hidden className="shrink-0" />
+                )}
+                <span className="min-w-0">
+                  <span className="block font-display text-xl font-semibold uppercase leading-none tracking-wide">Continuar</span>
+                  <span className="mt-0.5 block truncate text-xs font-medium text-white/85">{autoDetail}</span>
+                </span>
               </Button>
             )}
+            <Button variant={auto ? 'secondary' : 'primary'} className={cx('justify-start', !auto && 'min-h-12')} onClick={() => navigate('/new')}>
+              <Plus size={20} aria-hidden className="shrink-0" />
+              <span className={cx('font-display font-semibold uppercase leading-none tracking-wide', auto ? 'text-lg' : 'text-xl')}>Nova carreira</span>
+            </Button>
           </div>
+        </div>
 
-          <div className="rounded-xl border border-ink-700/70 bg-ink-900/80 p-4">
-            <div className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-ink-300">Carregar carreira</div>
-            <ul className="space-y-2">
+        <div className="min-w-0 space-y-3">
+          <StorageWarning link={false} />
+          {error && (
+            <div role="alert" className="border border-gold-400/60 bg-gold-400/10 px-3 py-2 text-sm text-gold-400">
+              {error}
+            </div>
+          )}
+          <Card title="Carregar carreira" padded={false}>
+            <ul className="divide-y divide-ink-800">
               {slots.map((slot) => (
                 <SlotRow key={slot.slot} slot={slot} busy={opening === slot.slot} disabled={opening !== null} onLoad={() => void load(slot.slot)} />
               ))}
-              {slots.length === 0 && <li className="text-sm text-ink-400">Verificando saves…</li>}
+              {slots.length === 0 && <li className="px-4 py-3 text-sm text-ink-400">Verificando saves…</li>}
             </ul>
-            <div className="mt-4 border-t border-ink-800 pt-4">
+            <div className="border-t border-ink-700 p-2">
               <input
                 ref={fileInput}
                 type="file"
@@ -113,17 +152,12 @@ export function MainMenuScreen() {
                 className="hidden"
                 onChange={(e) => e.target.files?.[0] && void onImport(e.target.files[0])}
               />
-              <Button variant="ghost" className="w-full" disabled={opening !== null} aria-busy={opening === 'file'} onClick={() => fileInput.current?.click()}>
-                {opening === 'file' && <LoaderCircle size={16} aria-hidden className="animate-spin" />}
+              <Button className="w-full" disabled={opening !== null} aria-busy={opening === 'file'} onClick={() => fileInput.current?.click()}>
+                {opening === 'file' ? <LoaderCircle size={16} aria-hidden className="animate-spin" /> : <FileUp size={16} aria-hidden />}
                 {opening === 'file' ? 'Abrindo o save…' : 'Importar save (.json)'}
               </Button>
             </div>
-          </div>
-          {error && (
-            <div role="alert" className="rounded-lg border border-apex-600/50 bg-apex-600/10 px-4 py-3 text-sm text-apex-400">
-              {error}
-            </div>
-          )}
+          </Card>
         </div>
       </div>
     </div>
@@ -131,25 +165,24 @@ export function MainMenuScreen() {
 }
 
 function SlotRow({ slot, busy, disabled, onLoad }: { slot: SlotInfo; busy: boolean; disabled: boolean; onLoad: () => void }) {
+  const summary = slot.status === 'ok' ? slot.summary : undefined;
   return (
-    <li
-      className={cx(
-        'flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5',
-        slot.status === 'corrupted' ? 'border-apex-600/40' : 'border-ink-800',
-      )}
-    >
+    <li className="flex min-h-13 items-center justify-between gap-3 py-1 pl-4 pr-2">
       <div className="min-w-0">
-        <div className="text-sm font-semibold">{SLOT_LABELS[slot.slot]}</div>
-        {slot.status === 'ok' && slot.summary && (
-          <div className="truncate text-xs text-ink-400">
-            {slot.summary.playerName} · {slot.summary.categoryName ?? 'Kart Regional'} · {slot.summary.teamName} · {slot.summary.year} ·{' '}
-            {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas · {slot.savedAt && formatDateTime(slot.savedAt)}
+        <div className="flex items-baseline gap-2">
+          <span className="shrink-0 text-sm font-semibold">{SLOT_LABELS[slot.slot]}</span>
+          {slot.status === 'ok' && slot.savedAt && <span className="truncate text-xs text-ink-400">{formatDateTime(slot.savedAt)}</span>}
+        </div>
+        {summary && (
+          <div className="truncate text-xs text-ink-300">
+            {summary.playerName} · {summary.categoryName ?? 'Kart Regional'} {summary.year} · {summary.roundsCompleted}/{summary.totalRounds} etapas ·{' '}
+            {summary.teamName}
           </div>
         )}
         {slot.status === 'empty' && <div className="text-xs text-ink-500">Vazio</div>}
-        {slot.status === 'corrupted' && <div className="text-xs text-apex-400">Danificado: tentaremos a cópia de segurança</div>}
+        {slot.status === 'corrupted' && <div className="truncate text-xs text-gold-400">Danificado: tentaremos a cópia de segurança</div>}
       </div>
-      <Button className="min-h-11 px-3 py-1.5" disabled={slot.status === 'empty' || disabled} aria-busy={busy} onClick={onLoad}>
+      <Button className="shrink-0" disabled={slot.status === 'empty' || disabled} aria-busy={busy} onClick={onLoad}>
         {busy && <LoaderCircle size={16} aria-hidden className="animate-spin" />}
         {busy ? 'Abrindo…' : 'Carregar'}
       </Button>
