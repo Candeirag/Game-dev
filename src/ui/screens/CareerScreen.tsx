@@ -111,7 +111,7 @@ function LadderTab() {
                 <div className="text-[10px] font-semibold uppercase leading-tight tracking-wider text-ink-400">Degrau {c.tier}</div>
                 <div
                   className={cx(
-                    'font-display text-[15px] font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] lg:text-lg lg:leading-[1.1]',
+                    'font-display text-[15px] font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] md:text-[13px] min-[840px]:text-[15px] lg:min-h-0 lg:text-lg lg:leading-[1.1]',
                     state === 'ahead' ? 'text-ink-300' : 'text-ink-100',
                   )}
                 >

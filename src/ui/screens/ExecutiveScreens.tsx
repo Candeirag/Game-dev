@@ -487,24 +487,21 @@ export function ExecutiveCareerScreen() {
     return (
       <div className="space-y-3">
         <PageHeader eyebrow={`Temporada ${career.year}`} title="Carreira de dirigente" />
-        <div className="grid items-start gap-3 md:grid-cols-2">
-          <div className="space-y-3">
-            <Card bodyClassName="grid grid-cols-3 gap-3">
-              <Stat
-                label="Prestígio como dirigente"
-                value={Math.round(executiveStanding(career))}
-                hint="Reputação e retrospecto das três últimas temporadas no comando"
-                accent
-              />
-              <Stat
-                label="Situação"
-                value={<span className="text-xl">{m ? (m.position === 'owner' ? 'Dono' : 'Chefe contratado') : 'Sem cargo'}</span>}
-                hint={team ? `${team.name} · ${category.shortName}` : 'Investidor'}
-              />
-              <Stat label="Temporadas no comando" value={career.executiveLog.length} hint={m && m.strikes > 0 ? 'Advertido pela diretoria' : undefined} />
-            </Card>
-            {career.executiveLog.length > 0 && <LogTable />}
-          </div>
+        <Card bodyClassName="grid grid-cols-3 gap-3 !p-3">
+          <Stat
+            label="Prestígio como dirigente"
+            value={Math.round(executiveStanding(career))}
+            hint="Reputação mais o retrospecto das três últimas temporadas no comando"
+            accent
+          />
+          <Stat
+            label="Situação"
+            value={m ? (m.position === 'owner' ? 'Dono' : 'Chefe contratado') : 'Sem cargo'}
+            hint={team ? `${team.name} · ${category.shortName}` : 'Investidor'}
+          />
+          <Stat label="Temporadas no comando" value={career.executiveLog.length} hint={m && m.strikes > 0 ? 'Advertido pela diretoria' : undefined} />
+        </Card>
+        <div className={cx('grid items-start gap-3', career.executiveLog.length > 0 && 'md:grid-cols-2')}>
           <Card title="Como funciona">
             <ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-300">
               <li>
@@ -523,6 +520,7 @@ export function ExecutiveCareerScreen() {
               </li>
             </ul>
           </Card>
+          {career.executiveLog.length > 0 && <LogTable />}
         </div>
       </div>
     );
