@@ -88,7 +88,7 @@ export function MainMenuScreen() {
             >
               A
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-apex-400">Fase 2 · Carreira completa</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-apex-400">Carreira e gestão no automobilismo</span>
           </div>
           {/* O tamanho acompanha a altura e a largura da tela: o nome cabe em três linhas no celular deitado, e "Motorsport" cabe numa linha mesmo com a fonte reserva, que é mais larga. */}
           <h1 className="mt-2 font-display text-[clamp(2rem,min(12vh,11.5vw),4.5rem)] font-bold uppercase leading-[0.9] tracking-tight [overflow-wrap:anywhere]">
@@ -98,11 +98,11 @@ export function MainMenuScreen() {
             <br />
             Dynasty
           </h1>
-          <p className="mt-2.5 max-w-md text-sm leading-snug text-ink-300">
+          <p className="mt-2.5 max-w-md text-sm leading-snug text-ink-300 lg:mt-4 lg:text-base">
             Do {CHAMPIONSHIP_NAME} à Fórmula 1: sete categorias, contratos, patrocinadores, finanças, rivalidades e corridas decididas volta a volta.
           </p>
 
-          <div className="mt-3 grid max-w-md gap-2">
+          <div className="mt-3 grid max-w-md gap-2 lg:mt-6">
             {auto && (
               <Button
                 variant="primary"

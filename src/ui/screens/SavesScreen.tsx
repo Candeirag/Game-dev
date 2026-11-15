@@ -150,7 +150,7 @@ export function SavesScreen() {
 
         <Card title="Exportar e importar" bodyClassName="p-3">
           <ExportReminder link={false} className="mb-3" />
-          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
+          <div className="grid gap-2">
             <Button onClick={download}>
               <Download size={16} aria-hidden className="shrink-0" />
               Exportar carreira (.json)

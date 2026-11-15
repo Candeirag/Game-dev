@@ -8,7 +8,7 @@ import { useCareer } from '../hooks/useCareer';
 
 /**
  * Lista de primeiros passos. No painel (`compact`) aparece até ser concluída ou dispensada, com
- * o texto só do próximo passo; na ajuda mostra todos os textos, em duas colunas quando há largura.
+ * o texto só do próximo passo; na ajuda mostra todos os textos, em duas colunas no tablet e no computador.
  */
 export function TutorialCard({ compact = true }: { compact?: boolean }) {
   const career = useCareer();
@@ -29,7 +29,7 @@ export function TutorialCard({ compact = true }: { compact?: boolean }) {
       }
       bodyClassName={compact ? undefined : 'p-3'}
     >
-      <ol className={cx('grid gap-y-2', !compact && 'gap-x-5 md:grid-cols-2')}>
+      <ol className={cx('grid gap-y-2', !compact && 'gap-x-6 lg:grid-cols-2')}>
         {steps.map((step, index) => (
           <li key={step.id} className="flex items-start gap-2.5 text-sm">
             <span
@@ -144,7 +144,6 @@ export function HelpScreen() {
       <div
         role="tablist"
         aria-label="Assuntos da ajuda"
-        aria-orientation="vertical"
         className="flex overflow-x-auto bg-ink-900 shadow-[inset_0_0_0_1px_var(--color-ink-700)] md:sticky md:top-[calc(4rem+env(safe-area-inset-top))] md:col-start-1 md:row-span-2 md:row-start-1 md:flex-col md:overflow-visible"
       >
         {SECTIONS.map((section) => {
