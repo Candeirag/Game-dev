@@ -93,7 +93,7 @@ function LadderTab() {
           do veículo) e mora numa faixa só dele, de altura fixa e com corte: nunca encosta nos textos
           do degrau, em nenhum tamanho de tela.
         */}
-        <ol className="grid grid-cols-2 gap-1.5 [--u:3.2px] sm:grid-cols-4 md:grid-cols-[1fr_1fr_1.25fr_1fr_1fr_1fr_1fr] md:[--u:2.8px] min-[840px]:[--u:3.2px] lg:gap-2 lg:[--u:4.2px]">
+        <ol className="grid grid-cols-2 gap-1.5 [--u:3.2px] sm:grid-cols-4 md:grid-cols-[1fr_1fr_1.25fr_1fr_1fr_1fr_1fr] md:max-[839px]:[--u:2.8px] lg:gap-2 lg:[--u:4.2px]">
           {CATEGORIES.map((c) => {
             const state = c.tier < category.tier ? 'done' : c.tier === category.tier ? 'current' : 'ahead';
             const seasons = career.history.filter((h) => h.categoryId === c.id).length + (c.id === category.id ? 1 : 0);
@@ -110,7 +110,7 @@ function LadderTab() {
                 <div className="text-[10px] font-semibold uppercase leading-tight tracking-wider text-ink-400">Degrau {c.tier}</div>
                 <div
                   className={cx(
-                    'font-display text-[15px] font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] md:text-[13px] min-[840px]:text-[15px] lg:min-h-0 lg:text-lg lg:leading-[1.1]',
+                    'font-display text-[15px] font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] md:max-[839px]:text-[13px] lg:min-h-0 lg:text-lg lg:leading-[1.1]',
                     state === 'ahead' ? 'text-ink-300' : 'text-ink-100',
                   )}
                 >
