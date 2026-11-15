@@ -23,7 +23,9 @@ const TABS: { value: FamilyTab; label: string }[] = [
 /** Linhas compactas das tabelas de leitura. */
 const cell = 'px-2 py-1.5 text-sm';
 
-const stagePill = (stage: Child['stage']) => <Pill tone={stage === 'racing' ? 'good' : stage === 'other' ? 'neutral' : 'warn'}>{CHILD_STAGE_LABELS[stage]}</Pill>;
+const stagePill = (stage: Child['stage']) => (
+  <Pill tone={stage === 'racing' ? 'good' : stage === 'other' ? 'neutral' : 'warn'}>{CHILD_STAGE_LABELS[stage]}</Pill>
+);
 
 function SupportPicker({ value, onChange, label }: { value: SupportLevel; onChange: (v: SupportLevel) => void; label: string }) {
   return (
@@ -108,7 +110,9 @@ function ChildCard({ child }: { child: Child }) {
           </div>
           <SupportPicker label="Apoio à carreira:" value={child.support} onChange={(v) => setChildSupport(child.id, v)} />
           {racing.stalled > 0 && (
-            <p className="text-sm text-gold-400">Sem dinheiro para a vaga: {child.firstName} corre de favor. Sem apoio, a carreira acaba na próxima temporada.</p>
+            <p className="text-sm text-gold-400">
+              Sem dinheiro para a vaga: {child.firstName} corre de favor. Sem apoio, a carreira acaba na próxima temporada.
+            </p>
           )}
           {racing.seasons.length > 0 && (
             <TableWrap>
@@ -261,11 +265,7 @@ export function FamilyScreen() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
               <Stat label="Idade" value={player.age} hint={career.mode === 'driver' ? 'Piloto em atividade' : 'Aposentado das pistas'} />
               <Stat label="Geração" value={`${career.dynasty.generation}ª`} />
-              <Stat
-                label="Filhos"
-                value={children.length}
-                hint={children.length > 0 ? `${formatMoney(cost)} por ano` : `Máximo: ${FAMILY.MAX_CHILDREN}`}
-              />
+              <Stat label="Filhos" value={children.length} hint={children.length > 0 ? `${formatMoney(cost)} por ano` : `Máximo: ${FAMILY.MAX_CHILDREN}`} />
               <Stat label="Risco anual de morte" value={`${(mortalityRisk(player.age) * 100).toLocaleString('pt-BR')}%`} hint="Cresce com a idade" />
             </div>
             <p className="text-xs leading-snug text-ink-300">
@@ -318,7 +318,13 @@ export function FamilyScreen() {
                       <td className={cx(td, 'text-ink-300')}>
                         {entry.bornYear} · T{entry.fromSeason}
                         {entry.toSeason !== null ? ` a T${entry.toSeason}` : ' em diante'}
-                        {entry.endReason === 'handover' ? ' (passou o comando)' : entry.endReason === 'accident' ? ' (acidente)' : entry.endReason ? ' (faleceu)' : ''}
+                        {entry.endReason === 'handover'
+                          ? ' (passou o comando)'
+                          : entry.endReason === 'accident'
+                            ? ' (acidente)'
+                            : entry.endReason
+                              ? ' (faleceu)'
+                              : ''}
                       </td>
                       <td className={td}>{entry.bestCategoryId ? getCategory(entry.bestCategoryId).shortName : '–'}</td>
                       <td className={cx(td, 'text-right')}>{entry.toSeason === null ? '–' : entry.titles}</td>

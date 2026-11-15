@@ -174,7 +174,9 @@ function SummaryTab() {
                           T{t.season} · E{t.round}
                         </td>
                         <td className={cell}>{t.label}</td>
-                        <td className={cx(cell, 'whitespace-nowrap text-right', moneyTone(t.amount))}>{formatMoney(t.amount, { sign: true, compact: false })}</td>
+                        <td className={cx(cell, 'whitespace-nowrap text-right', moneyTone(t.amount))}>
+                          {formatMoney(t.amount, { sign: true, compact: false })}
+                        </td>
                       </tr>
                     ))}
                     {f.transactions.length === 0 && (
@@ -265,7 +267,10 @@ function SponsorsTab() {
                   <b className="font-display text-base text-ink-100">{formatMoney(s.perSeason)}</b> por ano · até {career.year + (s.endSeason - career.season)}
                 </div>
               </div>
-              <Meter label="Satisfação" value={s.satisfaction} hint={
+              <Meter
+                label="Satisfação"
+                value={s.satisfaction}
+                hint={
                   <>
                     Meta: entre os {s.targetPosition} primeiros · <span className="whitespace-nowrap">{formatMoney(s.podiumBonus)} por pódio</span>
                   </>

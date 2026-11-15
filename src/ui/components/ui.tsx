@@ -91,7 +91,7 @@ export function PageHeader({ eyebrow, title, children }: { eyebrow?: ReactNode; 
         <h1 className="font-display text-[1.75rem] font-bold uppercase leading-none tracking-wide text-ink-100">{title}</h1>
         {eyebrow && <div className="text-xs font-medium text-ink-400">{eyebrow}</div>}
       </div>
-      {children && <div className="flex flex-wrap items-center gap-x-4 gap-y-2">{children}</div>}
+      {children && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-4 gap-y-2">{children}</div>}
     </div>
   );
 }

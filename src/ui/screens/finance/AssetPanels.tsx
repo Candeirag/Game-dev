@@ -376,9 +376,7 @@ export function StakesPanel() {
                       <td className={cx(cell, 'text-right')}>{pct(s.share)}</td>
                       <td className={cx(cell, 'text-right')}>{formatMoney(s.value)}</td>
                       <td className={cx(cell, 'text-right')}>{s.lastPosition}º</td>
-                      <td className={cx(cell, 'text-right', resultTone(s.lastDividend))}>
-                        {formatMoney(s.lastDividend, { sign: true })}
-                      </td>
+                      <td className={cx(cell, 'text-right', resultTone(s.lastDividend))}>{formatMoney(s.lastDividend, { sign: true })}</td>
                       <td className={cx(cell, 'text-right')}>
                         <Button variant="ghost" onClick={() => sellStake(s.id)}>
                           Vender
@@ -397,7 +395,11 @@ export function StakesPanel() {
         action={
           <span className="flex items-center gap-2 text-xs text-ink-400">
             Fatia a comprar
-            <Tabs value={String(share)} options={ASSET_RULES.STAKE_SHARES.map((s) => ({ value: String(s), label: pct(s) }))} onChange={(v) => setShare(Number(v))} />
+            <Tabs
+              value={String(share)}
+              options={ASSET_RULES.STAKE_SHARES.map((s) => ({ value: String(s), label: pct(s) }))}
+              onChange={(v) => setShare(Number(v))}
+            />
           </span>
         }
         padded={false}
@@ -497,8 +499,8 @@ export function CreditPanel() {
           </ul>
         )}
         <p className={note}>
-          O empréstimo é mais barato que deixar o caixa negativo, que paga {pct(ECONOMY.LOAN_INTEREST)} ao ano. Serve para atravessar uma temporada cara ou
-          para comprar uma equipe.
+          O empréstimo é mais barato que deixar o caixa negativo, que paga {pct(ECONOMY.LOAN_INTEREST)} ao ano. Serve para atravessar uma temporada cara ou para
+          comprar uma equipe.
         </p>
       </Card>
 
