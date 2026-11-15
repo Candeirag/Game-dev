@@ -94,7 +94,23 @@ Os testes travam o comportamento do jogo: a simulação com semente fixa é comp
 - Cada save é validado (estrutura, consistência e checksum) ao ser gravado e ao ser carregado, e a versão anterior do slot fica como cópia de segurança.
 - **Saves das fases anteriores continuam funcionando:** são convertidos ao abrir, mantendo o piloto, os resultados, o dinheiro, o contrato e o histórico, com os sistemas novos no estado inicial. Uma carreira encerrada na Fase 2 pode voltar como dirigente.
 - **Corrida interrompida:** a corrida ao vivo não entra no save, mas o navegador guarda os comandos dados a cada volta. Se a página recarrega no meio da prova, o jogo oferece "Continuar de onde parou" ou "Ver resultado"; a corrida é refeita com os mesmos comandos e dá no mesmo.
-- Os saves moram no navegador, que pode apagá-los: a tela Saves e o fechamento de cada temporada lembram de exportar o `.json` e mostram a data da última exportação. Se o navegador bloquear a gravação, o jogo segue na memória e avisa que o progresso será perdido ao fechar.
+- **No aplicativo**, os saves ficam em arquivos do próprio aparelho (não no navegador), entram no backup do sistema e a exportação abre a folha de compartilhamento (salvar em Arquivos, enviar por mensagem ou e-mail).
+- No navegador, os saves moram nele, que pode apagá-los: a tela Saves e o fechamento de cada temporada lembram de exportar o `.json` e mostram a data da última exportação. Se o navegador bloquear a gravação, o jogo segue na memória e avisa que o progresso será perdido ao fechar.
+
+## Aplicativo (Android e iOS)
+
+O jogo vira aplicativo com o [Capacitor](https://capacitorjs.com): o build de produção vai dentro do aplicativo e nada vem da rede. A tela fica travada na horizontal, em tela cheia, respeitando o recorte da câmera e a barra de gestos.
+
+| Comando               | O que faz                                                                                       |
+| --------------------- | ----------------------------------------------------------------------------------------------- |
+| `npm run app:sync`    | Faz o build e copia para os projetos `android/` e `ios/`.                                       |
+| `npm run app:android` | O mesmo, e abre o projeto no Android Studio (precisa do Android Studio e do SDK do Android 36). |
+| `npm run app:ios`     | O mesmo, e abre o projeto no Xcode (precisa de um Mac com uma versão recente do Xcode).         |
+| `npm run app:icons`   | Regenera o ícone e a tela de abertura provisórios.                                              |
+
+Para testar num aparelho: rode `npm run app:android` ou `npm run app:ios`, conecte o aparelho (ou escolha um emulador) e use o botão de executar do Android Studio ou do Xcode. Antes de publicar é preciso trocar o identificador provisório (`appId` em `capacitor.config.ts`, e nos projetos nativos), assinar o aplicativo e substituir o ícone e a abertura; a lista das imagens que faltam está em [ASSETS.md](ASSETS.md).
+
+No aplicativo o jogo ganha três coisas que o navegador não tem: saves em arquivos do aparelho (com migração automática do que uma versão anterior tiver deixado no armazenamento do navegador embutido), exportação pela folha de compartilhamento e vibração leve ao toque (pode ser desligada em "Mais").
 
 ## Estrutura do projeto
 

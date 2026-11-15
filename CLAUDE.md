@@ -28,6 +28,8 @@ issues, PRs) é em português do Brasil.
 | `npm run format`     | Aplica a formatação e as correções seguras do Biome.                                     |
 | `npm run test:e2e`   | Só os testes no navegador (`e2e/`).                                                      |
 | `npm run calibrate`  | Relatórios de balanceamento (não fazem parte da verificação).                            |
+| `npm run app:sync`   | Build e cópia para os projetos do aplicativo (`android/`, `ios/`).                       |
+| `npm run app:icons`  | Regenera o ícone e a tela de abertura provisórios do aplicativo.                         |
 
 O Playwright usa o Chromium. Em uma máquina nova: `npx playwright install chromium`.
 Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
@@ -66,6 +68,12 @@ determinístico) → `src/persistence` (saves) → `src/store` (Zustand, camada 
   colunas a partir de `md:`, abas (na URL, `?tab=`) quando a tela fica comprida, e o passo que
   faz a carreira avançar sempre na barra superior (`src/ui/layout/ScreenAction.tsx`).
 - Relatório de travamentos (Sentry) preparado e desligado: `src/monitoring/crashReporting.ts`.
+- Aplicativo (Capacitor, Android e iOS): só `src/platform` importa `@capacitor/*`; o resto do
+  jogo pergunta a `isNativeApp()`. No aplicativo os saves vão para arquivos do aparelho
+  (`src/persistence/deviceStorage.ts`) e nada vem da rede (`tests/offline.test.ts`). As pastas
+  `android/` e `ios/` são projetos nativos versionados: mexa nelas só para configuração
+  (orientação, ícones, permissões) e rode `npm run app:sync` depois de mudar o jogo. Imagens
+  que existem e que faltam: `ASSETS.md`.
 
 ## Convenções
 
