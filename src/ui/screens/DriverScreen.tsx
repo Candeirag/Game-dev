@@ -93,7 +93,7 @@ export function DriverScreen() {
             <div className="flex items-center gap-4">
               <Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} tone="accent" size={76} />
               <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
-                <Stat label="Potencial" value={player.potential} />
+                <Stat label="Potencial" value={formatRating(player.potential)} />
                 <Stat label="Reputação" value={career.reputation} />
               </div>
             </div>

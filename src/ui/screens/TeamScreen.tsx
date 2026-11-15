@@ -204,7 +204,8 @@ export function TeamScreen() {
                         {fullName(d)} {d.isPlayer && <span className="text-xs font-normal text-apex-400">(você)</span>}
                       </div>
                       <div className="mt-0.5 text-xs text-ink-400">
-                        <span className="font-semibold text-ink-200">{ROLE_LABELS[d.role ?? 'second']}</span> · {d.age} anos · geral {formatRating(overallRating(d.attributes))}
+                        <span className="font-semibold text-ink-200">{ROLE_LABELS[d.role ?? 'second']}</span> · {d.age} anos · geral{' '}
+                        {formatRating(overallRating(d.attributes))}
                         {d.injury ? ` · lesionado (${counted(d.injury.roundsRemaining, 'etapa', 'etapas')})` : ''}
                       </div>
                     </div>
@@ -224,7 +225,7 @@ export function TeamScreen() {
                     {reserve ? ` · ${reserve.age} anos · geral ${formatRating(overallRating(reserve.attributes))}` : ''}
                   </div>
                 </div>
-                <p className="w-[11.5rem] shrink-0 text-right text-xs text-ink-400">
+                <p className="w-[min(11.5rem,50%)] shrink-0 text-right text-xs text-ink-400">
                   O reserva assume o {category.machine} quando um titular está lesionado ou suspenso.
                 </p>
               </li>
