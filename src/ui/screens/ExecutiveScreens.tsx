@@ -544,7 +544,7 @@ export function ExecutiveCareerScreen() {
               title={off.lineup.length !== 2 ? 'Escolha os dois pilotos na aba Pilotos' : undefined}
               onClick={() => store.startExecutiveSeason({ kind: 'continue' })}
             >
-              Seguir com a {team?.name}
+              Seguir com a <span className="max-w-44 truncate">{team?.name}</span>
             </ScreenAction>
           ) : (
             <ScreenAction onClick={() => store.startExecutiveSeason({ kind: 'spectate' })}>Seguir sem equipe</ScreenAction>
