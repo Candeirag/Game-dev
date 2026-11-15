@@ -187,9 +187,12 @@ function Overview({ m }: { m: ManagedTeam }) {
                 {m.sponsors.map((s) => (
                   <li key={s.id} className="flex items-center justify-between gap-2 bg-ink-850 py-0.5 pl-3 pr-1 text-sm">
                     <div className="min-w-0">
-                      <div className="truncate font-semibold">{s.name}</div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="truncate font-semibold">{s.name}</span>
+                        <span className="shrink-0 text-xs text-ink-400">até {career.year + (s.endSeason - career.season)}</span>
+                      </div>
                       <div className="text-xs text-ink-400">
-                        {formatMoney(s.perSeason)} por temporada · entre as {s.targetPosition} primeiras · até {career.year + (s.endSeason - career.season)}
+                        {formatMoney(s.perSeason)} por temporada · entre as {s.targetPosition} primeiras
                       </div>
                     </div>
                     <Button variant="ghost" className="shrink-0" onClick={() => dropTeamSponsor(s.id)}>

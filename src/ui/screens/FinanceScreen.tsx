@@ -44,25 +44,31 @@ export function FinanceScreen() {
 
   return (
     <div>
-      <PageHeader
-        title="Finanças"
-        eyebrow={
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <LifeBackLink />
-            <span>
-              temporada {career.year}
-              {driving && (
-                <>
-                  {' '}
-                  · previsto por etapa <b className={cx('font-display text-base', moneyTone(nextRound))}>{formatMoney(nextRound, { sign: true })}</b>
-                </>
-              )}
-            </span>
-          </span>
-        }
-      >
-        <Tabs value={tab} options={tabs} onChange={setTab} />
-      </PageHeader>
+      {/* Seis abas não cabem ao lado do título no celular: ficam numa linha própria, que rola de lado se faltar largura, e sobem para a direita do título em telas largas. */}
+      <div className="xl:flex xl:items-start xl:justify-between xl:gap-4">
+        <div className="min-w-0">
+          <PageHeader
+            title="Finanças"
+            eyebrow={
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <LifeBackLink />
+                <span>
+                  temporada {career.year}
+                  {driving && (
+                    <>
+                      {' '}
+                      · previsto por etapa <b className={cx('font-display text-base', moneyTone(nextRound))}>{formatMoney(nextRound, { sign: true })}</b>
+                    </>
+                  )}
+                </span>
+              </span>
+            }
+          />
+        </div>
+        <div className="mb-3 xl:shrink-0">
+          <Tabs value={tab} options={tabs} onChange={setTab} />
+        </div>
+      </div>
 
       <div className="space-y-4">
         {tab === 'summary' && <SummaryTab />}

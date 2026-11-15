@@ -309,10 +309,7 @@ export function ExecutiveWeekendScreen() {
 
   return (
     <div className="space-y-3">
-      <PageHeader
-        eyebrow={who}
-        title={seasonOver ? 'Temporada encerrada' : next && track ? `Etapa ${next.round}: ${track.name}` : 'Fim de semana'}
-      >
+      <PageHeader eyebrow={who} title={seasonOver ? 'Temporada encerrada' : next && track ? `Etapa ${next.round}: ${track.name}` : 'Fim de semana'}>
         {planning && (
           <>
             {/* Com decisões pendentes, a barra superior mostra o atalho para resolvê-las. */}
@@ -556,9 +553,9 @@ export function ExecutiveCareerScreen() {
           ))}
       </PageHeader>
       {pending && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 border border-gold-400/40 bg-gold-400/10 py-1 pl-4 pr-1 text-sm text-gold-400">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 border border-gold-400/40 bg-gold-400/10 py-1.5 pl-4 pr-1.5 text-sm text-gold-400">
           Resolva as decisões pendentes no painel antes de começar a temporada.
-          <Button variant="ghost" className="text-gold-400" onClick={() => navigate('/dashboard')}>
+          <Button variant="danger" onClick={() => navigate('/dashboard')}>
             Ir para o painel
           </Button>
         </div>
@@ -602,9 +599,10 @@ export function ExecutiveCareerScreen() {
                 <Card title="Antes de seguir">
                   <ul className="space-y-1.5">
                     <Check met={off.lineup.length === 2}>Dupla de pilotos: {off.lineup.length} de 2 escolhidos</Check>
-                    <Check met={m.sponsors.length >= MANAGEMENT.SPONSOR_SLOTS || off.sponsorOffers.length === 0}>
-                      Patrocínio: {m.sponsors.length} de {MANAGEMENT.SPONSOR_SLOTS} cotas ocupadas
-                    </Check>
+                    <li className="pl-6 text-sm text-ink-300">
+                      Patrocínio: {m.sponsors.length} de {MANAGEMENT.SPONSOR_SLOTS} cotas ocupadas,{' '}
+                      {counted(off.sponsorOffers.length, 'proposta nova', 'propostas novas')}
+                    </li>
                   </ul>
                 </Card>
                 <Card title={m.position === 'owner' ? 'Vender a equipe' : 'Deixar o cargo'}>
@@ -670,7 +668,7 @@ export function ExecutiveCareerScreen() {
           action={<span className="text-xs text-ink-400">{off.lineup.length} de 2 escolhidos</span>}
           bodyClassName="!p-3"
         >
-          <ul className="grid gap-2 md:grid-cols-2">
+          <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {[...off.candidates]
               .sort((a, b) => b.rating - a.rating)
               .map((c) => {
@@ -691,12 +689,16 @@ export function ExecutiveCareerScreen() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="truncate text-sm font-semibold">{c.name}</span>
-                        <Pill tone={c.origin === 'child' ? 'good' : 'neutral'}>{ORIGIN_LABELS[c.origin]}</Pill>
+                        <span className="shrink-0 whitespace-nowrap">
+                          <Pill tone={c.origin === 'child' ? 'good' : 'neutral'}>{ORIGIN_LABELS[c.origin]}</Pill>
+                        </span>
                       </div>
-                      <div className="truncate text-xs text-ink-400">
-                        {c.age} anos · {counted(c.years, 'ano', 'anos')} de contrato
-                        {c.salary ? ` · salário ${formatMoney(c.salary)}` : ''}
-                        {c.seatFee ? ` · paga ${formatMoney(c.seatFee)} pela vaga` : ''}
+                      <div className="flex flex-wrap gap-x-3 text-xs text-ink-400">
+                        <span className="whitespace-nowrap">
+                          {c.age} anos · contrato de {counted(c.years, 'ano', 'anos')}
+                        </span>
+                        {c.salary > 0 && <span className="whitespace-nowrap text-ink-200">Salário: {formatMoney(c.salary)}</span>}
+                        {c.seatFee > 0 && <span className="whitespace-nowrap text-ink-200">Paga {formatMoney(c.seatFee)} pela vaga</span>}
                       </div>
                     </div>
                     {c.willing ? (
@@ -792,8 +794,8 @@ export function ExecutiveCareerScreen() {
             ))}
           </div>
           <p className="mt-3 text-xs text-ink-400">
-            Ao lado do nome, a força da equipe no grid da categoria; em cinza, as que o seu caixa não paga. A compra é paga com o seu caixa pessoal (um empréstimo, na tela Finanças, pode completar o
-            valor). Dono fica com o lucro, cobre o prejuízo e deixa a equipe para os herdeiros.
+            Ao lado do nome, a força da equipe no grid da categoria; em cinza, as que o seu caixa não paga. A compra é paga com o seu caixa pessoal (um
+            empréstimo, na tela Finanças, pode completar o valor). Dono fica com o lucro, cobre o prejuízo e deixa a equipe para os herdeiros.
           </p>
         </Card>
       )}

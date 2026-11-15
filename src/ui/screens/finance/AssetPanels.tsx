@@ -105,7 +105,7 @@ export function StocksPanel() {
               <tr>
                 <th className={head}>Ação</th>
                 <th className={cx(head, 'text-right')}>Cotação</th>
-                <th className={cx(head, 'text-right')}>Retorno · risco</th>
+                <th className={cx(head, 'text-right')}>Retorno ao ano · risco</th>
                 <th className={cx(head, 'text-right')}>Em carteira</th>
                 <th className={head}>Negociar</th>
               </tr>
@@ -119,13 +119,13 @@ export function StocksPanel() {
                 return (
                   <tr key={stock.id} className="border-ink-800 border-t">
                     <td className={cell}>
-                      <div className="font-semibold leading-tight">{stock.name}</div>
+                      <div className="whitespace-nowrap font-semibold leading-tight">{stock.name}</div>
                       <div className="text-xs text-ink-400">{stock.sector}</div>
                     </td>
                     <td className={cx(cell, 'whitespace-nowrap text-right')}>{formatMoney(price, { compact: false, decimals: 2 })}</td>
                     <td className={cx(cell, 'whitespace-nowrap text-right')}>
                       <div className="leading-tight">
-                        {pctTight(stock.drift)} ao ano · ±{pct(stock.volatility)}
+                        {pctTight(stock.drift)} · ±{pct(stock.volatility)}
                       </div>
                       <div className="text-xs text-ink-400">dividendo de {pctTight(stock.dividendYield)}</div>
                     </td>
@@ -376,7 +376,7 @@ export function StakesPanel() {
                       <td className={cx(cell, 'text-right')}>{pct(s.share)}</td>
                       <td className={cx(cell, 'text-right')}>{formatMoney(s.value)}</td>
                       <td className={cx(cell, 'text-right')}>{s.lastPosition}º</td>
-                      <td className={cx(cell, 'text-right', s.lastDividend < 0 ? 'text-gold-400' : 'text-go-400')}>
+                      <td className={cx(cell, 'text-right', resultTone(s.lastDividend))}>
                         {formatMoney(s.lastDividend, { sign: true })}
                       </td>
                       <td className={cx(cell, 'text-right')}>

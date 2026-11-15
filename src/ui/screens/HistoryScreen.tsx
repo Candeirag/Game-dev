@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { RoundRecord } from '@/domain/schemas';
 import { DNF_LABELS } from '@/domain/labels';
 import { getCategory } from '@/data/categories';
@@ -8,6 +8,7 @@ import { RaceResultTable } from '../components/RaceResultTable';
 import { Card, EmptyState, PageHeader, PositionBadge, Stat, Tabs, WeatherBadge, cx } from '../components/ui';
 import { formatDate } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { scrollToElement } from '../motion';
 
 /** Cor de cada corrida na sequência da carreira: pódio em verde, abandono em âmbar, o resto neutro. */
 const SEQUENCE = [
@@ -22,9 +23,11 @@ function sequenceColor(position: number, dnf: boolean): string {
   return SEQUENCE.find((s) => s.key === key)?.color ?? 'bg-ink-600';
 }
 
+const RESULT_ID = 'resultado-da-etapa';
+
 /**
  * Histórico: o resumo da carreira numa faixa, as etapas da temporada escolhida numa grade compacta
- * e, embaixo, o resultado completo da etapa selecionada (abre na mais recente).
+ * e, embaixo, o resultado completo da etapa em que o jogador tocar.
  */
 export function HistoryScreen() {
   const { career, player } = useCareerView();
@@ -60,7 +63,13 @@ export function HistoryScreen() {
   const lineage = career.dynasty.lineage.map((l) => l.driverId);
   const mineIn = (record: RoundRecord) =>
     record.race.entries.find((e) => e.driverId === player.id) ?? record.race.entries.find((e) => lineage.includes(e.driverId));
-  const shown = current.rounds.find((r) => r.round === open) ?? current.rounds[current.rounds.length - 1];
+  const shown = current.rounds.find((r) => r.round === open);
+  // O resultado abre embaixo da grade: se ficou fora da tela, a página rola até ele.
+  useEffect(() => {
+    if (open === null) return;
+    const result = document.getElementById(RESULT_ID);
+    if (result && result.getBoundingClientRect().top > window.innerHeight - 120) scrollToElement(RESULT_ID);
+  }, [open]);
   const pickSeason = (value: string) => {
     setSelected(value);
     setOpen(null);
@@ -91,7 +100,7 @@ export function HistoryScreen() {
       </PageHeader>
 
       <Card title="Resumo da carreira" bodyClassName="grid items-center gap-x-6 gap-y-3 p-3 md:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="grid grid-cols-3 gap-x-5 gap-y-2 sm:grid-cols-6">
+        <div className="grid grid-cols-3 gap-x-3 gap-y-2 sm:grid-cols-6">
           <Stat label="Temporadas" value={career.history.length + 1} />
           <Stat label="Corridas" value={stats.starts} />
           <Stat label="Vitórias" value={stats.wins} accent />
@@ -106,11 +115,11 @@ export function HistoryScreen() {
                 <span
                   key={`${r.season}-${r.record.round}`}
                   title={`${r.year} · Etapa ${r.record.round}: ${r.entry.status === 'dnf' ? 'abandono' : `${r.entry.position}º`}`}
-                  className={cx('h-3.5 w-1.5', sequenceColor(r.entry.position, r.entry.status === 'dnf'))}
+                  className={cx('h-3 w-1.5', sequenceColor(r.entry.position, r.entry.status === 'dnf'))}
                 />
               ))}
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-ink-400">
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] leading-tight text-ink-400">
               {SEQUENCE.map((s) => (
                 <span key={s.key} className="inline-flex items-center gap-1">
                   <span aria-hidden className={cx('h-2 w-2', s.color)} />
@@ -122,7 +131,11 @@ export function HistoryScreen() {
         )}
       </Card>
 
-      <Card title={`Temporada ${current.year} · ${getCategory(current.categoryId).name}`} padded={false}>
+      <Card
+        title={`Temporada ${current.year} · ${getCategory(current.categoryId).name}`}
+        action={current.rounds.length > 0 ? <span className="hidden text-xs text-ink-400 sm:inline">Toque numa etapa para ver o resultado</span> : undefined}
+        padded={false}
+      >
         {current.summary && (
           <div className="border-b border-ink-700 p-3">
             <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4">
@@ -159,7 +172,7 @@ export function HistoryScreen() {
                 <li key={record.round} className="min-w-0 bg-ink-900">
                   <button
                     type="button"
-                    onClick={() => setOpen(record.round)}
+                    onClick={() => setOpen(isShown ? null : record.round)}
                     aria-pressed={isShown}
                     className={cx(
                       'flex min-h-11 w-full items-center gap-2 px-2.5 py-1 text-left transition-colors',
@@ -207,7 +220,11 @@ function RoundResult({
   const winner = record.race.entries[0];
   const track = getTrack(record.trackId);
   return (
-    <Card title={`Etapa ${record.round} · ${track.name}`} action={<WeatherBadge weather={record.race.weather} compact />} padded={false}>
+    <Card
+      title={<span id={RESULT_ID} className="scroll-mt-16">{`Etapa ${record.round} · ${track.name}`}</span>}
+      action={<WeatherBadge weather={record.race.weather} compact />}
+      padded={false}
+    >
       <div className="px-4 pt-2 text-xs text-ink-400">
         {formatDate(record.date)} ·{' '}
         {mine
