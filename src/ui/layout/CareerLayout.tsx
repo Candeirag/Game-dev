@@ -270,19 +270,29 @@ function CareerShell() {
   const content = (
     <>
       <StorageWarning className="mx-4 mt-4 lg:mx-6" />
+      {/* Aviso passageiro (save importado, erro ao salvar): flutua no canto, sem empurrar a tela. */}
       {notice && (
         <div
           role="status"
-          className="enter mx-4 mt-4 flex items-start justify-between gap-3 border border-gold-400/40 bg-gold-400/10 px-4 py-3 text-sm text-gold-400 lg:mx-6"
+          className={cx(
+            'enter fixed right-[calc(0.75rem+env(safe-area-inset-right))] z-30 flex max-w-[min(24rem,calc(100vw-1.5rem))] items-center gap-2 bg-ink-800 py-1 pl-4 pr-1 text-sm text-ink-100 shadow-[inset_3px_0_0_0_var(--color-gold-400),0_8px_24px_rgba(0,0,0,0.5)]',
+            wide
+              ? raceBar
+                ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))]'
+                : 'bottom-[calc(0.75rem+env(safe-area-inset-bottom))]'
+              : raceBar
+                ? 'bottom-[calc(9rem+env(safe-area-inset-bottom))]'
+                : 'bottom-[calc(5rem+env(safe-area-inset-bottom))]',
+          )}
         >
-          <span>{notice}</span>
+          <span className="min-w-0 flex-1 py-2">{notice}</span>
           <button
             type="button"
             onClick={dismissNotice}
-            className="-m-2 grid h-9 w-9 shrink-0 place-items-center text-ink-300 hover:text-ink-100"
+            className="grid h-11 w-11 shrink-0 place-items-center text-ink-300 hover:text-ink-100"
             aria-label="Fechar aviso"
           >
-            <X size={16} aria-hidden />
+            <X size={18} aria-hidden />
           </button>
         </div>
       )}
