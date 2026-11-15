@@ -27,6 +27,7 @@ import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
 import { ExportReminder } from '../components/SaveNotices';
 import { ScreenAction } from '../layout/ScreenAction';
+import { useReveal } from './useReveal';
 
 const DEMANDS: { id: NegotiationDemand; label: string; available: (o: Offer) => boolean }[] = [
   { id: 'seat', label: 'Reduzir o custo da vaga', available: (o) => o.seatCost > 0 },
@@ -39,6 +40,8 @@ const DEMANDS: { id: NegotiationDemand; label: string; available: (o: Offer) => 
 ];
 
 type CareerTab = 'offers' | 'ladder' | 'license' | 'interest';
+
+const OFFER_ID = 'proposta-aberta';
 
 /** A maior largura entre os veículos: define a altura da faixa reservada à imagem em cada degrau. */
 const WIDEST_VEHICLE = Math.max(...CATEGORIES.map((c) => VEHICLES[c.id].width));
@@ -101,11 +104,7 @@ function LadderTab() {
                 aria-current={state === 'current' ? 'step' : undefined}
                 className={cx(
                   'flex min-w-0 flex-col border-t-[3px] p-2',
-                  state === 'current'
-                    ? 'border-apex-500 bg-apex-500/10'
-                    : state === 'done'
-                      ? 'border-ink-400 bg-ink-850'
-                      : 'border-ink-700 bg-ink-850/50',
+                  state === 'current' ? 'border-apex-500 bg-apex-500/10' : state === 'done' ? 'border-ink-400 bg-ink-850' : 'border-ink-700 bg-ink-850/50',
                 )}
               >
                 <div className="text-[10px] font-semibold uppercase leading-tight tracking-wider text-ink-400">Degrau {c.tier}</div>
@@ -168,8 +167,8 @@ function LadderTab() {
               </Check>
             </ul>
             <p className="mt-3 text-xs text-ink-400">
-              A idade vale para o início da próxima temporada. Você também precisa bancar a vaga (veja Finanças e as propostas no fim do ano); os três
-              primeiros do campeonato ganham bolsa de 60%, 35% e 20% na vaga do degrau de cima.
+              A idade vale para o início da próxima temporada. Você também precisa bancar a vaga (veja Finanças e as propostas no fim do ano); os três primeiros
+              do campeonato ganham bolsa de 60%, 35% e 20% na vaga do degrau de cima.
             </p>
           </>
         ) : (
@@ -197,8 +196,7 @@ function LicenseTab() {
           <Stat label="Suspensões" value={career.license.banRounds} hint="Etapas a cumprir" />
         </div>
         <p className="mt-3 text-xs text-ink-400">
-          Cada temporada rende pontos pela posição final. Toques e infrações rendem pontos de punição; com {PENALTY_POINTS_BAN}, você é suspenso por uma
-          etapa.
+          Cada temporada rende pontos pela posição final. Toques e infrações rendem pontos de punição; com {PENALTY_POINTS_BAN}, você é suspenso por uma etapa.
         </p>
       </Card>
 
@@ -227,10 +225,10 @@ function LicenseTab() {
 function OffersTab({ offseason }: { offseason: Offseason }) {
   const { career, drivers } = useCareerView();
   const [chosen, setChosen] = useState<string | null>(null);
+  useReveal(OFFER_ID, chosen);
   const offers = offseason.offers;
   // Sem escolha do jogador, abre a primeira proposta que ele pode assinar.
-  const selected =
-    offers.find((o) => o.id === chosen) ?? offers.find((o) => o.status !== 'withdrawn' && canAcceptOffer(career, o)) ?? offers[0];
+  const selected = offers.find((o) => o.id === chosen) ?? offers.find((o) => o.status !== 'withdrawn' && canAcceptOffer(career, o)) ?? offers[0];
   const champion = drivers[offseason.championDriverId];
 
   return (
@@ -248,7 +246,9 @@ function OffersTab({ offseason }: { offseason: Offseason }) {
               ))}
             </ul>
           </Card>
-          <OfferDetail key={selected.id} offer={selected} />
+          <div id={OFFER_ID} className="min-w-0 scroll-mt-16">
+            <OfferDetail key={selected.id} offer={selected} />
+          </div>
         </div>
       )}
 
@@ -519,8 +519,8 @@ function MarketCard() {
         })}
       </div>
       <p className="mt-3 text-xs text-ink-400">
-        Cada equipe avalia você pelo que ela mesma espera: a sua posição diante da meta dela, o seu nível diante do dos pilotos dela, a reputação e a idade.
-        A partir de cerca de 50 de interesse, ela faz proposta no fim do ano; acima disso, crescem o desconto na vaga e a margem de negociação.
+        Cada equipe avalia você pelo que ela mesma espera: a sua posição diante da meta dela, o seu nível diante do dos pilotos dela, a reputação e a idade. A
+        partir de cerca de 50 de interesse, ela faz proposta no fim do ano; acima disso, crescem o desconto na vaga e a margem de negociação.
       </p>
     </Card>
   );
@@ -535,8 +535,8 @@ function Retirement() {
   return (
     <section aria-label="Aposentadoria das pistas" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-ink-700 pt-3">
       <p className="min-w-0 flex-1 basis-80 text-xs text-ink-400">
-        <b className="font-semibold text-ink-300">Aposentadoria das pistas.</b> Pendurar o capacete é definitivo para este personagem, mas a carreira
-        continua: você passa a atuar como dirigente (investidor, chefe de equipe ou dono) e acompanha os filhos.
+        <b className="font-semibold text-ink-300">Aposentadoria das pistas.</b> Pendurar o capacete é definitivo para este personagem, mas a carreira continua:
+        você passa a atuar como dirigente (investidor, chefe de equipe ou dono) e acompanha os filhos.
         {confirming &&
           (career.offseason
             ? ' Como a temporada já acabou, as propostas de cargo e as equipes à venda aparecem em seguida.'

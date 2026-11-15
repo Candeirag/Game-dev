@@ -7,6 +7,9 @@ import { Card, PageHeader, Pill, PositionBadge, WeatherBadge, cx } from '../comp
 import { describeOvertaking, describePower, describeTyreWear, formatDate, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { ResultChips } from '../kit/bits';
+import { useReveal } from './useReveal';
+
+const DETAIL_ID = 'etapa-escolhida';
 
 /**
  * Calendário: a temporada inteira numa lista compacta (duas colunas na tela deitada) e, ao lado,
@@ -18,6 +21,7 @@ export function CalendarScreen() {
   const credit = career.calendar.map((event) => trackCredit(event.trackId)).find((text) => text !== null) ?? null;
   const upcoming = career.weekend ? career.weekend.round : career.calendar[career.nextRoundIndex]?.round;
   const [chosen, setChosen] = useState<number | null>(null);
+  useReveal(DETAIL_ID, chosen);
   const selected = career.calendar.find((e) => e.round === (chosen ?? upcoming)) ?? career.calendar[career.calendar.length - 1];
   const resultOf = (round: number) => {
     const record = career.rounds.find((r) => r.round === round);
@@ -80,39 +84,41 @@ export function CalendarScreen() {
         </Card>
 
         {selected && (
-          <EventDetail
-            round={selected.round}
-            total={career.calendar.length}
-            date={selected.date}
-            trackId={selected.trackId}
-            status={
-              held.record ? (
-                held.mine ? (
-                  <span className="flex items-center gap-2 text-sm font-semibold text-ink-100">
-                    {held.mine.points} pts
-                    <PositionBadge position={held.mine.position} dnf={held.mine.status === 'dnf'} />
+          <div id={DETAIL_ID} className="min-w-0 scroll-mt-16">
+            <EventDetail
+              round={selected.round}
+              total={career.calendar.length}
+              date={selected.date}
+              trackId={selected.trackId}
+              status={
+                held.record ? (
+                  held.mine ? (
+                    <span className="flex items-center gap-2 text-sm font-semibold text-ink-100">
+                      {held.mine.points} pts
+                      <PositionBadge position={held.mine.position} dnf={held.mine.status === 'dnf'} />
+                    </span>
+                  ) : (
+                    <span className="text-xs text-ink-400">Não disputou</span>
+                  )
+                ) : career.weekend?.round === selected.round ? (
+                  <Pill tone="accent">Em andamento</Pill>
+                ) : selected.round === upcoming ? (
+                  <Pill tone="accent">Próxima</Pill>
+                ) : undefined
+              }
+            >
+              {held.record && (
+                <div className="flex items-center justify-between gap-3 border-t border-ink-700 pt-2.5 text-xs text-ink-400">
+                  <span className="min-w-0">
+                    Vencedor: <b className="font-semibold text-ink-200">{winner ? fullName(winner) : '-'}</b>
                   </span>
-                ) : (
-                  <span className="text-xs text-ink-400">Não disputou</span>
-                )
-              ) : career.weekend?.round === selected.round ? (
-                <Pill tone="accent">Em andamento</Pill>
-              ) : selected.round === upcoming ? (
-                <Pill tone="accent">Próxima</Pill>
-              ) : undefined
-            }
-          >
-            {held.record && (
-              <div className="flex items-center justify-between gap-3 border-t border-ink-700 pt-2.5 text-xs text-ink-400">
-                <span className="min-w-0">
-                  Vencedor: <b className="font-semibold text-ink-200">{winner ? fullName(winner) : '-'}</b>
-                </span>
-                <span className="shrink-0">
-                  <WeatherBadge weather={held.record.race.weather} />
-                </span>
-              </div>
-            )}
-          </EventDetail>
+                  <span className="shrink-0">
+                    <WeatherBadge weather={held.record.race.weather} />
+                  </span>
+                </div>
+              )}
+            </EventDetail>
+          </div>
         )}
       </div>
       {credit && <p className="mt-3 text-[11px] text-ink-500">Traçados das pistas: {credit}</p>}
@@ -140,11 +146,7 @@ function EventDetail({
   const { category } = useCareerView();
   const track = getTrack(trackId);
   return (
-    <Card
-      title={`Etapa ${round} de ${total}`}
-      action={status}
-      bodyClassName="space-y-2.5 p-3"
-    >
+    <Card title={`Etapa ${round} de ${total}`} action={status} bodyClassName="space-y-2.5 p-3">
       {/* O traçado tem largura fixa e não encolhe: o texto fica na coluna ao lado, sem cruzar o desenho. */}
       <div className="flex items-center gap-3">
         <CircuitMap track={track} style={category.vehicle} className="h-20 w-28 shrink-0 lg:h-28 lg:w-40" />

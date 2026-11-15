@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { RoundRecord } from '@/domain/schemas';
 import { DNF_LABELS } from '@/domain/labels';
 import { getCategory } from '@/data/categories';
@@ -8,7 +9,7 @@ import { RaceResultTable } from '../components/RaceResultTable';
 import { Card, EmptyState, PageHeader, PositionBadge, Stat, Tabs, WeatherBadge, cx } from '../components/ui';
 import { formatDate } from '../format';
 import { useCareerView } from '../hooks/useCareer';
-import { scrollToElement } from '../motion';
+import { useReveal } from './useReveal';
 
 /** Cor de cada corrida na sequência da carreira: pódio em verde, abandono em âmbar, o resto neutro. */
 const SEQUENCE = [
@@ -24,6 +25,7 @@ function sequenceColor(position: number, dnf: boolean): string {
 }
 
 const RESULT_ID = 'resultado-da-etapa';
+const STEP_BUTTON = 'grid h-11 w-11 place-items-center text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100 disabled:opacity-40';
 
 /**
  * Histórico: o resumo da carreira numa faixa, as etapas da temporada escolhida numa grade compacta
@@ -65,11 +67,11 @@ export function HistoryScreen() {
     record.race.entries.find((e) => e.driverId === player.id) ?? record.race.entries.find((e) => lineage.includes(e.driverId));
   const shown = current.rounds.find((r) => r.round === open);
   // O resultado abre embaixo da grade: se ficou fora da tela, a página rola até ele.
-  useEffect(() => {
-    if (open === null) return;
-    const result = document.getElementById(RESULT_ID);
-    if (result && result.getBoundingClientRect().top > window.innerHeight - 120) scrollToElement(RESULT_ID);
-  }, [open]);
+  useReveal(RESULT_ID, open);
+  const step = (offset: number) => {
+    const next = shown ? current.rounds[current.rounds.indexOf(shown) + offset] : undefined;
+    return next ? () => setOpen(next.round) : undefined;
+  };
   const pickSeason = (value: string) => {
     setSelected(value);
     setOpen(null);
@@ -79,7 +81,11 @@ export function HistoryScreen() {
     <div className="space-y-4">
       <PageHeader eyebrow="Carreira" title="Histórico de resultados">
         {seasons.length > 1 && seasons.length <= 3 && (
-          <Tabs value={selected} onChange={pickSeason} options={seasons.map((s) => ({ value: String(s.season), label: `${s.year} · ${getCategory(s.categoryId).shortName}` }))} />
+          <Tabs
+            value={selected}
+            onChange={pickSeason}
+            options={seasons.map((s) => ({ value: String(s.season), label: `${s.year} · ${getCategory(s.categoryId).shortName}` }))}
+          />
         )}
         {seasons.length > 3 && (
           <label className="flex items-center gap-2 text-sm text-ink-300">
@@ -185,9 +191,7 @@ export function HistoryScreen() {
                         {getTrack(record.trackId).name}
                       </span>
                       <span className="block truncate text-[11px] leading-tight text-ink-400">
-                        {mine
-                          ? `Largada ${mine.grid}º · ${mine.status === 'dnf' ? 'abandono' : `${mine.points} pts`}`
-                          : 'Não disputou'}
+                        {mine ? `Largada ${mine.grid}º · ${mine.status === 'dnf' ? 'abandono' : `${mine.points} pts`}` : 'Não disputou'}
                       </span>
                     </span>
                     {mine && <PositionBadge position={mine.position} dnf={mine.status === 'dnf'} />}
@@ -199,7 +203,11 @@ export function HistoryScreen() {
         )}
       </Card>
 
-      {shown && <RoundResult record={shown} mine={mineIn(shown)} names={current.names} colors={current.colors} />}
+      {shown && (
+        <div id={RESULT_ID} className="scroll-mt-16">
+          <RoundResult record={shown} mine={mineIn(shown)} names={current.names} colors={current.colors} onPrevious={step(-1)} onNext={step(1)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -210,27 +218,44 @@ function RoundResult({
   mine,
   names,
   colors,
+  onPrevious,
+  onNext,
 }: {
   record: RoundRecord;
   mine: RoundRecord['race']['entries'][number] | undefined;
   names?: Record<string, string>;
   colors?: Record<string, string>;
+  /** Passam para a etapa vizinha sem voltar à grade; ausentes na primeira e na última. */
+  onPrevious?: () => void;
+  onNext?: () => void;
 }) {
   const { drivers } = useCareerView();
   const winner = record.race.entries[0];
   const track = getTrack(record.trackId);
   return (
     <Card
-      title={<span id={RESULT_ID} className="scroll-mt-16">{`Etapa ${record.round} · ${track.name}`}</span>}
-      action={<WeatherBadge weather={record.race.weather} compact />}
+      title={`Etapa ${record.round} · ${track.name}`}
+      action={
+        <span className="-mr-3 flex shrink-0">
+          <button type="button" onClick={onPrevious} disabled={!onPrevious} aria-label="Etapa anterior" className={STEP_BUTTON}>
+            <ChevronLeft size={18} aria-hidden />
+          </button>
+          <button type="button" onClick={onNext} disabled={!onNext} aria-label="Próxima etapa" className={STEP_BUTTON}>
+            <ChevronRight size={18} aria-hidden />
+          </button>
+        </span>
+      }
       padded={false}
     >
-      <div className="px-4 pt-2 text-xs text-ink-400">
-        {formatDate(record.date)} ·{' '}
-        {mine
-          ? `Largada ${mine.grid}º · ${mine.status === 'dnf' ? `Abandono (${DNF_LABELS[mine.dnfReason ?? 'crash']})` : `${mine.points} pts`}`
-          : 'Não disputou'}
-        {winner && ` · Vencedor: ${names?.[winner.driverId] ?? (drivers[winner.driverId] ? fullName(drivers[winner.driverId]!) : winner.driverId)}`}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 pt-2 text-xs text-ink-400">
+        <span>
+          {formatDate(record.date)} ·{' '}
+          {mine
+            ? `Largada ${mine.grid}º · ${mine.status === 'dnf' ? `Abandono (${DNF_LABELS[mine.dnfReason ?? 'crash']})` : `${mine.points} pts`}`
+            : 'Não disputou'}
+          {winner && ` · Vencedor: ${names?.[winner.driverId] ?? (drivers[winner.driverId] ? fullName(drivers[winner.driverId]!) : winner.driverId)}`}
+        </span>
+        <WeatherBadge weather={record.race.weather} compact />
       </div>
       <div className="px-4 pb-2">
         <RaceResultTable result={record.race} names={names} colors={colors} />
