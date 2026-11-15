@@ -182,7 +182,12 @@ export async function alvosPequenos(page: Page): Promise<string[]> {
  */
 export async function conferirTela(page: Page, tela: string, formato: string): Promise<void> {
   await page.waitForTimeout(250);
-  await page.screenshot({ path: `test-results/telas/${formato}/${tela}.png`, fullPage: true });
+  // Nome de arquivo sem acentos nem espaços.
+  const arquivo = tela
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-');
+  await page.screenshot({ path: `test-results/telas/${formato}/${arquivo}.png`, fullPage: true });
   const achados = await sobreposicoes(page);
   const toque = TELAS.find((item) => item.nome === formato)?.toque ?? true;
   const pequenos = toque ? await alvosPequenos(page) : [];
