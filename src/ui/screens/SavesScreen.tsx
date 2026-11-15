@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ClipboardPaste, Copy, Download, FileUp } from 'lucide-react';
 import { SAVE_SLOTS, type SaveSlotId } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, PageHeader, cx } from '../components/ui';
-import { ExportReminder, StorageWarning } from '../components/SaveNotices';
+import { ExportReminder } from '../components/SaveNotices';
 import { formatDateTime } from '../format';
 
 const SLOT_LABELS: Record<SaveSlotId, string> = { auto: 'Save automático', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
@@ -62,162 +63,173 @@ export function SavesScreen() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader eyebrow="Persistência" title="Saves">
-        <span className="text-sm text-ink-400">Armazenamento: {STORAGE_LABELS[storage.kind]}</span>
+        <span className="text-xs text-ink-400">Armazenamento: {STORAGE_LABELS[storage.kind]}</span>
       </PageHeader>
-
-      <StorageWarning link={false} />
 
       {message && (
         <div
           role="status"
           className={cx(
-            'rounded-lg border px-4 py-3 text-sm',
-            message.tone === 'ok' ? 'border-go-400/30 bg-go-400/10 text-go-400' : 'border-apex-600/50 bg-apex-600/10 text-apex-400',
+            'border px-3 py-2 text-sm',
+            message.tone === 'ok' ? 'border-go-400/40 bg-go-400/10 text-go-400' : 'border-gold-400/60 bg-gold-400/10 text-gold-400',
           )}
         >
           {message.text}
         </div>
       )}
 
-      <Card title="Slots">
-        <ul className="space-y-3">
-          {SAVE_SLOTS.map((id) => {
-            const slot = slots.find((s) => s.slot === id);
-            return (
-              <li key={id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ink-800 p-3">
-                <div className="min-w-0">
-                  <div className="font-semibold">{SLOT_LABELS[id]}</div>
-                  <div className="text-sm text-ink-400">
-                    {!slot || slot.status === 'empty' ? 'Vazio' : null}
-                    {slot?.status === 'ok' && slot.summary && (
-                      <>
-                        {slot.summary.playerName} · {slot.summary.categoryName ?? 'Kart Regional'} · {slot.summary.teamName} · {slot.summary.year} ·{' '}
-                        {slot.summary.roundsCompleted}/{slot.summary.totalRounds} etapas
-                        {slot.summary.championshipPosition && ` · ${slot.summary.championshipPosition}º no campeonato`} ·{' '}
-                        {slot.savedAt && formatDateTime(slot.savedAt)}
-                      </>
-                    )}
-                    {slot?.status === 'corrupted' && <span className="text-apex-400">Danificado: {slot.error}</span>}
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Card title="Slots" padded={false}>
+          <ul className="divide-y divide-ink-800">
+            {SAVE_SLOTS.map((id) => {
+              const slot = slots.find((s) => s.slot === id);
+              const empty = !slot || slot.status === 'empty';
+              const summary = slot?.status === 'ok' ? slot.summary : undefined;
+              return (
+                // Slot vazio cabe numa linha; com carreira, o resumo fica em cima e os botões embaixo (ou ao lado, quando há largura).
+                <li key={id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-2">
+                  <div className={cx('min-w-0 flex-1', empty ? 'basis-16' : 'basis-72')}>
+                    <div className="flex items-baseline gap-2">
+                      <span className="shrink-0 text-sm font-semibold">{SLOT_LABELS[id]}</span>
+                      {slot?.status === 'ok' && slot.savedAt && <span className="truncate text-xs text-ink-400">{formatDateTime(slot.savedAt)}</span>}
+                    </div>
+                    <div className="text-xs text-ink-300">
+                      {empty && <span className="text-ink-500">Vazio</span>}
+                      {summary && (
+                        <>
+                          {summary.playerName} · {summary.categoryName ?? 'Kart Regional'} · {summary.teamName} · {summary.year} · {summary.roundsCompleted}/
+                          {summary.totalRounds} etapas
+                          {summary.championshipPosition && ` · ${summary.championshipPosition}º no campeonato`}
+                        </>
+                      )}
+                      {slot?.status === 'corrupted' && <span className="text-gold-400">Danificado: {slot.error}</span>}
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {id !== 'auto' && <Button onClick={() => void run(() => saveToSlot(id), `Carreira salva em ${SLOT_LABELS[id]}.`)}>Salvar aqui</Button>}
-                  <Button
-                    disabled={!slot || slot.status === 'empty'}
-                    onClick={() =>
-                      void run(async () => {
-                        await loadSlot(id);
-                        navigate('/dashboard');
-                      }, 'Carreira carregada.')
-                    }
-                  >
-                    Carregar
-                  </Button>
-                  {confirmDelete === id ? (
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    {id !== 'auto' && <Button onClick={() => void run(() => saveToSlot(id), `Carreira salva em ${SLOT_LABELS[id]}.`)}>Salvar aqui</Button>}
                     <Button
-                      variant="danger"
+                      disabled={empty}
                       onClick={() =>
                         void run(async () => {
-                          await removeSlot(id);
-                          setConfirmDelete(null);
-                        }, `${SLOT_LABELS[id]} apagado.`)
+                          await loadSlot(id);
+                          navigate('/dashboard');
+                        }, 'Carreira carregada.')
                       }
                     >
-                      Confirmar exclusão
+                      Carregar
                     </Button>
-                  ) : (
-                    <Button variant="ghost" disabled={!slot || slot.status === 'empty'} onClick={() => setConfirmDelete(id)}>
-                      Apagar
-                    </Button>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="mt-4 text-xs text-ink-400">
-          O jogo salva sozinho depois de cada sessão e a cada mudança de treino. Toda gravação guarda a versão anterior como cópia de segurança, e cada save é
-          validado (estrutura, consistência e checksum) antes de ser gravado e ao ser carregado.
-        </p>
-      </Card>
+                    {confirmDelete === id ? (
+                      <Button
+                        variant="danger"
+                        onClick={() =>
+                          void run(async () => {
+                            await removeSlot(id);
+                            setConfirmDelete(null);
+                          }, `${SLOT_LABELS[id]} apagado.`)
+                        }
+                      >
+                        Confirmar exclusão
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" disabled={empty} onClick={() => setConfirmDelete(id)}>
+                        Apagar
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="border-t border-ink-800 px-3 py-2 text-xs text-ink-400">
+            O jogo salva sozinho depois de cada sessão e a cada mudança de treino. Toda gravação guarda a anterior como cópia de segurança e é validada
+            (estrutura, consistência e checksum).
+          </p>
+        </Card>
 
-      <Card title="Exportar e importar">
-        <ExportReminder link={false} className="mb-3" />
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={download}>Exportar carreira (.json)</Button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="application/json,.json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file)
-                void run(async () => {
-                  await importJson(await file.text());
-                  navigate('/dashboard');
-                }, 'Carreira importada.');
-              e.target.value = '';
-            }}
-          />
-          <Button variant="ghost" onClick={() => fileInput.current?.click()}>
-            Importar arquivo
-          </Button>
-          <Button disabled={!career} onClick={() => void copy()}>
-            Copiar carreira como texto
-          </Button>
-          <Button variant="ghost" onClick={() => setTransfer(transfer?.mode === 'paste' ? null : { mode: 'paste', text: '' })}>
-            Colar carreira
-          </Button>
-        </div>
-        {transfer && (
-          <div className="mt-4 space-y-2">
-            <label htmlFor="save-transfer" className="block text-sm text-ink-300">
-              {transfer.mode === 'copy'
-                ? 'O navegador não liberou a área de transferência. Selecione todo o texto abaixo e copie.'
-                : 'Cole aqui o texto de uma carreira exportada.'}
-            </label>
-            <textarea
-              id="save-transfer"
-              rows={6}
-              readOnly={transfer.mode === 'copy'}
-              value={transfer.text}
-              onChange={(e) => setTransfer({ mode: 'paste', text: e.target.value })}
-              onFocus={(e) => {
-                if (transfer.mode === 'copy') e.target.select();
+        <Card title="Exportar e importar" bodyClassName="p-3">
+          <ExportReminder link={false} className="mb-3" />
+          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2">
+            <Button onClick={download}>
+              <Download size={16} aria-hidden className="shrink-0" />
+              Exportar carreira (.json)
+            </Button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file)
+                  void run(async () => {
+                    await importJson(await file.text());
+                    navigate('/dashboard');
+                  }, 'Carreira importada.');
+                e.target.value = '';
               }}
-              spellCheck={false}
-              className="w-full rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 font-mono text-xs text-ink-100 focus:border-apex-500 focus:outline-none"
             />
-            <div className="flex flex-wrap gap-2">
-              {transfer.mode === 'paste' && (
-                <Button
-                  variant="primary"
-                  disabled={!transfer.text.trim()}
-                  onClick={() =>
-                    void run(async () => {
-                      await importJson(transfer.text);
-                      setTransfer(null);
-                      navigate('/dashboard');
-                    }, 'Carreira importada.')
-                  }
-                >
-                  Importar texto
-                </Button>
-              )}
-              <Button variant="ghost" onClick={() => setTransfer(null)}>
-                Fechar
-              </Button>
-            </div>
+            <Button onClick={() => fileInput.current?.click()}>
+              <FileUp size={16} aria-hidden className="shrink-0" />
+              Importar arquivo
+            </Button>
+            <Button disabled={!career} onClick={() => void copy()}>
+              <Copy size={16} aria-hidden className="shrink-0" />
+              Copiar carreira como texto
+            </Button>
+            <Button aria-expanded={transfer?.mode === 'paste'} onClick={() => setTransfer(transfer?.mode === 'paste' ? null : { mode: 'paste', text: '' })}>
+              <ClipboardPaste size={16} aria-hidden className="shrink-0" />
+              Colar carreira
+            </Button>
           </div>
-        )}
-        <p className="mt-3 text-xs text-ink-400">
-          Use para fazer backup fora do navegador ou levar a carreira para outro computador. Se o download não começar (alguns aplicativos e páginas bloqueiam
-          arquivos baixados), copie a carreira como texto. Saves alterados à mão são recusados pelo checksum.
-        </p>
-      </Card>
+          {transfer && (
+            <div className="mt-3 space-y-2">
+              <label htmlFor="save-transfer" className="block text-sm text-ink-300">
+                {transfer.mode === 'copy'
+                  ? 'O navegador não liberou a área de transferência. Selecione todo o texto abaixo e copie.'
+                  : 'Cole aqui o texto de uma carreira exportada.'}
+              </label>
+              <textarea
+                id="save-transfer"
+                rows={4}
+                readOnly={transfer.mode === 'copy'}
+                value={transfer.text}
+                onChange={(e) => setTransfer({ mode: 'paste', text: e.target.value })}
+                onFocus={(e) => {
+                  if (transfer.mode === 'copy') e.target.select();
+                }}
+                spellCheck={false}
+                className="block w-full border border-ink-700 bg-ink-850 px-3 py-2 font-mono text-xs text-ink-100 transition-colors focus:border-apex-500 focus:outline-none"
+              />
+              <div className="flex flex-wrap gap-2">
+                {transfer.mode === 'paste' && (
+                  <Button
+                    variant="primary"
+                    disabled={!transfer.text.trim()}
+                    onClick={() =>
+                      void run(async () => {
+                        await importJson(transfer.text);
+                        setTransfer(null);
+                        navigate('/dashboard');
+                      }, 'Carreira importada.')
+                    }
+                  >
+                    Importar texto
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => setTransfer(null)}>
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+          <p className="mt-3 text-xs text-ink-400">
+            Serve de backup e para levar a carreira a outro aparelho. Se o download não começar (há aplicativos e páginas que bloqueiam arquivos baixados),
+            copie a carreira como texto. Saves alterados à mão são recusados pelo checksum.
+          </p>
+        </Card>
+      </div>
     </div>
   );
 }

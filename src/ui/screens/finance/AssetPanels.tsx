@@ -28,12 +28,14 @@ import { useCareer } from '../../hooks/useCareer';
 const field = 'min-h-11 border border-ink-700 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
 /** Células das tabelas com botões na linha: o botão já dá a altura, a célula não soma mais. */
 const head = 'px-2 py-1.5 text-left text-[11px] font-medium text-ink-400';
-const cell = 'px-2 py-1 text-sm';
+const cell = 'px-2 py-0.5 text-sm';
 const note = 'text-xs leading-snug text-ink-400';
 
 const pct = (v: number, digits = 0) => `${(v * 100).toFixed(digits).replace('.', ',')}%`;
 /** Percentual com casa decimal só quando ela existe (3,5%; 6%). */
 const pctTight = (v: number) => pct(v, Math.abs(v * 100 - Math.round(v * 100)) < 0.01 ? 0 : 1);
+/** Variação em pontos, com sinal (+0,4; −1; 0). */
+const signedPoints = (v: number) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toLocaleString('pt-BR')}`;
 /** Cor de um resultado em dinheiro: verde no positivo, âmbar no negativo. */
 const resultTone = (v: number) => (v < 0 ? 'text-gold-400' : v > 0 ? 'text-go-400' : 'text-ink-400');
 
@@ -50,14 +52,15 @@ export function SavingsPanel() {
   const f = career.finance;
   const value = Math.max(0, Math.round(Number(amount) || 0));
   return (
-    <Card title="Investimentos" bodyClassName="grid gap-4 md:grid-cols-[11rem_minmax(0,1fr)_minmax(0,1fr)]">
-      <div>
-        <label className="block text-xs text-ink-300">
-          Valor da operação ({currencySymbol()})
-          <input type="number" min={0} step={1000} value={amount} onChange={(e) => setAmount(e.target.value)} className={cx(field, 'mt-1 block w-full')} />
-        </label>
-        <p className={cx(note, 'mt-2')}>O rendimento é creditado no fechamento de cada temporada.</p>
-      </div>
+    <Card
+      title="Investimentos"
+      action={<span className="text-right text-xs text-ink-400">Rendimento creditado no fechamento de cada temporada</span>}
+      bodyClassName="grid gap-4 md:grid-cols-[11rem_minmax(0,1fr)_minmax(0,1fr)]"
+    >
+      <label className="block text-xs text-ink-300">
+        Valor da operação ({currencySymbol()})
+        <input type="number" min={0} step={1000} value={amount} onChange={(e) => setAmount(e.target.value)} className={cx(field, 'mt-1 block w-full')} />
+      </label>
       {PRODUCTS.map((p) => (
         <div key={p.id} className="border-ink-700 border-t pt-3 md:border-t-0 md:border-l md:pt-0 md:pl-4">
           <div className="flex items-baseline justify-between gap-2">
@@ -451,11 +454,11 @@ export function CreditPanel() {
           <Stat label="Juros" value={`${pct(ASSET_RULES.LOAN_RATE)} ao ano`} hint="Parcelas iguais, pagas a cada etapa" />
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="min-w-24 flex-1 text-xs text-ink-300">
+          <label className="min-w-20 flex-1 text-xs text-ink-300">
             Valor ({currencySymbol()})
             <input type="number" min={1000} step={1000} value={amount} onChange={(e) => setAmount(e.target.value)} className={cx(field, 'mt-1 block w-full')} />
           </label>
-          <label className="min-w-32 flex-1 text-xs text-ink-300">
+          <label className="min-w-36 flex-1 text-xs text-ink-300">
             Prazo
             <select value={term} onChange={(e) => setTerm(Number(e.target.value))} className={cx(field, 'mt-1 block w-full')}>
               {ASSET_RULES.LOAN_TERMS.map((t) => (
@@ -508,8 +511,8 @@ export function CreditPanel() {
               selected={f.lifestyle === id}
               onSelect={() => setLifestyle(id)}
               title={LIFESTYLE_LABELS[id]}
-              description={`Custo de vida de ${formatMoney(living * rule.cost)} por temporada.`}
-              meta={`Moral ${rule.morale > 0 ? `+${rule.morale.toLocaleString('pt-BR')}` : '0'} por etapa · relação ${rule.relationship > 0 ? '+' : ''}${rule.relationship} por ano`}
+              description={`Custa ${formatMoney(living * rule.cost)} por temporada.`}
+              meta={`Moral ${signedPoints(rule.morale)} por etapa · relação ${signedPoints(rule.relationship)} por ano`}
             />
           );
         })}

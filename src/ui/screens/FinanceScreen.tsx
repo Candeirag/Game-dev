@@ -259,7 +259,12 @@ function SponsorsTab() {
                   <b className="font-display text-base text-ink-100">{formatMoney(s.perSeason)}</b> por ano · até {career.year + (s.endSeason - career.season)}
                 </div>
               </div>
-              <Meter label="Satisfação" value={s.satisfaction} hint={`Meta: entre os ${s.targetPosition} primeiros · ${formatMoney(s.podiumBonus)} por pódio`} />
+              <Meter label="Satisfação" value={s.satisfaction} hint={
+                  <>
+                    Meta: entre os {s.targetPosition} primeiros · <span className="whitespace-nowrap">{formatMoney(s.podiumBonus)} por pódio</span>
+                  </>
+                }
+              />
             </div>
           ))}
         </div>

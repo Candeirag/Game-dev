@@ -6,6 +6,7 @@ import { CircuitMap } from '../components/CircuitMap';
 import { Card, PageHeader, Pill, PositionBadge, WeatherBadge, cx } from '../components/ui';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { ResultChips } from '../kit/bits';
 
 /**
  * Calendário: a temporada inteira numa lista compacta (duas colunas na tela deitada) e, ao lado,
@@ -33,7 +34,7 @@ export function CalendarScreen() {
         </span>
       </PageHeader>
 
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card padded={false}>
           <ol
             className="grid gap-px bg-ink-800 md:auto-cols-fr md:grid-flow-col"
@@ -51,7 +52,7 @@ export function CalendarScreen() {
                     onClick={() => setChosen(event.round)}
                     aria-pressed={isSelected}
                     className={cx(
-                      'flex min-h-11 w-full items-center gap-2 px-2.5 py-1 text-left transition-colors',
+                      'flex min-h-11 w-full items-center gap-2 px-2 py-1 text-left transition-colors',
                       isSelected ? 'bg-ink-700 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
                     )}
                   >
@@ -59,24 +60,17 @@ export function CalendarScreen() {
                       {String(event.round).padStart(2, '0')}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-display text-[15px] font-semibold uppercase leading-tight text-ink-100">{track.name}</span>
+                      <span className="block truncate font-display text-sm font-semibold uppercase leading-tight text-ink-100 lg:text-base lg:leading-tight">
+                        {track.name}
+                      </span>
                       <span className="block truncate text-[11px] leading-tight text-ink-400">
-                        {formatDate(event.date)} · {track.city}
+                        {formatDate(event.date).replace(/ \d{4}$/, '')} · {track.city}
                       </span>
                     </span>
-                    {record && mine ? (
-                      <PositionBadge position={mine.position} dnf={mine.status === 'dnf'} />
-                    ) : record ? (
-                      <span className="w-9 shrink-0 text-center text-ink-500" title="Não disputou">
-                        –
-                      </span>
+                    {record ? (
+                      <ResultChips className="shrink-0" results={[{ round: event.round, position: mine?.position ?? null, dnf: mine?.status === 'dnf' }]} />
                     ) : isUpcoming ? (
-                      <Flag
-                        size={16}
-                        strokeWidth={2.25}
-                        className="mx-2.5 shrink-0 text-apex-400"
-                        aria-label={career.weekend ? 'Em andamento' : 'Próxima'}
-                      />
+                      <Flag size={16} strokeWidth={2.25} className="mx-1 shrink-0 text-apex-400" aria-label={career.weekend ? 'Em andamento' : 'Próxima'} />
                     ) : null}
                   </button>
                 </li>
@@ -91,20 +85,31 @@ export function CalendarScreen() {
             total={career.calendar.length}
             date={selected.date}
             trackId={selected.trackId}
-            state={career.weekend?.round === selected.round ? 'current' : selected.round === upcoming ? 'next' : 'other'}
+            status={
+              held.record ? (
+                held.mine ? (
+                  <span className="flex items-center gap-2 text-sm font-semibold text-ink-100">
+                    {held.mine.points} pts
+                    <PositionBadge position={held.mine.position} dnf={held.mine.status === 'dnf'} />
+                  </span>
+                ) : (
+                  <span className="text-xs text-ink-400">Não disputou</span>
+                )
+              ) : career.weekend?.round === selected.round ? (
+                <Pill tone="accent">Em andamento</Pill>
+              ) : selected.round === upcoming ? (
+                <Pill tone="accent">Próxima</Pill>
+              ) : undefined
+            }
           >
             {held.record && (
-              <div className="flex items-center gap-3 border-t border-ink-700 pt-3 text-sm">
-                {held.mine ? (
-                  <PositionBadge position={held.mine.position} dnf={held.mine.status === 'dnf'} />
-                ) : (
-                  <span className="text-ink-400">Não disputou</span>
-                )}
-                <div className="min-w-0 flex-1 leading-tight">
-                  {held.mine && <div className="font-semibold">{held.mine.points} pts</div>}
-                  <div className="text-xs text-ink-400">Vencedor: {winner ? fullName(winner) : '-'}</div>
-                </div>
-                <WeatherBadge weather={held.record.race.weather} />
+              <div className="flex items-center justify-between gap-3 border-t border-ink-700 pt-2.5 text-xs text-ink-400">
+                <span className="min-w-0">
+                  Vencedor: <b className="font-semibold text-ink-200">{winner ? fullName(winner) : '-'}</b>
+                </span>
+                <span className="shrink-0">
+                  <WeatherBadge weather={held.record.race.weather} />
+                </span>
               </div>
             )}
           </EventDetail>
@@ -120,15 +125,16 @@ function EventDetail({
   total,
   date,
   trackId,
-  state,
+  status,
   children,
 }: {
   round: number;
   total: number;
   date: string;
   trackId: string;
-  state: 'current' | 'next' | 'other';
-  /** O resultado da etapa, quando ela já foi disputada. */
+  /** À direita do título: o resultado do jogador, ou se a etapa é a próxima ou está em andamento. */
+  status: ReactNode;
+  /** Vencedor e clima, quando a etapa já foi disputada. */
   children: ReactNode;
 }) {
   const { category } = useCareerView();
@@ -136,8 +142,8 @@ function EventDetail({
   return (
     <Card
       title={`Etapa ${round} de ${total}`}
-      action={state === 'current' ? <Pill tone="accent">Em andamento</Pill> : state === 'next' ? <Pill tone="accent">Próxima</Pill> : undefined}
-      bodyClassName="p-3 space-y-3"
+      action={status}
+      bodyClassName="space-y-2.5 p-3"
     >
       {/* O traçado tem largura fixa e não encolhe: o texto fica na coluna ao lado, sem cruzar o desenho. */}
       <div className="flex items-center gap-3">

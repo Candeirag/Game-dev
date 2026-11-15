@@ -146,16 +146,30 @@ export function NewCareerScreen() {
                   ))}
                 </select>
               </label>
-              <label className="col-span-6 space-y-1">
-                <span className={fieldLabel}>Idade</span>
-                <select className={cx(field, 'px-2')} value={age} onChange={(e) => setAge(Number(e.target.value))}>
+              <div className="col-span-6 space-y-1">
+                {/* A dica fica fora das opções: o texto do campo fechado cabe inteiro. */}
+                <div className="flex items-baseline gap-1.5 text-[11px]">
+                  <label htmlFor="new-career-age" className="font-medium text-ink-400">
+                    Idade
+                  </label>
+                  <span id="new-career-age-hint" className="truncate text-ink-500">
+                    até 15 anos, evolui mais rápido
+                  </span>
+                </div>
+                <select
+                  id="new-career-age"
+                  aria-describedby="new-career-age-hint"
+                  className={cx(field, 'px-2')}
+                  value={age}
+                  onChange={(e) => setAge(Number(e.target.value))}
+                >
                   {Array.from({ length: PLAYER_MAX_AGE - PLAYER_MIN_AGE + 1 }, (_, i) => PLAYER_MIN_AGE + i).map((a) => (
                     <option key={a} value={a}>
-                      {a} anos {a <= 15 ? '(evolui mais rápido)' : ''}
+                      {a} anos
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
             </div>
           </Card>
 
@@ -220,7 +234,6 @@ export function NewCareerScreen() {
               ))}
             </div>
           </Card>
-
         </div>
 
         <Card title="4 · Equipe" bodyClassName="p-3" className={cx(wide && 'col-span-2')}>
@@ -243,7 +256,7 @@ export function NewCareerScreen() {
                   <span className="flex items-center gap-3">
                     {/* Largura fixa: o kart nunca encosta nos números ao lado. */}
                     <CarSprite categoryId="kart-regional" teamId={t.id} color={t.color} className="w-[min(32%,6rem)] shrink-0" title={`Kart da ${t.name}`} />
-                    <span className="grid flex-1 grid-cols-3 gap-2">
+                    <span className="flex min-w-0 flex-1 gap-x-3">
                       <CarNumber label="Motor" value={t.car.engine} />
                       <CarNumber label="Chassi" value={t.car.chassis} />
                       <CarNumber label="Confiab." value={t.car.reliability} />
@@ -273,8 +286,8 @@ function HeaderStat({ label, value, muted = false }: { label: string; value: str
 /** Um número do kart da equipe (0 a 100). */
 function CarNumber({ label, value }: { label: string; value: number }) {
   return (
-    <span className="block min-w-0">
-      <span className="block truncate text-[11px] font-medium text-ink-400">{label}</span>
+    <span className="block">
+      <span className="block whitespace-nowrap text-[11px] font-medium text-ink-400">{label}</span>
       <span className="block font-display text-lg font-semibold leading-tight text-ink-100">{value}</span>
     </span>
   );

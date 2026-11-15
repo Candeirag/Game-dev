@@ -82,7 +82,7 @@ export function LifeScreen() {
                     )}
                   </>
                 ) : (
-                  'Nenhum imóvel nem empresa. Imóveis rendem aluguel; empresas, lucro anual.'
+                  'Nenhum imóvel nem empresa. Rendem aluguel e lucro anual.'
                 )
               }
             />
@@ -124,7 +124,7 @@ export function LifeScreen() {
                     {teamValue > 0 && 'equipe própria'}
                   </>
                 ) : (
-                  'Nenhuma participação. Sócios recebem dividendos conforme o resultado da equipe.'
+                  'Nenhuma participação. Sócios recebem dividendos da equipe.'
                 )
               }
             />
@@ -192,7 +192,7 @@ function Row({
 }) {
   return (
     <li>
-      <Link to={to} className="group flex min-h-11 items-center gap-3 px-4 py-1.5 transition-colors hover:bg-ink-800 focus-visible:outline-offset-[-2px]">
+      <Link to={to} className="group flex min-h-11 items-center gap-3 px-4 py-1 transition-colors hover:bg-ink-800 focus-visible:outline-offset-[-2px]">
         <Icon size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-ink-400" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
