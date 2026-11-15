@@ -54,7 +54,8 @@ function gapText(row: StandingRow, mode: 'leader' | 'interval', started: boolean
 export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingView?: () => void; spectator?: boolean }) {
   const { wide, topSlot } = useChrome();
   // Com mouse, as linhas da classificação são clicáveis; no toque, são só leitura (ver a torre).
-  const finePointer = useMediaQuery('(pointer: fine)');
+  // Mouse de verdade: tela de toque não conta, mesmo quando o sistema diz que o ponteiro é fino.
+  const finePointer = useMediaQuery('(pointer: fine)') && navigator.maxTouchPoints === 0 && !('ontouchstart' in window);
   const [side, setSide] = useState<SidePanel>('tower');
   const { career, player, drivers, teams, category } = useCareerView();
   const race = useGameStore((s) => s.liveRace);
