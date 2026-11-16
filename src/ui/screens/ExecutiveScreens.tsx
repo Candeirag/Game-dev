@@ -693,9 +693,9 @@ export function ExecutiveCareerScreen() {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-x-3 text-xs text-ink-400">
-                        <span className="whitespace-nowrap">
-                          {c.age} anos · contrato de {counted(c.years, 'ano', 'anos')}
-                        </span>
+                        {/* A idade do candidato já é a da temporada para a qual ele assina. */}
+                        <span className="whitespace-nowrap">{c.age} anos na próxima temporada</span>
+                        <span className="whitespace-nowrap">Contrato de {counted(c.years, 'temporada', 'temporadas')}</span>
                         {c.salary > 0 && <span className="whitespace-nowrap text-ink-200">Salário: {formatMoney(c.salary)}</span>}
                         {c.seatFee > 0 && <span className="whitespace-nowrap text-ink-200">Paga {formatMoney(c.seatFee)} pela vaga</span>}
                       </div>
