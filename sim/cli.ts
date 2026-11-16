@@ -2,7 +2,7 @@
 import { writeFileSync } from 'node:fs';
 import { CAREER_SCHEMA_VERSION } from '@/domain/schemas';
 import { formatReport } from './report';
-import { DEFAULT_SIM_OPTIONS, runSimulation, type SimOptions } from './run';
+import { DEFAULT_SIM_OPTIONS, type SimOptions, type SimResult, runSimulation } from './run';
 
 export interface CliOptions extends SimOptions {
   /** Escreve os dados completos (uma linha por temporada de cada carreira) em JSON, no lugar do relatório. */
@@ -76,8 +76,8 @@ export interface CliStreams {
   err: (text: string) => void;
 }
 
-/** Roda a linha de comando e devolve o código de saída (0 = certo). */
-export function runCli(argv: readonly string[], streams: CliStreams): number {
+/** Roda a linha de comando e devolve o código de saída: 0 = certo, 1 = uma carreira quebrou, 2 = argumento inválido. */
+export function runCli(argv: readonly string[], streams: CliStreams, simulate: typeof runSimulation = runSimulation): number {
   let options: CliOptions;
   try {
     options = parseArgs(argv);
@@ -91,9 +91,16 @@ export function runCli(argv: readonly string[], streams: CliStreams): number {
   }
   const { json, out, help: _help, ...sim } = options;
   const started = performance.now();
-  const result = runSimulation(sim, (done, total) => {
-    if (done % 10 === 0 || done === total) streams.err(`  ${done}/${total} carreiras\n`);
-  });
+  let result: SimResult;
+  try {
+    result = simulate(sim, (done, total) => {
+      if (done % 10 === 0 || done === total) streams.err(`  ${done}/${total} carreiras\n`);
+    });
+  } catch (error) {
+    // Uma regra quebrada no motor aparece aqui: a mensagem traz a semente e a temporada para reproduzir.
+    streams.err(`${error instanceof Error ? error.message : String(error)}\n`);
+    return 1;
+  }
   const text = json ? `${JSON.stringify(result, null, 1)}\n` : formatReport(result.summary);
   streams.out(text);
   if (out) writeFileSync(out, text);

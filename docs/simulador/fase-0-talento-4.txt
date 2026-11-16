@@ -7,33 +7,33 @@ Idade média na estreia: 15,5 anos
 
 Categoria                      Temporadas  Carreiras  Posição média  Mediana  Melhor  Entre os 3  Títulos
 -----------------------------  ----------  ---------  -------------  -------  ------  ----------  -------
-Campeonato Regional de Kart           206         50           10,8      11º      1º         11%        4
-Campeonato Brasileiro de Kart         143         50            6,1       5º      1º         20%        7
-Campeonato Mundial de Kart            115         45            8,0       8º      1º         10%        1
-Fórmula Júnior                        132         50            7,3       8º      1º         19%        6
-Fórmula Sprint                         83         41            6,8       6º      1º         13%        6
-Fórmula Elite                          42         29            7,0       7º      1º         19%        1
-Grand Prix Mundial                     29         14            7,5       7º      2º          7%        0
+Campeonato Regional de Kart           204         50           10,7      11º      1º         12%        4
+Campeonato Brasileiro de Kart         143         50            6,3       6º      1º         17%        5
+Campeonato Mundial de Kart            119         44            8,1       8º      1º         12%        2
+Fórmula Júnior                        118         50            7,1       7º      1º         19%        8
+Fórmula Sprint                         84         44            6,3       6º      1º         20%        7
+Fórmula Elite                          58         37            7,6       7º      1º         12%        1
+Grand Prix Mundial                     24         13            7,5       8º      2º         13%        0
 
 2. CAIXA NO FIM DE CADA TEMPORADA
 
-Temporada  Carreiras  10% piores     Mediana  10% melhores  No vermelho  Patrimônio (mediana)
----------  ---------  ----------  ----------  ------------  -----------  --------------------
-1                 50   R$ 31.670   R$ 35.380     R$ 38.640           0%             R$ 35.380
-2                 50   R$ 37.310   R$ 43.525     R$ 47.480           0%             R$ 43.525
-3                 50   R$ 42.384   R$ 52.290     R$ 56.738           0%             R$ 52.290
-4                 50   R$ 49.324   R$ 60.389     R$ 76.323           0%             R$ 60.389
-5                 50   R$ 52.142   R$ 72.919    R$ 105 mil           0%             R$ 72.919
-6                 50   R$ 21.330   R$ 57.744    R$ 109 mil           2%             R$ 57.744
-7                 50  −R$ 21.552   R$ 28.686    R$ 150 mil          22%             R$ 28.686
-8                 50  −R$ 64.709   R$ 15.797    R$ 235 mil          32%             R$ 15.797
-9                 50  −R$ 39.059   R$ 19.011    R$ 218 mil          26%             R$ 19.011
-10                50  −R$ 43.646   R$ 17.278    R$ 260 mil          32%             R$ 17.278
-11                50  −R$ 48.892   R$ 47.469    R$ 457 mil          28%             R$ 47.469
-12                50  −R$ 35.749  R$ 106 mil    R$ 936 mil          20%            R$ 106 mil
-13                50  −R$ 47.357  R$ 221 mil    R$ 2,79 mi          14%            R$ 221 mil
-14                50    R$ 3.366  R$ 344 mil   R$ 11,94 mi           8%            R$ 344 mil
-15                50   R$ 18.858  R$ 295 mil   R$ 20,74 mi           8%            R$ 295 mil
+Temporada  Carreiras   10% piores     Mediana  10% melhores  No vermelho  Patrimônio (mediana)
+---------  ---------  -----------  ----------  ------------  -----------  --------------------
+1                 50    R$ 31.670   R$ 35.380     R$ 38.640           0%             R$ 35.380
+2                 50    R$ 38.520   R$ 43.875     R$ 47.480           0%             R$ 43.875
+3                 50    R$ 42.935   R$ 52.508     R$ 56.910           0%             R$ 52.508
+4                 50    R$ 51.004   R$ 61.387     R$ 76.329           0%             R$ 61.387
+5                 50    R$ 57.022   R$ 75.287     R$ 99.343           0%             R$ 75.287
+6                 50    R$ 36.058   R$ 61.118    R$ 115 mil           2%             R$ 61.118
+7                 50   −R$ 14.703   R$ 34.360    R$ 120 mil          20%             R$ 34.360
+8                 50   −R$ 53.096   R$ 16.779    R$ 239 mil          28%             R$ 16.779
+9                 50   −R$ 44.951   R$ 26.143    R$ 228 mil          32%             R$ 26.143
+10                50   −R$ 30.806   R$ 14.361    R$ 320 mil          34%             R$ 14.361
+11                50   −R$ 75.045   R$ 42.960    R$ 583 mil          24%             R$ 42.960
+12                50   −R$ 43.867  R$ 213 mil    R$ 1,03 mi          20%            R$ 213 mil
+13                50  −R$ 119 mil  R$ 207 mil    R$ 730 mil          20%            R$ 207 mil
+14                50   −R$ 19.698  R$ 351 mil    R$ 5,87 mi          10%            R$ 351 mil
+15                50    R$ 12.506  R$ 460 mil   R$ 11,69 mi           8%            R$ 460 mil
 
 Caixa: dinheiro na conta depois do fechamento do ano (impostos, juros e rendimentos já lançados).
 "10% piores" e "10% melhores" são os percentis 10 e 90; "no vermelho" é a parcela das carreiras com caixa negativo.
@@ -43,30 +43,32 @@ Caixa: dinheiro na conta depois do fechamento do ano (impostos, juros e rendimen
 Degrau  Categoria                      Chegaram  Das carreiras  Idade média  Mais novo  Mais velho  Temporada média
 ------  -----------------------------  --------  -------------  -----------  ---------  ----------  ---------------
      1  Campeonato Regional de Kart          50           100%         15,5         14          17              1,0
-     2  Campeonato Brasileiro de Kart        50           100%         19,6         17          22              5,0
-     3  Campeonato Mundial de Kart           45            90%         21,4         19          27              6,9
-     4  Fórmula Júnior                       50           100%         23,8         20          29              9,3
-     5  Fórmula Sprint                       41            82%         25,9         22          30             11,3
-     6  Fórmula Elite                        29            58%         27,5         24          30             13,0
-     7  Grand Prix Mundial                   14            28%         28,4         26          31             13,9
+     2  Campeonato Brasileiro de Kart        50           100%         19,5         17          22              5,0
+     3  Campeonato Mundial de Kart           44            88%         21,3         19          24              6,8
+     4  Fórmula Júnior                       50           100%         23,7         20          28              9,2
+     5  Fórmula Sprint                       44            88%         26,2         22          30             11,6
+     6  Fórmula Elite                        37            74%         27,6         23          31             13,2
+     7  Grand Prix Mundial                   13            26%         28,7         25          31             14,2
 
 4. CARREIRAS QUE CHEGAM AO TOPO
 
-Chegaram ao Grand Prix Mundial: 14 de 50 carreiras (28%).
-Degrau mais alto alcançado: 1º 0 · 2º 0 · 3º 0 · 4º 9 · 5º 12 · 6º 15 · 7º 14.
+Chegaram ao Grand Prix Mundial: 13 de 50 carreiras (26%).
+Degrau mais alto alcançado: 1º 0 · 2º 0 · 3º 0 · 4º 6 · 5º 7 · 6º 24 · 7º 13.
 
 5. TÍTULOS POR CARREIRA
 
-Média de 0,50 por carreira (25 títulos no total; o máximo numa carreira foi 3).
-Carreiras sem título: 33 · com um: 11 · com dois: 4 · com três ou mais: 2.
+Média de 0,54 por carreira (27 títulos no total; o máximo numa carreira foi 3).
+Carreiras sem título: 34 · com um: 9 · com dois: 3 · com três ou mais: 4.
 
 6. TEMPORADAS PARADAS, SEM VAGA
 
-Sem vaga: 79 temporadas (1,58 por carreira), em 45 de 50 carreiras (90%).
-Desceu de degrau: 89 temporadas (1,78 por carreira), em 47 de 50 carreiras.
-Maior sequência no mesmo degrau: 4,3 temporadas, em média.
+Sem vaga: 74 temporadas (1,48 por carreira), em 42 de 50 carreiras (84%).
+  Por quê: em 0, nenhuma equipe fez proposta; em 74, havia proposta e faltou dinheiro para a vaga; em 0, faltou outro requisito.
+Desceu de degrau: 94 temporadas (1,88 por carreira), em 47 de 50 carreiras.
+Maior sequência no mesmo degrau: 4,2 temporadas, em média.
 Etapas sem correr (lesão ou suspensão): 0,01 por temporada.
 Carreiras interrompidas por sucessão (morte ou acidente): 0.
 
-"Sem vaga" é a temporada em que nenhuma equipe fez uma proposta que o piloto pudesse aceitar e ele só correu
-pela rede de segurança (a vaga gratuita na equipe mais fraca do degrau de baixo, que o jogo sempre oferece).
+"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de
+segurança (a vaga gratuita na equipe mais fraca do degrau de baixo). O jogo de hoje sempre oferece essa vaga:
+ninguém fica um ano inteiro sem correr.

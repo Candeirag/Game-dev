@@ -108,13 +108,15 @@ export function formatReport(summary: SimSummary): string {
   section('6. Temporadas paradas, sem vaga');
   out.push(
     `Sem vaga: ${counted(summary.noSeat.seasons, 'temporada', 'temporadas')} (${decimal(summary.noSeat.perCareer, 2)} por carreira), em ${summary.noSeat.careers} de ${summary.careers} carreiras (${percent(summary.noSeat.share)}).`,
+    `  Por quê: em ${summary.noSeat.noOffer}, nenhuma equipe fez proposta; em ${summary.noSeat.money}, havia proposta e faltou dinheiro para a vaga; em ${summary.noSeat.requirements}, faltou outro requisito.`,
     `Desceu de degrau: ${counted(summary.demotions.seasons, 'temporada', 'temporadas')} (${decimal(summary.demotions.perCareer, 2)} por carreira), em ${summary.demotions.careers} de ${summary.careers} carreiras.`,
     `Maior sequência no mesmo degrau: ${decimal(summary.longestStay)} temporadas, em média.`,
     `Etapas sem correr (lesão ou suspensão): ${decimal(summary.roundsMissedPerSeason, 2)} por temporada.`,
     `Carreiras interrompidas por sucessão (morte ou acidente): ${summary.interrupted}.`,
     '',
-    '"Sem vaga" é a temporada em que nenhuma equipe fez uma proposta que o piloto pudesse aceitar e ele só correu',
-    'pela rede de segurança (a vaga gratuita na equipe mais fraca do degrau de baixo, que o jogo sempre oferece).',
+    '"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de',
+    'segurança (a vaga gratuita na equipe mais fraca do degrau de baixo). O jogo de hoje sempre oferece essa vaga:',
+    'ninguém fica um ano inteiro sem correr.',
   );
 
   return `${out.join('\n')}\n`;

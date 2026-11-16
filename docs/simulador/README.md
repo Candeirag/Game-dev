@@ -27,7 +27,14 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
 - O robô joga de forma simples (treino de acerto, classificação e corrida equilibradas, primeira
   opção em cada evento, melhor proposta aceitável). Ele é mais fraco que um jogador atento: o
   que importa é a comparação entre fases, não o número absoluto.
-- "Sem vaga" é a temporada em que nenhuma equipe fez uma proposta que o piloto pudesse aceitar e
-  ele só correu pela rede de segurança (a vaga gratuita na equipe mais fraca do degrau de baixo).
+- "Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só
+  correu pela rede de segurança (a vaga gratuita na equipe mais fraca do degrau de baixo). O
+  relatório separa o motivo: nenhuma equipe fez proposta, havia proposta e faltou dinheiro, ou
+  faltou outro requisito. No jogo de hoje ninguém fica um ano inteiro sem correr.
+- As decisões que a última etapa deixa pendentes são resolvidas antes de fechar o ano, como faz o
+  jogador.
+- A população da amostra é fixa (`SIM_POPULATION` em `sim/run.ts`): se o jogo ganhar um perfil ou
+  uma equipe de entrada, os 50 pilotos da linha de base continuam os mesmos.
+- Se uma carreira quebrar, o comando para com código 1 e diz a semente e a temporada.
 - Cada semente tem um piloto diferente (perfil, idade de 14 a 17 anos e equipe de estreia), sempre
   o mesmo para a mesma semente.

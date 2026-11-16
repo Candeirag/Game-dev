@@ -474,15 +474,15 @@ O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, de
 
 ### Linha de base do simulador (Fase 0 da grande atualização)
 
-`npm run sim -- --seeds 50 --seasons 15` joga 50 carreiras de 15 temporadas com o robô e imprime o relatório que cada fase compara com o da anterior (os relatórios completos ficam em `docs/simulador/`). Diferente do `calibrate`, o piloto de cada semente tem perfil, idade (14 a 17 anos) e equipe de estreia próprios, e o robô joga tudo no equilíbrio (treino de acerto, classificação e corrida equilibradas).
+`npm run sim -- --seeds 50 --seasons 15` joga 50 carreiras de 15 temporadas com o robô e imprime o relatório que cada fase compara com o da anterior (os relatórios completos ficam em `docs/simulador/`). Diferente do `calibrate`, o piloto de cada semente tem perfil, idade (14 a 17 anos) e equipe de estreia próprios, e o robô joga tudo no equilíbrio (treino de acerto, classificação e corrida equilibradas, primeira opção em cada evento).
 
 | Robô                  | Chegam ao Grand Prix Mundial | Idade média ao chegar | Chegada ao kart nacional | Títulos por carreira | Temporadas sem vaga por carreira | Caixa mediano na 15ª temporada |
 | --------------------- | ---------------------------- | --------------------- | ------------------------ | -------------------- | -------------------------------- | ------------------------------ |
-| Mediano (talento 0)   | 6%                           | 29,7 anos             | aos 20,8 anos            | 0,34                 | 2,02                             | R$ 96.688                      |
-| Bom (talento 4)       | 28%                          | 28,4 anos             | aos 19,6 anos            | 0,50                 | 1,58                             | R$ 295 mil                     |
-| Excelente (talento 8) | 68%                          | 26,9 anos             | aos 18,4 anos            | 0,78                 | 0,88                             | R$ 18,95 mi                    |
+| Mediano (talento 0)   | 4%                           | 29,5 anos             | aos 20,9 anos            | 0,34                 | 2,08                             | R$ 94.330                      |
+| Bom (talento 4)       | 26%                          | 28,7 anos             | aos 19,5 anos            | 0,54                 | 1,48                             | R$ 460 mil                     |
+| Excelente (talento 8) | 62%                          | 27,0 anos             | aos 18,4 anos            | 0,80                 | 0,86                             | R$ 11,96 mi                    |
 
-"Sem vaga" é a temporada em que nenhuma equipe fez uma proposta que o piloto pudesse aceitar e ele só correu pela rede de segurança. O robô mediano passa em média seis temporadas no kart regional antes de subir, e quase toda carreira dele tem ao menos uma temporada assim: é o retrato do jogo de hoje com um jogador que não aproveita nenhuma decisão, e o ponto de partida para as próximas fases.
+"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de segurança (ninguém fica um ano sem correr: essa vaga sempre existe). O motivo quase sempre é dinheiro: das 104 temporadas sem vaga do robô mediano, em 94 havia proposta de equipe e faltou caixa para bancar a vaga; em 10 nenhuma equipe fez proposta. Com talento 4 e 8, todas as temporadas sem vaga são por dinheiro. O robô mediano passa em média seis temporadas no kart regional antes de subir: é o retrato do jogo de hoje com um jogador que não aproveita nenhuma decisão, e o ponto de partida para as próximas fases.
 
 ## Limitações conhecidas e próximos passos
 

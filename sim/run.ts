@@ -9,10 +9,9 @@
  */
 import type { CareerState, CategoryId, Offer } from '@/domain/schemas';
 import { CATEGORIES, getCategory } from '@/data/categories';
-import { PLAYER_BACKGROUNDS, PLAYER_MAX_AGE, PLAYER_MIN_AGE, type PlayerBackground } from '@/data/rules';
-import { ROOKIE_TEAM_IDS } from '@/data/teams';
+import type { PlayerBackground } from '@/data/rules';
 import * as engine from '@/engine';
-import { botTraining, pickBestOffer, playRound, withTalent, type Choices } from './policy';
+import { botTraining, pickBestOffer, playRound, resolvePending, withTalent, type Choices } from './policy';
 
 /** Data fixa de criação das carreiras: o relógio não entra na simulação. */
 const CREATED_AT = '2027-01-01T00:00:00.000Z';
@@ -36,8 +35,28 @@ export const DEFAULT_SIM_OPTIONS: SimOptions = { seeds: 50, seasons: 15, firstSe
  */
 export const SIM_CHOICES: Choices = { program: 'setup', approach: 'balanced', mode: 'balanced', eventChoice: 0 };
 
+/**
+ * A população da amostra, congelada de propósito: os perfis, as idades e as equipes de estreia
+ * entre os quais cada semente sorteia o seu piloto. Se uma fase acrescentar um perfil ou uma
+ * equipe de entrada ao jogo, estas listas NÃO acompanham sozinhas: os 50 pilotos da linha de base
+ * continuam os mesmos, e os relatórios de fases diferentes continuam comparáveis. Mexer aqui é
+ * trocar a linha de base (regrave `docs/simulador/` e diga no PR).
+ */
+export const SIM_POPULATION = {
+  backgrounds: ['natural', 'technical', 'fighter'],
+  ages: [14, 15, 16, 17],
+  teamIds: ['horizonte', 'cerrado', 'garagem'],
+} as const satisfies { backgrounds: readonly PlayerBackground[]; ages: readonly number[]; teamIds: readonly string[] };
+
 /** Como o piloto conseguiu a vaga de uma temporada: a inicial ou o tipo da proposta aceita. */
 export type SeatOrigin = 'initial' | Offer['kind'];
+
+/**
+ * Por que o piloto ficou só com a rede de segurança: nenhuma equipe fez proposta; havia proposta
+ * e o que faltou foi dinheiro para bancar a vaga; ou faltou outro requisito (licença, reputação,
+ * experiência, idade).
+ */
+export type NoSeatCause = 'no-offer' | 'money' | 'requirements';
 
 export interface SeasonSample {
   /** Temporada da carreira (1 = a de estreia). */
@@ -60,7 +79,10 @@ export interface SeasonSample {
   /** Etapas em que o piloto não correu (lesão ou suspensão). */
   roundsMissed: number;
   seat: SeatOrigin;
-  /** Propostas que o piloto podia aceitar para o ano seguinte, sem contar a rede de segurança. */
+  /** Só nas temporadas disputadas pela rede de segurança: o motivo. */
+  noSeatCause: NoSeatCause | null;
+  /** Propostas de equipes para o ano seguinte, sem contar a rede de segurança: quantas vieram e quantas o piloto podia aceitar. */
+  offersMade: number;
   offers: number;
 }
 
@@ -86,11 +108,7 @@ export interface CareerSample {
 export function profileForSeed(seed: number): CareerProfile {
   const rng = engine.createRng(engine.hashSeed(seed, 'sim-profile'));
   const pick = <T>(list: readonly T[]): T => list[Math.floor(rng.next() * list.length)] as T;
-  return {
-    background: pick(PLAYER_BACKGROUNDS).id,
-    age: PLAYER_MIN_AGE + Math.floor(rng.next() * (PLAYER_MAX_AGE - PLAYER_MIN_AGE + 1)),
-    teamId: pick(ROOKIE_TEAM_IDS),
-  };
+  return { background: pick(SIM_POPULATION.backgrounds), age: pick(SIM_POPULATION.ages), teamId: pick(SIM_POPULATION.teamIds) };
 }
 
 export function createSimCareer(seed: number, talent = 0): CareerState {
@@ -103,11 +121,28 @@ export function createSimCareer(seed: number, talent = 0): CareerState {
   return withTalent(career, talent);
 }
 
-function sampleSeason(career: CareerState, index: number, seat: SeatOrigin): SeasonSample {
+/** Propostas de equipes no fechamento (sem a rede de segurança) e, se nenhuma serve, o que faltou. */
+function seatMarket(career: CareerState): { made: number; acceptable: number; cause: NoSeatCause | null } {
+  const offers = (career.offseason?.offers ?? []).filter((o) => o.kind !== 'fallback');
+  const acceptable = offers.filter((o) => engine.canAcceptOffer(career, o)).length;
+  if (acceptable > 0) return { made: offers.length, acceptable, cause: null };
+  if (offers.length === 0) return { made: 0, acceptable: 0, cause: 'no-offer' };
+  // Faltou só dinheiro em pelo menos uma proposta: com caixa, o piloto teria a vaga.
+  const onlyMoney = offers.some((o) =>
+    engine
+      .offerRequirements(career, o)
+      .filter((r) => !r.met)
+      .every((r) => r.key === 'finance'),
+  );
+  return { made: offers.length, acceptable: 0, cause: onlyMoney ? 'money' : 'requirements' };
+}
+
+function sampleSeason(career: CareerState, index: number, seat: SeatOrigin, noSeatCause: NoSeatCause | null): SeasonSample {
   const offseason = career.offseason;
   if (!offseason) throw new Error('Temporada sem fechamento.');
   const player = engine.getPlayer(career);
   const category = getCategory(career.categoryId);
+  const market = seatMarket(career);
   return {
     season: index,
     categoryId: category.id,
@@ -123,29 +158,42 @@ function sampleSeason(career: CareerState, index: number, seat: SeatOrigin): Sea
     overall: engine.overallRating(player.attributes),
     roundsMissed: career.rounds.filter((r) => !r.race.entries.some((e) => e.driverId === player.id)).length,
     seat,
-    offers: offseason.offers.filter((o) => o.kind !== 'fallback' && engine.canAcceptOffer(career, o)).length,
+    noSeatCause: seat === 'fallback' ? noSeatCause : null,
+    offersMade: market.made,
+    offers: market.acceptable,
   };
 }
 
 /** Joga uma carreira com o robô e devolve uma linha por temporada disputada. */
 export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons' | 'talent'>): CareerSample {
-  let career = createSimCareer(seed, options.talent);
   const profile = profileForSeed(seed);
   const seasons: SeasonSample[] = [];
-  let seat: SeatOrigin = 'initial';
-  for (let index = 1; index <= options.seasons; index++) {
-    career = botTraining(career);
-    while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, SIM_CHOICES);
-    // Um acidente fatal no meio do ano encerra a amostra sem contar a temporada incompleta.
-    if (!career.offseason) return { seed, profile, seasons, ended: 'succession' };
-    seasons.push(sampleSeason(career, index, seat));
-    if (career.succession) return { seed, profile, seasons, ended: 'succession' };
-    if (index === options.seasons) break;
-    const offerId = pickBestOffer(career);
-    seat = career.offseason.offers.find((o) => o.id === offerId)?.kind ?? 'fallback';
-    career = engine.startNextSeason(career, offerId);
+  let index = 1;
+  try {
+    let career = createSimCareer(seed, options.talent);
+    let seat: SeatOrigin = 'initial';
+    let cause: NoSeatCause | null = null;
+    for (; index <= options.seasons; index++) {
+      career = botTraining(career);
+      while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, SIM_CHOICES);
+      // Um acidente fatal no meio do ano encerra a amostra sem contar a temporada incompleta.
+      if (!career.offseason) return { seed, profile, seasons, ended: 'succession' };
+      // As decisões que a última etapa deixou pendentes são resolvidas antes de fechar as contas e
+      // escolher a proposta, como faz o jogador.
+      if (!career.succession) career = resolvePending(career, SIM_CHOICES.eventChoice);
+      seasons.push(sampleSeason(career, index, seat, cause));
+      if (career.succession) return { seed, profile, seasons, ended: 'succession' };
+      if (index === options.seasons) break;
+      const offerId = pickBestOffer(career);
+      seat = career.offseason?.offers.find((o) => o.id === offerId)?.kind ?? 'fallback';
+      cause = seat === 'fallback' ? seatMarket(career).cause : null;
+      career = engine.startNextSeason(career, offerId);
+    }
+    return { seed, profile, seasons, ended: 'completed' };
+  } catch (error) {
+    // Uma carreira que quebra tem de dizer qual foi: é com a semente que se reproduz o defeito.
+    throw new Error(`A carreira da semente ${seed} falhou na temporada ${index}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
   }
-  return { seed, profile, seasons, ended: 'completed' };
 }
 
 /* ------------------------------------------------------------------ */
@@ -203,8 +251,12 @@ export interface SimSummary {
   /** Carreiras por degrau mais alto alcançado (índice 0 = degrau 1). */
   highestTier: number[];
   titles: { total: number; perCareer: number; max: number; none: number; one: number; two: number; threeOrMore: number };
-  /** Temporadas em que o piloto só correu graças à rede de segurança: nenhuma equipe fez proposta que ele pudesse aceitar. */
-  noSeat: { seasons: number; perCareer: number; careers: number; share: number };
+  /**
+   * Temporadas em que o piloto só correu graças à rede de segurança, e por quê: nenhuma equipe
+   * fez proposta (`noOffer`), havia proposta e faltou dinheiro (`money`) ou faltou outro requisito
+   * (`requirements`).
+   */
+  noSeat: { seasons: number; perCareer: number; careers: number; share: number; noOffer: number; money: number; requirements: number };
   /** Temporadas em que o piloto desceu de degrau (por proposta ou pela rede de segurança). */
   demotions: { seasons: number; perCareer: number; careers: number };
   /** Maior sequência de temporadas no mesmo degrau, em média por carreira. */
@@ -326,6 +378,9 @@ export function summarize(samples: readonly CareerSample[], options: SimOptions)
       perCareer: mean(noSeatPerCareer),
       careers: noSeatPerCareer.filter((n) => n > 0).length,
       share: share(noSeatPerCareer.filter((n) => n > 0).length),
+      noOffer: all.filter((s) => s.noSeatCause === 'no-offer').length,
+      money: all.filter((s) => s.noSeatCause === 'money').length,
+      requirements: all.filter((s) => s.noSeatCause === 'requirements').length,
     },
     demotions: { seasons: sum(demotionsPerCareer), perCareer: mean(demotionsPerCareer), careers: demotionsPerCareer.filter((n) => n > 0).length },
     longestStay: mean(samples.map((c) => longestStay(c.seasons))),

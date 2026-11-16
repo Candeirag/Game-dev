@@ -8,7 +8,17 @@ import { ROOKIE_TEAM_IDS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { HELP, parseArgs, runCli } from '../sim/cli';
 import { formatReport } from '../sim/report';
-import { DEFAULT_SIM_OPTIONS, type SimResult, createSimCareer, percentile, profileForSeed, runSimulation, simulateCareer, summarize } from '../sim/run';
+import {
+  DEFAULT_SIM_OPTIONS,
+  SIM_POPULATION,
+  type SimResult,
+  createSimCareer,
+  percentile,
+  profileForSeed,
+  runSimulation,
+  simulateCareer,
+  summarize,
+} from '../sim/run';
 
 const SMALL = { seeds: 4, seasons: 3, firstSeed: 11, talent: 0 };
 const small: SimResult = runSimulation(SMALL);
@@ -53,10 +63,21 @@ describe('carreiras do simulador', () => {
       expect(profile.age).toBeLessThanOrEqual(PLAYER_MAX_AGE);
       expect(ROOKIE_TEAM_IDS).toContain(profile.teamId);
     }
-    // A amostra cobre todos os começos possíveis: os três perfis, as três equipes de entrada e todas as idades.
-    expect(new Set(profiles.map((p) => p.background)).size).toBe(PLAYER_BACKGROUNDS.length);
-    expect(new Set(profiles.map((p) => p.teamId)).size).toBe(ROOKIE_TEAM_IDS.length);
-    expect(new Set(profiles.map((p) => p.age)).size).toBe(PLAYER_MAX_AGE - PLAYER_MIN_AGE + 1);
+    // A amostra cobre todos os começos: os três perfis, as três equipes de entrada e todas as idades.
+    expect(new Set(profiles.map((p) => p.background)).size).toBe(SIM_POPULATION.backgrounds.length);
+    expect(new Set(profiles.map((p) => p.teamId)).size).toBe(SIM_POPULATION.teamIds.length);
+    expect(new Set(profiles.map((p) => p.age)).size).toBe(SIM_POPULATION.ages.length);
+  });
+
+  it('a população da amostra é fixa e só usa perfis, idades e equipes que existem no jogo', () => {
+    // Congelada de propósito: se o jogo ganhar um perfil ou uma equipe de entrada, os 50 pilotos da linha de base não mudam.
+    expect(SIM_POPULATION).toEqual({ backgrounds: ['natural', 'technical', 'fighter'], ages: [14, 15, 16, 17], teamIds: ['horizonte', 'cerrado', 'garagem'] });
+    for (const background of SIM_POPULATION.backgrounds) expect(PLAYER_BACKGROUNDS.map((b) => b.id)).toContain(background);
+    for (const teamId of SIM_POPULATION.teamIds) expect(ROOKIE_TEAM_IDS).toContain(teamId);
+  });
+
+  it('uma carreira que quebra diz a semente e a temporada', () => {
+    expect(() => simulateCareer(-1, { seasons: 1, talent: 0 })).toThrow(/A carreira da semente -1 falhou na temporada 1: Semente inválida/);
   });
 
   it('nascem íntegras, com a semente pedida', () => {
@@ -120,6 +141,12 @@ describe('agregados', () => {
   it('"sem vaga" conta as temporadas disputadas pela rede de segurança', () => {
     const fallbacks = samples.reduce((total, c) => total + c.seasons.filter((s) => s.seat === 'fallback').length, 0);
     expect(summary.noSeat.seasons).toBe(fallbacks);
+    // Toda temporada sem vaga tem um motivo, e só elas.
+    expect(summary.noSeat.noOffer + summary.noSeat.money + summary.noSeat.requirements).toBe(fallbacks);
+    for (const season of samples.flatMap((c) => c.seasons)) {
+      expect(season.noSeatCause !== null).toBe(season.seat === 'fallback');
+      expect(season.offers).toBeLessThanOrEqual(season.offersMade);
+    }
     expect(summarize([], SMALL)).toMatchObject({ careers: 0, seasonsPlayed: 0, noSeat: { seasons: 0, share: 0 }, titles: { perCareer: 0, max: 0 } });
   });
 });
@@ -138,6 +165,9 @@ describe('relatório', () => {
     ]) {
       expect(report).toContain(title);
     }
+    expect(report).toMatch(
+      /Por quê: em \d+, nenhuma equipe fez proposta; em \d+, havia proposta e faltou dinheiro para a vaga; em \d+, faltou outro requisito\./,
+    );
     expect(report).toContain('4 carreiras (sementes 11 a 14), 3 temporadas cada');
     expect(report).toContain('Campeonato Regional de Kart');
     expect(report).toContain('Chegaram ao Grand Prix Mundial: 0 de 4 carreiras (0%).');
@@ -159,6 +189,16 @@ describe('linha de comando', () => {
 
   it('--help mostra a ajuda e não simula nada', () => {
     expect(run(['--help'])).toEqual({ code: 0, out: HELP, err: '' });
+  });
+
+  it('uma falha do motor sai com código 1 e a mensagem com a semente, sem relatório', () => {
+    const out: string[] = [];
+    const err: string[] = [];
+    const broken = () => simulateCareer(-1, { seasons: 1, talent: 0 }) as never;
+    const code = runCli(['--seeds', '1', '--seasons', '1'], { out: (text) => out.push(text), err: (text) => err.push(text) }, broken);
+    expect(code).toBe(1);
+    expect(out).toEqual([]);
+    expect(err.join('')).toMatch(/A carreira da semente -1 falhou na temporada 1/);
   });
 
   it('um argumento inválido sai com erro e a explicação, sem relatório', () => {
