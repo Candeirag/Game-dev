@@ -76,7 +76,8 @@ import {
   syncManagedTeam,
 } from './team';
 import { money } from '../career/selectors';
-import { counted } from '@/domain/text';
+import { categoryRef } from '@/domain/categoryNames';
+import { amongTheFirst, counted } from '@/domain/text';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -186,7 +187,7 @@ export function convertToExecutive(career: CareerState): CareerState {
  * Custo de vida de referência do personagem (antes do padrão de vida). Como
  * piloto, é o da categoria em que corre. Fora das pistas, acompanha o
  * prestígio dele: o da categoria mais alta cuja nota-base de reputação ele já
- * alcança. Um ex-campeão de F1 não passa a viver com o custo do kart só por
+ * alcança. Um ex-campeão do Grand Prix Mundial não passa a viver com o custo do kart só por
  * acompanhar o kart.
  */
 export function livingCostBase(career: CareerState): number {
@@ -391,7 +392,7 @@ export function foundingCost(categoryId: CategoryId): number {
  * ficam livres, três estreantes e os filhos do jogador com carreira na mesma
  * categoria (ou prontos para subir a ela).
  *
- * Quanto melhor o piloto, mais ele custa: na F1, o salário pedido cresce com
+ * Quanto melhor o piloto, mais ele custa: no Grand Prix Mundial, o salário pedido cresce com
  * a nota; nas categorias de base, é o piloto que paga, e os melhores pagam
  * menos (de 105% a 65% do preço de tabela da vaga; ver driverTerms). Um piloto só aceita se a
  * equipe estiver à altura da ambição dele.
@@ -408,7 +409,7 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
   const nextSeason = career.season + 1;
   const attractiveness = m.reputation + (staffRating(m, 'sportingDirector') - 60) * 0.3;
   const grid = fieldRatings(career);
-  // Idade-limite: na F1, quem chega aos 38 se aposenta; nas outras, vale a idade máxima da categoria.
+  // Idade-limite: no Grand Prix Mundial, quem chega aos 38 se aposenta; nas outras, vale a idade máxima da categoria.
   const tooOld = (ageNextSeason: number) => (category.tier === 7 ? ageNextSeason >= 38 : ageNextSeason > category.field.maxAge + 1);
   const candidate = (driver: Driver, origin: DriverCandidate['origin'], inWorld: boolean, childId: string | null): DriverCandidate => {
     const t = driverTerms(m.categoryId, rank, driver, grid);
@@ -483,7 +484,9 @@ function defaultLineup(career: CareerState, candidates: readonly DriverCandidate
   if (!m) return [];
   const current = career.drivers
     .filter((d) => d.teamId === m.teamId && d.role !== 'reserve')
-    .sort((a) => (a.role === 'first' ? -1 : 1))
+    // Primeiro piloto na frente; entre iguais, a ordem de chegada (um comparador que ignora o segundo
+    // argumento dá ordens diferentes de um motor de JavaScript para outro).
+    .sort((a, b) => Number(b.role === 'first') - Number(a.role === 'first'))
     .map((d) => d.id);
   const willing = candidates.filter((c) => c.willing);
   const lineup = current.filter((id) => willing.some((c) => c.driverId === id));
@@ -564,9 +567,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
     const sponsors = management.sponsors
       .filter((s) => {
         if (position > s.targetPosition + 2) {
-          notes.push(
-            `${s.name} rompeu o patrocínio: queria a equipe entre as ${s.targetPosition} primeiras. A quebra de contrato arranha a reputação da equipe.`,
-          );
+          notes.push(`${s.name} rompeu o patrocínio: queria a equipe ${amongTheFirst(s.targetPosition)}. A quebra de contrato arranha a reputação da equipe.`);
           brokenDeals += 1;
           return false;
         }
@@ -693,7 +694,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
       date,
       category: 'season',
       title: `Fim da temporada ${career.year}`,
-      body: `${champion ? fullName(champion) : 'O campeão'} é o campeão da ${category.shortName}. ${notes.join(' ')} Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as decisões para a próxima temporada na tela Carreira.`,
+      body: `${champion ? fullName(champion) : 'O líder da tabela'} venceu ${categoryRef(category.id, 'the')}. ${notes.join(' ')} Imposto de renda do ano: ${money(career, closed.report.tax)}. Veja as decisões para a próxima temporada na tela Carreira.`,
     },
   ];
   if (family.notes.length > 0) messages.push({ id: `s${season}-family`, date, category: 'family', title: 'A família neste ano', body: family.notes.join(' ') });
@@ -902,7 +903,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     categoryId = plan.categoryId;
     founding = { name, color: plan.color };
     options = { position: 'owner', salary: 0, purchasePrice: cost, founded: true };
-    news.push(`Você fundou a ${name}, que estreia na ${getCategory(categoryId).name}. A inscrição e o equipamento custaram ${money(career, cost)}.`);
+    news.push(`Você fundou a ${name}, que estreia ${categoryRef(categoryId, 'em')}. A inscrição e o equipamento custaram ${money(career, cost)}.`);
   }
   const category: CategoryDefinition = getCategory(categoryId);
 
@@ -916,7 +917,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   if (categoryId === career.categoryId) {
     teams = evolveTeamsExecutive(career);
     if (isRegulationChange(career.seed, career.season, career.categoryId))
-      news.push(`Regulamento técnico novo na ${category.shortName}: as rivais refizeram o projeto e a ordem de forças entre elas pode ter mudado.`);
+      news.push(`Regulamento técnico novo ${categoryRef(category.id, 'em')}: as rivais refizeram o projeto e a ordem de forças entre elas pode ter mudado.`);
     if (plan.kind === 'continue' && previous) {
       lineup = off.lineup.map((id) => off.candidates.find((c) => c.driverId === id)).filter((c): c is DriverCandidate => c !== undefined);
       if (lineup.length !== 2) throw new Error('Escolha os dois pilotos da equipe para a próxima temporada.');
@@ -1059,8 +1060,8 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
       category: 'season',
       title: `Temporada ${nextYear}: ${category.shortName}`,
       body: managed
-        ? `Você comanda a ${teamName} na ${category.name}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(career, managed.budget)}.`
-        : `Você acompanha a ${category.name} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
+        ? `Você comanda a ${teamName} ${categoryRef(category.id, 'em')}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(career, managed.budget)}.`
+        : `Você acompanha ${categoryRef(category.id, 'the')} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
     },
   ];
   if (news.length > 0) messages.push({ id: `s${nextSeason}-market`, date, category: 'contract', title: 'Movimentações', body: news.join(' ') });

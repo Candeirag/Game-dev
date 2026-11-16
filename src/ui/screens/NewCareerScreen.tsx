@@ -153,7 +153,7 @@ export function NewCareerScreen() {
                     Idade
                   </label>
                   <span id="new-career-age-hint" className="truncate text-ink-500">
-                    até 15 anos, evolui mais rápido
+                    evolui mais rápido até os 17 anos
                   </span>
                 </div>
                 <select

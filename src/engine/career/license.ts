@@ -6,6 +6,7 @@
  * além de idade, reputação e experiência mínimas.
  */
 import type { CareerState, CategoryId, License } from '@/domain/schemas';
+import { counted } from '@/domain/text';
 import { LICENSE_WINDOW_SEASONS, getCategory } from '@/data/categories';
 import { getPlayer } from './selectors';
 
@@ -42,9 +43,11 @@ export function categoryRequirements(
   const reputation = options.reputation ?? career.reputation;
   const experience = Math.floor(player.attributes.experience);
   return [
-    { key: 'license', label: req.licenseName, detail: `${points} de ${req.licensePoints} pontos de licença`, met: points >= req.licensePoints },
-    { key: 'age', label: 'Idade mínima', detail: `${age} de ${req.minAge} anos`, met: age >= req.minAge },
-    { key: 'reputation', label: 'Reputação', detail: `${Math.floor(reputation)} de ${req.minReputation}`, met: reputation >= req.minReputation },
-    { key: 'experience', label: 'Experiência', detail: `${experience} de ${req.minExperience}`, met: experience >= req.minExperience },
+    // Cada linha diz o que o piloto tem e, entre parênteses, o mínimo exigido. Nada de "16 de 13":
+    // o valor do piloto não é uma parte do mínimo, e passar dele é o normal.
+    { key: 'license', label: req.licenseName, detail: `${counted(points, 'ponto', 'pontos')} (mínimo ${req.licensePoints})`, met: points >= req.licensePoints },
+    { key: 'age', label: 'Idade', detail: `${age} anos${options.nextSeason ? ' na próxima temporada' : ''} (mínimo ${req.minAge})`, met: age >= req.minAge },
+    { key: 'reputation', label: 'Reputação', detail: `${Math.floor(reputation)} (mínimo ${req.minReputation})`, met: reputation >= req.minReputation },
+    { key: 'experience', label: 'Experiência', detail: `${experience} (mínimo ${req.minExperience})`, met: experience >= req.minExperience },
   ];
 }

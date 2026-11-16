@@ -13,6 +13,7 @@
  */
 import type { CategoryId } from '@/domain/schemas';
 import { VEHICLES } from '@/data/vehicles';
+import { textHash } from '@/engine';
 import f1Url from '@/assets/race/vehicles/f1.webp';
 import f2Url from '@/assets/race/vehicles/f2.webp';
 import f3Url from '@/assets/race/vehicles/f3.webp';
@@ -123,21 +124,6 @@ export function safetyCarSprite(): HTMLImageElement | null {
   return safetyCar && safetyCar !== 'failed' ? safetyCar : null;
 }
 
-function hash(text: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  // Embaralha os bits: sem isto, textos que só diferem no último caractere dão valores vizinhos.
-  h ^= h >>> 16;
-  h = Math.imul(h, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  h ^= h >>> 16;
-  return h >>> 0;
-}
-
 function luminance(hex: string): number {
   const n = Number.parseInt(hex.slice(1), 16);
   return (((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255;
@@ -155,11 +141,11 @@ const HELMET_COLORS = ['#f6c343', '#22d3ee', '#f4f5f7', '#ef3b2d', '#34d399', '#
 /** Cor de contraste da equipe: sempre a mesma para a mesma equipe, e distante da cor principal. */
 export function accentFor(teamId: string, primary: string): string {
   const options = ACCENTS.filter((c) => distance(c, primary) > 230);
-  return options[hash(`accent|${teamId}`) % Math.max(1, options.length)] ?? '#f4f5f7';
+  return options[textHash(`accent|${teamId}`) % Math.max(1, options.length)] ?? '#f4f5f7';
 }
 
 export function helmetFor(driverId: string): string {
-  return HELMET_COLORS[hash(`helmet|${driverId}`) % HELMET_COLORS.length] ?? '#f4f5f7';
+  return HELMET_COLORS[textHash(`helmet|${driverId}`) % HELMET_COLORS.length] ?? '#f4f5f7';
 }
 
 /** Desenhos de pintura: onde entra a cor de contraste (coordenadas de 0 a 1, nariz à direita). */
@@ -220,7 +206,7 @@ export function liveryFor(categoryId: CategoryId, teamId: string, primary: strin
   p.fillStyle = primary;
   p.fillRect(0, 0, w, h);
   p.fillStyle = accent;
-  PATTERNS[hash(`pattern|${teamId}`) % PATTERNS.length]?.(p, w, h);
+  PATTERNS[textHash(`pattern|${teamId}`) % PATTERNS.length]?.(p, w, h);
   if (spec.number && carNumber !== undefined) {
     // Número no bico, lido de frente para o carro (o sprite aponta para a direita).
     const size = spec.number.size * h;

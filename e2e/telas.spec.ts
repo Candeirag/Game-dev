@@ -3,8 +3,9 @@
  * no computador, tira um print de cada uma (test-results/telas) e verifica se alguma imagem
  * cruza um texto, se a página passa da largura da tela e se há área de toque menor que 44 px.
  */
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { SAVES, TELAS, abrirSave, conferirTela, irPara, vigiarErros } from './apoio';
+import { SAVES, TELAS, abrirSave, conferirTela, gravarNoAparelho, irPara, vigiarErros } from './apoio';
 
 for (const formato of TELAS) {
   test.describe(`telas em ${formato.width}×${formato.height}`, () => {
@@ -99,6 +100,59 @@ for (const formato of TELAS) {
           await conferirTela(page, `${arquivo}-${aba.toLowerCase().replaceAll(' ', '-')}`, formato.nome);
         }
       }
+      expect(erros).toEqual([]);
+    });
+
+    test('topo da escada, num save antigo: os nomes mais longos cabem', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.antigoNoTopo);
+      await conferirTela(page, 'topo-painel', formato.nome);
+      for (const [nome, arquivo, abas] of [
+        ['Carreira', 'topo-carreira', ['Escada', 'Licença', 'Interesse']],
+        ['Equipe', 'topo-equipe', ['Contrato']],
+        ['Histórico', 'topo-historico', []],
+        ['Classificação', 'topo-classificacao', ['Equipes']],
+      ] as const) {
+        await irPara(page, nome);
+        await conferirTela(page, arquivo, formato.nome);
+        for (const aba of abas) {
+          await page.getByRole('main').getByRole('tab', { name: aba, exact: true }).click();
+          await conferirTela(page, `${arquivo}-${aba.toLowerCase().replaceAll(' ', '-')}`, formato.nome);
+        }
+      }
+      expect(erros).toEqual([]);
+    });
+
+    test('saves: o save do formato anterior fica guardado depois da conversão e pode ser exportado', async ({ page }) => {
+      const erros = vigiarErros(page);
+      // O aparelho já tem um save automático gravado pela versão anterior do jogo (formato 3).
+      await gravarNoAparelho(page, 'auto', SAVES.antigoComAcademia);
+      await page.getByRole('button', { name: /^Continuar:/ }).click();
+      await page.waitForURL(/#\/dashboard/);
+      const copias = page.getByRole('region', { name: 'Cópias de formatos anteriores' });
+      // Abrir só converte na memória: o slot ainda guarda o formato 3 e não há cópia para mostrar.
+      await irPara(page, 'Saves');
+      await expect(page.getByRole('main')).toContainText('Save automático');
+      await expect(copias).toHaveCount(0);
+      // A primeira gravação automática (aqui, trocar o foco do treino) converte o slot e guarda o original.
+      await irPara(page, 'Piloto');
+      await page.getByRole('main').getByRole('tab', { name: 'Condição e treino', exact: true }).click();
+      await page.getByRole('main').locator('button[aria-pressed="false"]').first().click();
+      await expect(page.getByRole('img', { name: /^Salvo em/ })).toBeVisible();
+      await irPara(page, 'Saves');
+      await expect(copias).toContainText('Save automático · formato 3');
+      await expect(copias).toContainText('F. Júnior');
+      await conferirTela(page, 'saves-copia-do-formato-anterior', formato.nome);
+      // O arquivo exportado é o save antigo, byte a byte no conteúdo: é o que a versão anterior abre.
+      const [download] = await Promise.all([page.waitForEvent('download'), copias.getByRole('button', { name: 'Exportar cópia (.json)' }).click()]);
+      expect(download.suggestedFilename()).toBe('apex-save-original-auto-formato-3.json');
+      const exportado = JSON.parse(readFileSync(await download.path(), 'utf8')) as unknown;
+      expect(exportado).toEqual(JSON.parse(readFileSync(SAVES.antigoComAcademia, 'utf8')));
+      // Apagar o slot não apaga a cópia: a lista é relida do armazenamento depois da exclusão.
+      await page.getByRole('main').getByRole('button', { name: 'Apagar', exact: true }).first().click();
+      await page.getByRole('button', { name: 'Confirmar exclusão' }).click();
+      await expect(page.getByRole('status')).toContainText('Save automático apagado.');
+      await expect(copias).toContainText('Save automático · formato 3');
       expect(erros).toEqual([]);
     });
 

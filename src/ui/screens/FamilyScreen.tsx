@@ -82,7 +82,11 @@ function ChildCard({ child }: { child: Child }) {
             <Meter
               label="Vontade de correr"
               value={child.interest}
-              hint={child.stage !== 'racing' ? `Precisa de ${FAMILY.CAREER_INTEREST} aos ${FAMILY.CAREER_START_AGE} anos para querer a carreira.` : undefined}
+              hint={
+                child.stage !== 'racing'
+                  ? `Ao fazer ${FAMILY.CAREER_START_AGE} anos, pede para correr se a vontade for ${FAMILY.CAREER_INTEREST} ou mais.`
+                  : undefined
+              }
               tone="neutral"
             />
           )}
@@ -94,8 +98,8 @@ function ChildCard({ child }: { child: Child }) {
           <SupportPicker label="Investimento no kart:" value={child.kartFunding} onChange={(v) => setKartFunding(child.id, v)} />
           <p className="text-xs leading-snug text-ink-400">
             Parcial: {formatMoney(FAMILY.KART_COST.basic)} por ano (rende 60%). Total: {formatMoney(FAMILY.KART_COST.full)} por ano. Formação acumulada:{' '}
-            <b className="text-ink-100">{counted(child.kartYears.toFixed(1), 'ano', 'anos')}</b>; cada ano vale cerca de {FAMILY.START_PER_KART_YEAR} pontos em
-            todos os atributos na estreia.
+            <b className="text-ink-100">{counted(child.kartYears.toFixed(1).replace('.', ','), 'ano', 'anos')}</b>; cada ano vale cerca de{' '}
+            {FAMILY.START_PER_KART_YEAR} pontos em todos os atributos na estreia.
           </p>
         </div>
       )}
@@ -229,7 +233,7 @@ export function FamilyScreen() {
                     {partner.firstName} {partner.lastName}
                   </div>
                   <div className="text-sm text-ink-400">
-                    {partner.age} anos · {partner.married ? 'Casados' : 'Namorando'} desde a temporada {partner.sinceSeason}
+                    {partner.age} anos · {partner.married ? 'Casados' : 'Namorando'} · juntos desde a temporada {partner.sinceSeason}
                   </div>
                 </div>
                 <Meter

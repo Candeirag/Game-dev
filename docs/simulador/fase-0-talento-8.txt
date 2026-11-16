@@ -1,0 +1,77 @@
+APEX MOTORSPORT DYNASTY · SIMULADOR DE CARREIRAS
+50 carreiras (sementes 1 a 50), 15 temporadas cada: 750 temporadas disputadas
+Política: robô padrão (treino de acerto, classificação e corrida equilibradas, melhor proposta aceitável) · talento 8
+Idade média na estreia: 15,5 anos
+
+1. POSIÇÃO FINAL POR CATEGORIA
+
+Categoria                      Temporadas  Carreiras  Posição média  Mediana  Melhor  Entre os 3  Títulos
+-----------------------------  ----------  ---------  -------------  -------  ------  ----------  -------
+Campeonato Regional de Kart           143         50            9,3      10º      1º         13%        5
+Campeonato Brasileiro de Kart         114         50            6,4       6º      1º         25%        9
+Campeonato Mundial de Kart            105         41            7,2       7º      1º         12%        1
+Fórmula Júnior                        114         50            6,4       7º      1º         18%        6
+Fórmula Sprint                         92         47            6,3       7º      1º         24%        6
+Fórmula Elite                          74         41            6,6       6º      1º         20%        4
+Grand Prix Mundial                    108         31            5,7       5º      1º         34%        9
+
+2. CAIXA NO FIM DE CADA TEMPORADA
+
+Temporada  Carreiras  10% piores      Mediana  10% melhores  No vermelho  Patrimônio (mediana)
+---------  ---------  ----------  -----------  ------------  -----------  --------------------
+1                 50   R$ 31.440    R$ 35.224     R$ 38.480           0%             R$ 35.224
+2                 50   R$ 37.260    R$ 43.338     R$ 48.708           0%             R$ 43.338
+3                 50   R$ 44.333    R$ 51.161     R$ 64.332           0%             R$ 51.161
+4                 50   R$ 45.931    R$ 59.178    R$ 107 mil           0%             R$ 59.178
+5                 50   R$ 44.769    R$ 70.036    R$ 144 mil           0%             R$ 70.036
+6                 50    R$ 7.384    R$ 64.712    R$ 274 mil           6%             R$ 64.712
+7                 50  −R$ 10.019    R$ 67.700    R$ 477 mil          16%             R$ 67.700
+8                 50  −R$ 57.228    R$ 84.439    R$ 843 mil          28%             R$ 84.439
+9                 50  −R$ 67.585    R$ 96.568    R$ 772 mil          26%             R$ 96.568
+10                50  −R$ 94.316   R$ 160 mil    R$ 1,01 mi          24%            R$ 160 mil
+11                50  −R$ 88.269   R$ 518 mil     R$ 7,6 mi          18%            R$ 518 mil
+12                50   −R$ 1.977   R$ 868 mil   R$ 12,45 mi          10%            R$ 868 mil
+13                50   R$ 50.156   R$ 1,38 mi   R$ 25,61 mi           4%            R$ 1,38 mi
+14                50   R$ 40.666   R$ 8,02 mi   R$ 39,14 mi           6%            R$ 8,02 mi
+15                50  R$ 117 mil  R$ 11,96 mi   R$ 54,52 mi           4%           R$ 11,96 mi
+
+Caixa: dinheiro na conta depois do fechamento do ano (impostos, juros e rendimentos já lançados).
+"10% piores" e "10% melhores" são os percentis 10 e 90; "no vermelho" é a parcela das carreiras com caixa negativo.
+
+3. IDADE AO CHEGAR A CADA DEGRAU
+
+Degrau  Categoria                      Chegaram  Das carreiras  Idade média  Mais novo  Mais velho  Temporada média
+------  -----------------------------  --------  -------------  -----------  ---------  ----------  ---------------
+     1  Campeonato Regional de Kart          50           100%         15,5         14          17              1,0
+     2  Campeonato Brasileiro de Kart        50           100%         18,4         16          22              3,9
+     3  Campeonato Mundial de Kart           38            76%         20,2         17          23              5,7
+     4  Fórmula Júnior                       50           100%         22,1         18          28              7,6
+     5  Fórmula Sprint                       47            94%         24,1         20          30              9,7
+     6  Fórmula Elite                        41            82%         25,7         21          31             11,3
+     7  Grand Prix Mundial                   31            62%         27,0         23          31             12,5
+
+Chegar é subir: conta a primeira temporada no degrau vindo de um degrau mais baixo (ou a estreia). Quem pula um
+degrau por um atalho e depois cai nele não entra na linha desse degrau.
+
+4. CARREIRAS QUE CHEGAM AO TOPO
+
+Chegaram ao Grand Prix Mundial: 31 de 50 carreiras (62%).
+Degrau mais alto alcançado: 1º 0 · 2º 0 · 3º 0 · 4º 3 · 5º 6 · 6º 10 · 7º 31.
+
+5. TÍTULOS POR CARREIRA
+
+Média de 0,80 por carreira (40 títulos no total; o máximo numa carreira foi 3).
+Carreiras sem título: 21 · com um: 20 · com dois: 7 · com três ou mais: 2.
+
+6. TEMPORADAS PARADAS, SEM VAGA
+
+Sem vaga: 43 temporadas (0,86 por carreira), em 27 de 50 carreiras (54%).
+  Por quê: em 0, nenhuma equipe fez proposta; em 43, havia proposta e faltou dinheiro para a vaga; em 0, faltou outro requisito.
+Desceu de degrau: 51 temporadas (1,02 por carreira), em 30 de 50 carreiras.
+Maior sequência no mesmo degrau: 4,2 temporadas, em média.
+Etapas sem correr (lesão ou suspensão): 0,00 por temporada.
+Carreiras interrompidas por sucessão (morte ou acidente): 0.
+
+"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de
+segurança: a vaga gratuita na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no
+primeiro). O jogo de hoje sempre oferece essa vaga: ninguém fica um ano inteiro sem correr.

@@ -26,6 +26,29 @@ export function fixStoredPlurals(text: string): string {
   });
 }
 
+/** Primeira letra em maiúscula, para abrir uma frase com um trecho montado ("do Grand Prix…" → "Do Grand Prix…"). */
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * Ordem fixa entre dois textos, pelo código de cada caractere. É o desempate do motor para ids:
+ * dá o mesmo resultado em qualquer aparelho e idioma, ao contrário de `localeCompare`, que segue
+ * o idioma do sistema (em tcheco ou dinamarquês, por exemplo, a ordem das letras é outra) e faria
+ * a mesma carreira ter resultados diferentes de um celular para outro.
+ */
+export function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/**
+ * Meta de posição de uma equipe, em frase: "em 1º lugar" quando a meta é a liderança, "entre as
+ * 3 primeiras" nas demais ("entre as 1 primeiras" não existe).
+ */
+export function amongTheFirst(position: number): string {
+  return position <= 1 ? 'em 1º lugar' : `entre as ${position} primeiras`;
+}
+
 /** Quantidade seguida da palavra na forma certa: "1 ponto", "4 ultrapassagens", "0 vitórias". */
 export function counted(count: number | string, singular: string, plural: string): string {
   return `${count} ${pluralWord(count, singular, plural)}`;

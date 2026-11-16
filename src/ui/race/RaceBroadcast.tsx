@@ -48,7 +48,7 @@ function gapText(row: StandingRow, mode: 'leader' | 'interval', started: boolean
 }
 
 /**
- * `spectator`: a corrida já foi simulada por inteiro e o jogador só assiste (dirigente no pit wall
+ * `spectator`: a corrida já foi simulada por inteiro e o jogador só assiste (dirigente no muro dos boxes
  * ou piloto fora da etapa). Não há comandos; os carros em destaque são os da equipe dele.
  */
 export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingView?: () => void; spectator?: boolean }) {
@@ -292,7 +292,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         <div className="flex flex-wrap items-center justify-between gap-2 bg-ink-950/90 px-3 py-1.5 text-xs text-ink-200">
           <span>
             {spectator
-              ? 'Você acompanha do pit wall: na corrida, os pilotos decidem ritmo e paradas.'
+              ? 'Você acompanha do muro dos boxes: na corrida, os pilotos decidem ritmo e paradas.'
               : 'A corrida já foi decidida; você está revendo as imagens.'}
           </span>
           <Button onClick={playback.goLive}>{spectator ? 'Pular para o resultado' : 'Ver o resultado'}</Button>

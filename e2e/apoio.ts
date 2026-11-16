@@ -1,4 +1,5 @@
 /** Apoio aos testes no navegador: tamanhos de tela, abertura de saves e a verificação visual. */
+import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 /**
@@ -20,7 +21,14 @@ export const SAVES = {
   fimDeTemporada: 'tests/fixtures/v3/atual-fim-de-temporada.json',
   formula: 'tests/fixtures/v2/formula-mid-season.json',
   antesDaReformulacao: 'tests/fixtures/v3/antes-da-reformulacao-kart-na-largada.json',
+  /** Saves da versão 3, de antes dos nomes próprios das categorias: abrem pela migração 3 → 4. */
+  antigoComAcademia: 'tests/fixtures/v3/fase0-monoposto-com-academia.json',
+  antigoNoTopo: 'tests/fixtures/v3/fase0-topo-fim-de-temporada.json',
+  antigoDirigente: 'tests/fixtures/v3/fase0-dirigente-dono-de-equipe.json',
 } as const;
+
+/** Nomes de marcas reais que saves antigos traziam por extenso e que não podem aparecer em tela nenhuma. */
+export const NOMES_ANTIGOS = /\bF[1-4]\b|Fórmula [1-4]\b/;
 
 /** Erros de página e de console acumulados durante um teste. */
 export function vigiarErros(page: Page): string[] {
@@ -39,6 +47,36 @@ export async function abrirSave(page: Page, arquivo: string): Promise<void> {
   await page.waitForURL(/#\/dashboard/);
   const aviso = page.getByRole('button', { name: 'Fechar aviso' });
   if (await aviso.count()) await aviso.click();
+}
+
+/**
+ * Deixa um save gravado no armazenamento do navegador, como se uma versão anterior do jogo o
+ * tivesse salvado naquele slot, e recarrega o menu inicial.
+ */
+export async function gravarNoAparelho(page: Page, slot: string, arquivo: string): Promise<void> {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Nova carreira' }).waitFor();
+  await page.evaluate(
+    async ([chave, json]) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const pedido = indexedDB.open('apex-motorsport-dynasty', 1);
+        pedido.onupgradeneeded = () => {
+          if (!pedido.result.objectStoreNames.contains('saves')) pedido.result.createObjectStore('saves');
+        };
+        pedido.onsuccess = () => resolve(pedido.result);
+        pedido.onerror = () => reject(pedido.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transacao = db.transaction('saves', 'readwrite');
+        transacao.objectStore('saves').put(JSON.parse(json), chave);
+        transacao.oncomplete = () => resolve();
+        transacao.onerror = () => reject(transacao.error);
+      });
+      db.close();
+    },
+    [slot, readFileSync(arquivo, 'utf8')] as const,
+  );
+  await page.reload();
 }
 
 /** Vai para uma tela pela navegação do jogo (trilho, barra inferior ou "Mais"). */

@@ -30,7 +30,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button, Card, EmptyState, Meter, PageHeader, Pill, RatingBar, Stat, TableWrap, Tabs, cx, td, th } from '../components/ui';
 import { currencySymbol, formatMoney } from '../format';
 import { useCareer } from '../hooks/useCareer';
-import { counted } from '@/domain/text';
+import { amongTheFirst, counted } from '@/domain/text';
 
 type Tab = 'overview' | 'staff' | 'facilities' | 'development' | 'drivers';
 const TABS: { value: Tab; label: string }[] = [
@@ -192,7 +192,7 @@ function Overview({ m }: { m: ManagedTeam }) {
                         <span className="shrink-0 text-xs text-ink-400">até {career.year + (s.endSeason - career.season)}</span>
                       </div>
                       <div className="text-xs text-ink-400">
-                        {formatMoney(s.perSeason)} por temporada · entre as {s.targetPosition} primeiras
+                        {formatMoney(s.perSeason)} por temporada · {amongTheFirst(s.targetPosition)}
                       </div>
                     </div>
                     <Button variant="ghost" className="shrink-0" onClick={() => dropTeamSponsor(s.id)}>

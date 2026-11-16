@@ -17,6 +17,7 @@ import { buildSponsor, commercialSponsors, sponsorTierFor, SPONSOR_RULES } from 
 import { fullName, teamKey } from '../career/selectors';
 import { hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
+import { TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { money } from '../career/selectors';
 
 export interface EventContext {
@@ -353,7 +354,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
             'Aceitar a responsabilidade',
             'Punição certa, mas branda.',
             sure(
-              'Você perde 3 posições no próximo grid e recebe 1 ponto na licença.',
+              'Você perde 3 posições no próximo grid e recebe 1 ponto de punição.',
               { type: 'gridPenalty', driverId: ctx.player.id, places: 3 },
               { type: 'penaltyPoints', value: 1 },
               stat('reputation', 1),
@@ -367,7 +368,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
               [0.45, 'Os comissários aceitam a sua versão: incidente de corrida.', [stat('confidence', 3)]],
               [
                 0.55,
-                'Os comissários não se convencem: 5 posições no próximo grid e 2 pontos na licença.',
+                'Os comissários não se convencem: 5 posições no próximo grid e 2 pontos de punição.',
                 [
                   { type: 'gridPenalty', driverId: ctx.player.id, places: 5 },
                   { type: 'penaltyPoints', value: 2 },
@@ -387,7 +388,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
               ],
               [
                 0.7,
-                'A versão não se sustenta nas imagens: 5 posições no grid, 2 pontos na licença e a imagem arranhada.',
+                'A versão não se sustenta nas imagens: 5 posições no grid, 2 pontos de punição e a imagem arranhada.',
                 [
                   { type: 'gridPenalty', driverId: ctx.player.id, places: 5 },
                   { type: 'penaltyPoints', value: 2 },
@@ -850,7 +851,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       if (ctx.career.academy || tier < 3 || tier > 6 || ctx.player.age > 21 || ctx.round < 4 || ctx.position > 5) return null;
       if (ctx.career.reputation < ctx.category.requirements.minReputation) return null;
       const index = hashSeed(ctx.career.seed, 'academy', ctx.career.season) % F1_TEAM_NAMES.length;
-      const f1Name = F1_TEAM_NAMES[index] ?? 'Equipe de F1';
+      const f1Name = F1_TEAM_NAMES[index] ?? `Equipe ${categoryRef(TOP_CATEGORY_ID, 'de')}`;
       const academy: Academy = {
         f1TeamId: f1TeamId(index),
         name: `Academia ${f1Name}`,
@@ -865,7 +866,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       );
       return {
         title: `Convite da ${academy.name}`,
-        body: `Olheiros da ${f1Name}, da Fórmula 1, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem 70% do custo da vaga pago e a atenção das equipes ligadas a ela; em troca, precisa terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
+        body: `Olheiros da ${f1Name}, ${categoryRef(TOP_CATEGORY_ID, 'de')}, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem 70% do custo da vaga pago e a atenção das equipes ligadas a ela; em troca, precisa terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
         choices: [
           choice(
             'accept',

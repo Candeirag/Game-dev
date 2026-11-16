@@ -18,6 +18,7 @@ import {
   racingLineAt,
   safetyCarAt,
   standingsAt,
+  textHash01,
   type Circuit,
   type RaceTimeline,
   type StandingRow,
@@ -69,21 +70,6 @@ const smooth = (t: number) => {
   const u = clamp(t, 0, 1);
   return u * u * (3 - 2 * u);
 };
-
-function hash01(text: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  // Embaralha os bits: sem isto, textos que só diferem no último caractere dão valores vizinhos.
-  h ^= h >>> 16;
-  h = Math.imul(h, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
 
 /** Sigla de três letras do piloto, como nas transmissões ("De Groot" vira DEG). */
 export function driverCode(lastName: string): string {
@@ -179,7 +165,7 @@ function formation(rows: StandingRow[], circuit: Circuit, memory: SceneMemory, l
     }
     let side = memory.side.get(row.driverId) ?? 0;
     if (side === 0) {
-      const inside = Math.sign(racingLineAt(circuit, row.sample.s + 0.012)) || (hash01(`lane|${row.driverId}`) < 0.5 ? 1 : -1);
+      const inside = Math.sign(racingLineAt(circuit, row.sample.s + 0.012)) || (textHash01(`lane|${row.driverId}`) < 0.5 ? 1 : -1);
       if (front <= back) {
         // Chegou em quem vai à frente: toma o lado oposto ao dele (ou o de dentro, se ele está livre).
         const aheadSide = sides[i - 1] ?? 0;
@@ -251,7 +237,7 @@ export function placeCars(
     let turn = 0;
     if (sample.state === 'retired') {
       // O carro sai para fora da pista, fica alguns segundos e é recolhido.
-      const out = hash01(`side|${row.driverId}`) < 0.5 ? 1 : -1;
+      const out = textHash01(`side|${row.driverId}`) < 0.5 ? 1 : -1;
       const crashed = sample.reason === 'crash' || sample.reason === 'collision';
       target = out * (CIRCUIT.TRACK_WIDTH / 2 + 8) * smooth(sample.retiredFor / 3);
       if (crashed) turn = out * 1.9 * smooth(sample.retiredFor / 1.5);
@@ -401,7 +387,7 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const { timeline, circuit, art, time } = input;
   const dt = memory.lastFrame ? Math.min(0.1, (now - memory.lastFrame) / 1000) : 0.016;
   memory.lastFrame = now;
-  // O veículo é o da categoria da corrida: do kart de entrada ao F1, cada um com o seu tamanho.
+  // O veículo é o da categoria da corrida: do kart de entrada ao Monoposto Grand Prix, cada um com o seu tamanho.
   const size = vehicleFor(timeline.categoryId);
   const rows = standingsAt(timeline, circuit, time);
   const info = lapInfoAt(timeline, time);
@@ -480,8 +466,8 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
         g.fillStyle = row.state === 'spin' ? '#cfd3da' : '#6f7682';
         g.beginPath();
         g.arc(
-          car.x + (hash01(`sx${i}${row.driverId}`) - 0.5) * 9,
-          car.y - life * 9 + (hash01(`sy${i}${row.driverId}`) - 0.5) * 6,
+          car.x + (textHash01(`sx${i}${row.driverId}`) - 0.5) * 9,
+          car.y - life * 9 + (textHash01(`sy${i}${row.driverId}`) - 0.5) * 6,
           3 + life * 8,
           0,
           Math.PI * 2,
@@ -586,8 +572,8 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
     g.beginPath();
     const fall = now / 1000;
     for (let i = 0; i < drops; i++) {
-      const x = ((hash01(`rx${i}`) * 1.3 * width + fall * 90) % (width * 1.3)) - width * 0.15;
-      const y = (hash01(`ry${i}`) * height + fall * (520 + hash01(`rv${i}`) * 260)) % height;
+      const x = ((textHash01(`rx${i}`) * 1.3 * width + fall * 90) % (width * 1.3)) - width * 0.15;
+      const y = (textHash01(`ry${i}`) * height + fall * (520 + textHash01(`rv${i}`) * 260)) % height;
       g.moveTo(x, y);
       g.lineTo(x - 3, y + 11);
     }

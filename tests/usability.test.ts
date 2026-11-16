@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { CareerState } from '@/domain/schemas';
 import { currencyForNationality, formatMoney, relabelMoney } from '@/domain/money';
-import { counted, fixStoredPlurals, pluralWord } from '@/domain/text';
+import { amongTheFirst, counted, fixStoredPlurals, pluralWord } from '@/domain/text';
 import { importCareer, exportCareer } from '@/persistence/saveService';
 import { loadRaceResume, raceResumeKey } from '@/persistence/raceResume';
 import { careerCurrency, money, runPractice, runQualifying, startWeekend } from './engineApi';
@@ -89,6 +89,12 @@ describe('plurais', () => {
     expect(counted('1,5', 'ano', 'anos')).toBe('1,5 ano');
     expect(counted('2.0', 'ano', 'anos')).toBe('2.0 anos');
     expect(pluralWord(1, 'proposta', 'propostas')).toBe('proposta');
+  });
+
+  it('a meta de posição de um patrocinador não vira "entre as 1 primeiras"', () => {
+    expect(amongTheFirst(1)).toBe('em 1º lugar');
+    expect(amongTheFirst(2)).toBe('entre as 2 primeiras');
+    expect(amongTheFirst(8)).toBe('entre as 8 primeiras');
   });
 
   it('acerta os plurais de textos gravados por versões anteriores', () => {

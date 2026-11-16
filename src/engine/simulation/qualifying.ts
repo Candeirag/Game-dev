@@ -3,7 +3,7 @@
  *
  * - Sessão única: cada piloto faz três tentativas lançadas com pneus novos e a
  *   melhor volta válida define o grid.
- * - Eliminatória (F1): três fases. A cada fase, cada piloto faz duas
+ * - Eliminatória (Grand Prix Mundial): três fases. A cada fase, cada piloto faz duas
  *   tentativas e o quarto mais lento do grid inicial é eliminado, ficando com
  *   as posições do fundo. A fase final decide as primeiras posições.
  *
@@ -11,6 +11,7 @@
  * herdadas de corridas anteriores deslocam os punidos para trás.
  */
 import type { Driver, QualifyingApproach, QualifyingEntry, QualifyingResult, SessionWeather, Team, Track, WeekendModifiers } from '@/domain/schemas';
+import { compareText } from '@/domain/text';
 import type { CategoryDefinition } from '@/data/categories';
 import { QUALIFYING_ATTEMPTS } from '@/data/rules';
 import { createRng, gaussian, hashSeed, type Rng } from '../rng';
@@ -77,7 +78,7 @@ function byLapTimes(x: Row, y: Row): number {
     const b = y.valid[i] ?? Infinity;
     if (a !== b) return a - b;
   }
-  return x.p.driver.id.localeCompare(y.p.driver.id);
+  return compareText(x.p.driver.id, y.p.driver.id);
 }
 
 export function simulateQualifying(

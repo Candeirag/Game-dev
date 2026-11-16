@@ -170,7 +170,7 @@ export const FAMILY = {
   /** Fração da vaga que os patrocinadores do próprio filho cobrem: 20% + reputação/250. */
   OWN_COVERAGE_BASE: 0.2,
   OWN_COVERAGE_PER_REPUTATION: 1 / 250,
-  /** Academia de F1: cobre metade da vaga e acelera a evolução. */
+  /** Academia de uma equipe do topo: cobre metade da vaga e acelera a evolução. */
   ACADEMY_SHARE: 0.5,
   ACADEMY_CHANCE: 0.4,
   ACADEMY_DEVELOPMENT: 1.1,

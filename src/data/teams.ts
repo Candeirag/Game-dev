@@ -137,23 +137,39 @@ export const ROOKIE_TEAM_IDS: readonly string[] = ['horizonte', 'cerrado', 'gara
 const COLORS = ['#e11d48', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#a16207', '#64748b'] as const;
 const TARGETS = [3, 3, 6, 6, 10, 10, 13, 13, 16, 16] as const;
 
-/** Equipes de F1 (fictícias), da mais forte para a mais fraca. Todas mantêm uma academia de pilotos. */
+/**
+ * Equipes do Grand Prix Mundial (fictícias), da mais forte para a mais fraca. Todas mantêm uma
+ * academia de pilotos. A ordem e o tamanho da lista entram em sorteios (qual academia convida o
+ * piloto): trocar um nome é seguro, mexer na ordem ou no tamanho muda carreiras em andamento.
+ */
 export const F1_TEAM_NAMES = [
   'Corsa Imperiale',
   'Albion Grand Prix',
   'Rheingold Racing',
   'Solaris Racing',
-  'Azure F1 Team',
+  'Azure Motorsport',
   'Emerald GP',
   'Massif Racing',
-  'Stallion F1',
+  'Stallion Autosport',
   'Kraken Motorsport',
   'Orion Grand Prix',
 ] as const;
 
+/**
+ * Ids que não acompanham o nome. O id de uma equipe nasce do nome dela (ver `teamSlug`), fica
+ * gravado nos saves e entra no cálculo das sementes; se mudasse junto com o nome, carreiras em
+ * andamento perderiam a equipe e o resultado das corridas seria outro. Quando uma equipe é
+ * rebatizada, o trecho antigo do id fica registrado aqui. `tests/names.test.ts` trava a lista
+ * completa de ids.
+ */
+const FROZEN_SLUGS: Readonly<Record<string, string>> = {
+  'Azure Motorsport': 'azure-f1-team',
+  'Stallion Autosport': 'stallion-f1',
+};
+
 interface CategoryTeams {
   names: readonly string[];
-  /** Índice (em F1_TEAM_NAMES) da equipe de F1 a que cada equipe é ligada; -1 = independente. */
+  /** Índice (em F1_TEAM_NAMES) da equipe do Grand Prix Mundial a que cada equipe é ligada; -1 = independente. */
   affiliations: readonly number[];
 }
 
@@ -244,8 +260,11 @@ const slug = (text: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 
+/** Trecho do id que vem do nome da equipe (ou o trecho antigo, se ela foi rebatizada). */
+const teamSlug = (name: string) => FROZEN_SLUGS[name] ?? slug(name);
+
 export function f1TeamId(index: number): string {
-  return `f1-${slug(F1_TEAM_NAMES[index] ?? '')}`;
+  return `f1-${teamSlug(F1_TEAM_NAMES[index] ?? '')}`;
 }
 
 /**
@@ -267,7 +286,7 @@ function buildTeams(categoryId: Exclude<CategoryId, 'kart-regional'>): Team[] {
       .join('')
       .toUpperCase();
     return {
-      id: `${categoryId}-${slug(name)}`,
+      id: `${categoryId}-${teamSlug(name)}`,
       name,
       shortName: (initials.length >= 2 ? initials : name.toUpperCase()).slice(0, 3),
       color: COLORS[rank] ?? '#64748b',

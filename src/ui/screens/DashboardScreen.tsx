@@ -462,7 +462,7 @@ function NextEventPanel() {
           {!availability.available && (
             <Tag tone="attention" className="mt-3 !items-start whitespace-normal py-1.5 leading-snug">
               {availability.reason === 'ban'
-                ? 'Você está suspenso desta etapa por pontos na licença.'
+                ? 'Você está suspenso desta etapa por pontos de punição.'
                 : `Lesionado (${player.injury?.description}): fora por ${counted(player.injury?.roundsRemaining ?? 0, 'etapa', 'etapas')}.`}{' '}
               O reserva corre no seu lugar.
             </Tag>

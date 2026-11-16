@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import type { CareerState } from '@/domain/schemas';
 import { cyrb53 } from '@/persistence/checksum';
 import { importCareer } from '@/persistence/saveService';
-import { driverStandings, getCategory, getPlayer, netWorth, startNextSeason, teamStandings } from '../engineApi';
+import { driverStandings, getPlayer, netWorth, startNextSeason, teamStandings } from '../engineApi';
 import { botCareer, botTraining, pickBestOffer, playRound } from '../helpers';
 
 export interface Checkpoint {
@@ -50,6 +50,8 @@ function withoutSentences(value: unknown): unknown {
 }
 
 export function checkpoint(label: string, career: CareerState): Checkpoint {
+  // O número da versão do save fica fora do hash: mudar o formato do arquivo não é mudar o jogo.
+  const { schemaVersion: _schemaVersion, ...state } = career;
   const player = getPlayer(career);
   const me = driverStandings(career).find((s) => s.driverId === player.id);
   const last = career.rounds[career.rounds.length - 1];
@@ -75,7 +77,7 @@ export function checkpoint(label: string, career: CareerState): Checkpoint {
       .sort()
       .map(([key, value]) => `${key}:${Math.round(value)}`)
       .join(','),
-    hash: cyrb53(JSON.stringify(withoutSentences(career))),
+    hash: cyrb53(JSON.stringify(withoutSentences(state))),
   };
 }
 
@@ -84,7 +86,8 @@ function playOut(career: CareerState, tag: string, log: Checkpoint[]): CareerSta
   let c = botTraining(career);
   while (c.nextRoundIndex < c.calendar.length) {
     c = playRound(c);
-    log.push(checkpoint(`${tag} · ${getCategory(c.categoryId).shortName} · temporada ${c.season} · etapa ${c.rounds.length}`, c));
+    // O rótulo leva o id da categoria, não o nome: rebatizar um campeonato não mexe nos valores gravados.
+    log.push(checkpoint(`${tag} · ${c.categoryId} · temporada ${c.season} · etapa ${c.rounds.length}`, c));
   }
   return c;
 }
@@ -92,8 +95,8 @@ function playOut(career: CareerState, tag: string, log: Checkpoint[]): CareerSta
 /**
  * As carreiras de referência:
  * - A: robô talentoso, cinco temporadas a partir do kart regional (passa pelo kart nacional e
- *   pelo internacional e chega à Fórmula 4), com todas as viradas de temporada;
- * - C: save de monopostos gravado no meio de uma temporada de Fórmula 2, jogado até o fim do ano
+ *   pelo internacional e chega à Fórmula Júnior), com todas as viradas de temporada;
+ * - C: save de monopostos gravado no meio de uma temporada de Fórmula Elite, jogado até o fim do ano
  *   (boxes, compostos, combustível, safety car, ordens de equipe).
  */
 export function referenceCheckpoints(): Checkpoint[] {
@@ -102,7 +105,7 @@ export function referenceCheckpoints(): Checkpoint[] {
   for (let i = 0; i < 5; i++) {
     a = playOut(a, 'A', log);
     a = startNextSeason(a, pickBestOffer(a));
-    log.push(checkpoint(`A · virada para a temporada ${a.season} (${getCategory(a.categoryId).shortName})`, a));
+    log.push(checkpoint(`A · virada para a temporada ${a.season} (${a.categoryId})`, a));
   }
   const c = importCareer(readFileSync('tests/fixtures/v2/formula-mid-season.json', 'utf8'));
   log.push(checkpoint('C · save aberto', c));

@@ -179,7 +179,7 @@ describe('condição, lesões e suspensão', () => {
     expect(startWeekend(hurt, { rest: true }).weekend!.playerParticipates).toBe(false);
   });
 
-  it('12 pontos na licença suspendem o piloto por uma etapa', () => {
+  it('12 pontos de punição suspendem o piloto por uma etapa', () => {
     const base = newCareer(9);
     const nearBan: CareerState = { ...base, license: { ...base.license, penaltyPoints: PENALTY_POINTS_BAN, banRounds: 1 } };
     expect(playerAvailability(nearBan).reason).toBe('ban');

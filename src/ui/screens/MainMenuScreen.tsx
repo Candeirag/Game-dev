@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { FileUp, LoaderCircle, Play, Plus } from 'lucide-react';
-import { CHAMPIONSHIP_NAME } from '@/data/rules';
+import { CATEGORY_NAMES, FIRST_CATEGORY_ID, TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
+import { capitalize } from '@/domain/text';
 import type { SaveSlotId, SlotInfo } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, cx } from '../components/ui';
@@ -10,6 +11,8 @@ import { StorageWarning } from '../components/SaveNotices';
 import { WIDE_QUERY, useMediaQuery } from '../layout/chrome';
 
 const SLOT_LABELS: Record<SaveSlotId, string> = { auto: 'Save automático', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
+/** Saves da primeira versão não guardavam a categoria no resumo: eram todos do primeiro degrau. */
+const FIRST_CATEGORY_LABEL = CATEGORY_NAMES[FIRST_CATEGORY_ID].shortName;
 
 export function MainMenuScreen() {
   const career = useGameStore((s) => s.career);
@@ -57,7 +60,7 @@ export function MainMenuScreen() {
   }
 
   const autoDetail = auto
-    ? `${auto.summary?.playerName} · ${auto.summary?.categoryName ?? 'Kart Regional'} ${auto.summary?.year} · Etapa ${auto.summary?.roundsCompleted}/${auto.summary?.totalRounds}`
+    ? `${auto.summary?.playerName} · ${auto.summary?.categoryName ?? FIRST_CATEGORY_LABEL} ${auto.summary?.year} · Etapa ${auto.summary?.roundsCompleted}/${auto.summary?.totalRounds}`
     : '';
 
   return (
@@ -99,7 +102,8 @@ export function MainMenuScreen() {
             Dynasty
           </h1>
           <p className="mt-2.5 max-w-md text-sm leading-snug text-ink-300 lg:mt-4 lg:text-base">
-            Do {CHAMPIONSHIP_NAME} à Fórmula 1: sete categorias, contratos, patrocinadores, finanças, rivalidades e corridas decididas volta a volta.
+            {capitalize(categoryRef(FIRST_CATEGORY_ID, 'de'))} {categoryRef(TOP_CATEGORY_ID, 'a')}: sete categorias, contratos, patrocinadores, finanças,
+            rivalidades e corridas decididas volta a volta.
           </p>
 
           <div className="mt-3 grid max-w-md gap-2 lg:mt-6">
@@ -175,14 +179,15 @@ function SlotRow({ slot, busy, disabled, onLoad }: { slot: SlotInfo; busy: boole
         </div>
         {summary && (
           <div className="truncate text-xs text-ink-300">
-            {summary.playerName} · {summary.categoryName ?? 'Kart Regional'} {summary.year} · {summary.roundsCompleted}/{summary.totalRounds} etapas ·{' '}
+            {summary.playerName} · {summary.categoryName ?? FIRST_CATEGORY_LABEL} {summary.year} · {summary.roundsCompleted}/{summary.totalRounds} etapas ·{' '}
             {summary.teamName}
           </div>
         )}
         {slot.status === 'empty' && <div className="text-xs text-ink-500">Vazio</div>}
         {slot.status === 'corrupted' && <div className="truncate text-xs text-gold-400">Danificado: tentaremos a cópia de segurança</div>}
+        {slot.status === 'newer' && <div className="truncate text-xs text-gold-400">De uma versão mais nova do jogo: atualize para abrir</div>}
       </div>
-      <Button className="shrink-0" disabled={slot.status === 'empty' || disabled} aria-busy={busy} onClick={onLoad}>
+      <Button className="shrink-0" disabled={slot.status === 'empty' || slot.status === 'newer' || disabled} aria-busy={busy} onClick={onLoad}>
         {busy && <LoaderCircle size={16} aria-hidden className="animate-spin" />}
         {busy ? 'Abrindo…' : 'Carregar'}
       </Button>
