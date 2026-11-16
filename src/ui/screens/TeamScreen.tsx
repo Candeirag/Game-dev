@@ -58,7 +58,7 @@ export function TeamScreen() {
   const rivalries = Object.entries(career.relations.rivalries)
     .filter(([id]) => drivers[id])
     .sort((a, b) => b[1] - a[1]);
-  const lineup = [player, ...(teammate ? [teammate] : [])].sort((a) => (a.role === 'first' ? -1 : 1));
+  const lineup = [player, ...(teammate ? [teammate] : [])].sort((a, b) => Number(b.role === 'first') - Number(a.role === 'first'));
   const playerStats = computeCareerStats(career, player.id);
   const spriteWidth = Math.round((SPRITE_HEIGHT * vehicle.length) / vehicle.width);
 

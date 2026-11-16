@@ -7,6 +7,7 @@
  * comissários (ajustes de pontos) são lançamentos separados, somados aqui.
  */
 import type { Driver, PointsAdjustment, RaceEntryResult, RoundRecord, Team } from '@/domain/schemas';
+import { compareText } from '@/domain/text';
 
 export interface DriverStanding {
   position: number;
@@ -78,7 +79,7 @@ export function computeDriverStandings(
     };
   });
 
-  rows.sort((a, b) => b.points - a.points || countbackCompare(a.counts, b.counts) || a.driverId.localeCompare(b.driverId));
+  rows.sort((a, b) => b.points - a.points || countbackCompare(a.counts, b.counts) || compareText(a.driverId, b.driverId));
   return rows.map(({ counts: _counts, ...row }, index) => ({ ...row, position: index + 1 }));
 }
 
@@ -94,6 +95,6 @@ export function computeTeamStandings(rounds: readonly RoundRecord[], teams: read
       counts: finishCounts(entries),
     };
   });
-  rows.sort((a, b) => b.points - a.points || countbackCompare(a.counts, b.counts) || a.teamId.localeCompare(b.teamId));
+  rows.sort((a, b) => b.points - a.points || countbackCompare(a.counts, b.counts) || compareText(a.teamId, b.teamId));
   return rows.map(({ counts: _counts, ...row }, index) => ({ ...row, position: index + 1 }));
 }

@@ -174,17 +174,6 @@ export interface GameStore {
 
 const now = () => new Date().toISOString();
 
-/**
- * Semente de uma carreira nova. É o único ponto do jogo com aleatoriedade não
- * determinística, de propósito: cada carreira nova tem a sua própria sorte.
- * Daí em diante, tudo deriva desta semente.
- */
-function newSeed(): number {
-  const buffer = new Uint32Array(1);
-  crypto.getRandomValues(buffer);
-  return buffer[0] ?? 1;
-}
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -293,7 +282,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     async newCareer(input) {
-      const career = engine.createCareer(input, newSeed(), now());
+      const career = engine.createCareer(input, engine.randomSeed(), now());
       set({ career, ...RACE_RESET, notice: null, lastOutcome: null });
       await autosave(career);
     },

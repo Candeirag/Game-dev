@@ -5,6 +5,7 @@
  * piloto automático) e à IA. Nenhuma decisão usa sorteio.
  */
 import type { DriverAttributes, Track, TyreCompound } from '@/domain/schemas';
+import { compareText } from '@/domain/text';
 import type { RaceRules } from '@/data/categories';
 import { RACE, SIM, TYRES } from '../constants';
 import { tyreCliffPenalty, tyreConditionEffect } from '../performance';
@@ -126,7 +127,7 @@ export function buildStrategyOptions(
     const plan: StrategyPlan = { startCompound: sequence[0] ?? 'medium', stops };
     options.push({ id: sequence.join('-'), label: describe(plan), plan, estimatedLoss: Math.round((tyreCost + stops.length * stopCost) * 10) / 10 });
   }
-  options.sort((a, b) => a.estimatedLoss - b.estimatedLoss || a.id.localeCompare(b.id));
+  options.sort((a, b) => a.estimatedLoss - b.estimatedLoss || compareText(a.id, b.id));
   return options.slice(0, 4);
 }
 

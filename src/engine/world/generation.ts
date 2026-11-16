@@ -15,6 +15,7 @@
  *   o degrau da categoria. Potencial: os jovens têm mais margem para evoluir.
  */
 import type { AttributeKey, CategoryId, Driver, DriverAttributes, DriverRole, Team } from '@/domain/schemas';
+import { compareText } from '@/domain/text';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
 import { NAME_POOLS, NATIONALITY_WEIGHTS } from '@/data/names';
@@ -125,7 +126,7 @@ export const teamStrength = (t: Team) => (t.car.engine + t.car.chassis) / 2;
 
 /** Equipes ordenadas da mais forte para a mais fraca. */
 export function rankTeams(teams: readonly Team[]): Team[] {
-  return [...teams].sort((a, b) => teamStrength(b) - teamStrength(a) || a.id.localeCompare(b.id));
+  return [...teams].sort((a, b) => teamStrength(b) - teamStrength(a) || compareText(a.id, b.id));
 }
 
 /** Grid completo de uma categoria: 10 equipes, cada uma com dois titulares e um reserva. */
