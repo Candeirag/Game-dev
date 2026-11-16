@@ -3,6 +3,7 @@
  * execuções com os mesmos argumentos dão o mesmo texto, letra por letra, enquanto nenhuma regra
  * do jogo mudar, e dá para comparar o relatório de uma fase com o da anterior num diff.
  */
+import { categoryRef } from '@/domain/categoryNames';
 import { formatMoney } from '@/domain/money';
 import { counted } from '@/domain/text';
 import { CATEGORIES, getCategory } from '@/data/categories';
@@ -95,7 +96,7 @@ export function formatReport(summary: SimSummary): string {
 
   section('4. Carreiras que chegam ao topo');
   out.push(
-    `Chegaram ao ${getCategory(summary.top.categoryId).name}: ${summary.top.careers} de ${summary.careers} carreiras (${percent(summary.top.share)}).`,
+    `Chegaram ${categoryRef(summary.top.categoryId, 'a')}: ${summary.top.careers} de ${summary.careers} carreiras (${percent(summary.top.share)}).`,
     `Degrau mais alto alcançado: ${CATEGORIES.map((c, i) => `${c.tier}º ${summary.highestTier[i] ?? 0}`).join(' · ')}.`,
   );
 

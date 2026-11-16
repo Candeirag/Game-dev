@@ -187,8 +187,11 @@ export function playLifeSeason(career: CareerState, policy: LifePolicy = {}, onS
     while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playRound(c, policy.choices);
     onSeasonEnd?.(c);
     if (c.succession) return botSuccession(c, policy);
-    if (engine.getPlayer(c).age >= (policy.retireAge ?? 36)) return engine.retireFromDriving(resolvePending(c));
-    return engine.startNextSeason(resolvePending(c), pickBestOffer(c));
+    // Primeiro as decisões pendentes, depois a proposta: o desfecho de um evento pode tirar o
+    // dinheiro ou a reputação que a proposta escolhida antes exigia.
+    const settled = resolvePending(c);
+    if (engine.getPlayer(settled).age >= (policy.retireAge ?? 36)) return engine.retireFromDriving(settled);
+    return engine.startNextSeason(settled, pickBestOffer(settled));
   }
   while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playExecutiveRound(c, policy.choices);
   onSeasonEnd?.(c);
