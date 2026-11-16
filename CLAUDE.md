@@ -6,8 +6,9 @@ issues, PRs) é em português do Brasil.
 
 ## As regras da grande atualização (fases 0 a 9)
 
-Valem para todas as fases. Cada regra tem um teste ou um comando que a confere; se você
-precisar contrariar uma delas, pare e pergunte antes.
+Valem para todas as fases. As regras 2 a 5, 7 e 8 têm um teste ou um comando que as confere; a 1
+e boa parte da 6 dependem de revisão (só largura da tela, sobreposição e área de toque têm teste).
+Se você precisar contrariar uma delas, pare e pergunte antes.
 
 1. **Uma fase por PR.** Nada de misturar escopos: o que não é da fase vai para "O que ficou de
    fora" do PR, não para o código. O PR não é mesclado por quem o abriu: o dono joga e aprova.

@@ -11,8 +11,10 @@
  *   `if (false)` nem constantes próprias pelo código.
  * - O motor do jogo (`src/engine`) não lê flags: regra de jogo não depende de
  *   loja, anúncio ou versão paga.
- * - Para testar uma parte escondida sem mexer neste arquivo, ligue a flag só no
- *   build: `VITE_FEATURE_FLAGS=premium,ads npm run dev` (ver `.env.example`).
+ * - Para testar uma parte escondida sem mexer neste arquivo, ligue a flag no
+ *   servidor de desenvolvimento: `VITE_FEATURE_FLAGS=premium,ads npm run dev`
+ *   (ver `.env.example`). No build de produção a variável é ignorada: um
+ *   `.env.local` esquecido não publica o jogo com uma flag ligada.
  */
 export const FEATURE_FLAGS = {
   /** Versão paga do jogo e tudo o que só ela libera. */
@@ -41,7 +43,12 @@ export function resolveFeatureFlags(overrides: string | undefined): Readonly<Rec
   return Object.fromEntries(FEATURE_FLAG_NAMES.map((name) => [name, FEATURE_FLAGS[name] || on.has(name)])) as Record<FeatureFlag, boolean>;
 }
 
-const ACTIVE = resolveFeatureFlags(import.meta.env.VITE_FEATURE_FLAGS);
+/** As flags que valem neste build: a lista de fora só é aceita fora da produção. */
+export function activeFeatureFlags(env: { PROD: boolean; VITE_FEATURE_FLAGS?: string }): Readonly<Record<FeatureFlag, boolean>> {
+  return resolveFeatureFlags(env.PROD ? undefined : env.VITE_FEATURE_FLAGS);
+}
+
+const ACTIVE = activeFeatureFlags(import.meta.env);
 
 /** A parte protegida por esta flag pode aparecer para o jogador? */
 export function isFeatureEnabled(flag: FeatureFlag): boolean {

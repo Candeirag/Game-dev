@@ -239,7 +239,7 @@ Toda gravação valida antes a carreira (integridade e o mesmo schema usado na l
 
 **Novo evento.** Acrescente uma entrada em `EVENT_DEFINITIONS` com a condição (`build` devolve `null` quando não vale) e as escolhas. Use os efeitos existentes; se precisar de um efeito novo, acrescente a variante em `EffectSchema`, o caso em `effects.ts` e suba a versão do schema se o formato de dados já gravados mudar.
 
-**Novo campo no save.** Suba `CAREER_SCHEMA_VERSION`, escreva a migração num arquivo próprio (`migrateVN.ts`, só transformação de dados, sem chamar o motor) e registre-a em `MIGRATIONS`; grave os saves da versão nova com `UPDATE_FIXTURES=1 npx vitest run tests/fixtures.test.ts` (os das versões anteriores ficam onde estão) e teste o degrau isolado com `migrateStep`. O schema descarta campos que não conhece: um campo novo sem versão nova some na primeira gravação.
+**Novo campo no save.** Suba `CAREER_SCHEMA_VERSION`, escreva a migração num arquivo próprio (`migrateVN.ts`, só transformação de dados, sem chamar o motor) e registre-a em `MIGRATIONS`; grave os saves da versão nova com `UPDATE_FIXTURES=1 npx vitest run tests/fixtures.test.ts` (os das versões anteriores ficam onde estão) e teste o degrau isolado com `migrateStep`. O schema descarta campos que não conhece: um campo novo sem versão nova é gravado e some na primeira vez que o save é aberto.
 
 **Novo ativo, traço de personalidade ou função da equipe técnica.** São dados: `data/assets.ts`, `data/family.ts`, `data/management.ts`. Um ativo com regra própria (como a residência fiscal) declara o benefício no catálogo e aplica a regra no ponto em que ela age.
 
@@ -256,7 +256,7 @@ Toda gravação valida antes a carreira (integridade e o mesmo schema usado na l
 ## Qualidade
 
 - `npm run typecheck`: TypeScript estrito (`strict`, `noUncheckedIndexedAccess`), sem `any`.
-- `npm test`: 326 testes.
+- `npm test`: todos os testes do Vitest (mais de 350; cerca de 30 s).
   - `raceEngine.test.ts`: pneus, combustível, clima, estratégia, boxes, safety car, safety car virtual, bandeira vermelha, punições, regra dos dois compostos, ordens de equipe, classificação eliminatória, todas as categorias.
   - `simulation.test.ts`, `championship.test.ts`: modelo de desempenho, sessões, pontuação por categoria, ajustes.
   - `systems.test.ts`: economia, impostos, investimentos, condição, lesões, suspensão, licença, reputação, contratos, negociação, patrocinadores, mercado, eventos e cada tipo de efeito.

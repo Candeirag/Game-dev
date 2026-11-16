@@ -18,7 +18,9 @@
  * As tabelas que já existiam antes da grande atualização continuam onde nasceram, ao lado do
  * sistema que cada uma regula, e estão mapeadas em BALANCE_TABLES. Quando uma fase mexer numa
  * dessas regras, ou numa regra cujo número ainda está solto no meio do código, traz os números
- * para cá no mesmo PR e atualiza o mapa. `tests/balance.test.ts` confere que o mapa está completo.
+ * para cá no mesmo PR e atualiza o mapa. `tests/balance.test.ts` confere que o mapa cobre todas as
+ * constantes exportadas (nome em maiúsculas) do motor e dos dados e barra constante de módulo nova
+ * fora daqui; número solto no meio de uma conta ele não vê: aí vale a revisão.
  */
 
 /**
