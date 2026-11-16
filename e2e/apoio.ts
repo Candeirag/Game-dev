@@ -20,7 +20,14 @@ export const SAVES = {
   fimDeTemporada: 'tests/fixtures/v3/atual-fim-de-temporada.json',
   formula: 'tests/fixtures/v2/formula-mid-season.json',
   antesDaReformulacao: 'tests/fixtures/v3/antes-da-reformulacao-kart-na-largada.json',
+  /** Saves da versão 3, de antes dos nomes próprios das categorias: abrem pela migração 3 → 4. */
+  antigoComAcademia: 'tests/fixtures/v3/fase0-monoposto-com-academia.json',
+  antigoNoTopo: 'tests/fixtures/v3/fase0-topo-fim-de-temporada.json',
+  antigoDirigente: 'tests/fixtures/v3/fase0-dirigente-dono-de-equipe.json',
 } as const;
+
+/** Nomes de marcas reais que saves antigos traziam por extenso e que não podem aparecer em tela nenhuma. */
+export const NOMES_ANTIGOS = /\bF[1-4]\b|Fórmula [1-4]\b/;
 
 /** Erros de página e de console acumulados durante um teste. */
 export function vigiarErros(page: Page): string[] {

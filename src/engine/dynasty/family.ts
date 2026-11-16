@@ -38,6 +38,7 @@ import { hasPersonalProperty } from '../economy/assets';
 import { createRng, gaussian, hashSeed, type Rng } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
+import { categoryRef } from '@/domain/categoryNames';
 import { counted } from '@/domain/text';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
@@ -346,7 +347,7 @@ export function closeChildSeason(
   const points = licensePointsFor(category.id, position);
   const reputation = reputationAfterSeason(racing.reputation, position, wins, category.tier);
   const season: ChildSeason = { season: career.season, year: career.year, categoryId: category.id, teamName, position, wins, inWorld: world !== null };
-  const note = `${child.firstName} terminou a ${category.shortName} em ${position}º${wins > 0 ? `, com ${counted(wins, 'vitória', 'vitórias')}` : ''}.`;
+  const note = `${child.firstName} terminou ${categoryRef(category.id, 'the')} em ${position}º${wins > 0 ? `, com ${counted(wins, 'vitória', 'vitórias')}` : ''}.`;
   return {
     child: {
       ...child,
@@ -394,12 +395,13 @@ export function planChildSeason(child: Child, career: CareerState): { child: Chi
 
   if (current.tier === 7) {
     const rating = overallRating(driver.attributes);
-    if (driver.age >= 38 || (driver.age >= 33 && rating < current.field.driverLevel - 6)) return quit('anunciou a aposentadoria da Fórmula 1.');
+    if (driver.age >= 38 || (driver.age >= 33 && rating < current.field.driverLevel - 6))
+      return quit(`anunciou a aposentadoria ${categoryRef(current.id, 'de')}.`);
     const teamRank = Math.round(clamp((racing.teamRank + clamp(Math.round((position - 1) / 2), 0, 9)) / 2, 0, 9));
     return { child: { ...child, racing: { ...racing, teamRank, teamName: teamNameAt('f1', teamRank), familyCost: 0, academy: null } }, note: '' };
   }
 
-  // Academia de F1: quem termina entre os três primeiros nas categorias intermediárias pode ser chamado.
+  // Academia de uma equipe do topo: quem termina entre os três primeiros nas categorias intermediárias pode ser chamado.
   let academy = racing.academy;
   let note = '';
   if (!academy && current.tier >= 3 && current.tier <= 5 && position <= 3 && rng.next() < FAMILY.ACADEMY_CHANCE) {
@@ -414,7 +416,7 @@ export function planChildSeason(child: Child, career: CareerState): { child: Chi
     const teamRank = Math.round(clamp(3 + (position - 1) / 1.5 - (academy ? 1 : 0), 1, 9));
     const funding = childSeatFunding(child, target, teamRank, racing.reputation, academy, scholarship);
     if (!funding.funded) {
-      note += `${child.firstName} tinha vaga na ${target.shortName}, mas não conseguiu pagar por ela. `;
+      note += `${child.firstName} tinha vaga ${categoryRef(target.id, 'em')}, mas não conseguiu pagar por ela. `;
       continue;
     }
     return {
@@ -430,11 +432,12 @@ export function planChildSeason(child: Child, career: CareerState): { child: Chi
           familyCost: funding.familyCost,
         },
       },
-      note: `${note}${child.firstName} sobe para a ${target.name}, pela ${teamNameAt(target.id, teamRank)}.`,
+      note: `${note}${child.firstName} sobe ${categoryRef(target.id, 'para')}, pela ${teamNameAt(target.id, teamRank)}.`,
     };
   }
 
-  if (driver.age > current.field.maxAge + 1) return quit(`passou da idade da ${current.shortName} sem conseguir subir e encerrou a carreira de piloto.`);
+  if (driver.age > current.field.maxAge + 1)
+    return quit(`passou da idade ${categoryRef(current.id, 'de')} sem conseguir subir e encerrou a carreira de piloto.`);
   const teamRank = Math.round(clamp((racing.teamRank + clamp(Math.round((position - 1) / 2), 0, 9)) / 2, 0, 9));
   const funding = childSeatFunding(child, current, teamRank, racing.reputation, academy, 0);
   if (funding.funded) {

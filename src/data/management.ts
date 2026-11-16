@@ -3,7 +3,7 @@
  *
  * As ordens de grandeza derivam da economia dos pilotos (categories.ts): nas
  * categorias de base, a receita principal de uma equipe são os dois pilotos
- * que pagam pela vaga; na Fórmula 1, são os prêmios e os patrocinadores, e é a
+ * que pagam pela vaga; no Grand Prix Mundial, são os prêmios e os patrocinadores, e é a
  * equipe que paga os pilotos.
  */
 import type { CategoryId, DevArea, FacilityKey, ResearchSpend, StaffRole } from '@/domain/schemas';
@@ -191,7 +191,7 @@ export const MANAGEMENT = {
   FACTORY_COST_DISCOUNT: 0.03,
   /** Simulador: +4% no desenvolvimento dos pilotos da equipe por nível. */
   SIMULATOR_DRIVER_DEV: 0.04,
-  /** Horas de túnel na F1: 70% para a campeã, mais 5 pontos percentuais por posição. */
+  /** Horas de túnel no Grand Prix Mundial: 70% para a campeã, mais 5 pontos percentuais por posição. */
   WIND_TUNNEL_ALLOWANCE: { base: 0.7, perPosition: 0.05 },
   /** Manutenção anual das instalações: 12% do custo de um nível, por nível. */
   FACILITY_UPKEEP: 0.12,

@@ -24,6 +24,7 @@ import { updateMarketInterest } from './market';
 import { fullName } from './selectors';
 import { familySupport } from './sponsors';
 import { TRAINABLE_ATTRIBUTES } from './training';
+import { categoryRef } from '@/domain/categoryNames';
 import { currencyForNationality, formatMoney } from '@/domain/money';
 
 export const PLAYER_DRIVER_ID = 'player';
@@ -83,6 +84,8 @@ const ROOKIE_SEAT_DISCOUNT = 0.25;
 export function createCareer(input: NewCareerInput, seed: number, now: string): CareerState {
   const problems = validateNewCareerInput(input);
   if (problems.length) throw new Error(problems.join(' '));
+  // A semente vai para o save e entra em todos os sorteios: tem de ser um inteiro de 32 bits sem sinal.
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error(`Semente inválida: ${seed}.`);
 
   const background = PLAYER_BACKGROUNDS.find((b) => b.id === input.background);
   if (!background) throw new Error('Perfil inválido.');
@@ -210,7 +213,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
         date: firstDate,
         category: 'team',
         title: `Bem-vindo à ${team.name}`,
-        body: `Você é o novo piloto da ${team.name} no ${category.name} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. A vaga custa ${formatMoney(seatCost, currencyForNationality(input.nationality))} por temporada, pagos em parcelas por etapa; a família ajuda nos cinco primeiros anos. Escolha o programa de treino no painel e prepare-se para a etapa de abertura.`,
+        body: `Você é o novo piloto da ${team.name} ${categoryRef(category.id, 'em')} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. A vaga custa ${formatMoney(seatCost, currencyForNationality(input.nationality))} por temporada, pagos em parcelas por etapa; a família ajuda nos cinco primeiros anos. Escolha o programa de treino no painel e prepare-se para a etapa de abertura.`,
       },
     ],
   };

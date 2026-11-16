@@ -1,7 +1,6 @@
 import type { DriverAttributes } from '@/domain/schemas';
 
-/** Categoria em que toda carreira começa. As regras de cada categoria ficam em categories.ts. */
-export const CHAMPIONSHIP_NAME = 'Campeonato Regional de Kart';
+/** Ano da primeira temporada de toda carreira. As regras de cada categoria ficam em categories.ts. */
 export const FIRST_SEASON_YEAR = 2027;
 
 /** Tentativas lançadas de cada piloto na classificação. */

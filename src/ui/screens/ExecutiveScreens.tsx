@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORY_IDS, PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type CategoryId, type PracticeProgram, type QualifyingApproach } from '@/domain/schemas';
 import { PRACTICE_PROGRAM_LABELS, QUALIFYING_APPROACH_LABELS } from '@/domain/labels';
+import { TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { counted } from '@/domain/text';
 import { getCategory } from '@/data/categories';
 import { MANAGEMENT, REGULATIONS } from '@/data/management';
@@ -516,7 +517,7 @@ export function ExecutiveCareerScreen() {
                 Como <b className="text-ink-100">dono</b>, o lucro (e o prejuízo) é seu, e a equipe passa aos herdeiros.
               </li>
               <li>
-                Regulamento da {category.shortName}: {REGULATIONS[category.id].summary}
+                Regulamento {categoryRef(category.id, 'de')}: {REGULATIONS[category.id].summary}
               </li>
             </ul>
           </Card>
@@ -711,9 +712,9 @@ export function ExecutiveCareerScreen() {
               })}
           </ul>
           <p className="mt-3 text-xs text-ink-400">
-            O primeiro escolhido é o primeiro piloto. Pilotos melhores pedem salário maior (na F1) ou pagam menos pela vaga (nas categorias de base), e só
-            aceitam equipes à altura da ambição deles. Quem recusa quer uma equipe mais forte, ou chegou à idade-limite da categoria. Um filho corre pela equipe
-            da família sem salário e sem pagar pela vaga.
+            O primeiro escolhido é o primeiro piloto. Pilotos melhores pedem salário maior ({categoryRef(TOP_CATEGORY_ID, 'em')}) ou pagam menos pela vaga (nas
+            categorias de base), e só aceitam equipes à altura da ambição deles. Quem recusa quer uma equipe mais forte, ou chegou à idade-limite da categoria.
+            Um filho corre pela equipe da família sem salário e sem pagar pela vaga.
           </p>
         </Card>
       )}

@@ -54,6 +54,7 @@ import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, rankTeams } from '../world/generation';
 import { childSummary, closeFamilyYear, emptyFamily } from './family';
 import { beginSeasonFamily } from './familyEvents';
+import { categoryRef } from '@/domain/categoryNames';
 import { money } from '../career/selectors';
 
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
@@ -540,7 +541,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     date,
     category: 'family',
     title: `${fullName(player)} continua a história`,
-    body: `${fullName(player)}, ${player.age} anos, é agora o piloto da família ${former.lastName}: corre a ${category.name} pela ${team.name}, como ${role === 'first' ? 'primeiro' : 'segundo'} piloto. A vaga custa ${money(career, seatCost)} por temporada. ${notes.join(' ')}`,
+    body: `${fullName(player)}, ${player.age} anos, é agora o piloto da família ${former.lastName}: corre ${categoryRef(category.id, 'the')} pela ${team.name}, como ${role === 'first' ? 'primeiro' : 'segundo'} piloto. A vaga custa ${money(career, seatCost)} por temporada. ${notes.join(' ')}`,
   };
   return beginSeasonFamily({ ...next, inbox: pushMessages(state.inbox, [message]) });
 }

@@ -1,6 +1,8 @@
 /** Ajuda: tutorial em passos e um resumo de como o jogo funciona, um assunto por vez. */
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Briefcase, Check, CircleUser, Flag, Heart, ListChecks, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
+import { CATEGORY_NAMES, FIRST_CATEGORY_ID, FIRST_FORMULA_CATEGORY_ID, TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
+import { capitalize } from '@/domain/text';
 import { tutorialSteps } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, PageHeader, cx } from '../components/ui';
@@ -74,11 +76,11 @@ const TOPICS: { id: string; title: string; icon: LucideIcon; items: string[] }[]
     icon: Flag,
     items: [
       'Treino livre: acerto, simulação de classificação ou ritmo de corrida. Classificação: segura, equilibrada ou ataque total.',
-      'Da Fórmula 4 em diante há estratégia de pneus, paradas, combustível, safety car e chuva que muda no meio da prova.',
+      `${capitalize(categoryRef(FIRST_FORMULA_CATEGORY_ID, 'de'))} em diante há estratégia de pneus, paradas, combustível, safety car e chuva que muda no meio da prova.`,
       'As decisões pendentes (eventos) precisam ser resolvidas antes de abrir o fim de semana.',
       'A corrida é mostrada na pista: toque em Largar, controle a transmissão com Pausar, 1× a 8× e +1 volta, e escolha entre a câmera geral e a que acompanha o seu carro. Tocar num piloto da classificação (ou num carro) o destaca.',
       'Ritmo e pedido de parada valem para a volta seguinte à que o líder está fazendo; a tela mostra qual é. Reiniciar visualização só repete as imagens: o que já aconteceu não muda.',
-      'Cada categoria tem o seu veículo, do kart 4 tempos ao Fórmula 1. As pistas seguem o traçado de circuitos reais, com nomes fictícios. Autódromos: geometria de bacinger/f1-circuits (licença MIT). Kartódromos: traçados © OpenStreetMap contributors (licença ODbL); só o Circuito do Oásis ainda tem traçado gerado pelo jogo.',
+      `Cada categoria tem o seu veículo, do ${CATEGORY_NAMES[FIRST_CATEGORY_ID].vehicleName.toLowerCase()} ao ${CATEGORY_NAMES[TOP_CATEGORY_ID].vehicleName}. As pistas seguem o traçado de circuitos reais, com nomes fictícios. Autódromos: geometria de bacinger/f1-circuits (licença MIT). Kartódromos: traçados © OpenStreetMap contributors (licença ODbL); só o Circuito do Oásis ainda tem traçado gerado pelo jogo.`,
     ],
   },
   {
@@ -86,7 +88,7 @@ const TOPICS: { id: string; title: string; icon: LucideIcon; items: string[] }[]
     title: 'Carreira',
     icon: TrendingUp,
     items: [
-      'Sete degraus, do kart regional à Fórmula 1. Para subir: licença, reputação, experiência, idade, dinheiro e uma equipe interessada.',
+      `Sete degraus, do kart regional ${categoryRef(TOP_CATEGORY_ID, 'a')}. Para subir: licença, reputação, experiência, idade, dinheiro e uma equipe interessada.`,
       'No fim do ano, as propostas ficam na tela Carreira. Dá para negociar salário, vaga, bônus, função e duração.',
       'Terminar entre os três primeiros dá bolsa na vaga do degrau de cima.',
     ],

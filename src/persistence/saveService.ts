@@ -16,7 +16,7 @@ import { getCategory } from '@/data/categories';
 import { getPlayer, driverStandings, teamStandings } from '@/engine';
 import { checksumOf } from './checksum';
 import { validateCareerIntegrity } from './integrity';
-import { migrateCareerData } from './migrations';
+import { NewerSchemaError, migrateCareerData } from './migrations';
 import type { StorageAdapter } from './storage';
 import { currencyForNationality, relabelMoney } from '@/domain/money';
 import { fixStoredPlurals } from '@/domain/text';
@@ -54,6 +54,14 @@ export class SaveError extends Error {
   ) {
     super(message);
     this.name = 'SaveError';
+  }
+}
+
+/** Save íntegro, mas de uma versão mais nova do jogo: não pode ser aberto nem trocado pela cópia de segurança. */
+export class NewerSaveError extends SaveError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NewerSaveError';
   }
 }
 
@@ -111,6 +119,7 @@ export function parseEnvelope(raw: unknown): CareerState {
   try {
     migrated = migrateCareerData(envelope.career);
   } catch (error) {
+    if (error instanceof NewerSchemaError) throw new NewerSaveError(error.message);
     throw new SaveError(error instanceof Error ? error.message : 'Falha ao migrar o save.');
   }
 
@@ -174,6 +183,9 @@ export async function loadCareer(storage: StorageAdapter, slot: SaveSlotId): Pro
   try {
     return { career: parseEnvelope(primary), recoveredFromBackup: false };
   } catch (primaryError) {
+    // Um save de versão mais nova não está danificado. A cópia de segurança é mais antiga: carregá-la
+    // no lugar dele faria o jogador perder o progresso sem perceber, na gravação automática seguinte.
+    if (primaryError instanceof NewerSaveError) throw primaryError;
     const backup = await storage.get(backupKey(slot));
     if (backup !== undefined) {
       try {
@@ -188,7 +200,8 @@ export async function loadCareer(storage: StorageAdapter, slot: SaveSlotId): Pro
 
 export interface SlotInfo {
   slot: SaveSlotId;
-  status: 'empty' | 'ok' | 'corrupted';
+  /** 'newer' = gravado por uma versão mais nova do jogo (íntegro, mas este build não o lê). */
+  status: 'empty' | 'ok' | 'corrupted' | 'newer';
   savedAt?: string;
   summary?: SaveSummary;
   error?: string;
@@ -200,11 +213,12 @@ export async function listSaves(storage: StorageAdapter): Promise<SlotInfo[]> {
       const raw = await storage.get(slot);
       if (raw === undefined) return { slot, status: 'empty' };
       try {
-        parseEnvelope(raw);
-        const env = raw as SaveEnvelope;
-        return { slot, status: 'ok', savedAt: env.savedAt, summary: env.summary };
+        // O resumo é refeito a partir da carreira já migrada, e não lido do arquivo: assim um save
+        // gravado por uma versão anterior aparece na lista com os nomes de hoje.
+        const career = parseEnvelope(raw);
+        return { slot, status: 'ok', savedAt: (raw as SaveEnvelope).savedAt, summary: summarize(career) };
       } catch (error) {
-        return { slot, status: 'corrupted', error: error instanceof Error ? error.message : String(error) };
+        return { slot, status: error instanceof NewerSaveError ? 'newer' : 'corrupted', error: error instanceof Error ? error.message : String(error) };
       }
     }),
   );

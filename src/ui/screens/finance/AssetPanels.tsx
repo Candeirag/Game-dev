@@ -3,6 +3,7 @@ import { type ReactNode, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { LIFESTYLES } from '@/domain/schemas';
 import { LIFESTYLE_LABELS } from '@/domain/labels';
+import { categoryRef } from '@/domain/categoryNames';
 import { counted } from '@/domain/text';
 import { ASSET_RULES, BUSINESSES, LIFESTYLE_RULES, PROPERTIES, STOCKS } from '@/data/assets';
 import { getCategory } from '@/data/categories';
@@ -391,7 +392,7 @@ export function StakesPanel() {
         </Card>
       )}
       <Card
-        title={`Equipes da ${category.shortName}`}
+        title={`Equipes ${categoryRef(category.id, 'de', { short: true })}`}
         action={
           <span className="flex items-center gap-2 text-xs text-ink-400">
             Fatia a comprar

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardPaste, Copy, Download, FileUp } from 'lucide-react';
+import { CATEGORY_NAMES, FIRST_CATEGORY_ID } from '@/domain/categoryNames';
 import { SAVE_SLOTS, type SaveSlotId } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, PageHeader, cx } from '../components/ui';
@@ -99,18 +100,19 @@ export function SavesScreen() {
                       {empty && <span className="text-ink-500">Vazio</span>}
                       {summary && (
                         <>
-                          {summary.playerName} · {summary.categoryName ?? 'Kart Regional'} · {summary.teamName} · {summary.year} · {summary.roundsCompleted}/
-                          {summary.totalRounds} etapas
+                          {summary.playerName} · {summary.categoryName ?? CATEGORY_NAMES[FIRST_CATEGORY_ID].shortName} · {summary.teamName} · {summary.year} ·{' '}
+                          {summary.roundsCompleted}/{summary.totalRounds} etapas
                           {summary.championshipPosition && ` · ${summary.championshipPosition}º no campeonato`}
                         </>
                       )}
                       {slot?.status === 'corrupted' && <span className="text-gold-400">Danificado: {slot.error}</span>}
+                      {slot?.status === 'newer' && <span className="text-gold-400">{slot.error}</span>}
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     {id !== 'auto' && <Button onClick={() => void run(() => saveToSlot(id), `Carreira salva em ${SLOT_LABELS[id]}.`)}>Salvar aqui</Button>}
                     <Button
-                      disabled={empty}
+                      disabled={empty || slot?.status === 'newer'}
                       onClick={() =>
                         void run(async () => {
                           await loadSlot(id);

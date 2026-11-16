@@ -102,6 +102,26 @@ for (const formato of TELAS) {
       expect(erros).toEqual([]);
     });
 
+    test('topo da escada, num save antigo: os nomes mais longos cabem', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.antigoNoTopo);
+      await conferirTela(page, 'topo-painel', formato.nome);
+      for (const [nome, arquivo, abas] of [
+        ['Carreira', 'topo-carreira', ['Escada', 'Licença', 'Interesse']],
+        ['Equipe', 'topo-equipe', ['Contrato']],
+        ['Histórico', 'topo-historico', []],
+        ['Classificação', 'topo-classificacao', ['Equipes']],
+      ] as const) {
+        await irPara(page, nome);
+        await conferirTela(page, arquivo, formato.nome);
+        for (const aba of abas) {
+          await page.getByRole('main').getByRole('tab', { name: aba, exact: true }).click();
+          await conferirTela(page, `${arquivo}-${aba.toLowerCase().replaceAll(' ', '-')}`, formato.nome);
+        }
+      }
+      expect(erros).toEqual([]);
+    });
+
     test('vida: finanças e família', async ({ page }) => {
       const erros = vigiarErros(page);
       await abrirSave(page, SAVES.formula);

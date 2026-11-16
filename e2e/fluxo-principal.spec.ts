@@ -4,7 +4,7 @@
  * e recarregar a página para abrir o save automático.
  */
 import { expect, test } from '@playwright/test';
-import { SAVES, abrirSave, irPara, vigiarErros } from './apoio';
+import { NOMES_ANTIGOS, SAVES, abrirSave, irPara, vigiarErros } from './apoio';
 
 test.use({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
@@ -70,5 +70,63 @@ test('abre um save gravado antes da reformulação visual e segue para a corrida
   await irPara(page, 'Fim de semana');
   await page.getByRole('button', { name: 'Ir para a largada' }).click();
   await expect(page.getByRole('region', { name: 'Comandos da corrida' })).toBeVisible();
+  expect(erros).toEqual([]);
+});
+
+test('abre um save da versão 3: a carreira continua inteira e com os nomes próprios das categorias', async ({ page }) => {
+  const erros = vigiarErros(page);
+  await abrirSave(page, SAVES.antigoComAcademia);
+  // Sétima temporada, no primeiro degrau dos monopostos: mesma etapa e mesma equipe, com o nome novo da categoria.
+  const topo = page.getByRole('banner').first();
+  await expect(topo).toContainText('F. Júnior 2033');
+  await expect(topo).toContainText('Etapa 5 de 10');
+  const corpo = page.locator('body');
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+
+  // A academia, que levava o nome antigo de uma equipe, continua ligada ao piloto.
+  await irPara(page, 'Equipe');
+  await page.getByRole('main').getByRole('tab', { name: 'Contrato', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Academia Stallion Autosport' })).toBeVisible();
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+
+  // Requisitos do próximo degrau: o que o piloto tem e o mínimo, e o nome com a contração certa.
+  await irPara(page, 'Carreira');
+  await expect(page.getByRole('heading', { name: 'Requisitos para a F. Sprint' })).toBeVisible();
+  await expect(page.getByRole('main')).toContainText(/Idade: \d+ anos na próxima temporada \(mínimo 16\)/);
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+  await irPara(page, 'Histórico');
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+
+  // O save automático já foi regravado na versão nova: recarregar traz a mesma carreira.
+  await page.reload();
+  const continuar = page.getByRole('button', { name: /^Continuar:/ });
+  await expect(continuar).toContainText('F. Júnior 2033');
+  await continuar.click();
+  await page.waitForURL(/#\/dashboard/);
+  await expect(page.getByRole('banner').first()).toContainText('Etapa 5 de 10');
+  expect(erros).toEqual([]);
+});
+
+test('abre saves da versão 3 no topo da escada e no modo dirigente, sem nomes antigos', async ({ page }) => {
+  const erros = vigiarErros(page);
+  const corpo = page.locator('body');
+  await abrirSave(page, SAVES.antigoNoTopo);
+  await expect(page.getByRole('banner').first()).toContainText('GP Mundial 2038');
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+  await irPara(page, 'Carreira');
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+  await page.getByRole('main').getByRole('tab', { name: 'Escada', exact: true }).click();
+  await expect(page.getByRole('main')).toContainText('Você chegou ao Grand Prix Mundial.');
+  await irPara(page, 'Classificação');
+  await page.getByRole('main').getByRole('tab', { name: 'Equipes', exact: true }).click();
+  await expect(page.getByRole('main')).toContainText('Azure Motorsport');
+  await expect(page.getByRole('main')).toContainText('Stallion Autosport');
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+
+  await abrirSave(page, SAVES.antigoDirigente);
+  await expect(page.getByRole('banner').first()).toContainText('F. Elite 2043');
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
+  await irPara(page, 'Gestão');
+  await expect(corpo).not.toContainText(NOMES_ANTIGOS);
   expect(erros).toEqual([]);
 });

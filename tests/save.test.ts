@@ -4,9 +4,22 @@ import { describe, expect, it } from 'vitest';
 import { CAREER_SCHEMA_VERSION, CareerStateSchema } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { IndexedDbStorage, MemoryStorage } from '@/persistence/storage';
-import { SaveError, createEnvelope, deleteSave, exportCareer, importCareer, listSaves, loadCareer, parseEnvelope, saveCareer } from '@/persistence/saveService';
+import {
+  NewerSaveError,
+  SaveError,
+  createEnvelope,
+  deleteSave,
+  exportCareer,
+  importCareer,
+  listSaves,
+  loadCareer,
+  parseEnvelope,
+  saveCareer,
+} from '@/persistence/saveService';
 import { canonicalStringify, checksumOf } from '@/persistence/checksum';
-import { migrateCareerData } from '@/persistence/migrations';
+import { F1_TEAM_NAMES, initialTeams } from '@/data/teams';
+import { renameStoredText } from '@/persistence/migrateV3';
+import { MIGRATIONS, migrateCareerData, migrateStep } from '@/persistence/migrations';
 import {
   buildRaceContext,
   completeWeekend,
@@ -92,6 +105,26 @@ describe('saves', () => {
 
   it('recusa saves de versões futuras do schema', () => {
     expect(() => migrateCareerData({ schemaVersion: 99 })).toThrow(/mais nova/);
+  });
+
+  it('um save de versão mais nova não é dado como danificado nem trocado pela cópia de segurança', async () => {
+    const storage = new MemoryStorage();
+    await saveCareer(storage, 'slot1', newCareer(31), NOW);
+    await saveCareer(storage, 'slot1', career, NOW);
+    // O slot passa a ter um save do "futuro" (o build de uma fase seguinte), com a cópia de segurança de hoje ao lado.
+    const future = { ...career, schemaVersion: CAREER_SCHEMA_VERSION + 1, campoNovo: true };
+    storage.rawSet('slot1', {
+      format: 'apex-motorsport-dynasty-save',
+      schemaVersion: CAREER_SCHEMA_VERSION + 1,
+      savedAt: NOW,
+      checksum: checksumOf(future),
+      career: future,
+    });
+    await expect(loadCareer(storage, 'slot1')).rejects.toThrow(NewerSaveError);
+    await expect(loadCareer(storage, 'slot1')).rejects.toThrow(/versão mais nova do jogo.*Atualize/);
+    const slot = (await listSaves(storage)).find((s) => s.slot === 'slot1')!;
+    expect(slot.status).toBe('newer');
+    expect(slot.error).toContain(`formato ${CAREER_SCHEMA_VERSION + 1}; esta versão lê até o ${CAREER_SCHEMA_VERSION}`);
   });
 
   it('não salva uma carreira inconsistente', async () => {
@@ -195,3 +228,162 @@ function continueWeekend(c: Parameters<typeof playRound>[0]) {
   const race = simulateRemainingRace(createWeekendRace(c), buildRaceContext(c), { mode: 'balanced', auto: true });
   return resolvePending(completeWeekend(c, race));
 }
+
+/**
+ * Degrau 3 → 4 (Fase 0): os nomes próprios das categorias e das equipes entram no lugar dos de
+ * marcas reais em tudo o que o save traz escrito, sem mexer em mais nada.
+ */
+describe('migração da versão 3 para a 4', () => {
+  const V3 = ['fase0-monoposto-com-academia', 'fase0-topo-fim-de-temporada', 'fase0-dirigente-dono-de-equipe'] as const;
+  const rawCareer = (name: string) => (JSON.parse(readFileSync(`tests/fixtures/v3/${name}.json`, 'utf8')) as { career: Record<string, unknown> }).career;
+  const OLD_NAMES = /\bF[1-4]\b|Fórmula [1-4]\b|Azure F1 Team|Stallion F1/;
+
+  /** Todas as folhas de texto de um save, com o caminho de cada uma. */
+  function strings(value: unknown, path = '', out: [string, string][] = []): [string, string][] {
+    if (typeof value === 'string') out.push([path, value]);
+    else if (Array.isArray(value)) value.forEach((inner, index) => void strings(inner, `${path}[${index}]`, out));
+    else if (value !== null && typeof value === 'object') for (const [key, inner] of Object.entries(value)) strings(inner, `${path}.${key}`, out);
+    return out;
+  }
+
+  /** O save sem os textos: estrutura, números, booleanos e nulos. */
+  const withoutStrings = (value: unknown): unknown =>
+    typeof value === 'string'
+      ? '§'
+      : Array.isArray(value)
+        ? value.map(withoutStrings)
+        : value !== null && typeof value === 'object'
+          ? Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, withoutStrings(inner)]))
+          : value;
+
+  it('troca os nomes nas frases, com a contração no gênero do nome novo', () => {
+    const cases: [string, string][] = [
+      ['Você se formou na Academia Emerald GP: chegou à Fórmula 1.', 'Você se formou na Academia Emerald GP: chegou ao Grand Prix Mundial.'],
+      [
+        'Você segue na Fórmula 1, pela Albion Grand Prix, como primeiro piloto.',
+        'Você segue no Grand Prix Mundial, pela Albion Grand Prix, como primeiro piloto.',
+      ],
+      ['Você vai disputar a Fórmula 1, pela Massif Racing.', 'Você vai disputar o Grand Prix Mundial, pela Massif Racing.'],
+      [
+        'Olheiros da Corsa Imperiale, da Fórmula 1, acompanham a sua temporada.',
+        'Olheiros da Corsa Imperiale, do Grand Prix Mundial, acompanham a sua temporada.',
+      ],
+      ['Você subiu para a Fórmula 2, pela Sterling Motorsport.', 'Você subiu para a Fórmula Elite, pela Sterling Motorsport.'],
+      [
+        'Você comanda a Castilla Racing na Fórmula 2. Meta: terminar entre as 7 primeiras.',
+        'Você comanda a Castilla Racing na Fórmula Elite. Meta: terminar entre as 7 primeiras.',
+      ],
+      ['Regulamento técnico novo na F1: as equipes refizeram o projeto.', 'Regulamento técnico novo no Grand Prix Mundial: as equipes refizeram o projeto.'],
+      ['Bia terminou a F3 em 2º.', 'Bia terminou a Fórmula Sprint em 2º.'],
+      ['Na F4, a vaga custa caro.', 'Na Fórmula Júnior, a vaga custa caro.'],
+      ['Temporada 2038: F1', 'Temporada 2038: GP Mundial'],
+      ['Temporada 2033: F4', 'Temporada 2033: F. Júnior'],
+      ['Filho(a): F3, Prisma Racing. Perfil: disciplinado.', 'Filho(a): F. Sprint, Prisma Racing. Perfil: disciplinado.'],
+      ['Callum Whitaker troca a Orion Grand Prix pela Stallion F1.', 'Callum Whitaker troca a Orion Grand Prix pela Stallion Autosport.'],
+      ['Apoio da Academia Azure F1 Team', 'Apoio da Academia Azure Motorsport'],
+    ];
+    for (const [before, after] of cases) expect(renameStoredText(before)).toBe(after);
+  });
+
+  it('acerta a concordância que as versões antigas erravam nos campeonatos de kart', () => {
+    expect(renameStoredText('Você subiu para a Campeonato Mundial de Kart, pela Scuderia Aurora.')).toBe(
+      'Você subiu para o Campeonato Mundial de Kart, pela Scuderia Aurora.',
+    );
+    expect(renameStoredText('Você segue na Campeonato Regional de Kart, pela Cerrado Kart Club.')).toBe(
+      'Você segue no Campeonato Regional de Kart, pela Cerrado Kart Club.',
+    );
+    expect(renameStoredText('Ana Teste é o campeão da Kart Regional.')).toBe('Ana Teste é o campeão do Kart Regional.');
+    expect(renameStoredText('Léo terminou a Kart Nacional em 4º.')).toBe('Léo terminou o Kart Nacional em 4º.');
+  });
+
+  it('não mexe em ids, em nomes parecidos nem no que já está certo', () => {
+    for (const text of [
+      'f1-azure-f1-team',
+      'offer-s12-f1:f1-stallion-f1',
+      'Albion Grand Prix',
+      'Serra Kart Team',
+      'Você é o novo piloto da Cerrado Kart Club no Campeonato Regional de Kart de 2027.',
+      'Você subiu para o Grand Prix Mundial, pela Azure Motorsport.',
+      'AF1',
+      'F10',
+    ]) {
+      expect(renameStoredText(text)).toBe(text);
+    }
+  });
+
+  it('preserva o que o jogador digitou, mesmo dentro das frases', () => {
+    const typed = ['Scuderia F1'];
+    expect(renameStoredText('Scuderia F1', typed)).toBe('Scuderia F1');
+    expect(renameStoredText('Você fundou a Scuderia F1, que estreia na Fórmula 4.', typed)).toBe('Você fundou a Scuderia F1, que estreia na Fórmula Júnior.');
+    // Numa carreira inteira: o nome da equipe fundada e o sobrenome da família ficam como estão.
+    const raw = rawCareer('fase0-dirigente-dono-de-equipe');
+    const teams = raw.teams as { id: string; name: string }[];
+    const own = { ...teams[0]!, id: 'own-abc', name: 'Equipe F1 do Zé' };
+    const inbox = raw.inbox as { id: string; title: string; body: string }[];
+    const custom = {
+      ...raw,
+      teams: [own, ...teams.slice(1)],
+      inbox: [{ ...inbox[0]!, title: 'Temporada 2043: F2', body: 'Você fundou a Equipe F1 do Zé, que estreia na Fórmula 2.' }, ...inbox.slice(1)],
+    };
+    const migrated = migrateStep(custom, 3) as typeof custom;
+    expect(migrated.teams[0]!.name).toBe('Equipe F1 do Zé');
+    expect(migrated.inbox[0]).toMatchObject({ title: 'Temporada 2043: F. Elite', body: 'Você fundou a Equipe F1 do Zé, que estreia na Fórmula Elite.' });
+  });
+
+  it.each(V3)('%s: só os textos com nomes antigos mudam; estrutura, números e ids ficam iguais', (name) => {
+    const before = rawCareer(name);
+    const after = migrateStep(before, 3);
+    expect(after.schemaVersion).toBe(4);
+    expect(withoutStrings({ ...after, schemaVersion: 3 })).toEqual(withoutStrings(before));
+    const was = strings(before);
+    const now = new Map(strings(after));
+    const changed = was.filter(([path, text]) => now.get(path) !== text);
+    expect(changed.length).toBeGreaterThan(0);
+    // Tudo o que mudou citava um nome antigo (ou a sigla de uma das duas equipes rebatizadas)...
+    for (const [path, text] of changed) expect(OLD_NAMES.test(text) || /\.shortName$/.test(path), `${path}: ${text}`).toBe(true);
+    // ...e nada do que citava ficou para trás.
+    expect(strings(after).filter(([, text]) => OLD_NAMES.test(text))).toEqual([]);
+    // Ids e referências não são texto de exibição: continuam idênticos.
+    const ids = (career: Record<string, unknown>) => strings(career).filter(([path]) => /(\.id|Id|\.driverId|\.teamId)$/.test(path));
+    expect(ids(after)).toEqual(ids(before));
+    // Rodar a migração de novo não muda mais nada.
+    expect(migrateStep({ ...after, schemaVersion: 3 }, 3)).toEqual(after);
+  });
+
+  it('as equipes rebatizadas mantêm o id e ganham o nome e a sigla novos', () => {
+    const career = importCareer(readFileSync('tests/fixtures/v3/fase0-topo-fim-de-temporada.json', 'utf8'));
+    expect(career.teams.find((t) => t.id === 'f1-azure-f1-team')).toMatchObject({ name: 'Azure Motorsport', shortName: 'AM' });
+    expect(career.teams.find((t) => t.id === 'f1-stallion-f1')).toMatchObject({ name: 'Stallion Autosport', shortName: 'SA' });
+    // O save aberto é igual ao que o jogo de hoje criaria: as equipes batem com os dados atuais.
+    const today = Object.fromEntries(initialTeams('f1').map((t) => [t.id, { name: t.name, shortName: t.shortName }]));
+    for (const team of career.teams) expect({ name: team.name, shortName: team.shortName }).toEqual(today[team.id]);
+  });
+
+  it('a academia gravada com o nome antigo continua reconhecida', () => {
+    const career = importCareer(readFileSync('tests/fixtures/v3/fase0-monoposto-com-academia.json', 'utf8'));
+    expect(career.academy).toMatchObject({ f1TeamId: 'f1-stallion-f1', name: 'Academia Stallion Autosport' });
+    expect(F1_TEAM_NAMES.some((team) => career.academy?.name === `Academia ${team}`)).toBe(true);
+    expect(career.finance.transactions.filter((t) => t.label === 'Apoio da Academia Stallion Autosport').length).toBeGreaterThan(0);
+  });
+
+  it('a lista de saves mostra o resumo com os nomes de hoje, mesmo de um arquivo antigo', async () => {
+    const storage = new MemoryStorage();
+    const envelope = JSON.parse(readFileSync('tests/fixtures/v3/fase0-topo-fim-de-temporada.json', 'utf8')) as { summary: { categoryName: string } };
+    expect(envelope.summary.categoryName).toBe('F1');
+    storage.rawSet('slot1', envelope);
+    const slot = (await listSaves(storage)).find((s) => s.slot === 'slot1')!;
+    expect(slot).toMatchObject({ status: 'ok', summary: { categoryName: 'GP Mundial', teamName: 'Rheingold Racing' } });
+  });
+
+  it('um save da versão 1 passa por todos os degraus até a atual', () => {
+    let data = (JSON.parse(readFileSync('tests/fixtures/v1/second-season.json', 'utf8')) as { career: Record<string, unknown> }).career;
+    const seen = [data.schemaVersion];
+    while ((data.schemaVersion as number) < CAREER_SCHEMA_VERSION) {
+      data = migrateStep(data, data.schemaVersion as number);
+      seen.push(data.schemaVersion);
+    }
+    expect(seen).toEqual([1, 2, 3, 4]);
+    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3]);
+    expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
+  });
+});

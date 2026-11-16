@@ -15,8 +15,25 @@
  * equipe, a sucessão e o tutorial. É uma migração só de dados: acrescenta os
  * campos novos no estado inicial, sem chamar o motor do jogo. Um save da
  * Fase 2 continua exatamente de onde parou.
+ *
+ * Versão 3 → 4 (Fase 0 da grande atualização): os nomes próprios das
+ * categorias e de duas equipes substituem os de marcas reais em tudo o que o
+ * save traz escrito. A estrutura não muda. Ver migrateV3.ts.
+ *
+ * Como acrescentar a próxima versão (a migração é encadeada: um save da
+ * versão 1 passa por 1 → 2 → 3 → 4 → … até a atual):
+ * 1. suba CAREER_SCHEMA_VERSION em src/domain/schemas.ts e ajuste o schema;
+ * 2. escreva `migrateVN` (N = a versão de origem) num arquivo próprio,
+ *    `migrateVN.ts`, só com dados: recebe o save da versão N e devolve o da
+ *    N + 1, sem chamar o motor do jogo;
+ * 3. registre a função em MIGRATIONS, na chave N;
+ * 4. grave saves da versão nova com
+ *    `UPDATE_FIXTURES=1 npx vitest run tests/fixtures.test.ts`
+ *    (os das versões anteriores ficam onde estão, para sempre) e teste o
+ *    degrau novo em tests/save.test.ts, isolado, com `migrateStep`.
  */
 import { CAREER_SCHEMA_VERSION, type CareerState, type Contract, type Driver, type Team } from '@/domain/schemas';
+import { compareText } from '@/domain/text';
 import { initialStockPrices } from '@/data/assets';
 import { getCategory } from '@/data/categories';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
@@ -29,9 +46,24 @@ import { fullName } from '@/engine/career/selectors';
 import { familySupport } from '@/engine/career/sponsors';
 import { overallRating } from '@/engine/simulation/performance';
 import { generateReserve, rankTeams } from '@/engine/world/generation';
+import { migrateV3 } from './migrateV3';
 
 type Loose = Record<string, unknown>;
 type Migration = (data: Loose) => Loose;
+
+/**
+ * O save foi gravado por uma versão mais nova do jogo do que esta. Ele não está danificado: este
+ * build só não sabe lê-lo. Quem carrega trata o caso à parte, para nunca pôr uma cópia mais
+ * antiga no lugar dele.
+ */
+export class NewerSchemaError extends Error {
+  constructor(readonly version: number) {
+    super(
+      `Este save foi gravado por uma versão mais nova do jogo (formato ${version}; esta versão lê até o ${CAREER_SCHEMA_VERSION}). Atualize o jogo para abri-lo.`,
+    );
+    this.name = 'NewerSchemaError';
+  }
+}
 
 const list = (value: unknown): Loose[] => (Array.isArray(value) ? (value as Loose[]) : []);
 const obj = (value: unknown): Loose => (value !== null && typeof value === 'object' ? (value as Loose) : {});
@@ -72,7 +104,7 @@ function migrateV1(data: Loose): Loose {
     if (!d.teamId) return d;
     const mates = base
       .filter((x) => x.teamId === d.teamId)
-      .sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes) || a.id.localeCompare(b.id));
+      .sort((a, b) => overallRating(b.attributes) - overallRating(a.attributes) || compareText(a.id, b.id));
     return { ...d, role: mates[0]?.id === d.id ? ('first' as const) : ('second' as const), contractEnd: season };
   });
   const ranked = rankTeams(teams);
@@ -119,7 +151,7 @@ function migrateV1(data: Loose): Loose {
 
   const migrated = {
     ...data,
-    schemaVersion: CAREER_SCHEMA_VERSION,
+    schemaVersion: 2,
     status: 'active',
     categoryId: category.id,
     drivers,
@@ -219,21 +251,24 @@ function migrateV2(data: Loose): Loose {
   };
 }
 
-/** Chave: versão de origem. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1, 2: migrateV2 };
+/** Chave: versão de origem. Cada função leva o save exatamente um degrau adiante. */
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1, 2: migrateV2, 3: migrateV3 };
+
+/** Um único degrau da cadeia: da versão `from` para a `from + 1`. Serve para testar cada migração isolada. */
+export function migrateStep(data: Loose, from: number): Loose {
+  const migrate = MIGRATIONS[from];
+  if (!migrate) throw new Error(`Não há migração do schema ${from} para ${from + 1}.`);
+  return { ...migrate(data), schemaVersion: from + 1 };
+}
 
 export function migrateCareerData(raw: unknown): unknown {
   if (raw === null || typeof raw !== 'object') return raw;
   let data = raw as Loose;
   let version = typeof data.schemaVersion === 'number' ? data.schemaVersion : 0;
   const original = version;
-  if (version > CAREER_SCHEMA_VERSION) {
-    throw new Error(`Save criado por uma versão mais nova do jogo (schema ${version}).`);
-  }
+  if (version > CAREER_SCHEMA_VERSION) throw new NewerSchemaError(version);
   while (version < CAREER_SCHEMA_VERSION) {
-    const migrate = MIGRATIONS[version];
-    if (!migrate) throw new Error(`Não há migração do schema ${version} para ${version + 1}.`);
-    data = { ...migrate(data), schemaVersion: version + 1 };
+    data = migrateStep(data, version);
     version += 1;
   }
   // Um save da versão 1 parado no fim da temporada precisa do fechamento, que só existe a partir

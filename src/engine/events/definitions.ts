@@ -17,6 +17,7 @@ import { buildSponsor, commercialSponsors, sponsorTierFor, SPONSOR_RULES } from 
 import { fullName, teamKey } from '../career/selectors';
 import { hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
+import { TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { money } from '../career/selectors';
 
 export interface EventContext {
@@ -850,7 +851,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       if (ctx.career.academy || tier < 3 || tier > 6 || ctx.player.age > 21 || ctx.round < 4 || ctx.position > 5) return null;
       if (ctx.career.reputation < ctx.category.requirements.minReputation) return null;
       const index = hashSeed(ctx.career.seed, 'academy', ctx.career.season) % F1_TEAM_NAMES.length;
-      const f1Name = F1_TEAM_NAMES[index] ?? 'Equipe de F1';
+      const f1Name = F1_TEAM_NAMES[index] ?? `Equipe ${categoryRef(TOP_CATEGORY_ID, 'de')}`;
       const academy: Academy = {
         f1TeamId: f1TeamId(index),
         name: `Academia ${f1Name}`,
@@ -865,7 +866,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       );
       return {
         title: `Convite da ${academy.name}`,
-        body: `Olheiros da ${f1Name}, da Fórmula 1, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem 70% do custo da vaga pago e a atenção das equipes ligadas a ela; em troca, precisa terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
+        body: `Olheiros da ${f1Name}, ${categoryRef(TOP_CATEGORY_ID, 'de')}, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem 70% do custo da vaga pago e a atenção das equipes ligadas a ela; em troca, precisa terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
         choices: [
           choice(
             'accept',
