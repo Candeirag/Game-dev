@@ -12,9 +12,11 @@
  * - de quebra, a concordância que as versões antigas erravam nos campeonatos de kart ("subiu
  *   para a Campeonato Mundial de Kart").
  *
- * O que o jogador digitou não é tocado: o nome do piloto, o sobrenome da família e o nome de uma
- * equipe fundada por ele ficam como estão, mesmo que contenham uma das siglas antigas, inclusive
- * dentro das frases que os citam.
+ * O que o jogador digitou não é tocado: o nome do piloto, o sobrenome da família e o nome e a
+ * sigla de uma equipe fundada por ele ficam como estão, mesmo que contenham uma das siglas
+ * antigas, inclusive dentro das frases que os citam. (Única exceção, nas frases: um nome digitado
+ * que seja, sozinho, exatamente um nome antigo, como uma equipe chamada "Stallion F1"; protegê-lo
+ * deixaria as menções à equipe de verdade sem trocar. Nos campos de nome ele fica como está.)
  *
  * É uma migração só de dados: não chama o motor do jogo e pode rodar duas vezes sem mudar nada
  * na segunda.
@@ -114,9 +116,53 @@ const list = (value: unknown): Loose[] => (Array.isArray(value) ? (value as Loos
 const obj = (value: unknown): Loose => (value !== null && typeof value === 'object' ? (value as Loose) : {});
 
 /**
- * Nomes que o jogador digitou: o piloto (e os personagens anteriores da família), o sobrenome da
- * dinastia e as equipes fundadas por ele. Vão do mais longo para o mais curto, para um nome
- * completo ser posto de lado antes de um pedaço dele.
+ * Campos que guardam um NOME (de equipe, de pessoa, de academia, a sigla) e não uma frase. Neles
+ * as regras de texto não entram: um nome digitado pelo jogador pode conter "F1" (uma equipe
+ * "Scuderia F1", de sigla "SF"; uma "Força 1", de sigla "F1"), e reescrevê-lo estragaria o nome
+ * e, na sigla, estouraria o limite de quatro letras do save. Um campo de nome só muda quando é
+ * exatamente o de uma das duas equipes rebatizadas.
+ */
+const NAME_KEYS: ReadonlySet<string> = new Set([
+  'name',
+  'shortName',
+  'teamName',
+  'playerTeamName',
+  'academy',
+  'firstName',
+  'lastName',
+  'surname',
+  'formerName',
+]);
+/** Onde um objeto do save diz de que equipe ele fala. As fundadas pelo jogador têm id próprio ("own-…"). */
+const TEAM_ID_KEYS = ['id', 'teamId', 'playerTeamId'] as const;
+const TEAM_NAME_KEYS = ['name', 'teamName', 'playerTeamName'] as const;
+const ownedByPlayer = (holder: Loose): boolean => TEAM_ID_KEYS.some((key) => text(holder[key]).startsWith('own-'));
+
+/** Nome antigo → nome novo, por igualdade exata: as duas equipes e as academias delas. */
+const OLD_NAMES: ReadonlyMap<string, string> = new Map(
+  RENAMED_TEAMS.flatMap(({ from, to }): [string, string][] => [
+    [from.name, to.name],
+    [`Academia ${from.name}`, `Academia ${to.name}`],
+  ]),
+);
+
+function renameNameField(key: string, value: string, holder: Loose): string {
+  // A sigla é derivada do nome e nunca aparece em frases: acerta-se pelo id da equipe.
+  if (key === 'shortName') {
+    const renamed = RENAMED_TEAMS.find((team) => team.id === holder.id);
+    return renamed && value === renamed.from.shortName ? renamed.to.shortName : value;
+  }
+  return ownedByPlayer(holder) ? value : (OLD_NAMES.get(value) ?? value);
+}
+
+/** Um nome que é, sozinho, um dos nomes antigos: "F1", "Fórmula 3", "Stallion F1". */
+const IS_OLD_NAME = new RegExp(`^(?:F[1-4]|Fórmula [1-4]|${RENAMED_TEAMS.map((team) => team.from.name).join('|')})$`);
+
+/**
+ * Nomes que o jogador digitou e que as frases gravadas citam: o piloto (e os personagens
+ * anteriores da família), o sobrenome da dinastia e as equipes fundadas por ele, onde quer que o
+ * save guarde o nome (grid, histórico, retrospecto de dirigente, participações, extrato). Vão do
+ * mais longo para o mais curto, para um nome completo ser posto de lado antes de um pedaço dele.
  */
 function typedNames(data: Loose): string[] {
   const names = new Set<string>();
@@ -133,26 +179,41 @@ function typedNames(data: Loose): string[] {
   const dynasty = obj(data.dynasty);
   add(dynasty.surname);
   for (const entry of list(dynasty.lineage)) add(entry.name);
-  // Equipes fundadas pelo jogador têm id próprio ("own-…"); as demais não podem ser rebatizadas.
-  for (const team of list(data.teams)) if (text(team.id).startsWith('own-')) add(team.name);
-  // Só precisa de proteção o nome que as regras mudariam (um "Scuderia F1", por exemplo).
-  return [...names].filter((name) => applyRules(name) !== name).sort((a, b) => b.length - a.length);
+  // Equipes fundadas: todo objeto ligado a um id "own-…", mesmo que a equipe já não esteja no grid.
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) value.forEach(visit);
+    else if (value !== null && typeof value === 'object') {
+      const holder = value as Loose;
+      if (ownedByPlayer(holder)) for (const key of TEAM_NAME_KEYS) add(holder[key]);
+      Object.values(holder).forEach(visit);
+    }
+  };
+  visit(data);
+  // O lançamento da fundação guarda o nome mesmo depois de a equipe sair de todo o resto.
+  for (const entry of list(obj(data.finance).transactions)) add(/^Fundação da equipe (.+)$/.exec(text(entry.label))?.[1]);
+  return (
+    [...names]
+      // Só precisa de proteção o nome que as regras mudariam (um "Scuderia F1", por exemplo).
+      .filter((name) => applyRules(name) !== name)
+      // Um nome digitado que é exatamente um nome antigo não é posto de lado nas frases: isso
+      // impediria de trocar todas as menções à categoria ou à equipe de verdade. Ele continua
+      // intacto nos campos de nome, e o nome completo do piloto continua protegido.
+      .filter((name) => !IS_OLD_NAME.test(name))
+      .sort((a, b) => b.length - a.length)
+  );
 }
 
 export function migrateV3(data: Loose): Loose {
   const typed = typedNames(data);
-  const walk = (value: unknown): unknown => {
-    if (typeof value === 'string') return renameStoredText(value, typed);
-    if (Array.isArray(value)) return value.map(walk);
+  const walk = (value: unknown, key: string, holder: Loose): unknown => {
+    if (typeof value === 'string') return NAME_KEYS.has(key) ? renameNameField(key, value, holder) : renameStoredText(value, typed);
+    // Os itens de uma lista são do mesmo campo que a lista (as notas de `notes`, por exemplo).
+    if (Array.isArray(value)) return value.map((inner) => walk(inner, key, holder));
     if (value !== null && typeof value === 'object') {
-      const entries = Object.entries(value).map(([key, inner]): [string, unknown] => [key, walk(inner)]);
-      const result: Loose = Object.fromEntries(entries);
-      // A sigla da equipe é derivada do nome e não aparece em frases: acerta-se pelo id.
-      const renamed = RENAMED_TEAMS.find((team) => team.id === result.id);
-      if (renamed && result.shortName === renamed.from.shortName) result.shortName = renamed.to.shortName;
-      return result;
+      const inside = value as Loose;
+      return Object.fromEntries(Object.entries(inside).map(([innerKey, inner]): [string, unknown] => [innerKey, walk(inner, innerKey, inside)]));
     }
     return value;
   };
-  return walk(data) as Loose;
+  return walk(data, '', {}) as Loose;
 }

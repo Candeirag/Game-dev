@@ -124,6 +124,12 @@ describe('saves', () => {
     await expect(loadCareer(storage, 'slot1')).rejects.toThrow(/versão mais nova do jogo.*Atualize/);
     const slot = (await listSaves(storage)).find((s) => s.slot === 'slot1')!;
     expect(slot.status).toBe('newer');
+    // Jogar outra carreira neste build não apaga o save mais novo: a gravação é recusada, quantas vezes for.
+    for (let i = 0; i < 3; i++) await expect(saveCareer(storage, 'slot1', career, NOW)).rejects.toThrow(/não foi sobrescrito/);
+    expect(await storage.get('slot1')).toMatchObject({ career: { schemaVersion: CAREER_SCHEMA_VERSION + 1, campoNovo: true } });
+    // Só sai quando o jogador apaga o slot; daí em diante grava normalmente.
+    await deleteSave(storage, 'slot1');
+    await expect(saveCareer(storage, 'slot1', career, NOW)).resolves.toMatchObject({ schemaVersion: CAREER_SCHEMA_VERSION });
     expect(slot.error).toContain(`formato ${CAREER_SCHEMA_VERSION + 1}; esta versão lê até o ${CAREER_SCHEMA_VERSION}`);
   });
 
@@ -328,6 +334,80 @@ describe('migração da versão 3 para a 4', () => {
     const migrated = migrateStep(custom, 3) as typeof custom;
     expect(migrated.teams[0]!.name).toBe('Equipe F1 do Zé');
     expect(migrated.inbox[0]).toMatchObject({ title: 'Temporada 2043: F. Elite', body: 'Você fundou a Equipe F1 do Zé, que estreia na Fórmula Elite.' });
+  });
+
+  it('uma equipe fundada com sigla "F1" continua abrindo: nome e sigla não são texto para reescrever', () => {
+    // O dono rebatiza a equipe do save de exemplo como se a tivesse fundado: id próprio, nome "Força 1", sigla "F1".
+    const file = JSON.parse(
+      readFileSync('tests/fixtures/v3/fase0-dirigente-dono-de-equipe.json', 'utf8')
+        .replaceAll('f2-castilla-racing', 'own-1a2b')
+        .replaceAll('Castilla Racing', 'Força 1'),
+    ) as { checksum: string; career: { teams: { id: string; name: string; shortName: string }[] } };
+    const own = file.career.teams.find((t) => t.id === 'own-1a2b')!;
+    own.shortName = 'F1';
+    file.checksum = checksumOf(file.career);
+    // Passa pelo caminho inteiro de leitura, schema incluído (a sigla tem no máximo quatro letras).
+    const career = importCareer(JSON.stringify(file));
+    expect(career.teams.find((t) => t.id === 'own-1a2b')).toMatchObject({ name: 'Força 1', shortName: 'F1' });
+    expect(career.inbox.some((m) => m.body.includes('Você comanda a Força 1 na Fórmula Elite.'))).toBe(true);
+    expect(validateCareerIntegrity(career)).toEqual([]);
+  });
+
+  it('o nome de uma equipe fundada é preservado mesmo depois de ela sair do grid', () => {
+    const raw = rawCareer('fase0-dirigente-dono-de-equipe');
+    const history = raw.history as Record<string, unknown>[];
+    const finance = raw.finance as { transactions: Record<string, unknown>[] };
+    const inbox = raw.inbox as { title: string; body: string }[];
+    const custom = {
+      ...raw,
+      // A equipe "Scuderia F1" só existe no passado: histórico, retrospecto de dirigente, participações e extrato.
+      history: [{ ...history[0], playerTeamId: 'own-9f', playerTeamName: 'Scuderia F1' }, ...history.slice(1)],
+      executiveLog: [{ season: 3, teamId: 'own-9f', teamName: 'Scuderia F1' }],
+      finance: {
+        ...finance,
+        stakes: [{ id: 'stake-1', teamId: 'own-9f', teamName: 'Scuderia F1' }],
+        transactions: [{ ...finance.transactions[0], label: 'Fundação da equipe Scuderia F1' }, ...finance.transactions.slice(1)],
+      },
+      inbox: [
+        { ...inbox[0]!, title: 'Temporada 2030: F4', body: 'Você fundou a Scuderia F1, que estreia na Fórmula 4. Você comanda a Scuderia F1 na Fórmula 4.' },
+        ...inbox.slice(1),
+      ],
+    };
+    const migrated = migrateStep(custom, 3) as typeof custom;
+    expect(migrated.history[0]).toMatchObject({ playerTeamName: 'Scuderia F1' });
+    expect(migrated.executiveLog[0]).toMatchObject({ teamName: 'Scuderia F1' });
+    expect(migrated.finance.stakes[0]).toMatchObject({ teamName: 'Scuderia F1' });
+    expect(migrated.finance.transactions[0]).toMatchObject({ label: 'Fundação da equipe Scuderia F1' });
+    expect(migrated.inbox[0]).toMatchObject({
+      title: 'Temporada 2030: F. Júnior',
+      body: 'Você fundou a Scuderia F1, que estreia na Fórmula Júnior. Você comanda a Scuderia F1 na Fórmula Júnior.',
+    });
+  });
+
+  it('um nome digitado igual a um nome antigo não impede a troca dos nomes de verdade', () => {
+    const raw = rawCareer('fase0-monoposto-com-academia');
+    const drivers = raw.drivers as { id: string; isPlayer: boolean; firstName: string; lastName: string }[];
+    const inbox = raw.inbox as { title: string; body: string }[];
+    const custom = {
+      ...raw,
+      // Piloto de sobrenome "F1", numa família "F1".
+      drivers: drivers.map((d) => (d.isPlayer ? { ...d, firstName: 'Zé', lastName: 'F1' } : d)),
+      dynasty: { ...(raw.dynasty as object), surname: 'F1' },
+      inbox: [
+        { ...inbox[0]!, title: 'Temporada 2040: F1', body: 'Zé F1 subiu para a Fórmula 1, pela Stallion F1. Regulamento técnico novo na F1.' },
+        ...inbox.slice(1),
+      ],
+    };
+    const migrated = migrateStep(custom, 3) as typeof custom & { academy: { name: string } };
+    // O nome do piloto fica como foi digitado, nos campos e nas frases...
+    expect(migrated.drivers.find((d) => d.isPlayer)).toMatchObject({ firstName: 'Zé', lastName: 'F1' });
+    expect(migrated.dynasty).toMatchObject({ surname: 'F1' });
+    // ...e a categoria, a equipe e a academia de verdade são trocadas mesmo assim.
+    expect(migrated.inbox[0]).toMatchObject({
+      title: 'Temporada 2040: GP Mundial',
+      body: 'Zé F1 subiu para o Grand Prix Mundial, pela Stallion Autosport. Regulamento técnico novo no Grand Prix Mundial.',
+    });
+    expect(migrated.academy.name).toBe('Academia Stallion Autosport');
   });
 
   it.each(V3)('%s: só os textos com nomes antigos mudam; estrutura, números e ids ficam iguais', (name) => {

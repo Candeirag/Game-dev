@@ -28,6 +28,7 @@ import { readLastExport, writeLastExport } from '@/persistence/preferences';
 import { clearRaceResume, loadRaceResume, raceResumeKey, saveRaceResume, type RaceResume } from '@/persistence/raceResume';
 import { createDefaultStorage, probeStorage, type StorageAdapter } from '@/persistence/storage';
 import {
+  NewerSaveError,
   SaveError,
   deleteSave,
   exportCareer,
@@ -179,12 +180,16 @@ function errorMessage(error: unknown): string {
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
+  /** O aviso de "save de versão mais nova no slot automático" já foi mostrado nesta sessão. */
+  let newerSaveWarned = false;
+
   /** Salva no slot automático. Erros aparecem no indicador de save, sem interromper o jogo. */
   async function autosave(career: CareerState) {
     set({ saveStatus: { kind: 'saving' } });
     try {
       await saveCareer(get().storage, 'auto', career, now());
       set({ saveStatus: { kind: 'saved', at: now(), slot: 'auto' } });
+      newerSaveWarned = false;
       void get().refreshSlots();
     } catch (error) {
       set({
@@ -193,7 +198,12 @@ export const useGameStore = create<GameStore>((set, get) => {
           message: errorMessage(error),
           ...(error instanceof SaveError ? { problems: error.problems } : {}),
         },
+        // O slot automático guarda um save de versão mais nova, que não é sobrescrito: o jogador
+        // precisa saber por que a gravação automática parou. O aviso aparece uma vez; o indicador
+        // de save continua mostrando a falha.
+        ...(error instanceof NewerSaveError && !newerSaveWarned ? { notice: error.message } : {}),
       });
+      if (error instanceof NewerSaveError) newerSaveWarned = true;
     }
   }
 

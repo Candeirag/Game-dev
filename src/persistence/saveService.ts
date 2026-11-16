@@ -67,6 +67,14 @@ export class NewerSaveError extends SaveError {
 
 const backupKey = (slot: SaveSlotId) => `${slot}.backup`;
 
+/** O que está gravado é um save deste jogo, de uma versão do formato mais nova que a deste build? */
+function isNewerSave(raw: unknown): boolean {
+  if (raw === null || typeof raw !== 'object') return false;
+  const envelope = raw as { format?: unknown; career?: { schemaVersion?: unknown } };
+  const version = envelope.career?.schemaVersion;
+  return envelope.format === SAVE_FORMAT && typeof version === 'number' && version > CAREER_SCHEMA_VERSION;
+}
+
 export function summarize(career: CareerState): SaveSummary {
   const player = getPlayer(career);
   // Como piloto, vale a posição dele no campeonato; como dirigente, a da equipe que ele comanda.
@@ -166,6 +174,14 @@ export async function saveCareer(storage: StorageAdapter, slot: SaveSlotId, care
     );
   }
   const previous = await storage.get(slot);
+  // Um save de versão mais nova não é sobrescrito por conta própria: este build não sabe lê-lo, e
+  // duas gravações automáticas de outra carreira o apagariam para sempre. Só sai do slot quando o
+  // jogador o apaga na tela Saves.
+  if (isNewerSave(previous)) {
+    throw new NewerSaveError(
+      'Este slot guarda um save de uma versão mais nova do jogo, e ele não foi sobrescrito. Atualize o jogo para abri-lo, salve em outro slot ou apague-o na tela Saves.',
+    );
+  }
   const entries: Record<string, unknown> = { [slot]: envelope };
   if (previous !== undefined) entries[backupKey(slot)] = previous;
   await storage.setMany(entries);
