@@ -6,6 +6,7 @@ import type { Offer, Offseason } from '@/domain/schemas';
 import { OFFER_KIND_LABELS, ROLE_LABELS } from '@/domain/labels';
 import { CATEGORIES, LICENSE_WINDOW_SEASONS, PENALTY_POINTS_BAN, categoryByTier, getCategory } from '@/data/categories';
 import {
+  CONTRACT_RULES,
   canAcceptOffer,
   categoryRequirements,
   fullName,
@@ -85,6 +86,15 @@ function LadderTab() {
   const { career, player, team, category } = useCareerView();
   const next = categoryByTier(category.tier + 1);
   const requirements = useMemo(() => (next ? categoryRequirements(career, next.id) : []), [career, next]);
+  // A equipe mais interessada do degrau de cima: é ela que faz a proposta de promoção.
+  const bestInterest = next
+    ? Math.max(
+        0,
+        ...Object.entries(career.marketInterest)
+          .filter(([key]) => key.startsWith(`${next.id}:`))
+          .map(([, value]) => value),
+      )
+    : 0;
 
   return (
     <>
@@ -165,8 +175,8 @@ function LadderTab() {
                   <b>{r.label}:</b> {r.detail}
                 </Check>
               ))}
-              <Check met={Object.entries(career.marketInterest).some(([key, value]) => key.startsWith(`${next.id}:`) && value >= 50)}>
-                <b>Proposta de uma equipe:</b> pelo menos uma equipe {categoryRef(next.id, 'de')} precisa ter interesse de 50 ou mais.
+              <Check met={bestInterest >= CONTRACT_RULES.MIN_INTEREST.promotion}>
+                <b>Interesse de uma equipe {categoryRef(next.id, 'de')}:</b> {Math.floor(bestInterest)} (mínimo {CONTRACT_RULES.MIN_INTEREST.promotion})
               </Check>
             </ul>
             <p className="mt-3 text-xs text-ink-400">

@@ -354,7 +354,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
             'Aceitar a responsabilidade',
             'Punição certa, mas branda.',
             sure(
-              'Você perde 3 posições no próximo grid e recebe 1 ponto na licença.',
+              'Você perde 3 posições no próximo grid e recebe 1 ponto de punição.',
               { type: 'gridPenalty', driverId: ctx.player.id, places: 3 },
               { type: 'penaltyPoints', value: 1 },
               stat('reputation', 1),
@@ -368,7 +368,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
               [0.45, 'Os comissários aceitam a sua versão: incidente de corrida.', [stat('confidence', 3)]],
               [
                 0.55,
-                'Os comissários não se convencem: 5 posições no próximo grid e 2 pontos na licença.',
+                'Os comissários não se convencem: 5 posições no próximo grid e 2 pontos de punição.',
                 [
                   { type: 'gridPenalty', driverId: ctx.player.id, places: 5 },
                   { type: 'penaltyPoints', value: 2 },
@@ -388,7 +388,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
               ],
               [
                 0.7,
-                'A versão não se sustenta nas imagens: 5 posições no grid, 2 pontos na licença e a imagem arranhada.',
+                'A versão não se sustenta nas imagens: 5 posições no grid, 2 pontos de punição e a imagem arranhada.',
                 [
                   { type: 'gridPenalty', driverId: ctx.player.id, places: 5 },
                   { type: 'penaltyPoints', value: 2 },

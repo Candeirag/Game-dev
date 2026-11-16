@@ -140,7 +140,7 @@ export function ExecutiveDashboardScreen() {
                   </div>
                   {!wide && (
                     <Button variant="primary" className="mt-3" disabled={pending} onClick={() => navigate('/weekend')}>
-                      {pending ? 'Resolva as decisões pendentes' : m ? 'Ir para o pit wall' : 'Acompanhar a etapa'}
+                      {pending ? 'Resolva as decisões pendentes' : m ? 'Ir para o muro dos boxes' : 'Acompanhar a etapa'}
                     </Button>
                   )}
                 </div>
@@ -306,7 +306,7 @@ export function ExecutiveWeekendScreen() {
   if (liveRace) return <RaceBroadcast spectator />;
 
   const planning = !seasonOver && next && track;
-  const who = m && team ? `Pit wall · ${team.name}` : 'Acompanhando o campeonato';
+  const who = m && team ? `Muro dos boxes · ${team.name}` : 'Acompanhando o campeonato';
 
   return (
     <div className="space-y-3">
@@ -749,8 +749,8 @@ export function ExecutiveCareerScreen() {
           )}
           {m.sponsors.length > 0 && (
             <p className="mt-3 text-xs text-ink-400">
-              Atuais: {m.sponsors.map((s) => `${s.name} (${formatMoney(s.perSeason)}, top ${s.targetPosition})`).join(' · ')}. Para trocar, dispense um na tela
-              Gestão.
+              Atuais: {m.sponsors.map((s) => `${s.name} (${formatMoney(s.perSeason)}, entre as ${s.targetPosition} primeiras)`).join(' · ')}. Para trocar,
+              dispense um na tela Gestão.
             </p>
           )}
         </Card>

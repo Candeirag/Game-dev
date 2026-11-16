@@ -217,7 +217,7 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
       add(
         `career-${child.id}`,
         `${child.firstName} quer ser piloto`,
-        `${child.firstName} tem ${child.age} anos, é ${traits} e quer disputar o kart regional. A formação no kart rendeu ${counted(child.kartYears.toFixed(1), 'ano', 'anos')} de base. Uma vaga custa de ${money(career, seat[1])} a ${money(career, seat[0])} por temporada, e o custo sobe muito nos degraus seguintes. O apoio da família define em que equipe ele começa e se consegue pagar as promoções.`,
+        `${child.firstName} tem ${child.age} anos, é ${traits} e quer disputar o kart regional. A formação no kart rendeu ${counted(child.kartYears.toFixed(1).replace('.', ','), 'ano', 'anos')} de base. Uma vaga custa de ${money(career, seat[1])} a ${money(career, seat[0])} por temporada, e o custo sobe muito nos degraus seguintes. O apoio da família define em que equipe ele começa e se consegue pagar as promoções.`,
         [
           choice(
             'full',

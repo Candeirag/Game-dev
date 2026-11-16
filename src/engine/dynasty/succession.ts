@@ -172,7 +172,8 @@ function childHeir(child: Child): HeirOption {
   const traits = child.traits.map((t) => getTrait(t).name.toLowerCase()).join(', ');
   const canDrive = child.stage === 'racing' && child.driver !== null && child.racing !== null;
   const canManage = child.age >= FAMILY.ADULT_AGE;
-  const limits = !canDrive && !canManage ? ' Ainda é menor de idade e não corre: precisa de um tutor até crescer.' : '';
+  const limits =
+    !canDrive && !canManage ? ` Tem ${child.age} anos (mínimo ${FAMILY.ADULT_AGE} para assumir os negócios) e não corre: precisa de um tutor até lá.` : '';
   return {
     id: child.id,
     kind: 'child',

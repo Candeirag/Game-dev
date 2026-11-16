@@ -58,7 +58,7 @@ function playExecutiveSeason(career: CareerState): CareerState {
 
 /* ------------------------------------------------------------------ */
 
-describe('assistir à corrida do pit wall', () => {
+describe('assistir à corrida do muro dos boxes', () => {
   it('assistir ou simular a etapa dá exatamente a mesma carreira, e a linha do tempo cobre a corrida toda', () => {
     const career = engine.startWeekend(resolvePending(ownerCareer('f1')));
     const program = 'longRun' as const;

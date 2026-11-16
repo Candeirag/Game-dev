@@ -253,7 +253,7 @@ export const RACE = {
   /** Chance de o atacante ser considerado culpado por um toque. */
   COLLISION_FAULT_CHANCE: 0.6,
   COLLISION_PENALTY: 5,
-  /** Toque que tira um rival da corrida: 10 s, 2 pontos na licença e 3 posições no próximo grid. */
+  /** Toque que tira um rival da corrida: 10 s, 2 pontos de punição e 3 posições no próximo grid. */
   COLLISION_DNF_PENALTY: 10,
   COLLISION_DNF_GRID_DROP: 3,
   PIT_PENALTY: 5,
