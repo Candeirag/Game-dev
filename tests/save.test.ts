@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CAREER_SCHEMA_VERSION, CareerStateSchema } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
-import { IndexedDbStorage, MemoryStorage } from '@/persistence/storage';
+import { IndexedDbStorage, LocalStorageAdapter, MemoryStorage } from '@/persistence/storage';
 import {
   NewerSaveError,
   SaveError,
@@ -585,7 +585,43 @@ describe('cópia intacta do save de formato anterior', () => {
     expect(await listOriginalCopies(storage)).toEqual([]);
   });
 
-  it('se a cópia não puder ser gravada, o save antigo continua no slot', async () => {
+  it('com o armazenamento quase cheio, a gravação abre mão da cópia de segurança, nunca do original nem do progresso', async () => {
+    // localStorage com espaço para dois saves e meio: é o que um aparelho sem IndexedDB tem, com slot e cópia de segurança.
+    const small = file('v3', 'atual-kart-na-largada');
+    const unit = JSON.stringify(small).length;
+    const data = new Map<string, string>();
+    const limited = {
+      get length() {
+        return data.size;
+      },
+      key: (index: number) => [...data.keys()][index] ?? null,
+      getItem: (key: string) => data.get(key) ?? null,
+      removeItem: (key: string) => void data.delete(key),
+      clear: () => data.clear(),
+      setItem(key: string, value: string) {
+        const used = [...data].reduce((total, [k, v]) => total + (k === key ? 0 : v.length), 0);
+        if (used + value.length > unit * 2.5) throw new DOMException('cota excedida', 'QuotaExceededError');
+        data.set(key, value);
+      },
+    } satisfies Storage;
+    const storage = new LocalStorageAdapter(limited);
+    await storage.setMany({ slot1: small });
+    await storage.setMany({ 'slot1.backup': small });
+
+    const { career } = await loadCareer(storage, 'slot1');
+    for (const day of ['2031-01-01', '2031-01-02', '2031-01-03']) {
+      // Cada gravação cabe e fica: o slot traz a gravação mais recente, e ela abre.
+      const now = `${day}T12:00:00.000Z`;
+      await saveCareer(storage, 'slot1', career, now);
+      expect(await storage.get('slot1')).toMatchObject({ savedAt: now, schemaVersion: CAREER_SCHEMA_VERSION });
+      expect((await loadCareer(storage, 'slot1')).career.updatedAt).toBe(now);
+      expect(await storage.get('slot1.original-v3')).toEqual(small);
+    }
+    // Slot, original e cópia de segurança não cabem juntos: quem ficou de fora foi a cópia de segurança.
+    expect((await storage.keys()).sort()).toEqual(['slot1', 'slot1.original-v3']);
+  });
+
+  it('se nem o essencial puder ser gravado, o erro aparece e o save antigo continua no slot', async () => {
     const storage = new IndexedDbStorage(indexedDB, 'teste-copia-original');
     await storage.setMany({ slot1: V3 });
     const { career } = await loadCareer(storage, 'slot1');

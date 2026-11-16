@@ -15,6 +15,9 @@
  * substituiria, o original vai intacto para uma chave própria
  * (`<slot>.original-v<formato>`), que nenhuma gravação nem a exclusão do slot
  * apagam. Ver `listOriginalCopies` e `exportOriginalCopy`.
+ *
+ * Se o armazenamento não comportar tudo, a gravação abre mão do backup (que só
+ * guarda a gravação anterior) para caber o save novo e o original.
  */
 import { CAREER_SCHEMA_VERSION, CareerStateSchema, type CareerState } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
@@ -209,9 +212,22 @@ export async function saveCareer(storage: StorageAdapter, slot: SaveSlotId, care
   const original = await originalToKeep(storage, slot, previous);
   const originalVersion = storedVersion(original);
   if (originalVersion !== null) entries[originalKey(slot, originalVersion)] = original;
+  const essential = { ...entries, [slot]: envelope };
   entries[slot] = envelope;
   if (previous !== undefined) entries[backupKey(slot)] = previous;
-  await storage.setMany(entries);
+  try {
+    await storage.setMany(entries);
+  } catch (error) {
+    // Não coube tudo (armazenamento quase cheio). O progresso e o original de formato anterior
+    // valem mais que a cópia de segurança, que guarda só a gravação de antes: ela dá lugar aos dois.
+    // O que estava no slot só é substituído se a nova gravação couber.
+    try {
+      await storage.delete([backupKey(slot)]);
+      await storage.setMany(essential);
+    } catch {
+      throw error;
+    }
+  }
   return envelope;
 }
 
