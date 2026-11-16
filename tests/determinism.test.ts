@@ -71,8 +71,12 @@ describe('o que muda o resultado', () => {
     // ...e os rivais fizeram exatamente os mesmos tempos nas duas versões da história.
     const rivals = (c: CareerState) => c.weekend?.practice?.entries.filter((e) => e.driverId !== c.playerDriverId).map((e) => [e.driverId, e.bestLap]);
     expect(rivals(longRun)).toEqual(rivals(setup));
-    // O clima das etapas seguintes já estava sorteado e não muda com a escolha.
-    expect(longRun.calendar).toEqual(setup.calendar);
+    // O clima das etapas seguintes já estava sorteado: jogar a etapa inteira com escolhas opostas não o muda.
+    const cautious = playRound(newCareer(909), { program: 'setup', approach: 'balanced', mode: 'conservative' });
+    const bold = playRound(newCareer(909), { program: 'longRun', approach: 'attack', mode: 'aggressive' });
+    expect(checksumOf(bold)).not.toBe(checksumOf(cautious));
+    expect(bold.calendar).toEqual(cautious.calendar);
+    expect(bold.calendar).not.toBe(cautious.calendar);
     // Repetir a mesma escolha depois de recarregar devolve o mesmo treino: não dá para "rolar de novo".
     expect(engine.runPractice(reload(start), 'setup').weekend).toEqual(setup.weekend);
   });
@@ -191,30 +195,145 @@ function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
     if (statSync(path).isDirectory()) return sourceFiles(path);
-    return /\.(ts|tsx)$/.test(name) ? [path] : [];
+    return /\.[cm]?[jt]sx?$/.test(name) ? [path] : [];
   });
 }
 
-/** O código sem os comentários (para um comentário que cite `Math.random` não disparar o alarme). */
-const withoutComments = (source: string) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`])\/\/.*$/gm, '$1');
+/**
+ * O código sem os comentários (para um comentário que cite `Math.random` não disparar o alarme),
+ * com as mesmas linhas do arquivo. Textos, modelos de texto e expressões regulares são copiados
+ * inteiros: um "//" ou "/*" dentro deles não é comentário e não pode esconder o código que vem depois.
+ */
+function withoutComments(source: string): string {
+  let out = '';
+  let i = 0;
+  /** Último caractere de código que não é espaço: decide se uma barra abre uma expressão regular. */
+  let last = '';
+  /** Fim de um literal que começa em `start` (aspas, crase ou barra de expressão regular). */
+  const literalEnd = (start: number): number => {
+    const quote = source[start];
+    let inClass = false;
+    for (let j = start + 1; j < source.length; j++) {
+      const c = source[j];
+      if (c === '\\') j++;
+      else if (quote !== '`' && c === '\n') return j;
+      else if (quote === '`' && c === '$' && source[j + 1] === '{') j = codeEnd(j + 2, '}');
+      else if (quote === '/' && c === '[') inClass = true;
+      else if (quote === '/' && c === ']') inClass = false;
+      else if (c === quote && !inClass) return j + 1;
+    }
+    return source.length;
+  };
+  /** Índice do `close` que fecha o trecho de código iniciado em `start` (dentro de `${…}`). */
+  const codeEnd = (start: number, close: string): number => {
+    let depth = 0;
+    for (let j = start; j < source.length; j++) {
+      const c = source[j];
+      if (c === '"' || c === "'" || c === '`') j = literalEnd(j) - 1;
+      else if (c === '{') depth++;
+      else if (c === close && depth-- === 0) return j;
+    }
+    return source.length;
+  };
+  while (i < source.length) {
+    const c = source[i] ?? '';
+    const next = source[i + 1];
+    if (c === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i++;
+    } else if (c === '/' && next === '*') {
+      const end = source.indexOf('*/', i + 2);
+      const stop = end < 0 ? source.length : end + 2;
+      out += source.slice(i, stop).replace(/[^\n]/g, '');
+      i = stop;
+    } else if (c === '"' || c === "'" || c === '`' || (c === '/' && (last === '' || '(,=:[!&|?{};+-*%<>~^'.includes(last)))) {
+      const stop = literalEnd(i);
+      out += source.slice(i, stop);
+      i = stop;
+      last = 'x';
+    } else {
+      out += c;
+      if (c.trim()) last = c;
+      i++;
+    }
+  }
+  return out;
+}
+
+const matches = (source: string, pattern: RegExp): string[] =>
+  withoutComments(source)
+    .split('\n')
+    .flatMap((line, index) => (pattern.test(line) ? [`${index + 1}: ${line.trim().slice(0, 100)}`] : []));
 
 function occurrences(dirs: readonly string[], pattern: RegExp, allowed: readonly string[] = []): string[] {
   return dirs
     .flatMap(sourceFiles)
     .filter((path) => !allowed.includes(path))
-    .flatMap((path) =>
-      withoutComments(readFileSync(path, 'utf8'))
-        .split('\n')
-        .flatMap((line, index) => (pattern.test(line) ? [`${path}:${index + 1}: ${line.trim().slice(0, 100)}`] : [])),
-    );
+    .flatMap((path) => matches(readFileSync(path, 'utf8'), pattern).map((found) => `${path}:${found}`));
 }
 
 /** Onde mora a lógica do jogo: nada aqui pode depender de acaso solto, do relógio ou do aparelho. */
-const LOGIC = ['src/engine', 'src/data', 'src/domain', 'src/persistence', 'sim'];
+const LOGIC = ['src/engine', 'src/data', 'src/domain', 'src/config', 'src/persistence', 'sim'];
+
+const RANDOM = /Math\s*(\.\s*random|\[\s*['"`]random)|\brandom\s*[,}][^;]*=\s*Math\b/;
+/** O relógio: `Date.now`, `new Date()` sem argumentos, `Date()` e tudo de `performance`. Data montada de um número fixo pode. */
+const CLOCK = /\bDate\s*\.\s*now\b|\bnew\s+Date\b(?!\s*\(\s*[^\s)])|(?<![.\w])Date\s*\(\s*\)|\bperformance\s*\./;
+/** Leituras de data no fuso do aparelho: o mesmo instante daria dias diferentes em lugares diferentes. */
+const LOCAL_TIME = /\.\s*(get(Day|Date|Month|FullYear|Hours|Minutes|Seconds|TimezoneOffset)|toLocale(Date|Time)String)\s*\(/;
+/** O idioma do aparelho: ordenação, caixa e formatação sem idioma fixo (`toLocaleString('pt-BR')` pode). */
+const DEVICE_LOCALE = /localeCompare|toLocale(Lower|Upper)Case|\bIntl\s*\.\s*\w+\s*\(\s*\)|toLocaleString\s*\(\s*\)/;
+
+describe('a guarda enxerga o que precisa', () => {
+  const found = (code: string, pattern: RegExp) => matches(code, pattern).length > 0;
+
+  it('ignora comentários, e só eles: código depois de "//" ou "/*" dentro de um texto continua à vista', () => {
+    expect(found('// Math.random() aqui é só conversa', RANDOM)).toBe(false);
+    expect(found('/** nada de Math.random()\n * nem de Date.now() */ const a = 1;', RANDOM)).toBe(false);
+    expect(found("const sep = 'a//b'; const r = Math.random();", RANDOM)).toBe(true);
+    expect(found('const ok = /^\\/\\//.test(p) && Math.random() < 0.5;', RANDOM)).toBe(true);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: é o código de exemplo que a guarda lê.
+    expect(found('const u = `${base}//x`; const r = Math.random();', RANDOM)).toBe(true);
+    expect(found("const glob = 'src/*.ts';\nconst r = Math.random();\n/** fim */", RANDOM)).toBe(true);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: é o código de exemplo que a guarda lê.
+    expect(found('const t = `${a ? `x//y` : "z"}`; const r = Math.random();', RANDOM)).toBe(true);
+    expect(found('const ratio = total / count; // Math.random', RANDOM)).toBe(false);
+  });
+
+  it('diz a linha certa do arquivo, mesmo depois de um cabeçalho de várias linhas', () => {
+    expect(matches('/**\n * cabeçalho\n * de três linhas\n */\nconst a = 1;\nconst r = Math.random();', RANDOM)).toEqual(['6: const r = Math.random();']);
+  });
+
+  it('reconhece as formas de sortear, ler o relógio e depender do aparelho', () => {
+    for (const code of ['Math.random()', "Math['random']()", 'const { random } = Math;']) expect(found(code, RANDOM), code).toBe(true);
+    for (const code of [
+      'Date.now()',
+      'const now = Date.now;',
+      'new Date()',
+      'new Date',
+      '+new Date;',
+      'const text = Date();',
+      'performance.now()',
+      'performance.timeOrigin',
+    ])
+      expect(found(code, CLOCK), code).toBe(true);
+    for (const code of ['new Date(start + i * 86_400_000)', 'Date.UTC(year, 2, 8)', 'Date.parse(value)', 'const updatedAt = now;'])
+      expect(found(code, CLOCK), code).toBe(false);
+    for (const code of ['date.getDay()', 'd.getTimezoneOffset()', 'date.toLocaleDateString()']) expect(found(code, LOCAL_TIME), code).toBe(true);
+    for (const code of [
+      'a.localeCompare(b)',
+      'name.toLocaleLowerCase()',
+      'value.toLocaleString()',
+      'new Intl.NumberFormat()',
+      'Intl.DateTimeFormat().resolvedOptions()',
+    ])
+      expect(found(code, DEVICE_LOCALE), code).toBe(true);
+    for (const code of ["value.toLocaleString('pt-BR')", "new Intl.NumberFormat('pt-BR')", 'date.toISOString()'])
+      expect(found(code, DEVICE_LOCALE), code).toBe(false);
+  });
+});
 
 describe('guarda: o gerador com semente é a única fonte de acaso', () => {
   it('não há Math.random em lugar nenhum do jogo nem do simulador', () => {
-    expect(occurrences(['src', 'sim'], /Math\s*\.\s*random/)).toEqual([]);
+    expect(occurrences(['src', 'sim'], RANDOM)).toEqual([]);
   });
 
   it('o acaso de verdade (crypto) só existe na criação da semente', () => {
@@ -228,11 +347,16 @@ describe('guarda: o gerador com semente é a única fonte de acaso', () => {
 
   it('a lógica do jogo não lê o relógio', () => {
     // A linha de comando do simulador mede o tempo gasto, mas só o escreve na saída de erro.
-    expect(occurrences(LOGIC, /Date\.now\s*\(|new Date\(\s*\)|performance\.now\s*\(/, ['sim/cli.ts'])).toEqual([]);
+    expect(occurrences(LOGIC, CLOCK, ['sim/cli.ts'])).toEqual([]);
+    expect(occurrences(LOGIC, LOCAL_TIME)).toEqual([]);
   });
 
-  it('a lógica do jogo não ordena pelo idioma do aparelho', () => {
-    expect(occurrences(LOGIC, /localeCompare\s*\(|Intl\.Collator/)).toEqual([]);
+  it('a lógica do jogo não ordena nem formata pelo idioma do aparelho', () => {
+    expect(occurrences(LOGIC, DEVICE_LOCALE)).toEqual([]);
+  });
+
+  it('o motor não lê feature flags nem variáveis do build: regra de jogo não depende de loja, anúncio ou versão paga', () => {
+    expect(occurrences(['src/engine', 'src/data', 'src/domain', 'sim'], /config\/featureFlags|import\s*\.\s*meta\s*\.\s*env/)).toEqual([]);
   });
 
   it('o motor roda sem navegador: não toca em window, document nem armazenamento', () => {
