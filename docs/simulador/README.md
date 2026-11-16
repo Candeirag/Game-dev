@@ -28,11 +28,15 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
   opção em cada evento, melhor proposta aceitável). Ele é mais fraco que um jogador atento: o
   que importa é a comparação entre fases, não o número absoluto.
 - "Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só
-  correu pela rede de segurança (a vaga gratuita na equipe mais fraca do degrau de baixo). O
-  relatório separa o motivo: nenhuma equipe fez proposta, havia proposta e faltou dinheiro, ou
+  correu pela rede de segurança (a vaga gratuita na equipe mais fraca do degrau de baixo ou, para
+  quem já está no primeiro degrau, do próprio kart regional). O relatório separa o motivo: nenhuma equipe fez proposta, havia proposta e faltou dinheiro, ou
   faltou outro requisito. No jogo de hoje ninguém fica um ano inteiro sem correr.
-- As decisões que a última etapa deixa pendentes são resolvidas antes de fechar o ano, como faz o
-  jogador.
+- As decisões que a última etapa deixa pendentes são resolvidas depois do fechamento do ano e
+  antes de medir o caixa e de escolher a proposta, como faz o jogador. O jogo congela a posição
+  final no fechamento: um evento da última etapa que tire pontos depois disso não muda a posição
+  registrada (é assim no jogo de hoje, não só no simulador).
+- "Chegar" a um degrau é subir até ele: quem pula um degrau por um atalho e depois cai nele não
+  entra na linha desse degrau.
 - A população da amostra é fixa (`SIM_POPULATION` em `sim/run.ts`): se o jogo ganhar um perfil ou
   uma equipe de entrada, os 50 pilotos da linha de base continuam os mesmos.
 - Se uma carreira quebrar, o comando para com código 1 e diz a semente e a temporada.

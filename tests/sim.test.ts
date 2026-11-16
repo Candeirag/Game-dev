@@ -3,14 +3,17 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { CATEGORIES } from '@/data/categories';
 import { PLAYER_BACKGROUNDS, PLAYER_MAX_AGE, PLAYER_MIN_AGE } from '@/data/rules';
 import { ROOKIE_TEAM_IDS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { HELP, parseArgs, runCli } from '../sim/cli';
 import { formatReport } from '../sim/report';
 import {
+  type CareerSample,
   DEFAULT_SIM_OPTIONS,
   SIM_POPULATION,
+  type SeasonSample,
   type SimResult,
   createSimCareer,
   percentile,
@@ -51,6 +54,16 @@ describe('argumentos da linha de comando', () => {
     expect(() => parseArgs(['--seasons', '2.5'])).toThrow(/número inteiro de 1 a 80/);
     expect(() => parseArgs(['--talent', '99'])).toThrow(/de 0 a 12/);
     expect(() => parseArgs(['--first-seed', '4294967295', '--seeds', '2'])).toThrow(/32 bits/);
+  });
+
+  it('não adivinha valores estranhos: número só com algarismos, valor vazio e opção no lugar do valor são recusados', () => {
+    // O valor é tudo o que vem depois do primeiro sinal de igual.
+    expect(parseArgs(['--out=pasta/a=b.txt']).out).toBe('pasta/a=b.txt');
+    expect(() => parseArgs(['--seeds=5=6'])).toThrow(/número inteiro de 1 a 5000 \(veio "5=6"\)/);
+    for (const value of ['0x2', '1e0', ' 5', '+5']) expect(() => parseArgs(['--seeds', value]), value).toThrow(/número inteiro/);
+    expect(() => parseArgs(['--talent='])).toThrow(/Falta o valor de --talent/);
+    expect(() => parseArgs(['--out='])).toThrow(/Falta o valor de --out/);
+    expect(() => parseArgs(['--out', '--json'])).toThrow(/Falta o valor de --out/);
   });
 });
 
@@ -151,6 +164,128 @@ describe('agregados', () => {
   });
 });
 
+describe('agregados de carreiras montadas à mão', () => {
+  const idOf = (tier: number) => CATEGORIES.find((c) => c.tier === tier)!.id;
+  const season = (number: number, tier: number, extra: Partial<SeasonSample> = {}): SeasonSample => ({
+    season: number,
+    categoryId: idOf(tier),
+    tier,
+    age: 15 + number,
+    position: 10,
+    wins: 0,
+    podiums: 0,
+    title: false,
+    cash: 1000 * number,
+    netWorth: 2000 * number,
+    reputation: 30,
+    overall: 60,
+    roundsMissed: 0,
+    seat: number === 1 ? 'initial' : 'continue',
+    noSeatCause: null,
+    offersMade: 2,
+    offers: 1,
+    ...extra,
+  });
+  const profile = { background: 'natural', age: 16, teamId: 'horizonte' } as const;
+  // A: sobe do 1º ao 2º degrau, pula o 3º pelo atalho, cai nele pela rede de segurança (faltou dinheiro) e volta ao 4º.
+  const a: CareerSample = {
+    seed: 1,
+    profile,
+    ended: 'completed',
+    seasons: [
+      season(1, 1, { position: 1, title: true }),
+      season(2, 1, { position: 2 }),
+      season(3, 2, { seat: 'promotion', position: 1, title: true }),
+      season(4, 4, { seat: 'promotion', cash: -500, roundsMissed: 2 }),
+      season(5, 3, { seat: 'fallback', noSeatCause: 'money', cash: -900 }),
+      season(6, 4, { seat: 'promotion' }),
+    ],
+  };
+  // B: fica sem proposta no primeiro degrau, depois sobe um degrau por vez até o 3º, e a carreira é interrompida.
+  const b: CareerSample = {
+    seed: 2,
+    profile: { ...profile, age: 14 },
+    ended: 'succession',
+    seasons: [
+      season(1, 1, { position: 20 }),
+      season(2, 1, { seat: 'fallback', noSeatCause: 'no-offer', position: 3 }),
+      season(3, 2, { seat: 'promotion' }),
+      season(4, 3, { seat: 'promotion', age: 30 }),
+    ],
+  };
+  const summary = summarize([a, b], { seeds: 2, seasons: 6, firstSeed: 1, talent: 0 });
+  const arrival = (tier: number) => summary.arrivals.find((row) => row.tier === tier);
+
+  it('chegar a um degrau é subir até ele: quem pula o degrau e depois cai nele não conta', () => {
+    // Ao 3º degrau só B chegou (aos 30, na temporada 4); a queda de A para ele não é chegada.
+    expect(arrival(3)).toMatchObject({ careers: 1, share: 0.5, averageAge: 30, minAge: 30, maxAge: 30, averageSeason: 4 });
+    // Ao 4º, só A, e vale a primeira subida (temporada 4), não a volta (temporada 6).
+    expect(arrival(4)).toMatchObject({ careers: 1, averageAge: 19, averageSeason: 4 });
+    expect(arrival(2)).toMatchObject({ careers: 2, averageSeason: 3 });
+    expect(arrival(1)).toMatchObject({ careers: 2, share: 1, averageSeason: 1 });
+    expect(arrival(5)).toBeUndefined();
+    // "Passou pela categoria" continua contando a queda: A disputou uma temporada no 3º degrau.
+    expect(summary.byCategory.find((row) => row.tier === 3)).toMatchObject({ seasons: 2, careers: 2 });
+  });
+
+  it('degrau mais alto, títulos, posições e idade de estreia', () => {
+    expect(summary.highestTier).toEqual([0, 0, 1, 1, 0, 0, 0]);
+    expect(summary.top).toMatchObject({ careers: 0, share: 0 });
+    expect(summary.titles).toEqual({ total: 2, perCareer: 1, max: 2, none: 1, one: 0, two: 1, threeOrMore: 0 });
+    expect(summary.byCategory.find((row) => row.tier === 1)).toMatchObject({
+      seasons: 4,
+      careers: 2,
+      averagePosition: 6.5,
+      medianPosition: 2,
+      bestPosition: 1,
+      top3Share: 0.75,
+      titles: 1,
+    });
+    expect(summary.averageStartAge).toBe(15);
+    expect(summary.seasonsPlayed).toBe(10);
+  });
+
+  it('temporadas sem vaga e o motivo, quedas, sequência no mesmo degrau, etapas perdidas e interrupções', () => {
+    expect(summary.noSeat).toEqual({ seasons: 2, perCareer: 1, careers: 2, share: 1, noOffer: 1, money: 1, requirements: 0 });
+    // Só A desceu (do 4º para o 3º); ficar no 1º degrau pela rede de segurança não é descer.
+    expect(summary.demotions).toEqual({ seasons: 1, perCareer: 0.5, careers: 1 });
+    expect(summary.longestStay).toBe(2);
+    expect(summary.roundsMissedPerSeason).toBe(0.2);
+    expect(summary.interrupted).toBe(1);
+  });
+
+  it('caixa por temporada: só as carreiras que chegaram àquela temporada entram', () => {
+    expect(summary.cashBySeason.map((row) => row.careers)).toEqual([2, 2, 2, 2, 1, 1]);
+    expect(summary.cashBySeason[3]).toMatchObject({ season: 4, p10: -500, median: -500, p90: 4000, negativeShare: 0.5, medianNetWorth: 8000 });
+    expect(summary.cashBySeason[4]).toMatchObject({ season: 5, median: -900, negativeShare: 1 });
+  });
+
+  it('o relatório mostra esses números e acerta o singular', () => {
+    const text = formatReport(summary);
+    expect(text).toContain('em 1, nenhuma equipe fez proposta; em 1, havia proposta e faltou dinheiro para a vaga; em 0, faltou outro requisito.');
+    expect(text).toContain('Carreiras interrompidas por sucessão (morte ou acidente): 1.');
+    expect(text).toContain('Chegar é subir');
+    const single = formatReport(summarize([{ ...b, seasons: b.seasons.slice(0, 1) }], { seeds: 1, seasons: 1, firstSeed: 2, talent: 0 }));
+    expect(single).toContain('1 carreira (semente 2), 1 temporada cada: 1 temporada disputada');
+    expect(single).toContain('0 de 1 carreira (0%)');
+    expect(single).toContain('Maior sequência no mesmo degrau: 1,0 temporada, em média.');
+    expect(single).not.toMatch(/1 carreiras|1 temporadas/);
+  });
+});
+
+describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
+  // A semente 7 chega ao fim da sétima temporada com proposta de equipe e sem caixa para bancá-la.
+  const sample = simulateCareer(7, { seasons: 8, talent: 0 });
+
+  it('a temporada seguinte é disputada pela rede de segurança, com o motivo "dinheiro"', () => {
+    expect(sample.seasons[7]).toMatchObject({ season: 8, seat: 'fallback', noSeatCause: 'money' });
+    // Havia proposta de equipe, e nenhuma que ele pudesse aceitar.
+    expect(sample.seasons[6]?.offersMade).toBeGreaterThan(0);
+    expect(sample.seasons[6]?.offers).toBe(0);
+    expect(summarize([sample], { seeds: 1, seasons: 8, firstSeed: 7, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
+  });
+});
+
 describe('relatório', () => {
   const report = formatReport(small.summary);
 
@@ -215,7 +350,20 @@ describe('linha de comando', () => {
     expect(result.err).toMatch(/4\/4 carreiras/);
     expect(result.err).toMatch(/4 carreiras, \d+ temporadas em \d+,\d s · jogo .+, save v\d+/);
     // A versão do jogo e a do save ficam fora do relatório, para ele só mudar quando uma regra mudar.
-    expect(result.out).not.toMatch(/save v\d|Jogo \d/);
+    expect(result.out).not.toMatch(/save v\d|jogo \d/i);
+  });
+
+  it('um arquivo de saída em que não dá para gravar é recusado antes de simular', () => {
+    const never = () => {
+      throw new Error('não era para simular');
+    };
+    const folder = mkdtempSync(join(tmpdir(), 'sim-'));
+    for (const out of [join(folder, 'pasta-que-nao-existe', 'relatorio.txt'), folder]) {
+      const err: string[] = [];
+      const code = runCli(['--seeds', '1', '--seasons', '1', '--out', out], { out: () => {}, err: (text) => err.push(text) }, never);
+      expect(code, out).toBe(2);
+      expect(err.join(''), out).toMatch(/^Não dá para gravar em /);
+    }
   });
 
   it('--json escreve os dados completos e --out grava a saída num arquivo', () => {

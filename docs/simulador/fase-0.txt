@@ -44,11 +44,14 @@ Degrau  Categoria                      Chegaram  Das carreiras  Idade média  Ma
 ------  -----------------------------  --------  -------------  -----------  ---------  ----------  ---------------
      1  Campeonato Regional de Kart          50           100%         15,5         14          17              1,0
      2  Campeonato Brasileiro de Kart        50           100%         20,9         17          24              6,4
-     3  Campeonato Mundial de Kart           48            96%         23,2         20          31              8,7
+     3  Campeonato Mundial de Kart           43            86%         22,9         20          27              8,3
      4  Fórmula Júnior                       46            92%         25,4         21          31             10,9
      5  Fórmula Sprint                       29            58%         27,4         24          30             12,8
      6  Fórmula Elite                        16            32%         28,4         26          31             13,9
      7  Grand Prix Mundial                    2             4%         29,5         29          30             15,0
+
+Chegar é subir: conta a primeira temporada no degrau vindo de um degrau mais baixo (ou a estreia). Quem pula um
+degrau por um atalho e depois cai nele não entra na linha desse degrau.
 
 4. CARREIRAS QUE CHEGAM AO TOPO
 
@@ -70,5 +73,5 @@ Etapas sem correr (lesão ou suspensão): 0,02 por temporada.
 Carreiras interrompidas por sucessão (morte ou acidente): 0.
 
 "Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de
-segurança (a vaga gratuita na equipe mais fraca do degrau de baixo). O jogo de hoje sempre oferece essa vaga:
-ninguém fica um ano inteiro sem correr.
+segurança: a vaga gratuita na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no
+primeiro). O jogo de hoje sempre oferece essa vaga: ninguém fica um ano inteiro sem correr.

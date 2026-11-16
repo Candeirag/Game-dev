@@ -50,6 +50,9 @@ Degrau  Categoria                      Chegaram  Das carreiras  Idade média  Ma
      6  Fórmula Elite                        37            74%         27,6         23          31             13,2
      7  Grand Prix Mundial                   13            26%         28,7         25          31             14,2
 
+Chegar é subir: conta a primeira temporada no degrau vindo de um degrau mais baixo (ou a estreia). Quem pula um
+degrau por um atalho e depois cai nele não entra na linha desse degrau.
+
 4. CARREIRAS QUE CHEGAM AO TOPO
 
 Chegaram ao Grand Prix Mundial: 13 de 50 carreiras (26%).
@@ -70,5 +73,5 @@ Etapas sem correr (lesão ou suspensão): 0,01 por temporada.
 Carreiras interrompidas por sucessão (morte ou acidente): 0.
 
 "Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de
-segurança (a vaga gratuita na equipe mais fraca do degrau de baixo). O jogo de hoje sempre oferece essa vaga:
-ninguém fica um ano inteiro sem correr.
+segurança: a vaga gratuita na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no
+primeiro). O jogo de hoje sempre oferece essa vaga: ninguém fica um ano inteiro sem correr.

@@ -178,12 +178,14 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
       while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, SIM_CHOICES);
       // Um acidente fatal no meio do ano encerra a amostra sem contar a temporada incompleta.
       if (!career.offseason) return { seed, profile, seasons, ended: 'succession' };
-      // As decisões que a última etapa deixou pendentes são resolvidas antes de fechar as contas e
-      // escolher a proposta, como faz o jogador.
+      // As decisões que a última etapa deixou pendentes são resolvidas aqui, depois do fechamento
+      // do ano (que acontece ao concluir a última etapa) e antes de medir o caixa e de escolher a
+      // proposta, como faz o jogador.
       if (!career.succession) career = resolvePending(career, SIM_CHOICES.eventChoice);
       seasons.push(sampleSeason(career, index, seat, cause));
-      if (career.succession) return { seed, profile, seasons, ended: 'succession' };
+      // Quem jogou todas as temporadas pedidas completou a carreira, mesmo que a sucessão venha no último fechamento.
       if (index === options.seasons) break;
+      if (career.succession) return { seed, profile, seasons, ended: 'succession' };
       const offerId = pickBestOffer(career);
       seat = career.offseason?.offers.find((o) => o.id === offerId)?.kind ?? 'fallback';
       cause = seat === 'fallback' ? seatMarket(career).cause : null;
@@ -329,7 +331,9 @@ export function summarize(samples: readonly CareerSample[], options: SimOptions)
   }).filter((row): row is CashStats => row !== null);
 
   const arrivals = CATEGORIES.flatMap((category): ArrivalStats[] => {
-    const firsts = samples.flatMap((c) => c.seasons.find((s) => s.categoryId === category.id) ?? []);
+    // Chegar é subir: a primeira temporada no degrau vindo de um degrau mais baixo (ou a estreia).
+    // Quem pula um degrau pelo atalho e depois cai nele não "chegou" a ele.
+    const firsts = samples.flatMap((c) => c.seasons.find((s, i) => s.categoryId === category.id && (i === 0 || (c.seasons[i - 1]?.tier ?? 0) < s.tier)) ?? []);
     if (firsts.length === 0) return [];
     const ages = firsts.map((s) => s.age);
     return [

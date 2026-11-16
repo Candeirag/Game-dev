@@ -32,10 +32,11 @@ export function formatReport(summary: SimSummary): string {
   const lastSeed = options.firstSeed + options.seeds - 1;
   const out: string[] = [];
   const section = (title: string) => out.push('', title.toUpperCase(), '');
+  const careers = counted(summary.careers, 'carreira', 'carreiras');
 
   out.push(
     'APEX MOTORSPORT DYNASTY · SIMULADOR DE CARREIRAS',
-    `${counted(summary.careers, 'carreira', 'carreiras')} (sementes ${options.firstSeed} a ${lastSeed}), ${counted(options.seasons, 'temporada', 'temporadas')} cada: ${summary.seasonsPlayed} temporadas disputadas`,
+    `${counted(summary.careers, 'carreira', 'carreiras')} (${options.seeds === 1 ? `semente ${lastSeed}` : `sementes ${options.firstSeed} a ${lastSeed}`}), ${counted(options.seasons, 'temporada', 'temporadas')} cada: ${counted(summary.seasonsPlayed, 'temporada disputada', 'temporadas disputadas')}`,
     `Política: robô padrão (treino de acerto, classificação e corrida equilibradas, melhor proposta aceitável) · talento ${options.talent}`,
     `Idade média na estreia: ${decimal(summary.averageStartAge)} anos`,
   );
@@ -92,11 +93,14 @@ export function formatReport(summary: SimSummary): string {
       ]),
       ['right', 'left'],
     ),
+    '',
+    'Chegar é subir: conta a primeira temporada no degrau vindo de um degrau mais baixo (ou a estreia). Quem pula um',
+    'degrau por um atalho e depois cai nele não entra na linha desse degrau.',
   );
 
   section('4. Carreiras que chegam ao topo');
   out.push(
-    `Chegaram ${categoryRef(summary.top.categoryId, 'a')}: ${summary.top.careers} de ${summary.careers} carreiras (${percent(summary.top.share)}).`,
+    `Chegaram ${categoryRef(summary.top.categoryId, 'a')}: ${summary.top.careers} de ${careers} (${percent(summary.top.share)}).`,
     `Degrau mais alto alcançado: ${CATEGORIES.map((c, i) => `${c.tier}º ${summary.highestTier[i] ?? 0}`).join(' · ')}.`,
   );
 
@@ -108,16 +112,16 @@ export function formatReport(summary: SimSummary): string {
 
   section('6. Temporadas paradas, sem vaga');
   out.push(
-    `Sem vaga: ${counted(summary.noSeat.seasons, 'temporada', 'temporadas')} (${decimal(summary.noSeat.perCareer, 2)} por carreira), em ${summary.noSeat.careers} de ${summary.careers} carreiras (${percent(summary.noSeat.share)}).`,
+    `Sem vaga: ${counted(summary.noSeat.seasons, 'temporada', 'temporadas')} (${decimal(summary.noSeat.perCareer, 2)} por carreira), em ${summary.noSeat.careers} de ${careers} (${percent(summary.noSeat.share)}).`,
     `  Por quê: em ${summary.noSeat.noOffer}, nenhuma equipe fez proposta; em ${summary.noSeat.money}, havia proposta e faltou dinheiro para a vaga; em ${summary.noSeat.requirements}, faltou outro requisito.`,
-    `Desceu de degrau: ${counted(summary.demotions.seasons, 'temporada', 'temporadas')} (${decimal(summary.demotions.perCareer, 2)} por carreira), em ${summary.demotions.careers} de ${summary.careers} carreiras.`,
-    `Maior sequência no mesmo degrau: ${decimal(summary.longestStay)} temporadas, em média.`,
+    `Desceu de degrau: ${counted(summary.demotions.seasons, 'temporada', 'temporadas')} (${decimal(summary.demotions.perCareer, 2)} por carreira), em ${summary.demotions.careers} de ${careers}.`,
+    `Maior sequência no mesmo degrau: ${counted(decimal(summary.longestStay), 'temporada', 'temporadas')}, em média.`,
     `Etapas sem correr (lesão ou suspensão): ${decimal(summary.roundsMissedPerSeason, 2)} por temporada.`,
     `Carreiras interrompidas por sucessão (morte ou acidente): ${summary.interrupted}.`,
     '',
     '"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de',
-    'segurança (a vaga gratuita na equipe mais fraca do degrau de baixo). O jogo de hoje sempre oferece essa vaga:',
-    'ninguém fica um ano inteiro sem correr.',
+    'segurança: a vaga gratuita na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no',
+    'primeiro). O jogo de hoje sempre oferece essa vaga: ninguém fica um ano inteiro sem correr.',
   );
 
   return `${out.join('\n')}\n`;
