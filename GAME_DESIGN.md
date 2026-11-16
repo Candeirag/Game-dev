@@ -2,7 +2,7 @@
 
 ## Visão
 
-Um simulador de carreira de automobilismo: o jogador vive a trajetória de um piloto, do kart regional em uma equipe modesta até a Fórmula 1, e depois a de uma família inteira. A Fase 1 entregou um campeonato de kart jogável. A Fase 2 fez disso uma carreira completa, em que resultados, dinheiro, contratos, relações e eventos se influenciam. A Fase 3 acrescenta a vida fora do carro: patrimônio, família, aposentadoria, gestão de equipe, morte e sucessão.
+Um simulador de carreira de automobilismo: o jogador vive a trajetória de um piloto, do kart regional em uma equipe modesta até o Grand Prix Mundial, e depois a de uma família inteira. A Fase 1 entregou um campeonato de kart jogável. A Fase 2 fez disso uma carreira completa, em que resultados, dinheiro, contratos, relações e eventos se influenciam. A Fase 3 acrescenta a vida fora do carro: patrimônio, família, aposentadoria, gestão de equipe, morte e sucessão.
 
 **Pilares**
 
@@ -42,16 +42,18 @@ A qualquer fim de ano: mortalidade → sucessão → herdeiro (piloto ou dirigen
 | 1      | Kart Regional      | 10     | sem paradas                                                         | € 16 a 30 mil            | início da carreira                                     |
 | 2      | Kart Nacional      | 10     | sem paradas                                                         | € 34 a 60 mil            | 2 pts · 10 · 26 · 13 anos                              |
 | 3      | Kart Internacional | 10     | sem paradas                                                         | € 90 a 150 mil           | 8 pts · 18 · 34 · 14 anos                              |
-| 4      | Fórmula 4          | 10     | 28 min; safety car, bandeira vermelha, clima variável               | € 240 a 380 mil          | 12 pts · 25 · 40 · 15 anos                             |
-| 5      | Fórmula 3          | 10     | 40 min; + safety car virtual e ordens de equipe                     | € 620 a 950 mil          | 18 pts · 36 · 50 · 16 anos                             |
-| 6      | Fórmula 2          | 12     | 58 min; + parada obrigatória (dois compostos) e combustível         | € 1,6 a 2,4 mi           | 25 pts · 48 · 58 · 17 anos                             |
-| 7      | Fórmula 1          | 14     | 82 min; + três compostos, intermediário, classificação eliminatória | salário de € 0,6 a 14 mi | 40 pts · 60 · 64 · 18 anos                             |
+| 4      | Fórmula Júnior     | 10     | 28 min; safety car, bandeira vermelha, clima variável               | € 240 a 380 mil          | 12 pts · 25 · 40 · 15 anos                             |
+| 5      | Fórmula Sprint     | 10     | 40 min; + safety car virtual e ordens de equipe                     | € 620 a 950 mil          | 18 pts · 36 · 50 · 16 anos                             |
+| 6      | Fórmula Elite      | 12     | 58 min; + parada obrigatória (dois compostos) e combustível         | € 1,6 a 2,4 mi           | 25 pts · 48 · 58 · 17 anos                             |
+| 7      | Grand Prix Mundial | 14     | 82 min; + três compostos, intermediário, classificação eliminatória | salário de € 0,6 a 14 mi | 40 pts · 60 · 64 · 18 anos                             |
 
-Do kart nacional é possível ir direto para a F4, como na vida real. Além dos requisitos esportivos, é preciso uma proposta de uma equipe do degrau de cima e dinheiro para a vaga.
+Os nomes das categorias, dos veículos e das licenças são do próprio jogo, sem marcas reais, e saem todos de `src/domain/categoryNames.ts` (os identificadores internos `f4`, `f3`, `f2` e `f1` continuam os mesmos nos saves).
+
+Do kart nacional é possível ir direto para a Fórmula Júnior, como na vida real. Além dos requisitos esportivos, é preciso uma proposta de uma equipe do degrau de cima e dinheiro para a vaga.
 
 ### Requisitos de promoção
 
-- **Resultados e licença.** Cada temporada rende pontos de licença pela posição final (por exemplo, F3: 30, 25, 20, 15, 12…; F2: 40 para os três primeiros). Vale a soma das últimas três temporadas. A F1 exige 40, no espírito da superlicença.
+- **Resultados e licença.** Cada temporada rende pontos de licença pela posição final (por exemplo, Fórmula Sprint: 30, 25, 20, 15, 12…; Fórmula Elite: 40 para os três primeiros). Vale a soma das últimas três temporadas. O Grand Prix Mundial exige 40, na lógica das licenças por pontos do automobilismo.
 - **Reputação.** Prestígio de 0 a 100, ancorado ao degrau: cada temporada tem uma nota (base da categoria + bônus da posição) e a reputação anda metade do caminho até ela, mais 0,5 por vitória. Bases: 5, 15, 27, 38, 50, 62 e 74. Bônus: campeão +22, vice +18, 3º +15, até 5º +13, até 10º +6, até 15º 0, abaixo −5. Um campeão regional fica perto de 20, não de 100; quem termina sempre entre os cinco primeiros cumpre o requisito do degrau seguinte a cada ano.
 - **Experiência.** O atributo cresce só competindo: +1,6 por etapa × (1 − exp/110).
 - **Idade.** Mínima por categoria, contada para a temporada seguinte.
@@ -96,11 +98,11 @@ ganho = (0,6 × peso_do_foco + 0,08) × fator_idade × min(1, distância_ao_pote
 
 ### Lesões e recuperação
 
-Um acidente que tira o piloto da corrida tem chance de lesão (5% no kart, 4% nos monopostos, 2% na F1). 65% são leves (1 a 2 etapas; o piloto pode correr 0,3% mais lento e com 30% mais erros, ou descansar) e 35% são graves (2 a 5 etapas fora). Quando um titular está fora, o **reserva** da equipe corre no lugar. As lesões cicatrizam na pré-temporada.
+Um acidente que tira o piloto da corrida tem chance de lesão (5% no kart, 4% nos monopostos, 2% no Grand Prix Mundial). 65% são leves (1 a 2 etapas; o piloto pode correr 0,3% mais lento e com 30% mais erros, ou descansar) e 35% são graves (2 a 5 etapas fora). Quando um titular está fora, o **reserva** da equipe corre no lugar. As lesões cicatrizam na pré-temporada.
 
 ### Envelhecimento e declínio
 
-A partir dos 31 anos, velocidade, concentração, ultrapassagem e chuva caem a cada temporada: 0,25 ponto por ano acima de 30, com variação de ±30% (cerca de 1 ponto por ano aos 34, 2 aos 38). Leitura de corrida, gestão de pneus e experiência não caem. O potencial acompanha a queda. Na F1, a IA se aposenta aos 38, ou aos 34 se estiver abaixo do nível do grid.
+A partir dos 31 anos, velocidade, concentração, ultrapassagem e chuva caem a cada temporada: 0,25 ponto por ano acima de 30, com variação de ±30% (cerca de 1 ponto por ano aos 34, 2 aos 38). Leitura de corrida, gestão de pneus e experiência não caem. O potencial acompanha a queda. No Grand Prix Mundial, a IA se aposenta aos 38, ou aos 34 se estiver abaixo do nível do grid.
 
 ## Fim de semana
 
@@ -116,8 +118,8 @@ Qualidade do acerto: `0,2 + retorno do piloto × 0,35 + bônus do programa + ru�
 
 ### Classificação
 
-- **Sessão única** (até a F2): três tentativas; vale a melhor.
-- **Eliminatória** (F1): três fases de duas tentativas; a cada uma das duas primeiras, os cinco mais lentos são eliminados.
+- **Sessão única** (até a Fórmula Elite): três tentativas; vale a melhor.
+- **Eliminatória** (Grand Prix Mundial): três fases de duas tentativas; a cada uma das duas primeiras, os cinco mais lentos são eliminados.
 - **Abordagem:** segura (+0,08%, metade do risco), equilibrada, ou ataque total (−0,10%, risco × 2,2). O risco em volta lançada é 4 vezes o de corrida.
 - **Punições de grid** herdadas da corrida anterior ou de investigações deslocam o punido para trás.
 
@@ -131,7 +133,7 @@ Qualidade do acerto: `0,2 + retorno do piloto × 0,35 + bônus do programa + ru�
 | Intermediário | ideal com pista de 15% a 65% molhada | × 1,0    |                       |
 | Chuva         | ideal acima de 50%                   | × 0,8    |                       |
 
-Além de 80% de desgaste, o pneu perde 8% por unidade de desgaste extra. Pneu errado custa caro: pneu de seco com 30% de umidade perde 6% da volta e multiplica os erros. Antes da largada, o motor lista as estratégias viáveis com a perda estimada (desgaste, ritmo do composto e tempo de box); na F1, uma e duas paradas ficam próximas, e a escolha depende da pista e do piloto. Na F2 e na F1, quem não usa dois compostos em corrida seca leva 30 s.
+Além de 80% de desgaste, o pneu perde 8% por unidade de desgaste extra. Pneu errado custa caro: pneu de seco com 30% de umidade perde 6% da volta e multiplica os erros. Antes da largada, o motor lista as estratégias viáveis com a perda estimada (desgaste, ritmo do composto e tempo de box); no Grand Prix Mundial, uma e duas paradas ficam próximas, e a escolha depende da pista e do piloto. Na Fórmula Elite e no Grand Prix Mundial, quem não usa dois compostos em corrida seca leva 30 s.
 
 ### Corrida
 
@@ -145,8 +147,8 @@ O jogador assiste à corrida na pista (1×, 2×, 4×, 8×, ou avançando volta p
 
 A corrida é mostrada num circuito visto de cima. O que se vê é a simulação, não uma animação à parte:
 
-- **Circuitos.** Os 14 autódromos (usados da Fórmula 4 à Fórmula 1) reproduzem o traçado da pista real que inspira cada um, com nome fictício: curvas, retas e proporções reais, sentido da corrida, posição da largada e boxes do lado de dentro. O Circuito do Oito cruza a si mesmo num viaduto. As duas retas mais longas são marcadas como zonas de ultrapassagem (marcação visual; a disputa em si continua sendo a do motor). Dos 20 kartódromos, 19 reproduzem o traçado de um kartódromo real (dados do OpenStreetMap), também com nome fictício e na cidade do kartódromo de referência. No Brasil: Vale do Sol (Granja Viana, Cotia), Lagoa Azul (Londrina), Vale dos Sinos (Velopark, Nova Santa Rita), Planalto (Brasília), Represas (Interlagos, São Paulo), Litoral Norte (Joinville), Triângulo (Uberlândia), Pampas (Tarumã, Viamão), Cerrado Paulista (Birigui) e Guanabara (Guapimirim). No mundial: Lonato, Genk, Le Mans, Zuera, Wackersdorf, Kristianstad, PF International (com a ponte), Portimão e Franciacorta. O Circuito do Oásis (Al Ain) não tem traçado mapeado e continua com um traçado próprio, sempre o mesmo, gerado a partir das características da pista. Nos kartódromos reais os boxes ficam do lado da reta em que há espaço (quase sempre o de fora), e não há zonas de ultrapassagem marcadas. Em todos há zebras nas curvas, brita ou asfalto de escape do lado de fora, pit lane com os boxes das equipes, linha de chegada, grid, setores, arquibancadas e árvores.
-- **Veículos.** Cada categoria tem o seu, e o tamanho cresce a cada degrau: kart 4 tempos de chassi tubular (Kart Regional), kart 125 cc carenado (Kart Nacional), kart 125 cc com câmbio, radiador e carenagem larga (Kart Internacional), Fórmula 4 (compacto, asas simples), Fórmula 3 (asa dianteira de três elementos, barbatana), Fórmula 2 (asa traseira larga, pneus traseiros largos) e Fórmula 1 (efeito solo, asa de quatro elementos, assoalho largo). A pintura é a cor da equipe com um desenho de contraste; nos karts, o macacão do piloto também leva a cor da equipe. O capacete tem a cor do piloto e o carro leva o número dele. É só aparência: desempenho e regras de cada categoria não mudam.
+- **Circuitos.** Os 14 autódromos (usados da Fórmula Júnior ao Grand Prix Mundial) reproduzem o traçado da pista real que inspira cada um, com nome fictício: curvas, retas e proporções reais, sentido da corrida, posição da largada e boxes do lado de dentro. O Circuito do Oito cruza a si mesmo num viaduto. As duas retas mais longas são marcadas como zonas de ultrapassagem (marcação visual; a disputa em si continua sendo a do motor). Dos 20 kartódromos, 19 reproduzem o traçado de um kartódromo real (dados do OpenStreetMap), também com nome fictício e na cidade do kartódromo de referência. No Brasil: Vale do Sol (Granja Viana, Cotia), Lagoa Azul (Londrina), Vale dos Sinos (Velopark, Nova Santa Rita), Planalto (Brasília), Represas (Interlagos, São Paulo), Litoral Norte (Joinville), Triângulo (Uberlândia), Pampas (Tarumã, Viamão), Cerrado Paulista (Birigui) e Guanabara (Guapimirim). No mundial: Lonato, Genk, Le Mans, Zuera, Wackersdorf, Kristianstad, PF International (com a ponte), Portimão e Franciacorta. O Circuito do Oásis (Al Ain) não tem traçado mapeado e continua com um traçado próprio, sempre o mesmo, gerado a partir das características da pista. Nos kartódromos reais os boxes ficam do lado da reta em que há espaço (quase sempre o de fora), e não há zonas de ultrapassagem marcadas. Em todos há zebras nas curvas, brita ou asfalto de escape do lado de fora, pit lane com os boxes das equipes, linha de chegada, grid, setores, arquibancadas e árvores.
+- **Veículos.** Cada categoria tem o seu, e o tamanho cresce a cada degrau: kart 4 tempos de chassi tubular (Kart Regional), kart 125 cc carenado (Kart Nacional), kart 125 cc com câmbio, radiador e carenagem larga (Kart Internacional), Monoposto Júnior (compacto, asas simples), Monoposto Sprint (asa dianteira de três elementos, barbatana), Monoposto Elite (asa traseira larga, pneus traseiros largos) e Monoposto Grand Prix (efeito solo, asa de quatro elementos, assoalho largo). A pintura é a cor da equipe com um desenho de contraste; nos karts, o macacão do piloto também leva a cor da equipe. O capacete tem a cor do piloto e o carro leva o número dele. É só aparência: desempenho e regras de cada categoria não mudam.
 - **Movimento.** Cada carro cruza a linha no tempo que o motor calculou. Dentro da volta, todos seguem o mesmo perfil de velocidade do circuito (freiam para as curvas, aceleram nas retas); quem faz a volta mais rápida anda mais depressa em todos os pontos. A ultrapassagem acontece onde as duas trajetórias se cruzam, com os carros lado a lado.
 - **Ritmo da reprodução.** Em 1×, uma volta de referência dura 24 segundos na tela num kartódromo e de 24 a 40 segundos num autódromo (quanto mais longo o circuito, mais longa a volta na tela); em 8×, um oitavo disso. O relógio da corrida, as diferenças e a velocidade em km/h são os reais.
 - **Decisões.** O motor simula a volta seguinte quando o líder termina a atual. Ritmo e pedido de parada valem para a próxima volta a ser simulada; a tela diz qual é ("Entrar nos boxes no fim da volta N").
@@ -171,14 +173,14 @@ perdas = (100 − nota do piloto) × 0,022%
        + combustível + dano + modo + fase do piloto
 volta  = base × (1 + perdas) × (1 + N(0,1) × σ)
 ```
-O peso do carro vai de 1 (kart) a 4 (F1): no kart, o piloto decide; na F1, o carro pesa quatro vezes mais.
+O peso do carro vai de 1 (kart) a 4 (Grand Prix Mundial): no kart, o piloto decide; no Grand Prix Mundial, o carro pesa quatro vezes mais.
 
 ### Incidentes
 
 - **Erros:** chance por volta de `0,3% + (100 − consistência) × 0,012% + cansaço + chuva`, multiplicada pelo modo, pela confiança e pelo pneu. 72% erro leve, 25% rodada, 3% batida (60%, 34% e 6% na chuva).
 - **Quebra mecânica:** `(100 − confiabilidade)² × 0,00015%` por volta.
 - **Danos:** toques e rodadas danificam o carro (até 1,2% mais lento); dano total tira o carro da corrida. O reparo custa 9 s no box. Nas categorias de base, o piloto paga a conta.
-- **Combustível (F2 e F1):** o tanque leva 3% além da distância; o tanque cheio custa 2,5% de ritmo. Atacar a corrida inteira consome 6% a mais: sem neutralizações, o carro para antes do fim. A IA e o engenheiro automático poupam quando a conta aperta.
+- **Combustível (Fórmula Elite e Grand Prix Mundial):** o tanque leva 3% além da distância; o tanque cheio custa 2,5% de ritmo. Atacar a corrida inteira consome 6% a mais: sem neutralizações, o carro para antes do fim. A IA e o engenheiro automático poupam quando a conta aperta.
 
 ### Disputas de posição
 
@@ -203,14 +205,14 @@ Uma tentativa frustrada tem risco de toque (cresce com a agressividade e com a *
 
 ### Punições
 
-| Infração                                                            | Punição                                     |
-| ------------------------------------------------------------------- | ------------------------------------------- |
-| Queimar a largada                                                   | 5 s                                         |
-| Causar um toque (60% de chance de culpa)                            | 5 s e 1 ponto na licença                    |
-| Causar um toque que tira o rival da prova                           | 10 s, 2 pontos e 3 posições no próximo grid |
-| Excesso de velocidade no pit lane, liberação insegura               | 5 s                                         |
-| Limites de pista, nos monopostos (3 erros leves, e a cada 2 depois) | 5 s                                         |
-| Não usar dois compostos no seco (F2 e F1)                           | 30 s                                        |
+| Infração                                                             | Punição                                     |
+| -------------------------------------------------------------------- | ------------------------------------------- |
+| Queimar a largada                                                    | 5 s                                         |
+| Causar um toque (60% de chance de culpa)                             | 5 s e 1 ponto na licença                    |
+| Causar um toque que tira o rival da prova                            | 10 s, 2 pontos e 3 posições no próximo grid |
+| Excesso de velocidade no pit lane, liberação insegura                | 5 s                                         |
+| Limites de pista, nos monopostos (3 erros leves, e a cada 2 depois)  | 5 s                                         |
+| Não usar dois compostos no seco (Fórmula Elite e Grand Prix Mundial) | 30 s                                        |
 
 As punições em tempo entram no tempo final. Com 12 pontos na licença, o piloto é suspenso por uma etapa.
 
@@ -220,22 +222,22 @@ O clima do fim de semana vem de uma frente climática com frequência igual à c
 
 ### Frequências medidas (`npm run calibrate`, médias por corrida)
 
-| Categoria | Safety car | Virtual | Vermelha | Paradas por carro | Abandonos | Punidos |
-| --------- | ---------- | ------- | -------- | ----------------- | --------- | ------- |
-| Kart      | -          | -       | -        | -                 | 0,7       | 1,0     |
-| F4        | 0,5        | -       | 0,04     | 0,2               | 0,5       | 0,9     |
-| F3        | 0,7        | 0,6     | 0,13     | 0,2               | 0,9       | 1,2     |
-| F2        | 1,0        | 0,7     | 0,10     | 1,0               | 1,0       | 1,6     |
-| F1        | 1,0        | 0,9     | 0,10     | 1,6               | 1,4       | 1,5     |
+| Categoria          | Safety car | Virtual | Vermelha | Paradas por carro | Abandonos | Punidos |
+| ------------------ | ---------- | ------- | -------- | ----------------- | --------- | ------- |
+| Kart               | -          | -       | -        | -                 | 0,7       | 1,0     |
+| Fórmula Júnior     | 0,5        | -       | 0,04     | 0,2               | 0,5       | 0,9     |
+| Fórmula Sprint     | 0,7        | 0,6     | 0,13     | 0,2               | 0,9       | 1,2     |
+| Fórmula Elite      | 1,0        | 0,7     | 0,10     | 1,0               | 1,0       | 1,6     |
+| Grand Prix Mundial | 1,0        | 0,9     | 0,10     | 1,6               | 1,4       | 1,5     |
 
 ## Equipes
 
 - **Hierarquia.** Cada equipe tem primeiro piloto, segundo piloto e reserva. O papel do jogador vem do contrato; o da IA, do valor de mercado.
-- **Ordens de equipe** (F3 em diante): se o segundo piloto está logo à frente do primeiro (até 0,6 s) e mais lento, a equipe pede a troca, uma vez por corrida. A IA obedece em 85% dos casos. O jogador escolhe: obedecer (+5 de confiança da equipe, +4 na relação) ou ignorar (−10 nas duas, e uma reunião com o chefe).
+- **Ordens de equipe** (Fórmula Sprint em diante): se o segundo piloto está logo à frente do primeiro (até 0,6 s) e mais lento, a equipe pede a troca, uma vez por corrida. A IA obedece em 85% dos casos. O jogador escolhe: obedecer (+5 de confiança da equipe, +4 na relação) ou ignorar (−10 nas duas, e uma reunião com o chefe).
 - **Boxes.** Quando os dois carros param juntos, o de trás espera 3 s. A qualidade da equipe de box define o tempo e o risco de parada lenta.
 - **Confiança da equipe.** +1 por posição acima da meta (de −5 a +6 por etapa), −5 em abandono por erro, cai com danos e punições, e volta 4% do caminho até 50. Abaixo de 18, a equipe rescinde o contrato.
 - **Relação com o companheiro** e **rivalidades.** Toque: +15 de rivalidade (+25 se alguém abandona); vizinho de tabela a até 10 pontos: +3 por etapa; perde 2 por etapa. A rivalidade aumenta o risco de toque nas disputas com aquele piloto.
-- **Academia.** Equipes de F1 mantêm academias e convidam para avaliação quem está entre os cinco primeiros, tem até 21 anos e corre do kart internacional à F2. O piloto aprovado tem 70% da vaga paga, +10% no treino e mais interesse das equipes ligadas à academia. Duas temporadas fora dos seis primeiros e ele é dispensado.
+- **Academia.** Equipes do Grand Prix Mundial mantêm academias e convidam para avaliação quem está entre os cinco primeiros, tem até 21 anos e corre do kart internacional à Fórmula Elite. O piloto aprovado tem 70% da vaga paga, +10% no treino e mais interesse das equipes ligadas à academia. Duas temporadas fora dos seis primeiros e ele é dispensado.
 - **Evolução.** Cada posição do campeonato de equipes tem um carro de referência (a escada original da categoria). A cada ano, a equipe anda 15% do caminho entre o carro dela e a referência da posição em que terminou (no máximo 2 pontos): quem termina acima do que o carro vale melhora; quem termina abaixo piora. Soma-se o acerto ou erro do projeto do ano (cerca de 1,5 ponto por equipe, soma zero no grid) e, a cada cinco temporadas, uma mudança de regulamento que dobra essa variação. Medido em 60 temporadas: a média dos carros não sai de 75, a distância entre o melhor e o pior se mantém, e os títulos se dividem entre 4 a 8 equipes, em eras.
 
 ## Contratos e mercado
@@ -279,7 +281,7 @@ Contrato no fim: a equipe propõe renovar se ainda confia no piloto. Contrato vi
 
 ### Mercado de pilotos da IA
 
-Entre as temporadas: os três melhores da IA sobem de categoria (na F1, os veteranos se aposentam); quem saiu de contrato, os reservas e o segundo piloto que superou o primeiro (insatisfeito) ficam livres; chegam estreantes; e as equipes escolhem, da mais forte para a mais fraca, o melhor piloto livre. Quando o jogador sobe, os melhores rivais sobem junto.
+Entre as temporadas: os três melhores da IA sobem de categoria (no Grand Prix Mundial, os veteranos se aposentam); quem saiu de contrato, os reservas e o segundo piloto que superou o primeiro (insatisfeito) ficam livres; chegam estreantes; e as equipes escolhem, da mais forte para a mais fraca, o melhor piloto livre. Quando o jogador sobe, os melhores rivais sobem junto.
 
 ## Economia
 
@@ -318,19 +320,19 @@ Além do caixa, da renda fixa e do fundo de ações, o jogador pode montar um pa
 - **Impostos.** Dividendos, aluguéis e lucro das empresas somam-se à renda tributável do ano. Vender com lucro ações, imóveis, empresas, participações ou a própria equipe paga 15% sobre o ganho.
 - **Patrimônio líquido** = caixa + aplicações + ações + imóveis + empresas + participações − empréstimos (mais o valor da equipe própria, se houver).
 
-O que acontece com € 100 milhões em 40 temporadas, por estratégia (`npm run calibrate`, quatro sementes, com custo de vida de ex-piloto de F1 e um investidor que mantém o caixa positivo):
+O que acontece com € 100 milhões em 40 temporadas, por estratégia (`npm run calibrate`, quatro sementes, com custo de vida de ex-piloto do Grand Prix Mundial e um investidor que mantém o caixa positivo):
 
-| Estratégia                          | Resultado típico                                        | Faixa                                                 |
-| ----------------------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
-| Só caixa                            | 0,9×                                                    | 0,9×                                                  |
-| Renda fixa                          | 2,5×                                                    | 2,5×                                                  |
-| Fundo de ações                      | 3,4× (400 sementes)                                     | 1,0× a 9,5×                                           |
-| As seis ações, em partes iguais     | 3,6×                                                    | 1,4× a 19×                                            |
-| Só Grid Tech (a mais arriscada)     | 1,6×                                                    | 0,9× a 15×                                            |
-| Empréstimo máximo aplicado em ações | 3,2×                                                    | 0,7× a 26×                                            |
-| 25% da melhor equipe da F1          | 1,7×                                                    | 1,6× a 1,8×                                           |
-| 25% da pior equipe da F1            | 1,0×                                                    | 0,9× a 1,2×                                           |
-| Dono passivo de uma equipe          | lucro médio de −0,5% a +2,3% do preço da equipe por ano | e a equipe desvaloriza, porque o carro fica para trás |
+| Estratégia                                 | Resultado típico                                        | Faixa                                                 |
+| ------------------------------------------ | ------------------------------------------------------- | ----------------------------------------------------- |
+| Só caixa                                   | 0,9×                                                    | 0,9×                                                  |
+| Renda fixa                                 | 2,5×                                                    | 2,5×                                                  |
+| Fundo de ações                             | 3,4× (400 sementes)                                     | 1,0× a 9,5×                                           |
+| As seis ações, em partes iguais            | 3,6×                                                    | 1,4× a 19×                                            |
+| Só Grid Tech (a mais arriscada)            | 1,6×                                                    | 0,9× a 15×                                            |
+| Empréstimo máximo aplicado em ações        | 3,2×                                                    | 0,7× a 26×                                            |
+| 25% da melhor equipe do Grand Prix Mundial | 1,7×                                                    | 1,6× a 1,8×                                           |
+| 25% da pior equipe do Grand Prix Mundial   | 1,0×                                                    | 0,9× a 1,2×                                           |
+| Dono passivo de uma equipe                 | lucro médio de −0,5% a +2,3% do preço da equipe por ano | e a equipe desvaloriza, porque o carro fica para trás |
 
 Antes da auditoria, o fundo e a carteira de ações multiplicavam o dinheiro por 12 a 16 no mesmo prazo, e as caudas passavam de 100×: depois de uma geração, o dinheiro deixava de importar.
 
@@ -356,7 +358,7 @@ No começo de cada temporada, a família pode trazer decisões (eventos da categ
 - **Avaliação.** O teto de um filho não aparece como número antes de ele correr. Depois de meio ano de kart, os treinadores dão uma avaliação (limitado, mediano, promissor, muito promissor, fora de série).
 - **Linhagem.** A tela Família guarda todas as gerações: período, melhor categoria, títulos, vitórias, reputação máxima e patrimônio deixado.
 
-Medido (2.000 filhos por caso, parceiro mediano): com um pai de teto 96, os filhos têm teto médio de 85, 45% chegam a 86 e 19% a 90; com um pai de teto 86, a média é 80 e só 3% chegam a 90. Com o robô (apoio total e formação completa), um filho de teto 81 costuma parar no kart internacional ou na F4; um de teto 89 chegou à F1 aos 28 anos. Em 16 vidas simuladas de pilotos de F1, a segunda geração chegou à F1 em duas, à F2 em quatro e parou entre o kart e a F3 nas demais: a dinastia regride à média, e ter mais filhos, formar no kart e escolher bem o herdeiro fazem diferença.
+Medido (2.000 filhos por caso, parceiro mediano): com um pai de teto 96, os filhos têm teto médio de 85, 45% chegam a 86 e 19% a 90; com um pai de teto 86, a média é 80 e só 3% chegam a 90. Com o robô (apoio total e formação completa), um filho de teto 81 costuma parar no kart internacional ou na Fórmula Júnior; um de teto 89 chegou ao Grand Prix Mundial aos 28 anos. Em 16 vidas simuladas de pilotos do Grand Prix Mundial, a segunda geração chegou ao Grand Prix Mundial em duas, à Fórmula Elite em quatro e parou entre o kart e a Fórmula Sprint nas demais: a dinastia regride à média, e ter mais filhos, formar no kart e escolher bem o herdeiro fazem diferença.
 
 ## Morte e continuidade
 
@@ -371,8 +373,8 @@ Medido (2.000 filhos por caso, parceiro mediano): com um pai de teto 96, os filh
 
 "Pendurar o capacete" (tela Carreira) encerra a vida de piloto do personagem, mas não a carreira. No fechamento da temporada, aparecem:
 
-- **Propostas para chefiar uma equipe.** Cada equipe exige um prestígio mínimo (reputação mais o retrospecto das três últimas temporadas no comando: +4 por meta cumprida, −3 por meta perdida): base da categoria + 1,5 por posição na ordem de forças − 8. Um campeão de F1 recebe propostas da F1; um piloto desconhecido, só do kart. Salário de € 8 mil (pior equipe do kart regional) a € 4 milhões (melhor da F1).
-- **Equipes à venda.** Em cada categoria, as duas mais fracas e uma do meio do grid: de cerca de € 60 mil (a pior do kart regional) a cerca de € 140 milhões (meio do grid da F1). O preço inclui o caixa com que a equipe é entregue. As equipes de ponta não ficam à venda. Quem já é sócio paga só a parte que falta.
+- **Propostas para chefiar uma equipe.** Cada equipe exige um prestígio mínimo (reputação mais o retrospecto das três últimas temporadas no comando: +4 por meta cumprida, −3 por meta perdida): base da categoria + 1,5 por posição na ordem de forças − 8. Um campeão do Grand Prix Mundial recebe propostas do Grand Prix Mundial; um piloto desconhecido, só do kart. Salário de € 8 mil (pior equipe do kart regional) a € 4 milhões (melhor do Grand Prix Mundial).
+- **Equipes à venda.** Em cada categoria, as duas mais fracas e uma do meio do grid: de cerca de € 60 mil (a pior do kart regional) a cerca de € 140 milhões (meio do grid do Grand Prix Mundial). O preço inclui o caixa com que a equipe é entregue. As equipes de ponta não ficam à venda. Quem já é sócio paga só a parte que falta.
 - **Fundar uma equipe.** Custa 75% do valor da mais fraca da categoria, mais o caixa inicial. A equipe nova ocupa a inscrição da mais fraca e herda o equipamento dela, um pouco pior, sem instalações, sem equipe técnica e com reputação 22.
 - **Revenda.** O valor de uma equipe é o valor de mercado da posição dela × (0,55 + reputação/200), mais um quarto do custo das instalações e o caixa. Fica abaixo do preço de compra até a equipe subir na tabela ou ganhar reputação: comprar ou fundar para revender em seguida dá prejuízo (conferido em todas as categorias).
 - **Ficar sem equipe.** O jogador vive do patrimônio, acompanha o campeonato e a família; a reputação cai 1 ponto por ano.
@@ -397,7 +399,7 @@ No fim de semana, o dirigente escolhe o programa de treino e a abordagem de clas
 | Simulador, túnel de vento, fábrica (nível 0 a 5)                   | +6% de pesquisa e +4% na evolução dos pilotos; +10% em aerodinâmica; +10% em fabricação, −3% no custo da pesquisa e boxes melhores |
 
 - **Mercado de profissionais.** Dois candidatos por função a cada temporada; o nível deles segue a reputação da equipe. O salário cresce com a nota (elevada a 2,5) e volta ao valor de mercado a cada renovação. Trocar alguém custa meio ano de salário de indenização. Quem tem contrato vencido e nota muito acima da reputação da equipe pode ir embora. Uma função vaga é ocupada por um interino fraco, que também recebe salário.
-- **Pilotos.** No fechamento, a lista traz os atuais, os que ficam livres, três estreantes e os filhos do jogador. Cada piloto é medido contra o grid atual: na F1, o melhor pede € 14 milhões e o pior, € 600 mil; nas categorias de base é o piloto que paga, de 105% (o mais fraco) a 65% (o melhor) do preço de tabela da vaga. Um piloto só aceita se a reputação da equipe estiver à altura da ambição dele (os atuais são mais tolerantes), e quem chega à idade-limite não renova. Um filho corre pela equipe da família sem salário e sem pagar.
+- **Pilotos.** No fechamento, a lista traz os atuais, os que ficam livres, três estreantes e os filhos do jogador. Cada piloto é medido contra o grid atual: no Grand Prix Mundial, o melhor pede € 14 milhões e o pior, € 600 mil; nas categorias de base é o piloto que paga, de 105% (o mais fraco) a 65% (o melhor) do preço de tabela da vaga. Um piloto só aceita se a reputação da equipe estiver à altura da ambição dele (os atuais são mais tolerantes), e quem chega à idade-limite não renova. Um filho corre pela equipe da família sem salário e sem pagar.
 - **Patrocinadores da equipe.** Três cotas, que dividem o total que o mercado paga (40%, 33% e 27%): a base da categoria × (0,25 + reputação/60). A cota maior exige uma posição melhor que a meta da equipe. Quem vê a equipe mais de duas posições abaixo do combinado rompe o contrato, e cada rompimento tira 2 pontos da reputação da equipe.
 - **Caixa.** Receitas (patrocínios, vagas pagas pelos pilotos, prêmio pela posição do ano anterior) e despesas (pilotos, equipe técnica, operação, instalações, pesquisa) entram em parcelas por etapa; os danos dos dois carros são cobrados na hora. Com o caixa negativo, a pesquisa para.
 - **Reputação da equipe.** A cada ano, anda 40% do caminho até a nota da posição final (92 para a campeã, 8 a menos por posição), mais depressa com um bom comando.
@@ -409,29 +411,29 @@ Com a estrutura padrão, o resultado previsto do ano vai de 0,3% a 8% do valor d
 
 A pesquisa gera pontos a cada etapa: capacidade da engenharia (2 pontos mais 0,6 por nível) × ritmo (contido 0,5; normal 1; agressivo 1,6, a 1,9 vez o custo) × pessoas (0,55 + diretor técnico/200 + engenheiro-chefe/400) × simulador. O jogador distribui o esforço entre cinco áreas. A primeira melhoria de uma área na temporada custa 9 pontos, e cada seguinte, 35% a mais. A pesquisa em andamento não se perde na virada do ano.
 
-| Área                            | Cada melhoria dá                 | Kart              | F4, F3 e F2 | F1    |
-| ------------------------------- | -------------------------------- | ----------------- | ----------- | ----- |
-| Aerodinâmica                    | chassi +0,6; motor +0,2          | fechada           | fechada     | livre |
-| Chassi                          | chassi +0,7                      | livre             | fechada     | livre |
-| Motor                           | motor +0,8                       | fechada (lacrado) | fechada     | livre |
-| Suspensão                       | chassi +0,4; confiabilidade +0,2 | livre             | livre       | livre |
-| Fabricação                      | confiabilidade +1                | livre             | livre       | livre |
-| Limite por área e por temporada |                                  | 2                 | 2           | 5     |
+| Área                            | Cada melhoria dá                 | Kart              | Fórmula Júnior, Sprint e Elite | Grand Prix Mundial |
+| ------------------------------- | -------------------------------- | ----------------- | ------------------------------ | ------------------ |
+| Aerodinâmica                    | chassi +0,6; motor +0,2          | fechada           | fechada                        | livre              |
+| Chassi                          | chassi +0,7                      | livre             | fechada                        | livre              |
+| Motor                           | motor +0,8                       | fechada (lacrado) | fechada                        | livre              |
+| Suspensão                       | chassi +0,4; confiabilidade +0,2 | livre             | livre                          | livre              |
+| Fabricação                      | confiabilidade +1                | livre             | livre                          | livre              |
+| Limite por área e por temporada |                                  | 2                 | 2                              | 5                  |
 
-- **Fórmula 1.** Teto de gastos com desenvolvimento de € 30 milhões por temporada: ao atingi-lo, a pesquisa para até o ano seguinte. As horas de túnel de vento dependem da posição no campeonato anterior: 70% para a campeã, 5 pontos percentuais a mais por posição.
-- **Concorrência.** Todas as rivais evoluem o mesmo durante o ano: 2 pontos de carro na F1, 0,6 no kart e 0,25 nas categorias monomarca. Na virada do ano, essa evolução é descontada de todos, e o que a equipe do jogador ganhou acima dela perde 30%. Quem não acompanha anda para trás.
+- **Grand Prix Mundial.** Teto de gastos com desenvolvimento de € 30 milhões por temporada: ao atingi-lo, a pesquisa para até o ano seguinte. As horas de túnel de vento dependem da posição no campeonato anterior: 70% para a campeã, 5 pontos percentuais a mais por posição.
+- **Concorrência.** Todas as rivais evoluem o mesmo durante o ano: 2 pontos de carro no Grand Prix Mundial, 0,6 no kart e 0,25 nas categorias monomarca. Na virada do ano, essa evolução é descontada de todos, e o que a equipe do jogador ganhou acima dela perde 30%. Quem não acompanha anda para trás.
 
 Quanto o carro evolui por temporada com a estrutura padrão e o esforço dividido por igual (`npm run calibrate`):
 
-| Categoria   | Rivais | Melhor equipe (normal / agressivo)  | Equipe do meio            | Pior equipe               |
-| ----------- | ------ | ----------------------------------- | ------------------------- | ------------------------- |
-| Fórmula 1   | 2,00   | 2,46 / 3,47                         | 1,55 a 1,79 / 2,23 a 2,80 | 1,01 / 1,45               |
-| F4, F3 e F2 | 0,25   | 0,40 / 0,40 (limite do regulamento) | 0,30 a 0,40 / 0,40        | 0,25 a 0,30 / 0,30 a 0,40 |
-| Kart        | 0,60   | 1,10 / 1,10                         | 0,55 a 0,83 / 0,83 a 1,10 | 0,55 / 0,69               |
+| Categoria                      | Rivais | Melhor equipe (normal / agressivo)  | Equipe do meio            | Pior equipe               |
+| ------------------------------ | ------ | ----------------------------------- | ------------------------- | ------------------------- |
+| Grand Prix Mundial             | 2,00   | 2,46 / 3,47                         | 1,55 a 1,79 / 2,23 a 2,80 | 1,01 / 1,45               |
+| Fórmula Júnior, Sprint e Elite | 0,25   | 0,40 / 0,40 (limite do regulamento) | 0,30 a 0,40 / 0,40        | 0,25 a 0,30 / 0,30 a 0,40 |
+| Kart                           | 0,60   | 1,10 / 1,10                         | 0,55 a 0,83 / 0,83 a 1,10 | 0,55 / 0,69               |
 
-Na F1, só a equipe de ponta acompanha o grid no ritmo normal; as do meio precisam do ritmo agressivo, e a pior não acompanha nem assim sem ampliar a engenharia, contratar gente melhor e concentrar o esforço.
+No Grand Prix Mundial, só a equipe de ponta acompanha o grid no ritmo normal; as do meio precisam do ritmo agressivo, e a pior não acompanha nem assim sem ampliar a engenharia, contratar gente melhor e concentrar o esforço.
 
-Medido em quatro temporadas à frente da pior equipe da F1: com estrutura e pesquisa no máximo, o carro ganha mais de 2 pontos sobre o grid em relação a uma gestão que só mantém o ritmo contido.
+Medido em quatro temporadas à frente da pior equipe do Grand Prix Mundial: com estrutura e pesquisa no máximo, o carro ganha mais de 2 pontos sobre o grid em relação a uma gestão que só mantém o ritmo contido.
 
 ## Tutorial e primeiros passos
 
@@ -458,17 +460,29 @@ Os eventos de família (no começo de cada temporada) e os de gestão (depois da
 
 `npm run calibrate` simula 12 carreiras de 14 temporadas com um robô que joga de forma simples. O "talento" soma pontos aos atributos e representa um jogador que decide melhor:
 
-| Robô                  | Onde chega em 14 temporadas                                     |
-| --------------------- | --------------------------------------------------------------- |
-| Mediano (talento 0)   | F3 ou F2                                                        |
-| Bom (talento 4)       | F1 aos 26 ou 27 anos, no meio do grid                           |
-| Excelente (talento 8) | F1 aos 24 a 28 anos; em parte das carreiras, vitórias e títulos |
+| Robô                  | Onde chega em 14 temporadas                                                     |
+| --------------------- | ------------------------------------------------------------------------------- |
+| Mediano (talento 0)   | Fórmula Sprint ou Fórmula Elite                                                 |
+| Bom (talento 4)       | Grand Prix Mundial aos 26 ou 27 anos, no meio do grid                           |
+| Excelente (talento 8) | Grand Prix Mundial aos 24 a 28 anos; em parte das carreiras, vitórias e títulos |
 
-Essas faixas foram medidas de novo depois da auditoria: com a regra nova de evolução das equipes, três das quatro carreiras do robô bom chegam à F1 (aos 24 a 28 anos) e uma das quatro do mediano também.
+Essas faixas foram medidas de novo depois da auditoria: com a regra nova de evolução das equipes, três das quatro carreiras do robô bom chegam ao Grand Prix Mundial (aos 24 a 28 anos) e uma das quatro do mediano também.
 
-**Mundo no longo prazo** (60 temporadas acompanhadas de fora, por categoria): o nível médio dos pilotos sobe de 4 a 5 pontos nas primeiras temporadas e fica estável (kart regional 73, F3 82 a 83, F1 89 a 91, para níveis projetados de 68, 78 e 85); as idades ficam estáveis (F1: média de 31 a 33 anos, máximo de 38); a média dos carros fica em 75; há de 2 a 7 pilotos campeões diferentes por década na F1.
+**Mundo no longo prazo** (60 temporadas acompanhadas de fora, por categoria): o nível médio dos pilotos sobe de 4 a 5 pontos nas primeiras temporadas e fica estável (kart regional 73, Fórmula Sprint 82 a 83, Grand Prix Mundial 89 a 91, para níveis projetados de 68, 78 e 85); as idades ficam estáveis (Grand Prix Mundial: média de 31 a 33 anos, máximo de 38); a média dos carros fica em 75; há de 2 a 7 pilotos campeões diferentes por década no Grand Prix Mundial.
 
-O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, depois dirigente, com sucessões) e confere a integridade do estado a cada passo. Nessas vidas: um campeão de F1 aposenta-se com cerca de € 180 milhões e recebe proposta da melhor equipe da F1; um piloto que parou na F3 ou na F2 recebe proposta de uma equipe do fundo da F2; as mortes aconteceram aos 60, 64 e 73 anos (um personagem chegou vivo aos 84); e os herdeiros que assumiram tinham de 16 a 22 anos: dois filhos, um no kart regional e outro na F4, e um parente, porque os filhos daquele personagem já tinham largado as pistas.
+O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, depois dirigente, com sucessões) e confere a integridade do estado a cada passo. Nessas vidas: um campeão do Grand Prix Mundial aposenta-se com cerca de € 180 milhões e recebe proposta da melhor equipe do Grand Prix Mundial; um piloto que parou na Fórmula Sprint ou na Fórmula Elite recebe proposta de uma equipe do fundo da Fórmula Elite; as mortes aconteceram aos 60, 64 e 73 anos (um personagem chegou vivo aos 84); e os herdeiros que assumiram tinham de 16 a 22 anos: dois filhos, um no kart regional e outro na Fórmula Júnior, e um parente, porque os filhos daquele personagem já tinham largado as pistas.
+
+### Linha de base do simulador (Fase 0 da grande atualização)
+
+`npm run sim -- --seeds 50 --seasons 15` joga 50 carreiras de 15 temporadas com o robô e imprime o relatório que cada fase compara com o da anterior (os relatórios completos ficam em `docs/simulador/`). Diferente do `calibrate`, o piloto de cada semente tem perfil, idade (14 a 17 anos) e equipe de estreia próprios, e o robô joga tudo no equilíbrio (treino de acerto, classificação e corrida equilibradas).
+
+| Robô                  | Chegam ao Grand Prix Mundial | Idade média ao chegar | Chegada ao kart nacional | Títulos por carreira | Temporadas sem vaga por carreira | Caixa mediano na 15ª temporada |
+| --------------------- | ---------------------------- | --------------------- | ------------------------ | -------------------- | -------------------------------- | ------------------------------ |
+| Mediano (talento 0)   | 6%                           | 29,7 anos             | aos 20,8 anos            | 0,34                 | 2,02                             | R$ 96.688                      |
+| Bom (talento 4)       | 28%                          | 28,4 anos             | aos 19,6 anos            | 0,50                 | 1,58                             | R$ 295 mil                     |
+| Excelente (talento 8) | 68%                          | 26,9 anos             | aos 18,4 anos            | 0,78                 | 0,88                             | R$ 18,95 mi                    |
+
+"Sem vaga" é a temporada em que nenhuma equipe fez uma proposta que o piloto pudesse aceitar e ele só correu pela rede de segurança. O robô mediano passa em média seis temporadas no kart regional antes de subir, e quase toda carreira dele tem ao menos uma temporada assim: é o retrato do jogo de hoje com um jogador que não aproveita nenhuma decisão, e o ponto de partida para as próximas fases.
 
 ## Limitações conhecidas e próximos passos
 
@@ -483,7 +497,7 @@ O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, de
 - Uma corrida recarregada no meio recomeça da largada; a transmissão não é gravada.
 - A mudança de regulamento a cada cinco temporadas embaralha as rivais, mas não mexe no carro da equipe que o jogador dirige (o dela é o que a pesquisa construiu).
 - O equilíbrio da gestão foi medido com robôs e simulações, não com jogadores: os números de retorno e de ritmo de desenvolvimento podem pedir ajuste fino depois de partidas reais.
-- Nas vidas longas, o nível dos pilotos da F1 sobe alguns pontos acima do projetado; os contratos da gestão já medem cada piloto contra o grid real, mas o nível nominal da categoria não é recalibrado.
+- Nas vidas longas, o nível dos pilotos do Grand Prix Mundial sobe alguns pontos acima do projetado; os contratos da gestão já medem cada piloto contra o grid real, mas o nível nominal da categoria não é recalibrado.
 - O jogador não pode assinar como piloto reserva de uma categoria superior.
 - Não há mudanças no meio da temporada (troca de equipe, demissão imediata, contratação de pilotos).
 - Corridas sprint, pontuação pela metade e retardatários não são simulados.

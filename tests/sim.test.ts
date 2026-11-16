@@ -173,7 +173,9 @@ describe('linha de comando', () => {
     expect(result.code).toBe(0);
     expect(result.out).toBe(formatReport(small.summary));
     expect(result.err).toMatch(/4\/4 carreiras/);
-    expect(result.err).toMatch(/4 carreiras, \d+ temporadas em \d+,\d s/);
+    expect(result.err).toMatch(/4 carreiras, \d+ temporadas em \d+,\d s · jogo .+, save v\d+/);
+    // A versão do jogo e a do save ficam fora do relatório, para ele só mudar quando uma regra mudar.
+    expect(result.out).not.toMatch(/save v\d|Jogo \d/);
   });
 
   it('--json escreve os dados completos e --out grava a saída num arquivo', () => {

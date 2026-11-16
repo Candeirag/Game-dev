@@ -4,6 +4,46 @@ Jogo de carreira e gestão no automobilismo, em React + TypeScript, que vai vira
 (Android e iPhone). Todo texto do jogo, do código (comentários) e do repositório (commits,
 issues, PRs) é em português do Brasil.
 
+## As regras da grande atualização (fases 0 a 9)
+
+Valem para todas as fases. Cada regra tem um teste ou um comando que a confere; se você
+precisar contrariar uma delas, pare e pergunte antes.
+
+1. **Uma fase por PR.** Nada de misturar escopos: o que não é da fase vai para "O que ficou de
+   fora" do PR, não para o código. O PR não é mesclado por quem o abriu: o dono joga e aprova.
+2. **Testes (Vitest) e Biome sempre passando.** Toda regra de jogo nova ganha teste no mesmo PR.
+3. **Número de equilíbrio não fica solto no código.** Probabilidade, multiplicador, limite,
+   custo, idade: tudo o que se ajusta para equilibrar o jogo mora em tabela com nome. Números
+   novos entram em `src/config/balance.ts`. As tabelas que já existiam continuam onde estão (o
+   mapa delas está nesse arquivo e é conferido por `tests/balance.test.ts`); quando uma fase
+   mexer numa regra antiga cujo número está solto, leva o número para a configuração no mesmo PR.
+4. **Toda aleatoriedade passa pelo gerador com semente** (`src/engine/rng.ts`):
+   `createRng(hashSeed(career.seed, temporada, etapa, 'nome-do-sorteio', …))`. Nada de
+   `Math.random`, `crypto`, relógio ou `localeCompare` na lógica; `tests/determinism.test.ts`
+   falha se aparecerem. Mesma semente + mesmas escolhas = mesmo resultado. Sorteio novo ganha um
+   nome novo; mudar o nome, os ids ou a ordem de uma lista usada num sorteio muda a sorte de
+   carreiras em andamento.
+5. **Mudou o formato do save: nova versão + migração.** Suba `CAREER_SCHEMA_VERSION`, escreva
+   `migrateVN.ts` e registre em `src/persistence/migrations.ts` (o passo a passo está lá), grave
+   os saves da versão nova com `UPDATE_FIXTURES=1 npx vitest run tests/fixtures.test.ts` e teste
+   o degrau. Save antigo nunca quebra: os de `tests/fixtures/v1` em diante têm de abrir e
+   continuar jogáveis. O schema descarta campos que não conhece, então todo campo novo exige
+   versão nova.
+6. **Interface.** Tela deitada (844×390 é a referência); português do Brasil; números com
+   dígitos de largura fixa (`tabular-nums`, já ligado no `body`) e diferenças de tempo sempre
+   com três casas (`formatGap`, `formatLap`); nenhuma informação só por cor (cor + letra, ícone
+   ou seta); área de toque de no mínimo 44 pt; respeitar o "reduzir movimento" do sistema;
+   vibração só em momentos importantes e sempre igual para a mesma ação, por um módulo único
+   (nenhuma tela chama a vibração direto).
+7. **Visual.** Grafite escuro com vermelho de destaque, Barlow Condensed nos títulos e Inter no
+   texto (tokens em `src/index.css`). A inspiração são os jogos de gestão de automobilismo, sem
+   copiar logos, imagens ou layouts, e **sem marcas reais**: nem nomes de categorias, entidades,
+   equipes, pilotos ou patrocinadores de verdade. Os nomes das categorias saem todos de
+   `src/domain/categoryNames.ts`; `tests/names.test.ts` falha se uma marca conhecida aparecer.
+8. **Mexeu em regra de jogo: rode o simulador** (`npm run sim -- --seeds 50 --seasons 15`) e
+   cole o relatório no PR, ao lado do relatório da fase anterior. Sem mudança de regra, o
+   relatório tem de sair idêntico.
+
 ## Fluxo de trabalho (obrigatório)
 
 1. **Uma issue por tarefa grande.** Antes de começar, crie a issue com o escopo, o que fica de
@@ -19,28 +59,37 @@ issues, PRs) é em português do Brasil.
 
 ## Comandos
 
-| Comando              | O que faz                                                                                |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| `npm run dev`        | Servidor de desenvolvimento.                                                             |
-| `npm run build`      | Tipos e build de produção (`dist/`).                                                     |
-| `npm run check`      | **Verificação completa:** lint (Biome), tipos, testes (Vitest) e navegador (Playwright). |
-| `npm run check:fast` | O mesmo, sem o Playwright.                                                               |
-| `npm run format`     | Aplica a formatação e as correções seguras do Biome.                                     |
-| `npm run test:e2e`   | Só os testes no navegador (`e2e/`).                                                      |
-| `npm run calibrate`  | Relatórios de balanceamento (não fazem parte da verificação).                            |
+| Comando              | O que faz                                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run dev`        | Servidor de desenvolvimento.                                                                |
+| `npm run build`      | Tipos e build de produção (`dist/`).                                                        |
+| `npm run check`      | **Verificação completa:** lint (Biome), tipos, testes (Vitest) e navegador (Playwright).    |
+| `npm run check:fast` | O mesmo, sem o Playwright.                                                                  |
+| `npm run format`     | Aplica a formatação e as correções seguras do Biome.                                        |
+| `npm run test:e2e`   | Só os testes no navegador (`e2e/`).                                                         |
+| `npm run sim`        | **Simulador sem interface:** joga carreiras com o robô e imprime o relatório de equilíbrio. |
+| `npm run calibrate`  | Relatórios de balanceamento detalhados (não fazem parte da verificação).                    |
 
 O Playwright usa o Chromium. Em uma máquina nova: `npx playwright install chromium`.
 Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
+
+Simulador: `npm run sim -- --seeds 50 --seasons 15` (o padrão; cerca de 25 s). Outras opções:
+`--first-seed N`, `--talent N` (0 = o robô puro; 4 = bom jogador; 8 = excelente), `--json`,
+`--out arquivo`, `--help`. O relatório vai para a saída padrão e não tem data nem duração: com
+os mesmos argumentos e o mesmo código, sai sempre igual.
 
 ## O que não pode mudar sem querer
 
 - **Simulação, balanceamento e economia.** `tests/regression.test.ts` compara carreiras de
   semente fixa com os valores de `tests/golden/simulation.json`. Se o teste falhar e a mudança
   não for proposital, é um defeito. Se for proposital, regrave com
-  `UPDATE_GOLDEN=1 npx vitest run tests/regression.test.ts` e explique no PR o que mudou.
-- **Saves.** Os de `tests/fixtures/` (versões 1, 2 e 3) têm de continuar abrindo e jogáveis.
-  Mudou o formato do save? Suba `CAREER_SCHEMA_VERSION`, escreva a migração em
-  `src/persistence/migrations.ts` e grave um save novo em `tests/fixtures/`.
+  `UPDATE_GOLDEN=1 npx vitest run tests/regression.test.ts`, explique no PR o que mudou e cole o
+  relatório do simulador de antes e de depois.
+- **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
+  estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
+  (`tests/names.test.ts` trava a lista).
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 4) têm de continuar abrindo e jogáveis. Os
+  das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
   imagem cruzar um texto, se a página passar da largura ou se houver área de toque menor que
@@ -51,11 +100,17 @@ Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
 
 `src/domain` (schemas e textos) → `src/data` (dados estáticos) → `src/engine` (motor puro e
 determinístico) → `src/persistence` (saves) → `src/store` (Zustand, camada fina) → `src/ui`.
+Ao lado: `src/config` (configuração de balanceamento e feature flags) e `sim/` (o robô e o
+simulador, que só usam a API pública do motor).
 
 - Regra de jogo só no motor. Componentes React e a store não decidem nada do jogo.
-- Toda aleatoriedade vem de `src/engine/rng.ts`, com semente. Nada de `Math.random` no motor.
+- Toda aleatoriedade vem de `src/engine/rng.ts`, com semente (regra 4).
 - Dinheiro só por `src/domain/money.ts` (motor: `money(career, valor)`; interface:
-  `formatMoney`). Plurais por `src/domain/text.ts`.
+  `formatMoney`). Plurais por `src/domain/text.ts`. Nome de categoria em frase só por
+  `categoryRef` (`src/domain/categoryNames.ts`), que acerta "do/da", "no/na", "ao/à".
+- O que ainda não está pronto para o jogador fica atrás de uma feature flag de
+  `src/config/featureFlags.ts` (premium, anúncios, conquistas da loja; tudo desligado). O motor
+  não lê flags.
 - Visual "muro dos boxes": tokens em `src/index.css`, componentes em `src/ui/kit`. Cada cor
   tem um significado fixo (vermelho: ação principal e o jogador; verde: bom; âmbar: atenção).
   Ícones só do Lucide; nada de emoji como ícone.

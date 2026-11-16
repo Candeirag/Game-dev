@@ -1,9 +1,8 @@
 /**
- * Relatório do simulador, em texto puro. Não tem data, hora nem duração: duas execuções com os
- * mesmos argumentos e o mesmo código dão o mesmo texto, letra por letra, e dá para comparar o
- * relatório de uma fase com o da anterior num diff.
+ * Relatório do simulador, em texto puro. Não tem data, hora, duração nem número de versão: duas
+ * execuções com os mesmos argumentos dão o mesmo texto, letra por letra, enquanto nenhuma regra
+ * do jogo mudar, e dá para comparar o relatório de uma fase com o da anterior num diff.
  */
-import { CAREER_SCHEMA_VERSION } from '@/domain/schemas';
 import { formatMoney } from '@/domain/money';
 import { counted } from '@/domain/text';
 import { CATEGORIES, getCategory } from '@/data/categories';
@@ -37,7 +36,7 @@ export function formatReport(summary: SimSummary): string {
     'APEX MOTORSPORT DYNASTY · SIMULADOR DE CARREIRAS',
     `${counted(summary.careers, 'carreira', 'carreiras')} (sementes ${options.firstSeed} a ${lastSeed}), ${counted(options.seasons, 'temporada', 'temporadas')} cada: ${summary.seasonsPlayed} temporadas disputadas`,
     `Política: robô padrão (treino de acerto, classificação e corrida equilibradas, melhor proposta aceitável) · talento ${options.talent}`,
-    `Jogo ${__APP_VERSION__} · save v${CAREER_SCHEMA_VERSION} · idade média na estreia: ${decimal(summary.averageStartAge)} anos`,
+    `Idade média na estreia: ${decimal(summary.averageStartAge)} anos`,
   );
 
   section('1. Posição final por categoria');

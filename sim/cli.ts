@@ -1,5 +1,6 @@
 /** Linha de comando do simulador: lê os argumentos, roda as carreiras e escreve o relatório. */
 import { writeFileSync } from 'node:fs';
+import { CAREER_SCHEMA_VERSION } from '@/domain/schemas';
 import { formatReport } from './report';
 import { DEFAULT_SIM_OPTIONS, runSimulation, type SimOptions } from './run';
 
@@ -98,7 +99,7 @@ export function runCli(argv: readonly string[], streams: CliStreams): number {
   if (out) writeFileSync(out, text);
   const seconds = (performance.now() - started) / 1000;
   streams.err(
-    `${result.summary.careers} carreiras, ${result.summary.seasonsPlayed} temporadas em ${seconds.toFixed(1).replace('.', ',')} s${out ? ` · gravado em ${out}` : ''}\n`,
+    `${result.summary.careers} carreiras, ${result.summary.seasonsPlayed} temporadas em ${seconds.toFixed(1).replace('.', ',')} s · jogo ${__APP_VERSION__}, save v${CAREER_SCHEMA_VERSION}${out ? ` · gravado em ${out}` : ''}\n`,
   );
   return 0;
 }
