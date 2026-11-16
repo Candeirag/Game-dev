@@ -1,4 +1,5 @@
 /** Apoio aos testes no navegador: tamanhos de tela, abertura de saves e a verificação visual. */
+import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 /**
@@ -46,6 +47,36 @@ export async function abrirSave(page: Page, arquivo: string): Promise<void> {
   await page.waitForURL(/#\/dashboard/);
   const aviso = page.getByRole('button', { name: 'Fechar aviso' });
   if (await aviso.count()) await aviso.click();
+}
+
+/**
+ * Deixa um save gravado no armazenamento do navegador, como se uma versão anterior do jogo o
+ * tivesse salvado naquele slot, e recarrega o menu inicial.
+ */
+export async function gravarNoAparelho(page: Page, slot: string, arquivo: string): Promise<void> {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Nova carreira' }).waitFor();
+  await page.evaluate(
+    async ([chave, json]) => {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const pedido = indexedDB.open('apex-motorsport-dynasty', 1);
+        pedido.onupgradeneeded = () => {
+          if (!pedido.result.objectStoreNames.contains('saves')) pedido.result.createObjectStore('saves');
+        };
+        pedido.onsuccess = () => resolve(pedido.result);
+        pedido.onerror = () => reject(pedido.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transacao = db.transaction('saves', 'readwrite');
+        transacao.objectStore('saves').put(JSON.parse(json), chave);
+        transacao.oncomplete = () => resolve();
+        transacao.onerror = () => reject(transacao.error);
+      });
+      db.close();
+    },
+    [slot, readFileSync(arquivo, 'utf8')] as const,
+  );
+  await page.reload();
 }
 
 /** Vai para uma tela pela navegação do jogo (trilho, barra inferior ou "Mais"). */

@@ -29,10 +29,13 @@ import { clearRaceResume, loadRaceResume, raceResumeKey, saveRaceResume, type Ra
 import { createDefaultStorage, probeStorage, type StorageAdapter } from '@/persistence/storage';
 import {
   NewerSaveError,
+  type OriginalCopyInfo,
   SaveError,
   deleteSave,
   exportCareer,
+  exportOriginalCopy,
   importCareer,
+  listOriginalCopies,
   listSaves,
   loadCareer,
   saveCareer,
@@ -78,6 +81,8 @@ export interface GameStore {
   lastExportAt: string | null;
   saveStatus: SaveStatus;
   slots: SlotInfo[];
+  /** Cópias intactas de saves de formato anterior, guardadas quando o slot foi convertido. */
+  originalCopies: OriginalCopyInfo[];
   notice: string | null;
   /** Desfecho do último evento resolvido, para mostrar ao jogador. */
   lastOutcome: { title: string; text: string } | null;
@@ -85,6 +90,9 @@ export interface GameStore {
   /** Testa o armazenamento do navegador e escolhe o que funciona (chamado uma vez, na abertura). */
   initStorage(): Promise<void>;
   refreshSlots(): Promise<void>;
+  refreshOriginalCopies(): Promise<void>;
+  /** Texto JSON de uma cópia de formato anterior, como o save foi gravado. */
+  exportOriginalCopy(slot: SaveSlotId, version: number): Promise<string>;
   /** Anota que a carreira acabou de ser exportada. */
   markExported(): void;
   newCareer(input: NewCareerInput): Promise<void>;
@@ -270,6 +278,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     autoEngineer: false,
     saveStatus: { kind: 'idle' },
     slots: [],
+    originalCopies: [],
     notice: null,
     lastOutcome: null,
     lastExportAt: readLastExport(),
@@ -289,6 +298,14 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     async refreshSlots() {
       set({ slots: await listSaves(get().storage) });
+    },
+
+    async refreshOriginalCopies() {
+      set({ originalCopies: await listOriginalCopies(get().storage) });
+    },
+
+    exportOriginalCopy(slot, version) {
+      return exportOriginalCopy(get().storage, slot, version);
     },
 
     async newCareer(input) {

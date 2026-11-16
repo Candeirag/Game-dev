@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardPaste, Copy, Download, FileUp } from 'lucide-react';
 import { CATEGORY_NAMES, FIRST_CATEGORY_ID } from '@/domain/categoryNames';
-import { SAVE_SLOTS, type SaveSlotId } from '@/persistence/saveService';
+import { SAVE_SLOTS, type OriginalCopyInfo, type SaveSlotId } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, PageHeader, cx } from '../components/ui';
 import { ExportReminder } from '../components/SaveNotices';
@@ -13,6 +13,7 @@ const STORAGE_LABELS = { indexeddb: 'IndexedDB do navegador', localstorage: 'loc
 
 export function SavesScreen() {
   const { slots, storage, refreshSlots, saveToSlot, loadSlot, removeSlot, exportJson, importJson, markExported, career } = useGameStore();
+  const { originalCopies, refreshOriginalCopies, exportOriginalCopy } = useGameStore();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
@@ -23,7 +24,8 @@ export function SavesScreen() {
 
   useEffect(() => {
     void refreshSlots();
-  }, [refreshSlots]);
+    void refreshOriginalCopies();
+  }, [refreshSlots, refreshOriginalCopies]);
 
   async function run(action: () => Promise<void>, success: string) {
     setMessage(null);
@@ -33,19 +35,29 @@ export function SavesScreen() {
     } catch (e) {
       setMessage({ tone: 'error', text: e instanceof Error ? e.message : String(e) });
     }
+    // Gravar por cima de um save de formato anterior guarda o original: a lista pode ter mudado.
+    void refreshOriginalCopies();
+  }
+
+  function saveFile(name: string, json: string) {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function download() {
     const json = exportJson();
     if (!json || !career) return;
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `apex-carreira-${career.year}-etapa-${career.rounds.length}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    saveFile(`apex-carreira-${career.year}-etapa-${career.rounds.length}.json`, json);
     markExported();
+  }
+
+  async function downloadOriginal(copy: OriginalCopyInfo) {
+    saveFile(`apex-save-original-${copy.slot}-formato-${copy.version}.json`, await exportOriginalCopy(copy.slot, copy.version));
   }
 
   /** Alternativa ao download: há páginas e aplicativos que bloqueiam arquivos baixados. */
@@ -144,6 +156,39 @@ export function SavesScreen() {
               );
             })}
           </ul>
+          {originalCopies.length > 0 && (
+            <section aria-label="Cópias de formatos anteriores" className="border-t border-ink-800 px-3 py-2">
+              <div className="text-sm font-semibold">Cópias de formatos anteriores</div>
+              <p className="text-xs text-ink-400">
+                Quando o jogo converte um save gravado por uma versão anterior, o original fica guardado aqui, intacto, mesmo que o slot seja apagado. A cópia
+                abre nesta versão e na que a gravou: exporte o arquivo e importe-o lá.
+              </p>
+              <ul className="mt-1 divide-y divide-ink-800">
+                {originalCopies.map((copy) => (
+                  <li key={`${copy.slot}-${copy.version}`} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2">
+                    <div className="min-w-0 flex-1 basis-72">
+                      <div className="flex items-baseline gap-2">
+                        <span className="shrink-0 text-sm font-semibold">
+                          {SLOT_LABELS[copy.slot]} · formato {copy.version}
+                        </span>
+                        {copy.savedAt && <span className="truncate text-xs text-ink-400">{formatDateTime(copy.savedAt)}</span>}
+                      </div>
+                      {copy.summary && (
+                        <div className="text-xs text-ink-300">
+                          {copy.summary.playerName} · {copy.summary.categoryName} · {copy.summary.teamName} · {copy.summary.year} ·{' '}
+                          {copy.summary.roundsCompleted}/{copy.summary.totalRounds} etapas
+                        </div>
+                      )}
+                    </div>
+                    <Button className="shrink-0" onClick={() => void run(() => downloadOriginal(copy), 'Cópia exportada.')}>
+                      <Download size={16} aria-hidden className="shrink-0" />
+                      Exportar cópia (.json)
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <p className="border-t border-ink-800 px-3 py-2 text-xs text-ink-400">
             O jogo salva sozinho depois de cada sessão e a cada mudança de treino. Toda gravação guarda a anterior como cópia de segurança e é validada
             (estrutura, consistência e checksum).

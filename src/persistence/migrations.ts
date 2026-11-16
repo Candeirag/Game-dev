@@ -31,6 +31,9 @@
  *    `UPDATE_FIXTURES=1 npx vitest run tests/fixtures.test.ts`
  *    (os das versões anteriores ficam onde estão, para sempre) e teste o
  *    degrau novo em tests/save.test.ts, isolado, com `migrateStep`.
+ *
+ * A cópia intacta do save antigo não depende de nada disto: `saveCareer` guarda
+ * o original de qualquer formato anterior na gravação que o substituiria.
  */
 import { CAREER_SCHEMA_VERSION, type CareerState, type Contract, type Driver, type Team } from '@/domain/schemas';
 import { compareText } from '@/domain/text';

@@ -10,6 +10,11 @@
  * Toda gravação mantém a versão anterior do slot como backup, na mesma
  * transação. Se o arquivo principal falhar em qualquer verificação, o
  * carregamento recorre ao backup automaticamente.
+ *
+ * Um save de formato anterior nunca é perdido na conversão: na gravação que o
+ * substituiria, o original vai intacto para uma chave própria
+ * (`<slot>.original-v<formato>`), que nenhuma gravação nem a exclusão do slot
+ * apagam. Ver `listOriginalCopies` e `exportOriginalCopy`.
  */
 import { CAREER_SCHEMA_VERSION, CareerStateSchema, type CareerState } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
@@ -66,13 +71,27 @@ export class NewerSaveError extends SaveError {
 }
 
 const backupKey = (slot: SaveSlotId) => `${slot}.backup`;
+/** Onde fica a cópia intacta de um save de formato anterior depois que o slot é convertido. */
+const originalKey = (slot: SaveSlotId, version: number) => `${slot}.original-v${version}`;
+const ORIGINAL_KEY = /^(.+)\.original-v(\d+)$/;
+
+/** Formato em que um save deste jogo foi gravado; null se o conteúdo não for um save do jogo. */
+function storedVersion(raw: unknown): number | null {
+  if (raw === null || typeof raw !== 'object') return null;
+  const envelope = raw as { format?: unknown; schemaVersion?: unknown; career?: { schemaVersion?: unknown } };
+  if (envelope.format !== SAVE_FORMAT) return null;
+  const version = envelope.career?.schemaVersion ?? envelope.schemaVersion;
+  return typeof version === 'number' && Number.isInteger(version) && version >= 1 ? version : null;
+}
 
 /** O que está gravado é um save deste jogo, de uma versão do formato mais nova que a deste build? */
 function isNewerSave(raw: unknown): boolean {
-  if (raw === null || typeof raw !== 'object') return false;
-  const envelope = raw as { format?: unknown; career?: { schemaVersion?: unknown } };
-  const version = envelope.career?.schemaVersion;
-  return envelope.format === SAVE_FORMAT && typeof version === 'number' && version > CAREER_SCHEMA_VERSION;
+  return (storedVersion(raw) ?? 0) > CAREER_SCHEMA_VERSION;
+}
+
+/** O que está gravado é um save deste jogo, de um formato anterior ao deste build? */
+function isOlderSave(raw: unknown): boolean {
+  return (storedVersion(raw) ?? CAREER_SCHEMA_VERSION) < CAREER_SCHEMA_VERSION;
 }
 
 export function summarize(career: CareerState): SaveSummary {
@@ -182,10 +201,30 @@ export async function saveCareer(storage: StorageAdapter, slot: SaveSlotId, care
       'Este slot guarda um save de uma versão mais nova do jogo, e ele não foi sobrescrito. Atualize o jogo para abri-lo, salve em outro slot ou apague-o na tela Saves.',
     );
   }
-  const entries: Record<string, unknown> = { [slot]: envelope };
+  // Esta gravação vai substituir um save de formato anterior (o do slot ou, se ele já foi
+  // convertido, o que restou na cópia de segurança)? Então o original é guardado antes, intacto,
+  // numa chave que nenhuma gravação seguinte toca. Vai na mesma transação e é a primeira chave: se
+  // faltar espaço para a cópia, nada é escrito e o save antigo continua no slot.
+  const entries: Record<string, unknown> = {};
+  const original = await originalToKeep(storage, slot, previous);
+  const originalVersion = storedVersion(original);
+  if (originalVersion !== null) entries[originalKey(slot, originalVersion)] = original;
+  entries[slot] = envelope;
   if (previous !== undefined) entries[backupKey(slot)] = previous;
   await storage.setMany(entries);
   return envelope;
+}
+
+/**
+ * O save de formato anterior que a próxima gravação do slot faria sumir, se houver: o do próprio
+ * slot ou, se ele já foi convertido (ou está danificado), o da cópia de segurança.
+ */
+async function originalToKeep(storage: StorageAdapter, slot: SaveSlotId, previous: unknown): Promise<unknown> {
+  const intact = (raw: unknown) => checksumOf((raw as SaveEnvelope).career) === (raw as SaveEnvelope).checksum;
+  if (isOlderSave(previous) && intact(previous)) return previous;
+  const backup = await storage.get(backupKey(slot));
+  if (isOlderSave(backup) && (intact(backup) || !isOlderSave(previous))) return backup;
+  return isOlderSave(previous) ? previous : undefined;
 }
 
 export interface LoadResult {
@@ -240,8 +279,53 @@ export async function listSaves(storage: StorageAdapter): Promise<SlotInfo[]> {
   );
 }
 
+/** Apaga o slot e a cópia de segurança dele. As cópias de formatos anteriores (`listOriginalCopies`) ficam. */
 export async function deleteSave(storage: StorageAdapter, slot: SaveSlotId): Promise<void> {
   await storage.delete([slot, backupKey(slot)]);
+}
+
+/** Cópia intacta de um save de formato anterior, guardada quando o slot foi convertido. */
+export interface OriginalCopyInfo {
+  slot: SaveSlotId;
+  /** Formato em que o save foi gravado (o `schemaVersion` dele). */
+  version: number;
+  savedAt?: string;
+  /** Resumo com os nomes de hoje; ausente se a cópia não puder mais ser lida por este build. */
+  summary?: SaveSummary;
+}
+
+/**
+ * As cópias de formatos anteriores guardadas neste aparelho: no máximo uma por slot e por formato
+ * (uma conversão nova do mesmo slot e formato fica no lugar da anterior).
+ */
+export async function listOriginalCopies(storage: StorageAdapter): Promise<OriginalCopyInfo[]> {
+  const copies: OriginalCopyInfo[] = [];
+  for (const key of await storage.keys()) {
+    const match = ORIGINAL_KEY.exec(key);
+    const slot = SAVE_SLOTS.find((id) => id === match?.[1]);
+    if (!match || !slot) continue;
+    const raw = await storage.get(key);
+    const copy: OriginalCopyInfo = { slot, version: Number(match[2]) };
+    const savedAt = (raw as { savedAt?: unknown } | undefined)?.savedAt;
+    if (typeof savedAt === 'string') copy.savedAt = savedAt;
+    try {
+      copy.summary = summarize(parseEnvelope(raw));
+    } catch {
+      // Sem resumo: a cópia continua guardada e pode ser exportada para a versão que a gravou.
+    }
+    copies.push(copy);
+  }
+  return copies.sort((a, b) => SAVE_SLOTS.indexOf(a.slot) - SAVE_SLOTS.indexOf(b.slot) || b.version - a.version);
+}
+
+/**
+ * O texto JSON de uma cópia de formato anterior, exatamente como o save foi gravado (com o
+ * checksum dele): abre na versão do jogo que o gravou e, pela migração, nesta.
+ */
+export async function exportOriginalCopy(storage: StorageAdapter, slot: SaveSlotId, version: number): Promise<string> {
+  const raw = await storage.get(originalKey(slot, version));
+  if (raw === undefined) throw new SaveError('Esta cópia não está mais guardada neste aparelho.');
+  return JSON.stringify(raw, null, 2);
 }
 
 /** Exporta a carreira como texto JSON, para baixar como arquivo. */

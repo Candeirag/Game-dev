@@ -28,7 +28,9 @@ precisar contrariar uma delas, pare e pergunte antes.
    os saves da versão nova com `UPDATE_FIXTURES=1 npx vitest run tests/fixtures.test.ts` e teste
    o degrau. Save antigo nunca quebra: os de `tests/fixtures/v1` em diante têm de abrir e
    continuar jogáveis. O schema descarta campos que não conhece, então todo campo novo exige
-   versão nova.
+   versão nova. Na conversão, o save original fica guardado intacto no aparelho
+   (`<slot>.original-v<formato>`, em `saveService.ts`; conferido por `tests/save.test.ts`):
+   vale sozinho para toda versão futura e não pode ser removido.
 6. **Interface.** Tela deitada (844×390 é a referência); português do Brasil; números com
    dígitos de largura fixa (`tabular-nums`, já ligado no `body`) e diferenças de tempo sempre
    com três casas (`formatGap`, `formatLap`); nenhuma informação só por cor (cor + letra, ícone

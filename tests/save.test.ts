@@ -10,7 +10,9 @@ import {
   createEnvelope,
   deleteSave,
   exportCareer,
+  exportOriginalCopy,
   importCareer,
+  listOriginalCopies,
   listSaves,
   loadCareer,
   parseEnvelope,
@@ -465,5 +467,134 @@ describe('migração da versão 3 para a 4', () => {
     expect(seen).toEqual([1, 2, 3, 4]);
     expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3]);
     expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
+  });
+});
+
+describe('cópia intacta do save de formato anterior', () => {
+  const file = (version: string, name: string) => JSON.parse(readFileSync(`tests/fixtures/${version}/${name}.json`, 'utf8')) as Record<string, unknown>;
+  const V3 = file('v3', 'fase0-topo-fim-de-temporada');
+  /** A versão anterior do jogo só aceita o save se o conteúdo e o checksum forem os que ela gravou. */
+  const opensInTheVersionThatWroteIt = (raw: unknown) => {
+    const envelope = raw as { schemaVersion: number; checksum: string; career: { schemaVersion: number } };
+    return envelope.career.schemaVersion === envelope.schemaVersion && checksumOf(envelope.career) === envelope.checksum;
+  };
+
+  it('converter um save do formato 3 guarda o original, que continua lá depois de muitas gravações e de apagar o slot', async () => {
+    const storage = new MemoryStorage();
+    storage.rawSet('slot1', V3);
+    // Abrir converte só na memória: o slot ainda guarda o formato 3 e não há cópia para fazer.
+    const { career } = await loadCareer(storage, 'slot1');
+    expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
+    expect(await listOriginalCopies(storage)).toEqual([]);
+
+    // A primeira gravação troca o formato do slot e guarda o original numa chave separada.
+    await saveCareer(storage, 'slot1', career, NOW);
+    expect(await storage.get('slot1')).toMatchObject({ schemaVersion: CAREER_SCHEMA_VERSION });
+    expect(await storage.get('slot1.original-v3')).toEqual(V3);
+
+    // Várias gravações depois, a cópia de segurança comum já é do formato novo; a do formato 3 está intacta.
+    for (let i = 0; i < 4; i++) await saveCareer(storage, 'slot1', career, NOW);
+    expect(await storage.get('slot1.backup')).toMatchObject({ schemaVersion: CAREER_SCHEMA_VERSION });
+    expect(await storage.get('slot1.original-v3')).toEqual(V3);
+
+    // Apagar o slot, gravar outra carreira nele e gravar nos outros slots também não a tocam.
+    await deleteSave(storage, 'slot1');
+    expect(await storage.get('slot1')).toBeUndefined();
+    await saveCareer(storage, 'slot1', playRound(newCareer(7)), NOW);
+    await saveCareer(storage, 'auto', career, NOW);
+    expect(await storage.get('slot1.original-v3')).toEqual(V3);
+    expect((await storage.keys()).filter((key) => key.includes('original'))).toEqual(['slot1.original-v3']);
+  });
+
+  it('a cópia ainda abre: na versão que a gravou (conteúdo e checksum originais) e nesta, pela migração', async () => {
+    const storage = new MemoryStorage();
+    storage.rawSet('auto', V3);
+    const { career } = await loadCareer(storage, 'auto');
+    await saveCareer(storage, 'auto', career, NOW);
+    await saveCareer(storage, 'auto', career, NOW);
+
+    const text = await exportOriginalCopy(storage, 'auto', 3);
+    // O arquivo exportado é o save do formato 3 tal como foi gravado.
+    expect(JSON.parse(text)).toEqual(V3);
+    expect(opensInTheVersionThatWroteIt(JSON.parse(text))).toBe(true);
+    // E esta versão o abre de novo, chegando à mesma carreira que a conversão deu da primeira vez.
+    expect(importCareer(text)).toEqual(career);
+
+    // A lista mostra de onde a cópia veio, com o resumo já nos nomes de hoje.
+    const [copy, ...others] = await listOriginalCopies(storage);
+    expect(others).toEqual([]);
+    expect(copy).toMatchObject({
+      slot: 'auto',
+      version: 3,
+      savedAt: V3.savedAt,
+      summary: { playerName: (V3.summary as { playerName: string }).playerName, categoryName: 'GP Mundial' },
+    });
+    await expect(exportOriginalCopy(storage, 'slot2', 3)).rejects.toThrow(/não está mais guardada/);
+  });
+
+  it('gravar outra carreira por cima de um save antigo que nem foi aberto também guarda o original', async () => {
+    const storage = new MemoryStorage();
+    storage.rawSet('auto', V3);
+    await saveCareer(storage, 'auto', playRound(newCareer(11)), NOW);
+    expect(await storage.get('auto.original-v3')).toEqual(V3);
+  });
+
+  it('se o slot já foi convertido e o formato 3 só resta na cópia de segurança, a gravação seguinte o guarda', async () => {
+    const storage = new MemoryStorage();
+    const converted = importCareer(JSON.stringify(V3));
+    // Estado deixado por um build que convertia sem guardar o original: slot no formato novo, cópia de segurança no antigo.
+    storage.rawSet('slot2', createEnvelope(converted, NOW));
+    storage.rawSet('slot2.backup', V3);
+    await saveCareer(storage, 'slot2', converted, NOW);
+    expect(await storage.get('slot2.backup')).toMatchObject({ schemaVersion: CAREER_SCHEMA_VERSION });
+    expect(await storage.get('slot2.original-v3')).toEqual(V3);
+  });
+
+  it('com o slot danificado, o original guardado é o que ainda abre (a cópia de segurança)', async () => {
+    const storage = new MemoryStorage();
+    storage.rawSet('slot3', { ...V3, checksum: 'adulterado' });
+    storage.rawSet('slot3.backup', V3);
+    const { career, recoveredFromBackup } = await loadCareer(storage, 'slot3');
+    expect(recoveredFromBackup).toBe(true);
+    await saveCareer(storage, 'slot3', career, NOW);
+    expect(await storage.get('slot3.original-v3')).toEqual(V3);
+  });
+
+  it('vale para qualquer formato anterior, e cada um tem a sua cópia', async () => {
+    const storage = new MemoryStorage();
+    const v1 = file('v1', 'second-season');
+    const v2 = file('v2', 'formula-mid-season');
+    storage.rawSet('slot1', v1);
+    await saveCareer(storage, 'slot1', (await loadCareer(storage, 'slot1')).career, NOW);
+    storage.rawSet('slot1', v2);
+    await saveCareer(storage, 'slot1', (await loadCareer(storage, 'slot1')).career, NOW);
+    expect(await storage.get('slot1.original-v1')).toEqual(v1);
+    expect(await storage.get('slot1.original-v2')).toEqual(v2);
+    expect((await listOriginalCopies(storage)).map((copy) => [copy.slot, copy.version])).toEqual([
+      ['slot1', 2],
+      ['slot1', 1],
+    ]);
+    expect(opensInTheVersionThatWroteIt(await storage.get('slot1.original-v1'))).toBe(true);
+  });
+
+  it('save do formato atual não gera cópia nenhuma', async () => {
+    const storage = new MemoryStorage();
+    const career = playRound(newCareer(31));
+    for (let i = 0; i < 3; i++) await saveCareer(storage, 'slot1', career, NOW);
+    expect((await storage.keys()).sort()).toEqual(['slot1', 'slot1.backup']);
+    expect(await listOriginalCopies(storage)).toEqual([]);
+  });
+
+  it('se a cópia não puder ser gravada, o save antigo continua no slot', async () => {
+    const storage = new IndexedDbStorage(indexedDB, 'teste-copia-original');
+    await storage.setMany({ slot1: V3 });
+    const { career } = await loadCareer(storage, 'slot1');
+    // Um valor que o IndexedDB não consegue guardar faz a transação inteira falhar.
+    const failing = Object.create(storage, {
+      setMany: { value: (entries: Record<string, unknown>) => storage.setMany({ ...entries, 'slot1.original-v3': () => 'não clonável' }) },
+    }) as IndexedDbStorage;
+    await expect(saveCareer(failing, 'slot1', career, NOW)).rejects.toThrow();
+    expect(await storage.get('slot1')).toEqual(V3);
+    expect(await storage.get('slot1.backup')).toBeUndefined();
   });
 });
