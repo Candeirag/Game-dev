@@ -41,6 +41,14 @@ export function compareText(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
+/**
+ * Meta de posição de uma equipe, em frase: "em 1º lugar" quando a meta é a liderança, "entre as
+ * 3 primeiras" nas demais ("entre as 1 primeiras" não existe).
+ */
+export function amongTheFirst(position: number): string {
+  return position <= 1 ? 'em 1º lugar' : `entre as ${position} primeiras`;
+}
+
 /** Quantidade seguida da palavra na forma certa: "1 ponto", "4 ultrapassagens", "0 vitórias". */
 export function counted(count: number | string, singular: string, plural: string): string {
   return `${count} ${pluralWord(count, singular, plural)}`;

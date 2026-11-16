@@ -77,7 +77,7 @@ import {
 } from './team';
 import { money } from '../career/selectors';
 import { categoryRef } from '@/domain/categoryNames';
-import { counted } from '@/domain/text';
+import { amongTheFirst, counted } from '@/domain/text';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -567,9 +567,7 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
     const sponsors = management.sponsors
       .filter((s) => {
         if (position > s.targetPosition + 2) {
-          notes.push(
-            `${s.name} rompeu o patrocínio: queria a equipe entre as ${s.targetPosition} primeiras. A quebra de contrato arranha a reputação da equipe.`,
-          );
+          notes.push(`${s.name} rompeu o patrocínio: queria a equipe ${amongTheFirst(s.targetPosition)}. A quebra de contrato arranha a reputação da equipe.`);
           brokenDeals += 1;
           return false;
         }

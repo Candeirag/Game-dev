@@ -86,7 +86,9 @@ function LadderTab() {
   const { career, player, team, category } = useCareerView();
   const next = categoryByTier(category.tier + 1);
   const requirements = useMemo(() => (next ? categoryRequirements(career, next.id) : []), [career, next]);
-  // A equipe mais interessada do degrau de cima: é ela que faz a proposta de promoção.
+  // Durante a temporada, o interesse da equipe mais interessada do degrau de cima é uma estimativa:
+  // as propostas só saem no fechamento, com as contas do ano. No fechamento, vale o que saiu.
+  const promotionOffer = next && career.offseason ? career.offseason.offers.some((o) => o.kind === 'promotion' && o.categoryId === next.id) : null;
   const bestInterest = next
     ? Math.max(
         0,
@@ -175,8 +177,13 @@ function LadderTab() {
                   <b>{r.label}:</b> {r.detail}
                 </Check>
               ))}
-              <Check met={bestInterest >= CONTRACT_RULES.MIN_INTEREST.promotion}>
-                <b>Interesse de uma equipe {categoryRef(next.id, 'de')}:</b> {Math.floor(bestInterest)} (mínimo {CONTRACT_RULES.MIN_INTEREST.promotion})
+              <Check met={promotionOffer ?? bestInterest >= CONTRACT_RULES.MIN_INTEREST.promotion}>
+                <b>Interesse de uma equipe {categoryRef(next.id, 'de')}:</b>{' '}
+                {promotionOffer === null
+                  ? `${Math.floor(bestInterest)} hoje (as propostas saem no fim da temporada, a partir de ${CONTRACT_RULES.MIN_INTEREST.promotion})`
+                  : promotionOffer
+                    ? 'há proposta para a próxima temporada'
+                    : 'nenhuma proposta neste fim de temporada'}
               </Check>
             </ul>
             <p className="mt-3 text-xs text-ink-400">

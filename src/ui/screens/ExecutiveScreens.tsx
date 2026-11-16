@@ -12,7 +12,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORY_IDS, PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type CategoryId, type PracticeProgram, type QualifyingApproach } from '@/domain/schemas';
 import { PRACTICE_PROGRAM_LABELS, QUALIFYING_APPROACH_LABELS } from '@/domain/labels';
 import { TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
-import { counted } from '@/domain/text';
+import { amongTheFirst, counted } from '@/domain/text';
 import { getCategory } from '@/data/categories';
 import { MANAGEMENT, REGULATIONS } from '@/data/management';
 import { getTrack } from '@/data/tracks';
@@ -739,7 +739,7 @@ export function ExecutiveCareerScreen() {
                     {formatMoney(s.perSeason)}
                     <span className="font-sans text-xs font-normal text-ink-400"> por temporada</span>
                   </div>
-                  <div className="text-xs text-ink-400">Exige a equipe entre as {s.targetPosition} primeiras.</div>
+                  <div className="text-xs text-ink-400">Exige a equipe {amongTheFirst(s.targetPosition)}.</div>
                   <Button className="mt-2" disabled={m.sponsors.length >= MANAGEMENT.SPONSOR_SLOTS} onClick={() => store.acceptTeamSponsor(s.id)}>
                     Aceitar
                   </Button>
@@ -749,8 +749,8 @@ export function ExecutiveCareerScreen() {
           )}
           {m.sponsors.length > 0 && (
             <p className="mt-3 text-xs text-ink-400">
-              Atuais: {m.sponsors.map((s) => `${s.name} (${formatMoney(s.perSeason)}, entre as ${s.targetPosition} primeiras)`).join(' · ')}. Para trocar,
-              dispense um na tela Gestão.
+              Atuais: {m.sponsors.map((s) => `${s.name} (${formatMoney(s.perSeason)}, ${amongTheFirst(s.targetPosition)})`).join(' · ')}. Para trocar, dispense
+              um na tela Gestão.
             </p>
           )}
         </Card>
