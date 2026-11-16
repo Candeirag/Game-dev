@@ -208,13 +208,13 @@ Uma tentativa frustrada tem risco de toque (cresce com a agressividade e com a *
 | Infração                                                             | Punição                                     |
 | -------------------------------------------------------------------- | ------------------------------------------- |
 | Queimar a largada                                                    | 5 s                                         |
-| Causar um toque (60% de chance de culpa)                             | 5 s e 1 ponto na licença                    |
+| Causar um toque (60% de chance de culpa)                             | 5 s e 1 ponto de punição                    |
 | Causar um toque que tira o rival da prova                            | 10 s, 2 pontos e 3 posições no próximo grid |
 | Excesso de velocidade no pit lane, liberação insegura                | 5 s                                         |
 | Limites de pista, nos monopostos (3 erros leves, e a cada 2 depois)  | 5 s                                         |
 | Não usar dois compostos no seco (Fórmula Elite e Grand Prix Mundial) | 30 s                                        |
 
-As punições em tempo entram no tempo final. Com 12 pontos na licença, o piloto é suspenso por uma etapa.
+As punições em tempo entram no tempo final. Com 12 pontos de punição, o piloto é suspenso por uma etapa.
 
 ### Clima
 
@@ -448,7 +448,7 @@ Depois de cada etapa, entram os eventos cuja condição vale (até dois) e, com 
 | Entrevistas   | coletiva do vencedor; pressão em má fase                                   | confiança da equipe, confiança, rivalidade, patrocinadores                           |
 | Polêmicas     | toque sofrido; vídeo fora de contexto                                      | rivalidade, reputação, patrocinadores                                                |
 | Rivalidades   | provocação do rival; conflito com o companheiro                            | risco de toque, multa, confiança da equipe                                           |
-| Investigações | comissários após um toque causado; vistoria técnica                        | posições no próximo grid, pontos na licença, perda dos pontos da etapa               |
+| Investigações | comissários após um toque causado; vistoria técnica                        | posições no próximo grid, pontos de punição, perda dos pontos da etapa               |
 | Protestos     | contra o rival à frente; contra o seu resultado                            | pontos do rival ou seus, taxa, rivalidade                                            |
 | Contrato      | aporte extra pedido pela equipe; sondagem de outra equipe; vontade de sair | dinheiro, rendimento do carro, custo da vaga, multa rescisória, interesse de equipes |
 | Patrocínio    | pressão por resultados; proposta nova (ou troca por um maior)              | receita, satisfação, fase                                                            |

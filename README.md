@@ -63,7 +63,7 @@ O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer serv
 4. **Entre as etapas:** ajuste o treino, acompanhe a confiança da equipe e as rivalidades (tela Equipe), o interesse das equipes e os requisitos do próximo degrau (tela Carreira), e o dinheiro (tela Vida).
 5. **Fim de temporada:** na tela Carreira, veja o fechamento do ano e as propostas. Negocie, confira os requisitos de cada uma e assine.
 6. **Fora das pistas:** a tela Vida (em "Mais") reúne tudo, com um resumo por linha. Em Finanças, aplique o dinheiro (ações, imóveis, empresas, participações) e escolha o padrão de vida. Em Família, acompanhe o parceiro e os filhos; as decisões do casal aparecem como eventos no começo de cada temporada, a partir dos 21 anos.
-7. **Depois da carreira de piloto:** na tela Carreira, "Pendurar o capacete" leva às propostas de cargo, às equipes à venda e à fundação de uma equipe. A tela Equipe vira Gestão, e o fim de semana passa a ser do pit wall: você define o treino e a classificação dos seus pilotos e escolhe entre assistir à corrida (com os dois carros da equipe em destaque) ou simular a etapa. O resultado é o mesmo.
+7. **Depois da carreira de piloto:** na tela Carreira, "Pendurar o capacete" leva às propostas de cargo, às equipes à venda e à fundação de uma equipe. A tela Equipe vira Gestão, e o fim de semana passa a ser do muro dos boxes: você define o treino e a classificação dos seus pilotos e escolhe entre assistir à corrida (com os dois carros da equipe em destaque) ou simular a etapa. O resultado é o mesmo.
 8. **Sucessão:** quando o personagem morre (ou passa o comando em vida), escolha o herdeiro e o caminho dele.
 
 O painel traz uma lista de primeiros passos, e a tela "Como jogar" resume as regras.

@@ -34,12 +34,16 @@ precisar contrariar uma delas, pare e pergunte antes.
    com três casas (`formatGap`, `formatLap`); nenhuma informação só por cor (cor + letra, ícone
    ou seta); área de toque de no mínimo 44 pt; respeitar o "reduzir movimento" do sistema;
    vibração só em momentos importantes e sempre igual para a mesma ação, por um módulo único
-   (nenhuma tela chama a vibração direto).
+   (nenhuma tela chama a vibração direto). Há telas antigas que ainda não cumprem tudo isso (a
+   lista está no PR da Fase 0): quando a fase tocar numa delas, corrige.
 7. **Visual.** Grafite escuro com vermelho de destaque, Barlow Condensed nos títulos e Inter no
    texto (tokens em `src/index.css`). A inspiração são os jogos de gestão de automobilismo, sem
    copiar logos, imagens ou layouts, e **sem marcas reais**: nem nomes de categorias, entidades,
    equipes, pilotos ou patrocinadores de verdade. Os nomes das categorias saem todos de
-   `src/domain/categoryNames.ts`; `tests/names.test.ts` falha se uma marca conhecida aparecer.
+   `src/domain/categoryNames.ts`. `tests/names.test.ts` falha se os nomes antigos voltarem ao
+   código (F1 a F4, "Fórmula 1" a "Fórmula 4", FIA, superlicença, licenças internacionais por
+   letra); marca nova não é pega por teste, então confira cada nome que criar. "Campeonato
+   Brasileiro de Kart" fica, por decisão do dono.
 8. **Mexeu em regra de jogo: rode o simulador** (`npm run sim -- --seeds 50 --seasons 15`) e
    cole o relatório no PR, ao lado do relatório da fase anterior. Sem mudança de regra, o
    relatório tem de sair idêntico.

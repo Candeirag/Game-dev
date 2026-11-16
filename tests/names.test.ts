@@ -15,8 +15,15 @@ import { VEHICLES } from '@/data/vehicles';
 import { categoryRequirements } from './engineApi';
 import { newCareer } from './helpers';
 
-/** Marcas reais que o jogo não usa em lugar nenhum do que escreve na tela ou grava. */
-const REAL_MARKS = /\bF[1-4]\b|F[oó]rmula [1-4]\b|\bFIA\b|Superlicença/;
+/**
+ * Os nomes de marca que o jogo já teve e não pode voltar a ter: as siglas e os nomes numerados das
+ * categorias, a entidade e as licenças que copiavam as dela. Não é uma lista de todas as marcas do
+ * mundo: nome novo de equipe, piloto ou patrocinador precisa ser conferido por quem o cria.
+ */
+const OLD_MARKS = /\bF-?[1-4]\b|\bFIA\b/;
+/** Estes valem com qualquer caixa (as siglas não: 'f1' minúsculo é o id interno da categoria). */
+const OLD_MARKS_ANY_CASE = /f[oó]rmula[- ]?(?:[1-4]|um|dois|tr[eê]s|quatro)(?![\p{L}\d])|superlicen[çc]a|licen[çc]a internacional [a-d](?![\p{L}\d])/iu;
+const hasOldMark = (text: string): boolean => OLD_MARKS.test(text) || OLD_MARKS_ANY_CASE.test(text);
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -103,7 +110,7 @@ describe('requisitos para subir de categoria', () => {
 
 describe('equipes', () => {
   it('nenhuma equipe leva uma marca real no nome', () => {
-    for (const id of CATEGORY_IDS) for (const team of initialTeams(id)) expect(team.name).not.toMatch(REAL_MARKS);
+    for (const id of CATEGORY_IDS) for (const team of initialTeams(id)) expect(hasOldMark(team.name), team.name).toBe(false);
     expect(F1_TEAM_NAMES).toContain('Azure Motorsport');
     expect(F1_TEAM_NAMES).toContain('Stallion Autosport');
   });
@@ -201,6 +208,39 @@ describe('equipes', () => {
 });
 
 describe('marcas reais', () => {
+  it('a guarda reconhece os nomes antigos em qualquer grafia e não confunde os nomes de hoje', () => {
+    for (const text of [
+      'campeão de F1',
+      'na F-1',
+      'Fórmula 1',
+      'FÓRMULA 3',
+      'fórmula-2',
+      'Fórmula Um',
+      'da FIA',
+      'a superlicença',
+      'Licença Internacional B',
+      'Azure F1 Team',
+    ]) {
+      expect(hasOldMark(text), text).toBe(true);
+    }
+    for (const text of [
+      'Fórmula Júnior',
+      'F. Sprint',
+      'GP Mundial',
+      'Licença Internacional de Kart',
+      "getCategory('f1')",
+      'f1-azure-f1-team',
+      'F1_TEAM_NAMES',
+      'confia',
+    ]) {
+      expect(hasOldMark(text), text).toBe(false);
+    }
+  });
+
+  it('os nomes das categorias, dos veículos e das licenças não trazem nenhum deles', () => {
+    for (const id of CATEGORY_IDS) for (const value of Object.values(CATEGORY_NAMES[id])) expect(hasOldMark(value), value).toBe(false);
+  });
+
   it('não aparecem no código do jogo, do simulador nem dos testes no navegador', () => {
     const found = ['src', 'sim', 'e2e', 'index.html']
       .flatMap((entry) => (statSync(entry).isDirectory() ? sourceFiles(entry) : [entry]))
@@ -210,7 +250,7 @@ describe('marcas reais', () => {
       .flatMap((path) =>
         readFileSync(path, 'utf8')
           .split('\n')
-          .flatMap((line, index) => (REAL_MARKS.test(line) ? [`${path}:${index + 1}: ${line.trim().slice(0, 120)}`] : [])),
+          .flatMap((line, index) => (hasOldMark(line) ? [`${path}:${index + 1}: ${line.trim().slice(0, 120)}`] : [])),
       );
     expect(found).toEqual([]);
   });
