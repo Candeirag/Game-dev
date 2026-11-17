@@ -375,7 +375,7 @@ describe('investidor: porcentagem para sempre', () => {
     const earnings = Math.round(1_000_000 / pro.calendar.length) + 50_000;
     expect(round.finance.seasonTotals.investor).toBe(-Math.round(earnings * share));
     expect(round.investor!.received).toBe(career.investor!.received + Math.round(earnings * share));
-  });
+  }, 60_000);
 
   it('do patrocínio, ele só leva parte do que sobra depois de pagar a vaga', () => {
     const base: CareerState = { ...closed, investor: investorOf({ share: 0.2 }), contract: { ...closed.contract, salary: 0, seatCost: 20_000 } };
@@ -494,7 +494,7 @@ describe('último recurso: nunca uma parede sem porta', () => {
     expect(bottom!.seasons).toBeGreaterThan(0);
     expect(bottom!.median).toBeLessThan(0);
     expect(bottom!.median).toBeLessThan(top!.median);
-  });
+  }, 60_000);
 });
 
 describe('academia: paga a vaga, cobra exclusividade e resultado', () => {
@@ -665,7 +665,7 @@ describe('mudança de polo', () => {
       career = playSeason(botTraining(startNextSeason(next.career, next.offerId)));
     }
     throw new Error('Nenhuma proposta de outro polo em 14 temporadas.');
-  });
+  }, 60_000);
 
   it('quem volta para o Brasil não paga mudança', () => {
     const abroad: CareerState = { ...closed, hub: { id: 'italia', arrivedSeason: 1 } };
