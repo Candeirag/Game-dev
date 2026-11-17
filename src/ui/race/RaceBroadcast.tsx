@@ -31,11 +31,11 @@ import {
 } from 'lucide-react';
 import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/domain/labels';
 import { getTrack } from '@/data/tracks';
-import { TYRES, buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName, isRaceFinished, lapInfoAt, standingsAt, type StandingRow } from '@/engine';
+import { buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName, isRaceFinished, lapInfoAt, standingsAt, type StandingRow } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
 import { RaceResultPanel } from '../components/RaceView';
-import { Button, Delta, PortraitOr, Tower, type TowerRow, TyreBadge, cx } from '@/ui/kit';
+import { Button, cx, Delta, PortraitOr, Tower, type TowerRow, TyreBadge, TyreLegend, tyreName, WholeRows } from '@/ui/kit';
 import { portraitUrl } from '../images';
 import { feedback } from '../feedback/feedback';
 import { formatInterval, formatLap, trackCredit } from '../format';
@@ -398,7 +398,14 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   });
   // Com mouse, clicar na linha destaca o piloto. No toque a linha é só leitura (é baixa demais para um
   // alvo de 44 px): o destaque muda pelas setas do painel Piloto ou tocando no carro.
-  const tower = <Tower label="Ordem da corrida" rows={towerRows} onSelect={finePointer ? setFocusId : undefined} selectedId={focus?.driverId} />;
+  // A torre e, nas categorias com troca de pneus, a legenda das letras dos selos. A lista mostra
+  // sempre linhas inteiras (WholeRows): a linha acima da do jogador, que gruda no pé, não fica cortada.
+  const tower = (
+    <WholeRows>
+      <Tower label="Ordem da corrida" rows={towerRows} onSelect={finePointer ? setFocusId : undefined} selectedId={focus?.driverId} />
+      {rules.pitStops && <TyreLegend compounds={[...rules.dryCompounds, ...rules.wetCompounds]} className="snap-end border-t border-ink-700 px-2 py-2" />}
+    </WholeRows>
+  );
   // Um toque troca a diferença mostrada: para o líder ou para o carro da frente.
   const gapToggle = (
     <button
@@ -517,7 +524,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
       {events.length === 0 && (
         <li className="p-2 text-sm text-ink-300">
           Os carros estão alinhados no grid.{' '}
-          {rules.pitStops ? `Compostos: ${[...rules.dryCompounds, ...rules.wetCompounds].map((c) => TYRES[c].label.toLowerCase()).join(', ')}.` : ''}
+          {rules.pitStops ? `Compostos: ${[...rules.dryCompounds, ...rules.wetCompounds].map((c) => tyreName(c)).join(', ')}.` : ''}
         </li>
       )}
       {[...events]
@@ -681,11 +688,13 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         // Em tela larga tudo cabe sem rolar: a torre fixa à esquerda, a pista dominando e a barra de comandos embaixo.
         <div
           className="grid min-h-[13.5rem] grid-cols-[15rem_minmax(0,1fr)] gap-2 xl:grid-cols-[19rem_minmax(0,1fr)]"
-          style={{ height: `calc(100dvh - ${showBar ? '8.75rem' : '5.5rem'} - env(safe-area-inset-top) - env(safe-area-inset-bottom))` }}
+          style={{
+            height: `calc(100dvh - ${showBar ? '8.75rem' : '5.5rem'} - env(safe-area-inset-top) - max(var(--action-bar-h, 0px), env(safe-area-inset-bottom)))`,
+          }}
         >
           <aside aria-label="Classificação da corrida" className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
             {gapToggle}
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{tower}</div>
+            {tower}
           </aside>
 
           {/* Na transmissão, placares e nomes ficam sobre a pista de propósito (o teste visual pula esta área):
@@ -769,17 +778,15 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
                 </button>
               ))}
             </div>
-            <div className="max-h-[26rem] min-h-0 flex-1 overflow-y-auto overscroll-contain">
-              {panel === 'tower' ? (
-                // O espaço em cima separa o botão de troca das abas (8 px entre alvos de toque).
-                <div className="pt-2">
-                  {gapToggle}
-                  {tower}
-                </div>
-              ) : (
-                panelContent(panel)
-              )}
-            </div>
+            {panel === 'tower' ? (
+              // O espaço em cima separa o botão de troca das abas (8 px entre alvos de toque).
+              <div className="flex h-[24rem] flex-col pt-2">
+                {gapToggle}
+                {tower}
+              </div>
+            ) : (
+              <div className="max-h-[26rem] min-h-0 flex-1 overflow-y-auto overscroll-contain">{panelContent(panel)}</div>
+            )}
           </aside>
         </div>
       )}
