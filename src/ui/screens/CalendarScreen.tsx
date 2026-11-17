@@ -65,7 +65,7 @@ export function CalendarScreen() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-display text-base font-semibold uppercase leading-tight text-ink-100">{track.name}</span>
                       <span className="block truncate text-2xs leading-tight text-ink-400">
-                        {formatDate(event.date).replace(/ \d{4}$/, '')} · {track.city}
+                        {formatDate(event.date).replace(/\s\d{4}$/, '')} · {track.city}
                       </span>
                     </span>
                     {record ? (

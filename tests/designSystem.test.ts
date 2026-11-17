@@ -233,11 +233,14 @@ describe('números', () => {
     expect(found).toEqual([]);
   });
 
-  it('dinheiro: abreviado para os cartões, completo para os detalhes', () => {
-    expect(formatMoneyAs(1_250_000, 'BRL')).toBe('R$ 1,25 mi');
-    expect(formatMoneyAs(250_000, 'BRL')).toBe('R$ 250 mil');
-    expect(formatMoneyAs(1_250_000, 'BRL', { compact: false })).toBe('R$ 1.250.000');
-    expect(formatMoneyAs(-4000, 'BRL', { sign: true })).toBe('−R$ 4.000');
+  it('dinheiro: abreviado para os cartões, completo para os detalhes, sem quebrar de linha no meio', () => {
+    // Na tela os espaços são inquebráveis (U+00A0): "−R$" nunca fica numa linha e o número na outra.
+    const nbsp = (text: string) => text.replaceAll(' ', '\u00a0');
+    expect(formatMoneyAs(1_250_000, 'BRL')).toBe(nbsp('R$ 1,25 mi'));
+    expect(formatMoneyAs(250_000, 'BRL')).toBe(nbsp('R$ 250 mil'));
+    expect(formatMoneyAs(1_250_000, 'BRL', { compact: false })).toBe(nbsp('R$ 1.250.000'));
+    expect(formatMoneyAs(-4000, 'BRL', { sign: true })).toBe(nbsp('−R$ 4.000'));
+    expect(formatMoneyAs(-12_429, 'BRL', { compact: false })).not.toContain(' ');
   });
 });
 

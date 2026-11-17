@@ -353,19 +353,21 @@ function PreRacePhase() {
                   {qualifying.entries.map((e) => (
                     <tr key={e.driverId} className={cx('border-t border-ink-800', e.driverId === player.id && 'bg-apex-500/10')}>
                       <td className={cx(td, 'font-semibold tabular')}>{e.position}</td>
-                      <td className={td}>
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="flex items-center gap-2">
+                      {/* A coluna do piloto fica com a largura que sobra (nome cortado com reticências, se preciso):
+                          assim a tabela nunca passa da borda do cartão e a diferença aparece inteira. */}
+                      <td className={cx(td, 'w-full max-w-0')}>
+                        <span className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
                             <CarSprite
                               categoryId={category.id}
                               teamId={e.teamId}
                               color={teams[e.teamId]?.color ?? '#9aa3b2'}
                               driverId={e.driverId}
                               number={carNumbers[e.driverId]}
-                              className="w-10 shrink-0"
+                              className="hidden w-10 shrink-0 lg:block"
                             />
                             <span className="w-6 shrink-0 text-right text-xs text-ink-400">{carNumbers[e.driverId]}</span>
-                            <span className="whitespace-nowrap">{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
+                            <span className="min-w-0 truncate">{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
                             {e.driverId === player.id && <YouMark />}
                           </span>
                           {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
@@ -385,9 +387,9 @@ function PreRacePhase() {
                           )}
                         </span>
                       </td>
-                      <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
-                      <td className={cx(td, 'text-right tabular text-ink-400')}>
-                        {e.position === 1 || e.bestLap === null || pole === null || e.eliminatedIn ? '' : `+${(e.bestLap - pole).toFixed(3)}`}
+                      <td className={cx(td, 'whitespace-nowrap text-right tabular')}>{formatLap(e.bestLap)}</td>
+                      <td className={cx(td, 'whitespace-nowrap text-right tabular text-ink-400')}>
+                        {e.position === 1 || e.bestLap === null || pole === null || e.eliminatedIn ? '' : formatInterval(e.bestLap - pole)}
                       </td>
                     </tr>
                   ))}

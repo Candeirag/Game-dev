@@ -109,7 +109,7 @@ export function DashboardScreen() {
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:col-span-6 lg:col-span-5 landscape:col-span-6 lg:landscape:col-span-5">
+        <div className="grid grid-cols-2 gap-2 md:col-span-6 lg:col-span-5 landscape:col-span-6 lg:landscape:col-span-5">
           <SummaryCard to="/driver" title="Piloto" ring={<Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} size={ringSize} />}>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               {/* Com o retrato do jogador importado, ele entra aqui; sem ele, fica a placa com o número. */}
@@ -122,8 +122,8 @@ export function DashboardScreen() {
               />
               <span className="min-w-0 truncate text-sm font-semibold">{player.lastName}</span>
             </div>
-            <div className="mt-2 text-xs leading-tight text-ink-400">
-              {driverRank}º do grid · {player.age} anos
+            <div className="mt-1 text-xs leading-tight text-ink-400">
+              {driverRank}º do grid · {player.age}\u00a0anos
             </div>
           </SummaryCard>
 
@@ -325,7 +325,7 @@ function SummaryCard({ to, title, ring, children }: { to: string; title: string;
       <Panel
         title={title}
         className="h-full transition-colors group-hover:bg-ink-500"
-        bodyClassName="flex items-center gap-2 !p-2.5 lg:gap-3 lg:!p-3"
+        bodyClassName="flex items-center gap-2 !p-2 lg:gap-3 lg:!p-3"
         action={<ChevronRight size={16} aria-hidden className="text-ink-400 transition-colors group-hover:text-ink-100" />}
       >
         {ring}
@@ -449,7 +449,8 @@ function NextEventPanel() {
   const credit = trackCredit(track.id);
   return (
     <section className="chamfer h-full bg-ink-700 p-px [--chamfer:18px]" aria-label={inProgress ? 'Fim de semana em andamento' : 'Próxima etapa'}>
-      <div className="chamfer relative flex h-full min-h-[17.5rem] flex-col overflow-hidden bg-ink-900 [--chamfer:18px]">
+      {/* Altura mínima pensada para a primeira fileira do Painel caber acima da barra do passo principal em 844×390. */}
+      <div className="chamfer relative flex h-full min-h-[16rem] flex-col overflow-hidden bg-ink-900 [--chamfer:18px]">
         {/* O traçado ocupa o lado direito, sobre uma grade de prancheta. */}
         <div aria-hidden className="gridlines absolute inset-y-0 right-0 w-[58%] [mask-image:linear-gradient(to_right,transparent,black_35%)]" />
         <div aria-hidden className="stripes absolute -right-8 top-0 h-full w-24 -skew-x-12 opacity-70" />
@@ -472,7 +473,7 @@ function NextEventPanel() {
           </div>
           <h2 className="mt-2 font-display text-[clamp(1.6rem,3.1vw,2.75rem)] font-bold uppercase leading-[0.95] tracking-wide">{track.name}</h2>
           <div className="mt-2 text-sm text-ink-300">
-            {trackLocation(track)} · {formatDate(event.date).replace(/ \d{4}$/, '')}
+            {trackLocation(track)} · {formatDate(event.date).replace(/\s\d{4}$/, '')}
           </div>
           <p className="mt-3 hidden max-w-md text-sm leading-snug text-ink-400 xl:block">{track.description}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">

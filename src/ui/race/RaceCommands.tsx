@@ -55,22 +55,11 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
       Engenheiro automático
     </label>
   );
+  // A ação principal (o pneu da próxima parada) vem primeiro: no painel estreito da corrida, o resto
+  // fica abaixo, ao rolar, e o pedido de parada aparece sem rolar.
   const content = (
     <>
-      {bare && engineer}
-      <p className="text-sm text-ink-300">
-        {nextStop ? (
-          <>
-            Próxima parada planejada: <b className="text-ink-100">volta {nextStop.lap}</b>, pneu {tyreName(nextStop.compound)}.
-          </>
-        ) : (
-          'Nenhuma parada planejada.'
-        )}
-        {rules.mandatoryTwoCompounds && new Set(me.compoundsUsed).size < 2 && conditionFor(wetness) === 'dry' && (
-          <span className="text-gold-400"> Você ainda precisa usar um segundo composto (30s de punição se não usar).</span>
-        )}
-      </p>
-      <div className="mt-3 text-xs font-semibold text-ink-300">
+      <div className="text-xs font-semibold text-ink-300">
         {redFlagRestart ? 'Trocar pneus na relargada (sem custo)' : `Entrar nos boxes no fim da volta ${nextLap} com`}
       </div>
       <div className="mt-2 flex flex-wrap gap-2">
@@ -101,6 +90,19 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
           {me.damage > 0.05 && !redFlagRestart ? ', com reparo do carro' : ''}.
         </p>
       )}
+      <p className="mt-3 text-sm text-ink-300">
+        {nextStop ? (
+          <>
+            Próxima parada planejada: <b className="text-ink-100">volta {nextStop.lap}</b>, pneu {tyreName(nextStop.compound)}.
+          </>
+        ) : (
+          'Nenhuma parada planejada.'
+        )}
+        {rules.mandatoryTwoCompounds && new Set(me.compoundsUsed).size < 2 && conditionFor(wetness) === 'dry' && (
+          <span className="text-gold-400"> Você ainda precisa usar um segundo composto (30s de punição se não usar).</span>
+        )}
+      </p>
+      {bare && <div className="mt-2">{engineer}</div>}
       {nextStop && !autoEngineer && (
         <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2 text-xs text-ink-300">
           <input

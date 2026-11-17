@@ -101,77 +101,84 @@ function LadderTab() {
 
   return (
     <>
-      <Card title="Escada do automobilismo" bodyClassName="p-3">
+      {/* Sem barra de título: a aba "Escada" já diz o que é, e os 40 px fazem a escada caber acima da barra
+          do passo principal em 844×390. O título continua para leitores de tela. */}
+      <Card bodyClassName="p-3">
+        <h2 className="sr-only">Escada do automobilismo</h2>
         {/*
           O desenho do carro tem tamanho fixo (`--u` é quantos pixels vale cada unidade de comprimento
           do veículo) e mora numa faixa só dele, de altura fixa e com corte: nunca encosta nos textos
           do degrau, em nenhum tamanho de tela.
         */}
-        <ol className="grid grid-cols-2 gap-2 [--u:3.2px] sm:grid-cols-4 md:grid-cols-[1fr_1fr_1.25fr_1fr_1fr_1fr_1fr] md:max-[839px]:[--u:2.8px] lg:gap-2 lg:[--u:4.2px]">
-          {CATEGORIES.map((c) => {
-            const state = c.tier < category.tier ? 'done' : c.tier === category.tier ? 'current' : 'ahead';
-            const seasons = career.history.filter((h) => h.categoryId === c.id).length + (c.id === category.id ? 1 : 0);
-            const vehicle = VEHICLES[c.id];
-            return (
-              <li
-                key={c.id}
-                aria-current={state === 'current' ? 'step' : undefined}
-                className={cx(
-                  'flex min-w-0 flex-col border-t-[3px] p-2',
-                  state === 'current' ? 'border-apex-400 bg-apex-500/10' : state === 'done' ? 'border-ink-400 bg-ink-850' : 'border-ink-500 bg-ink-850/50',
-                )}
-              >
-                {/* O estado do degrau vai num ícone além da cor (e por extenso para leitores de tela):
-                    alfinete no atual, visto nos já percorridos. Numa linha só, para a escada caber. */}
-                <div
-                  className="flex items-center gap-1 text-2xs font-semibold uppercase leading-tight tracking-wider text-ink-300"
-                  title={state === 'current' ? 'Você está aqui' : state === 'done' ? 'Já correu' : undefined}
-                >
-                  Degrau {c.tier}
-                  {state === 'current' && <MapPin size={12} strokeWidth={2.5} aria-hidden className="shrink-0 text-apex-400" />}
-                  {state === 'done' && <CheckIcon size={12} strokeWidth={3} aria-hidden className="shrink-0 text-ink-200" />}
-                  {state !== 'ahead' && <span className="sr-only">{state === 'current' ? '(você está aqui)' : '(já correu)'}</span>}
-                </div>
-                <div
+        {/* As colunas dependem da largura do cartão medida em `em` do texto (consulta de contêiner): com o
+            texto grande, a escada passa de sete para quatro colunas em vez de quebrar os nomes no meio. */}
+        <div className="@container text-base">
+          <ol className="grid grid-cols-2 gap-2 [--u:3.2px] @min-[28em]:grid-cols-4 @min-[42em]:grid-cols-[1fr_1fr_1.25fr_1fr_1fr_1fr_1fr] md:max-[839px]:[--u:2.8px] lg:[--u:4.2px]">
+            {CATEGORIES.map((c) => {
+              const state = c.tier < category.tier ? 'done' : c.tier === category.tier ? 'current' : 'ahead';
+              const seasons = career.history.filter((h) => h.categoryId === c.id).length + (c.id === category.id ? 1 : 0);
+              const vehicle = VEHICLES[c.id];
+              return (
+                <li
+                  key={c.id}
+                  aria-current={state === 'current' ? 'step' : undefined}
                   className={cx(
-                    'font-display text-base font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] lg:min-h-0 lg:text-lg lg:leading-[1.1]',
-                    state === 'ahead' ? 'text-ink-300' : 'text-ink-100',
+                    'flex min-w-0 flex-col border-t-[3px] p-2',
+                    state === 'current' ? 'border-apex-400 bg-apex-500/10' : state === 'done' ? 'border-ink-400 bg-ink-850' : 'border-ink-500 bg-ink-850/50',
                   )}
                 >
-                  {c.shortName}
-                </div>
-                {/* O veículo de cada degrau, em proporção: do kart de entrada ao Monoposto Grand Prix. Na categoria atual, com a pintura da equipe. */}
-                <div
-                  className="my-1 flex shrink-0 items-center overflow-hidden"
-                  style={{ height: `calc(var(--u) * ${WIDEST_VEHICLE} + 4px)` }}
-                  title={vehicle.description}
-                >
-                  <CarSprite
-                    categoryId={c.id}
-                    teamId={state === 'current' ? team.id : 'escada'}
-                    color={state === 'current' ? team.color : '#aab3c2'}
-                    driverId={state === 'current' ? player.id : undefined}
-                    className="shrink-0"
-                    style={{ width: `calc(var(--u) * ${vehicle.length})` }}
-                  />
-                </div>
-                <div className="text-2xs leading-tight text-ink-300">{vehicle.name}</div>
-                <div className="mt-1 text-2xs leading-tight text-ink-400">
-                  {seasons > 0 ? (
-                    counted(seasons, 'temporada', 'temporadas')
-                  ) : c.economy.seatCost[0] > 0 ? (
-                    <>
-                      Vaga: <span className="whitespace-nowrap">{formatMoney(c.economy.seatCost[1])}</span> a{' '}
-                      <span className="whitespace-nowrap">{formatMoney(c.economy.seatCost[0])}</span>
-                    </>
-                  ) : (
-                    'A equipe paga salário'
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+                  {/* O estado do degrau vai num ícone além da cor (e por extenso para leitores de tela):
+                    alfinete no atual, visto nos já percorridos. Numa linha só, para a escada caber. */}
+                  <div
+                    className="flex items-center gap-1 whitespace-nowrap text-2xs font-semibold uppercase leading-tight tracking-wide text-ink-300"
+                    title={state === 'current' ? 'Você está aqui' : state === 'done' ? 'Já correu' : undefined}
+                  >
+                    Degrau {c.tier}
+                    {state === 'current' && <MapPin size={12} strokeWidth={2.5} aria-hidden className="shrink-0 text-apex-400" />}
+                    {state === 'done' && <CheckIcon size={12} strokeWidth={3} aria-hidden className="shrink-0 text-ink-200" />}
+                    {state !== 'ahead' && <span className="sr-only">{state === 'current' ? '(você está aqui)' : '(já correu)'}</span>}
+                  </div>
+                  <div
+                    className={cx(
+                      'min-h-[2.2em] font-display text-base font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] @min-[60em]:min-h-0 @min-[60em]:text-lg',
+                      state === 'ahead' ? 'text-ink-300' : 'text-ink-100',
+                    )}
+                  >
+                    {c.shortName}
+                  </div>
+                  {/* O veículo de cada degrau, em proporção: do kart de entrada ao Monoposto Grand Prix. Na categoria atual, com a pintura da equipe. */}
+                  <div
+                    className="my-1 flex shrink-0 items-center overflow-hidden"
+                    style={{ height: `calc(var(--u) * ${WIDEST_VEHICLE} + 4px)` }}
+                    title={vehicle.description}
+                  >
+                    <CarSprite
+                      categoryId={c.id}
+                      teamId={state === 'current' ? team.id : 'escada'}
+                      color={state === 'current' ? team.color : '#aab3c2'}
+                      driverId={state === 'current' ? player.id : undefined}
+                      className="shrink-0"
+                      style={{ width: `calc(var(--u) * ${vehicle.length})` }}
+                    />
+                  </div>
+                  <div className="text-2xs leading-tight text-ink-300">{vehicle.name}</div>
+                  <div className="mt-1 text-2xs leading-tight text-ink-400">
+                    {seasons > 0 ? (
+                      counted(seasons, 'temporada', 'temporadas')
+                    ) : c.economy.seatCost[0] > 0 ? (
+                      <>
+                        Vaga: <span className="whitespace-nowrap">{formatMoney(c.economy.seatCost[1])}</span> a{' '}
+                        <span className="whitespace-nowrap">{formatMoney(c.economy.seatCost[0])}</span>
+                      </>
+                    ) : (
+                      'A equipe paga salário'
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
         {career.categoryId === 'kart-national' && (
           <p className="mt-2 text-xs text-ink-400">
             Do kart nacional é possível ir direto {categoryRef(FIRST_FORMULA_CATEGORY_ID, 'para')}, se você cumprir os requisitos.

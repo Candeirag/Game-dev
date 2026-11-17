@@ -139,7 +139,8 @@ export function HelpScreen() {
 
   return (
     // Deitado: índice à esquerda (sempre à vista) e o assunto ao lado. Em pé: o índice vira uma faixa que rola de lado.
-    <div className="grid items-start gap-x-4 md:-mb-2 md:grid-cols-[11.5rem_minmax(0,1fr)]">
+    // A linha do título fica com a altura dele; a sobra do índice (que ocupa as duas linhas) vai para a de baixo.
+    <div className="grid items-start gap-x-4 md:-mb-2 md:grid-cols-[11.5rem_minmax(0,1fr)] md:grid-rows-[auto_1fr]">
       <div className="md:col-start-2 md:row-start-1">
         <PageHeader eyebrow="Ajuda" title="Como jogar" />
       </div>

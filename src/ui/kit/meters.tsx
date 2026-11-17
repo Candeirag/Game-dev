@@ -13,7 +13,7 @@ export function Meter({ label, value, hint, tone }: { label: ReactNode; value: n
   const v = Math.max(0, Math.min(100, value));
   return (
     <div>
-      <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 text-sm">
         <span className="text-ink-300">{label}</span>
         <span className="font-display text-lg font-semibold leading-none">{Math.round(v)}</span>
       </div>

@@ -61,11 +61,14 @@ export const RELATION_RULES = {
 } as const;
 
 function formatDelta(delta: AttributeDelta): string {
-  return Object.entries(delta)
-    .filter(([, v]) => (v ?? 0) >= 0.05)
-    .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
-    .map(([k, v]) => `${ATTRIBUTE_LABELS[k as keyof typeof ATTRIBUTE_LABELS]} +${(v ?? 0).toFixed(1)}`)
-    .join(', ');
+  return (
+    Object.entries(delta)
+      .filter(([, v]) => (v ?? 0) >= 0.05)
+      .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+      // Decimal com vírgula, como no resto do jogo em português ("Velocidade +0,7"). Só texto: os números não mudam.
+      .map(([k, v]) => `${ATTRIBUTE_LABELS[k as keyof typeof ATTRIBUTE_LABELS]} +${(v ?? 0).toFixed(1).replace('.', ',')}`)
+      .join(', ')
+  );
 }
 
 export function applyRoundEffects(input: CareerState, record: RoundRecord, gridDrops: Readonly<Record<string, number>>): CareerState {

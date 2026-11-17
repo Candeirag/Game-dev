@@ -22,7 +22,8 @@ export function TrainingFocusPicker() {
     <div className="space-y-4">
       <div>
         <div className="mb-2 text-xs font-semibold text-ink-300">Foco do treino</div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {/* Quantas colunas couberem com "Consistência mental" inteiro dentro do botão (acompanha o tamanho do texto). */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,calc(8.75rem*var(--text-scale))),1fr))] gap-2">
           {TRAINING_FOCUSES.map((focus) => (
             <button
               key={focus}

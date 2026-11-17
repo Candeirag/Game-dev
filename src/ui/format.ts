@@ -31,7 +31,8 @@ const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', '
 export function formatDate(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   if (!y || !m || !d) return iso;
-  return `${d} ${MONTHS[m - 1]} ${y}`;
+  // Espaços inquebráveis: "7 mai" nunca fica com o dia numa linha e o mês na outra.
+  return `${d}\u00a0${MONTHS[m - 1]}\u00a0${y}`;
 }
 
 export function formatDateTime(iso: string): string {
@@ -87,7 +88,8 @@ export function formatMoneyFull(value: number, options: { sign?: boolean; decima
 
 /** O mesmo, numa moeda dada (a tela de nova carreira ainda não tem carreira aberta). */
 export function formatMoneyAs(value: number, currency: Currency, options: { compact?: boolean; sign?: boolean; decimals?: number } = {}): string {
-  return formatAmount(value, currency, { ...options, compact: options.compact !== false });
+  // Na tela, o valor não quebra de linha entre o símbolo, o número e o "mil"/"mi": espaço inquebrável.
+  return formatAmount(value, currency, { ...options, compact: options.compact !== false }).replaceAll(' ', '\u00a0');
 }
 
 export function trackLocation(track: { city: string; state: string; country: string }): string {
@@ -96,5 +98,6 @@ export function trackLocation(track: { city: string; state: string; country: str
 
 /** Crédito da fonte do traçado, quando a licença pede que ele apareça junto do mapa (kartódromos reais). */
 export function trackCredit(trackId: string): string | null {
-  return trackId in KART_LAYOUTS ? KART_LAYOUTS_CREDIT : null;
+  // O OpenStreetMap aceita a atribuição traduzida; a constante (gerada pelo script de importação) fica em inglês.
+  return trackId in KART_LAYOUTS ? KART_LAYOUTS_CREDIT.replace('OpenStreetMap contributors', 'colaboradores do OpenStreetMap') : null;
 }

@@ -40,8 +40,11 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
               </td>
               <td className={td}>
                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <TeamSwatch team={colorOf(e.teamId)} />
-                  <span className={cx(e.driverId === player.id && 'font-semibold')}>{nameOf(e.driverId)}</span>
+                  {/* A faixa da equipe e o nome não se separam quando a linha quebra (só as marcas descem). */}
+                  <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                    <TeamSwatch team={colorOf(e.teamId)} />
+                    <span className={cx(e.driverId === player.id && 'font-semibold')}>{nameOf(e.driverId)}</span>
+                  </span>
                   {e.driverId === player.id && <YouMark />}
                   {result.fastestLap?.driverId === e.driverId && (
                     <Mark title="Volta mais rápida" tone="strong">

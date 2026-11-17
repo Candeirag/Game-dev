@@ -26,6 +26,9 @@ const SPEEDS = [
   { label: '8×', ms: 120 },
 ];
 
+/** Número com uma casa e vírgula, como no resto do jogo ("36,3"). */
+const decimal = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 /** Resultado oficial da corrida, com o botão que conclui a etapa. Usado pelos dois modos de exibição. */
 export function RaceResultPanel({ race, result, extra }: { race: RaceSimState; result: RaceResult; extra?: ReactNode }) {
   const { career, player, drivers } = useCareerView();
@@ -240,72 +243,80 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
       )}
 
       <div className={cx('min-h-0 flex-1', wide ? 'grid grid-cols-[minmax(0,1fr)_15rem] gap-2 xl:grid-cols-[minmax(0,1fr)_20rem]' : 'flex flex-col gap-3')}>
-        <div className="min-h-0 overflow-auto overscroll-contain bg-ink-900 px-3 shadow-frame">
-          <table className="w-full">
-            <thead className="sticky top-0 z-10 bg-ink-900">
-              <tr>
-                <th className={th}>Pos</th>
-                <th className={th}>Piloto</th>
-                <th className={cx(th, 'text-right')}>Dif.</th>
-                <th className={cx(th, 'hidden text-right lg:table-cell')}>Última</th>
-                <th className={cx(th, 'hidden text-right xl:table-cell')}>Melhor</th>
-                <th className={cx(th, 'w-24')}>Pneus</th>
-                {rules.pitStops && <th className={cx(th, 'hidden text-center lg:table-cell')}>Par.</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {race.cars.map((car, i) => {
-                const isMe = car.driverId === player.id;
-                return (
-                  <tr key={car.driverId} className={cx('border-t border-ink-700', isMe && 'bg-apex-500/15', car.status === 'dnf' && 'text-ink-300')}>
-                    <td className="w-14 px-3 py-2">
-                      <span className="flex items-center gap-1">
-                        <span className="font-display text-base font-bold leading-none">{car.status === 'dnf' ? 'AB' : i + 1}</span>
-                        {car.status === 'running' && race.currentLap > 0 && <Delta value={car.grid - (i + 1)} signless threshold={0.5} className="text-2xs" />}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-sm">
-                      <span className="flex items-center gap-2">
-                        <TeamSwatch team={teams[car.teamId]} />
-                        <span className={cx('truncate', isMe && 'font-semibold')}>{nameOf(car.driverId)}</span>
-                        {isMe && <YouMark />}
-                        {race.fastestLap?.driverId === car.driverId && (
-                          <Mark title="Volta mais rápida" tone="strong">
-                            VMR
-                          </Mark>
-                        )}
-                        {car.penaltySeconds > 0 && <Mark title="Punição em tempo" tone="attention">{`+${car.penaltySeconds}s`}</Mark>}
-                        {car.damage >= 0.2 && car.status === 'running' && (
-                          <Mark title="Carro danificado" tone="attention">
-                            DANO
-                          </Mark>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right text-sm text-ink-300">
-                      {car.status === 'dnf' ? '–' : race.currentLap === 0 ? '' : formatGap(gapToLeader(race, car))}
-                    </td>
-                    <td className="hidden px-3 py-2 text-right text-sm text-ink-400 lg:table-cell">{formatLap(car.lastLap)}</td>
-                    <td className="hidden px-3 py-2 text-right text-sm text-ink-400 xl:table-cell">{formatLap(car.bestLap)}</td>
-                    <td className="px-3 py-2">
-                      <span className="flex items-center gap-2">
-                        {rules.pitStops && <TyreBadge compound={car.tyre.compound} />}
-                        <span className="h-1.5 flex-1 overflow-hidden bg-ink-800" title={`${Math.round((1 - car.tyre.wear) * 100)}% de pneu`}>
-                          <span
-                            className={cx('block h-full', car.tyre.wear > 0.75 ? 'bg-gold-400' : car.tyre.wear > 0.45 ? 'bg-ink-200' : 'bg-go-400')}
-                            style={{ width: `${Math.max(0, (1 - car.tyre.wear) * 100)}%` }}
-                          />
+        {/* A tabela rola por dentro; a legenda das letras dos pneus fica no pé, à vista sem rolar. */}
+        <div className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
+          <div className="min-h-0 flex-1 overflow-auto overscroll-contain px-3">
+            <table className="w-full">
+              <thead className="sticky top-0 z-10 bg-ink-900">
+                <tr>
+                  <th className={th}>Pos</th>
+                  <th className={th}>Piloto</th>
+                  <th className={cx(th, 'text-right')}>Dif.</th>
+                  <th className={cx(th, 'hidden text-right lg:table-cell')}>Última</th>
+                  <th className={cx(th, 'hidden text-right xl:table-cell')}>Melhor</th>
+                  <th className={cx(th, 'sm:w-24')}>Pneus</th>
+                  {rules.pitStops && <th className={cx(th, 'hidden text-center lg:table-cell')}>Par.</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {race.cars.map((car, i) => {
+                  const isMe = car.driverId === player.id;
+                  return (
+                    <tr key={car.driverId} className={cx('border-t border-ink-700', isMe && 'bg-apex-500/15', car.status === 'dnf' && 'text-ink-300')}>
+                      <td className="w-14 px-3 py-2">
+                        <span className="flex items-center gap-1">
+                          <span className="font-display text-base font-bold leading-none">{car.status === 'dnf' ? 'AB' : i + 1}</span>
+                          {car.status === 'running' && race.currentLap > 0 && (
+                            <Delta value={car.grid - (i + 1)} signless threshold={0.5} className="text-2xs" />
+                          )}
                         </span>
-                      </span>
-                    </td>
-                    {rules.pitStops && <td className="hidden px-3 py-2 text-center text-sm text-ink-400 lg:table-cell">{car.pitStops}</td>}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {/* As letras dos selos, com o nome de cada composto. */}
-          {rules.pitStops && <TyreLegend compounds={[...rules.dryCompounds, ...rules.wetCompounds]} className="border-t border-ink-700 py-2" />}
+                      </td>
+                      <td className="px-3 py-2 text-sm">
+                        <span className="flex items-center gap-2">
+                          <TeamSwatch team={teams[car.teamId]} />
+                          <span className={cx('truncate', isMe && 'font-semibold')}>{nameOf(car.driverId)}</span>
+                          {isMe && <YouMark />}
+                          {race.fastestLap?.driverId === car.driverId && (
+                            <Mark title="Volta mais rápida" tone="strong">
+                              VMR
+                            </Mark>
+                          )}
+                          {car.penaltySeconds > 0 && <Mark title="Punição em tempo" tone="attention">{`+${car.penaltySeconds}s`}</Mark>}
+                          {car.damage >= 0.2 && car.status === 'running' && (
+                            <Mark title="Carro danificado" tone="attention">
+                              DANO
+                            </Mark>
+                          )}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right text-sm text-ink-300">
+                        {car.status === 'dnf' ? '–' : race.currentLap === 0 ? '' : formatGap(gapToLeader(race, car))}
+                      </td>
+                      <td className="hidden px-3 py-2 text-right text-sm text-ink-400 lg:table-cell">{formatLap(car.lastLap)}</td>
+                      <td className="hidden px-3 py-2 text-right text-sm text-ink-400 xl:table-cell">{formatLap(car.bestLap)}</td>
+                      <td className="px-3 py-2">
+                        <span className="flex items-center gap-2">
+                          {rules.pitStops && <TyreBadge compound={car.tyre.compound} />}
+                          {/* Com troca de pneus, na tela estreita fica só o selo (com a letra); a barra de desgaste aparece a partir de 640 px. */}
+                          <span
+                            className={cx('h-1.5 flex-1 overflow-hidden bg-ink-800', rules.pitStops ? 'hidden sm:block' : 'block min-w-10')}
+                            title={`${Math.round((1 - car.tyre.wear) * 100)}% de pneu`}
+                          >
+                            <span
+                              className={cx('block h-full', car.tyre.wear > 0.75 ? 'bg-gold-400' : car.tyre.wear > 0.45 ? 'bg-ink-200' : 'bg-go-400')}
+                              style={{ width: `${Math.max(0, (1 - car.tyre.wear) * 100)}%` }}
+                            />
+                          </span>
+                        </span>
+                      </td>
+                      {rules.pitStops && <td className="hidden px-3 py-2 text-center text-sm text-ink-400 lg:table-cell">{car.pitStops}</td>}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {rules.pitStops && <TyreLegend compounds={[...rules.dryCompounds, ...rules.wetCompounds]} className="shrink-0 border-t border-ink-700 px-3 py-1" />}
         </div>
 
         <aside className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
@@ -357,8 +368,8 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                 )}
                 {me && rules.fuel && (
                   <p className={cx('mt-2 text-xs', fuelMargin < 1 ? 'font-semibold text-gold-400' : 'text-ink-300')}>
-                    Combustível: {me.fuel.toFixed(1)} voltas no tanque, {lapsRemaining} por correr (
-                    {fuelMargin >= 0 ? `sobra ${fuelMargin.toFixed(1)}` : `falta ${(-fuelMargin).toFixed(1)}: poupe ou não chega ao fim`}).
+                    Combustível: {decimal(me.fuel)} voltas no tanque, {lapsRemaining} por correr (
+                    {fuelMargin >= 0 ? `sobra ${decimal(fuelMargin)}` : `falta ${decimal(-fuelMargin)}: poupe ou não chega ao fim`}).
                   </p>
                 )}
                 {me && (me.damage >= 0.05 || me.penaltySeconds > 0) && (

@@ -313,7 +313,7 @@ export function ExecutiveWeekendScreen() {
       <PageHeader eyebrow={who} title={seasonOver ? 'Temporada encerrada' : next && track ? `Etapa ${next.round}: ${track.name}` : 'Fim de semana'}>
         {planning && (
           <>
-            {/* Com decisões pendentes, a barra superior mostra o atalho para resolvê-las. */}
+            {/* Com decisões pendentes, a barra do pé da tela mostra o atalho para resolvê-las. */}
             {!pending && (
               <ScreenAction onClick={watch} className="min-h-12">
                 Assistir à corrida
@@ -537,7 +537,7 @@ export function ExecutiveCareerScreen() {
     <div className="space-y-3">
       <PageHeader eyebrow={`Fim da temporada ${career.year}`} title="Próxima temporada">
         <Tabs value={tab} options={tabs} onChange={setTab} />
-        {/* O passo que começa a temporada vai para a barra superior. Com decisões pendentes, ela mostra o atalho para resolvê-las. */}
+        {/* O passo que começa a temporada vai para a barra do pé da tela. Com decisões pendentes, ela mostra o atalho para resolvê-las. */}
         {!pending &&
           (keepsTeam ? (
             <ScreenAction

@@ -73,7 +73,7 @@ export function RaceControlBar({
               disabled={modeDisabled}
               aria-pressed={mode === m}
               className={cx(
-                'chamfer-br min-h-11 min-w-0 px-1 text-sm font-semibold leading-tight transition-colors [--chamfer:8px]',
+                'chamfer-br min-h-11 min-w-0 px-2 text-sm font-semibold leading-tight transition-colors [--chamfer:8px]',
                 // O ritmo escolhido tem contorno vermelho e também uma barra na base (forma, não só cor).
                 mode === m
                   ? 'bg-apex-500/20 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-400),inset_0_-4px_0_0_var(--color-apex-400)]'
@@ -93,7 +93,7 @@ export function RaceControlBar({
           onClick={onToggle}
           disabled={toggleDisabled}
           className={cx(
-            'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-2 px-2 text-sm font-bold transition-colors [--chamfer:8px] md:ml-auto md:min-w-28',
+            'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-2 px-2 text-sm font-bold transition-colors [--chamfer:8px] md:ml-auto md:min-w-24',
             playing ? 'bg-ink-800 text-ink-100 shadow-ring hover:bg-ink-700' : 'bg-apex-500 text-white hover:bg-apex-600',
           )}
         >

@@ -121,7 +121,8 @@ export function TeamScreen() {
           </Card>
 
           <Card title="Equipamento e estrutura" bodyClassName="p-3">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            {/* Duas colunas, ou uma só quando o texto grande não deixa "Confiabilidade" e o número caberem lado a lado. */}
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,calc(11rem*var(--text-scale))),1fr))] gap-x-4 gap-y-3">
               <Meter tone="neutral" label="Motor" value={team.car.engine} />
               <Meter tone="neutral" label="Chassi" value={team.car.chassis} />
               <Meter tone="neutral" label="Confiabilidade" value={team.car.reliability} />
