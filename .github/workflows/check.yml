@@ -46,16 +46,3 @@ jobs:
           path: test-results/
           retention-days: 7
           if-no-files-found: ignore
-
-      # TEMPORÁRIO (será removido antes do PR ficar pronto): prints da tela Caminhos para o PR da Fase 3.
-      - name: Guardar os prints da Fase 3
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prints-fase-3
-          path: |
-            test-results/telas/**/caminhos*.png
-            test-results/telas/**/painel-formula.png
-            test-results/telas/**/painel-fim-de-temporada.png
-          retention-days: 3
-          if-no-files-found: warn
