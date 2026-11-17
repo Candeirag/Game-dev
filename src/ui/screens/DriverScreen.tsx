@@ -5,7 +5,8 @@ import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
 import { computeCareerStats, fullName, overallRating } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { Card, cx, Delta, Meter, PageHeader, Pill, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
+import { Card, cx, Delta, Meter, PageHeader, Pill, PortraitOr, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
+import { portraitUrl } from '../images';
 import { TrendLine, attributeSeries } from '../components/TrendLine';
 import { formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
@@ -81,6 +82,8 @@ export function DriverScreen() {
 
           <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" className="text-xs" />} bodyClassName="p-3">
             <div className="flex items-center gap-4">
+              {/* O retrato do piloto, quando importado (sem ele, o cartão fica como era). */}
+              <PortraitOr src={portraitUrl(player.id, true)} name={`${player.firstName} ${player.lastName}`} color={team.color} fallback={null} />
               <Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} tone="accent" size={76} />
               <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
                 <Stat label="Potencial" value={formatRating(player.potential)} />

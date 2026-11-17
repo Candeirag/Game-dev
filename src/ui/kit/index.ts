@@ -16,5 +16,6 @@ export { LowerThird } from './LowerThird';
 export { PositionBadge, TableWrap, TeamSwatch, Tower, td, th, type TowerRow } from './Table';
 export { Check, ChoiceCard, EmptyState, PageHeader, Stat, Tabs } from './layout';
 export { Segmented, Slider, Switch } from './controls';
+export { Portrait, PortraitOr } from './Portrait';
 export { Ring } from './Ring';
 export { NumberPlate, ResultChips, WeatherBadge, WeatherTag, YouMark, type RecentResult } from './bits';

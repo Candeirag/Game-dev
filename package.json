@@ -21,7 +21,8 @@
     "app:sync": "npm run build && cap sync",
     "app:android": "npm run app:sync && cap open android",
     "app:ios": "npm run app:sync && cap open ios",
-    "app:icons": "node scripts/gerar-icones-do-app.mjs"
+    "app:icons": "node scripts/gerar-icones-do-app.mjs",
+    "app:images": "node scripts/importar-imagens.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.2",
@@ -49,6 +50,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "fake-indexeddb": "^6.2.8",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",

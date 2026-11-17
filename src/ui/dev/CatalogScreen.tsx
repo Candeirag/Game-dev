@@ -23,6 +23,7 @@ import {
   Meter,
   NumberPlate,
   PageHeader,
+  Portrait,
   PositionBadge,
   ProgressBar,
   ResultChips,
@@ -274,6 +275,15 @@ export default function CatalogScreen() {
             />
             <NumberPlate number={27} color="#d93826" />
           </div>
+        </Section>
+
+        <Section title="Retratos">
+          <div className="flex flex-wrap items-end gap-4">
+            <Portrait src={null} name="Ana Teste" color="#d93826" size="sm" />
+            <Portrait src={null} name="Marcos Rocha" color="#f2b33d" />
+            <Portrait src={null} name="Lia Alves" color="#4f8df7" size="lg" />
+          </div>
+          <p className="text-xs text-ink-400">Moldura padrão (4:5, chanfro e a cor da equipe na base). Sem imagem importada, aparecem as iniciais.</p>
         </Section>
 
         <Section title="Pneus">

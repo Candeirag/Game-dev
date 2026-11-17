@@ -35,7 +35,8 @@ import { TYRES, buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName,
 import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
 import { RaceResultPanel } from '../components/RaceView';
-import { Button, Delta, Tower, type TowerRow, TyreBadge, cx } from '@/ui/kit';
+import { Button, Delta, PortraitOr, Tower, type TowerRow, TyreBadge, cx } from '@/ui/kit';
+import { portraitUrl } from '../images';
 import { feedback } from '../feedback/feedback';
 import { formatInterval, formatLap, trackCredit } from '../format';
 import { useCareerView } from '../hooks/useCareer';
@@ -457,6 +458,13 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         </button>
       </div>
       <div className="mt-2 flex items-center gap-2">
+        <PortraitOr
+          src={portraitUrl(focus.driverId, focus.driverId === player.id)}
+          name={nameOf(focus.driverId)}
+          color={teams[focus.teamId]?.color}
+          size="sm"
+          fallback={null}
+        />
         <CarSprite
           categoryId={category.id}
           teamId={focus.teamId}

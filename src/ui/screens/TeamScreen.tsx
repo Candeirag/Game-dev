@@ -5,8 +5,9 @@ import { ROLE_LABELS } from '@/domain/labels';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
 import { computeCareerStats, fullName, getReserve, overallRating, rankTeams } from '@/engine';
 import { VEHICLES } from '@/data/vehicles';
+import { portraitUrl } from '../images';
 import { CarSprite } from '../components/CarSprite';
-import { Card, cx, Meter, NumberPlate, PageHeader, Stat, Tabs, TeamSwatch } from '@/ui/kit';
+import { Card, cx, Meter, NumberPlate, PageHeader, PortraitOr, Stat, Tabs, TeamSwatch } from '@/ui/kit';
 import { formatMoney, formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
@@ -94,7 +95,14 @@ export function TeamScreen() {
                     />
                   </div>
                   <div className="flex min-w-0 items-center gap-3">
-                    <NumberPlate number={carNumbers[d.id]} color={team.color} className="shrink-0" />
+                    {/* Retrato do elenco, quando importado; sem ele, a placa com o número. */}
+                    <PortraitOr
+                      src={portraitUrl(d.id, d.id === player.id)}
+                      name={fullName(d)}
+                      color={team.color}
+                      size="sm"
+                      fallback={<NumberPlate number={carNumbers[d.id]} color={team.color} className="shrink-0" />}
+                    />
                     <div className="min-w-0">
                       <div className="font-display text-lg font-bold uppercase leading-tight">{fullName(d)}</div>
                       <div className="text-xs text-ink-400">

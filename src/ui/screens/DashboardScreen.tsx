@@ -28,11 +28,13 @@ import {
   tutorialSteps,
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
+import { CategoryCarArt } from '../components/CategoryCarArt';
+import { portraitUrl } from '../images';
 import { CarSprite } from '../components/CarSprite';
 import { CircuitMap } from '../components/CircuitMap';
 import { EventsPanel } from '../components/EventsPanel';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { cx, Gauge, NumberPlate, Panel, type RecentResult, ResultChips, Ring, Tag, type Tone, WeatherTag } from '@/ui/kit';
+import { cx, Gauge, NumberPlate, Panel, PortraitOr, type RecentResult, ResultChips, Ring, Tag, type Tone, WeatherTag } from '@/ui/kit';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { scrollToElement } from '../motion';
@@ -110,7 +112,14 @@ export function DashboardScreen() {
         <div className="grid grid-cols-2 gap-3 md:col-span-6 lg:col-span-5 landscape:col-span-6 lg:landscape:col-span-5">
           <SummaryCard to="/driver" title="Piloto" ring={<Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} size={ringSize} />}>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <NumberPlate number={carNumbers[player.id]} color={team.color} />
+              {/* Com o retrato do jogador importado, ele entra aqui; sem ele, fica a placa com o número. */}
+              <PortraitOr
+                src={portraitUrl(player.id, true)}
+                name={fullName(player)}
+                color={team.color}
+                size="sm"
+                fallback={<NumberPlate number={carNumbers[player.id]} color={team.color} />}
+              />
               <span className="min-w-0 truncate text-sm font-semibold">{player.lastName}</span>
             </div>
             <div className="mt-2 text-xs leading-tight text-ink-400">
@@ -123,13 +132,20 @@ export function DashboardScreen() {
             title={machine}
             ring={<Ring value={Math.round(teamStrength(team))} label="Nota" fraction={teamStrength(team) / 100} size={ringSize} />}
           >
-            <CarSprite
+            {/* A arte do carro da categoria atual, se já foi importada; senão, o carro com a pintura da equipe. */}
+            <CategoryCarArt
               categoryId={category.id}
-              teamId={team.id}
-              color={team.color}
-              driverId={player.id}
-              number={carNumbers[player.id]}
-              className="w-full max-w-28"
+              className="w-28"
+              fallback={
+                <CarSprite
+                  categoryId={category.id}
+                  teamId={team.id}
+                  color={team.color}
+                  driverId={player.id}
+                  number={carNumbers[player.id]}
+                  className="w-full max-w-28"
+                />
+              }
             />
             <div className="mt-1 text-xs leading-tight text-ink-400">
               {carRank}º do grid<span className="max-lg:hidden"> · {VEHICLES[category.id].name}</span>
