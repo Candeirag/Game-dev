@@ -34,13 +34,20 @@ Se você precisar contrariar uma delas, pare e pergunte antes.
    vale sozinho para toda versão futura e não pode ser removido.
 6. **Interface.** Tela deitada (844×390 é a referência); português do Brasil; números com
    dígitos de largura fixa (`tabular-nums`, já ligado no `body`) e diferenças de tempo sempre
-   com três casas (`formatGap`, `formatLap`); nenhuma informação só por cor (cor + letra, ícone
-   ou seta); área de toque de no mínimo 44 pt; respeitar o "reduzir movimento" do sistema;
-   vibração só em momentos importantes e sempre igual para a mesma ação, por um módulo único
-   (nenhuma tela chama a vibração direto). Há telas antigas que ainda não cumprem tudo isso (a
-   lista está no PR da Fase 0): quando a fase tocar numa delas, corrige.
+   com três casas (`formatGap`, `formatInterval`, `formatLap`); nenhuma informação só por cor
+   (cor + letra, ícone ou seta); contraste de 4,5:1 para texto e 3:1 para texto grande, ícones e
+   contornos; área de toque de no mínimo 44 pt, com 8 pt entre vizinhas; respeitar o "reduzir
+   movimento" (do sistema ou de Ajustes): nada desliza nem dá zoom, só esmaece; vibração só em
+   momentos importantes e sempre igual para a mesma ação, por um módulo único (as telas chamam
+   `feedback(...)`, em `src/ui/feedback`; nenhuma chama a vibração direto). `e2e/telas.spec.ts`
+   confere contraste, largura fixa, toque e espaço entre alvos em todas as telas.
 7. **Visual.** Grafite escuro com vermelho de destaque, Barlow Condensed nos títulos e Inter no
-   texto (tokens em `src/index.css`). A inspiração são os jogos de gestão de automobilismo, sem
+   texto (tokens em `src/ui/tokens.css`). **Toda tela nova usa esses tokens e os componentes de
+   `src/ui/kit`** (botão, card, chip, tabela e torre, barra de progresso, selo de pneu, variação
+   com seta, sparkline, tarja): nada de cor, tamanho de texto ou sombra soltos, nem componente
+   base refeito dentro da tela. Se faltar um componente, ele entra no kit e no catálogo
+   (`#/dev/catalogo`, no `npm run dev`). A fonte condensada só em texto de 16 px ou mais; texto
+   pequeno é sempre Inter. Nenhuma terceira fonte. A inspiração são os jogos de gestão de automobilismo, sem
    copiar logos, imagens ou layouts, e **sem marcas reais**: nem nomes de categorias, entidades,
    equipes, pilotos ou patrocinadores de verdade. Os nomes das categorias saem todos de
    `src/domain/categoryNames.ts`. `tests/names.test.ts` falha se os nomes antigos voltarem ao
@@ -79,6 +86,7 @@ Se você precisar contrariar uma delas, pare e pergunte antes.
 | `npm run calibrate`  | Relatórios de balanceamento detalhados (não fazem parte da verificação).                    |
 | `npm run app:sync`   | Build e cópia para os projetos do aplicativo (`android/`, `ios/`).                          |
 | `npm run app:icons`  | Regenera o ícone e a tela de abertura provisórios do aplicativo.                            |
+| `npm run app:images` | Converte as imagens de `assets/higgsfield/` (carros e retratos) para WebP, dentro do jogo.  |
 
 O Playwright usa o Chromium. Em uma máquina nova: `npx playwright install chromium`.
 Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
@@ -98,7 +106,7 @@ os mesmos argumentos e o mesmo código, sai sempre igual.
 - **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
   estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
   (`tests/names.test.ts` trava a lista).
-- **Saves.** Os de `tests/fixtures/` (versões 1 a 4) têm de continuar abrindo e jogáveis. Os
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 5) têm de continuar abrindo e jogáveis. Os
   das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
@@ -121,15 +129,34 @@ simulador, que só usam a API pública do motor).
 - O que ainda não está pronto para o jogador fica atrás de uma feature flag de
   `src/config/featureFlags.ts` (premium, anúncios, conquistas da loja; tudo desligado). O motor
   não lê flags.
-- Visual "muro dos boxes": tokens em `src/index.css`, componentes em `src/ui/kit`. Cada cor
-  tem um significado fixo (vermelho: ação principal e o jogador; verde: bom; âmbar: atenção).
-  Ícones só do Lucide; nada de emoji como ícone.
-- Movimento: entradas e saídas de 150 a 300 ms, por transição de CSS (interrompível), e nada
-  para quem usa `prefers-reduced-motion` (ver `src/ui/motion.ts`). Indicador de progresso só
-  onde há espera de verdade (abrir save, carregar imagens).
-- Áreas de toque de no mínimo 44 px. O aplicativo é pensado para a tela deitada (844×390):
-  colunas a partir de `md:`, abas (na URL, `?tab=`) quando a tela fica comprida, e o passo que
-  faz a carreira avançar sempre na barra superior (`src/ui/layout/ScreenAction.tsx`).
+- Visual "muro dos boxes" (sistema de design da Fase 1): os tokens ficam todos em
+  `src/ui/tokens.css` (cores com papel fixo, escala de texto, grade de 8 px, chanfros, sombras,
+  movimento) e os componentes base em `src/ui/kit` (importe de `@/ui/kit`). Cada cor tem um
+  significado fixo (vermelho: ação principal e o jogador; verde: bom; âmbar: atenção) e nunca
+  vai sozinha: junto vem texto, letra, seta ou ícone. Ícones só do Lucide; nada de emoji.
+  O catálogo (`#/dev/catalogo`) só existe no servidor de desenvolvimento.
+- Espaçamento: passos pares do Tailwind (`p-2`, `gap-4`: múltiplos de 8 px); `1` (4 px) só para
+  ajuste fino. O passo `3` (12 px) sobrevive em telas antigas e não pode crescer
+  (`tests/designSystem.test.ts` trava a contagem): quem mexer numa tela troca os dela.
+- Texto: tamanhos só pelos tokens (`text-2xs` a `text-title`), que seguem o tamanho de texto do
+  aparelho e o de Ajustes (`--text-scale`). Dinheiro abreviado nos cartões (`formatMoney`) e
+  completo em detalhes e extrato (`formatMoneyFull`). Variação sempre com `Delta` (seta + sinal).
+- Movimento: entradas e saídas de 150 a 300 ms, por transição de CSS (interrompível). Com menos
+  movimento (sistema ou Ajustes; `data-motion="reduce"` no `<html>`), só a opacidade e as cores
+  têm transição e a câmera da corrida fica parada (ver `src/ui/motion.ts`). Nada pisca a 3 Hz
+  ou mais. Indicador de progresso só onde há espera de verdade (abrir save, carregar imagens).
+- Retorno ao jogador: `src/ui/feedback` é o único lugar que decide vibração e som. A tela chama
+  `feedback('victory')`; a tabela `FEEDBACK` diz o padrão. Sons são sintetizados
+  (`sounds.ts`), sem arquivos de áudio. Os ajustes do jogador (texto, daltonismo, movimento,
+  vibração, volumes) ficam em `src/ui/settings` e são guardados no aparelho, fora dos saves.
+- Áreas de toque de no mínimo 44 px, com 8 px entre vizinhas. O aplicativo é pensado para a
+  tela deitada (844×390): colunas a partir de `md:`, abas (na URL, `?tab=`) quando a tela fica
+  comprida, e o passo que faz a carreira avançar sempre no canto inferior direito, perto do
+  polegar (`ScreenAction` e `ActionDock`, em `src/ui/layout/ScreenAction.tsx`). Margens de
+  segurança do aparelho pelos tokens `--safe-*`.
+- Imagens geradas (carros por categoria, retratos): os originais vão em `assets/higgsfield/` e
+  `npm run app:images` os converte para `src/assets/generated/`. Faltando imagem, a tela usa a
+  reserva (o carro desenhado pelo jogo, a placa com o número). Ver `ASSETS.md`.
 - Relatório de travamentos (Sentry) preparado e desligado: `src/monitoring/crashReporting.ts`.
 - Aplicativo (Capacitor, Android e iOS): só `src/platform` importa `@capacitor/*`; o resto do
   jogo pergunta a `isNativeApp()`. No aplicativo os saves vão para arquivos do aparelho

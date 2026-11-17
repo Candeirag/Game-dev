@@ -62,16 +62,27 @@ International, Zuera, Prokart Raceland (Wackersdorf), Åsum Ring
 (Kristianstad), PF International, Kartódromo Internacional do Algarve
 (Portimão) e Franciacorta Karting Track.
 
-## Fontes: Barlow Condensed e Inter
+## Fontes: Barlow Condensed, Inter e Saira Condensed
 
 As fontes do jogo ficam embutidas em `src/assets/fonts/` (arquivos `.woff2`,
 subconjuntos latino e latino estendido), para o jogo funcionar sem internet.
 
 - **Barlow Condensed** (pesos 500, 600 e 700), © 2017 The Barlow Project Authors.
-- **Inter** (variável), © 2016 The Inter Project Authors.
+  Títulos, nomes e números grandes.
+- **Inter** (variável), © 2016 The Inter Project Authors. Texto, tabelas e
+  cronômetro.
+- **Saira Condensed** (pesos 500, 600 e 700), © 2016 The Saira Project Authors.
+  Só para o comparativo de títulos da Fase 1: é carregada apenas no servidor de
+  desenvolvimento, com a flag `sairaTitles` ligada, e não entra no jogo
+  publicado enquanto o padrão for a Barlow.
 
-Ambas sob a SIL Open Font License 1.1; o texto da licença acompanha os
-arquivos (`OFL-BarlowCondensed.txt` e `OFL-Inter.txt`).
+As três sob a SIL Open Font License 1.1, que permite uso comercial, embutir e
+redistribuir (os nomes reservados "Barlow", "Inter" e "Saira" não podem ser
+usados em versões modificadas). O texto da licença acompanha os arquivos
+(`OFL-BarlowCondensed.txt`, `OFL-Inter.txt` e `OFL-SairaCondensed.txt`). Os
+arquivos vêm dos pacotes `@fontsource/*`, sem modificação.
+
+O jogo não usa fontes oficiais de campeonatos reais nem recriações delas.
 
 ## Ícones: Lucide
 

@@ -17,6 +17,9 @@ import { formatGap, formatInterval, formatLap, formatMoneyAs } from '@/ui/format
 import { TYRE_LETTERS } from '@/ui/kit/TyreBadge';
 import { DEFAULT_SETTINGS, MAX_TEXT_SCALE, SYSTEM_SCALE_RANGE, TEXT_SIZES, TEXT_SIZE_SCALE, parseSettings, textScale } from '@/ui/settings/settings';
 
+/** Usos do passo de 12 px (p-3, gap-3…) que sobraram nas telas antigas. Só diminui. */
+const STEP_3_LEFT = 288;
+
 const ROOT = join(__dirname, '..');
 const UI = join(ROOT, 'src', 'ui');
 
@@ -84,6 +87,18 @@ describe('tokens', () => {
     const steps = [...tokens.matchAll(/--space-(\d+):\s*([\d.]+)rem;/g)].map(([, step, rem]) => [Number(step), Number(rem) * 16] as const);
     expect(steps.length).toBeGreaterThanOrEqual(5);
     for (const [step, px] of steps) expect(px, `--space-${step}`).toBe(step * 8);
+  });
+
+  it('o passo de 12 px das telas antigas não cresce (e os fracionados não voltam)', () => {
+    const spacing = /(?<=["' :`])-?(?:p|px|py|pt|pb|pl|pr|m|mx|my|mt|mb|ml|mr|gap|gap-x|gap-y|space-x|space-y)-(0\.5|1\.5|2\.5|3|3\.5|5|7|9|11)(?=["' `])/g;
+    const counts = new Map<string, number>();
+    for (const file of uiSources) {
+      for (const match of readFileSync(file, 'utf8').matchAll(spacing)) counts.set(match[1] ?? '', (counts.get(match[1] ?? '') ?? 0) + 1);
+    }
+    // Fora da grade de 8 px (com o meio passo de 4) só resta o passo 3, em telas de antes da
+    // Fase 1. O número abaixo só pode cair: quem mexer numa tela troca os dela por 2 ou 4.
+    expect([...counts.keys()].sort()).toEqual(['3']);
+    expect(counts.get('3')).toBeLessThanOrEqual(STEP_3_LEFT);
   });
 
   it('a paleta cumpre os mínimos de contraste: 4,5:1 para texto, 3:1 para contornos e ícones', () => {
