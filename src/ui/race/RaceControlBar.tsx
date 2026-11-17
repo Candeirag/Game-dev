@@ -10,7 +10,7 @@ import { Pause, Play } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { RACE_MODES, type RaceMode } from '@/domain/schemas';
 import { RACE_MODE_LABELS } from '@/domain/labels';
-import { cx } from '../components/ui';
+import { cx } from '@/ui/kit';
 import { useRaceBarSpace } from '../layout/chrome';
 
 export interface RaceControlBarProps {
@@ -56,7 +56,7 @@ export function RaceControlBar({
       <div className="mx-auto grid max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 py-2 pl-3 pr-[calc(0.75rem+env(safe-area-inset-right))] md:flex md:gap-3 lg:pl-6 lg:pr-[calc(1.5rem+env(safe-area-inset-right))]">
         <div className="min-w-[3.75rem] shrink-0 leading-none md:flex md:items-baseline md:gap-2" aria-live="off">
           <div className="font-display text-2xl font-bold tabular">{position}</div>
-          <div className="mt-0.5 whitespace-nowrap text-[11px] font-semibold text-ink-300 tabular md:mt-0 md:text-sm">{lap}</div>
+          <div className="mt-0.5 whitespace-nowrap text-2xs font-semibold text-ink-300 tabular md:mt-0 md:text-sm">{lap}</div>
         </div>
 
         <div
@@ -72,17 +72,15 @@ export function RaceControlBar({
               disabled={modeDisabled}
               aria-pressed={mode === m}
               className={cx(
-                'chamfer-br min-h-11 px-1 text-sm font-semibold transition-colors [--chamfer:8px] disabled:opacity-40',
-                mode === m
-                  ? 'bg-apex-500/20 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-500)]'
-                  : 'bg-ink-800 text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:text-ink-100',
+                'chamfer-br min-h-11 px-1 text-sm font-semibold transition-colors [--chamfer:8px]',
+                mode === m ? 'bg-apex-500/20 text-ink-100 shadow-ring-accent' : 'bg-ink-800 text-ink-300 shadow-ring hover:text-ink-100',
               )}
             >
               {RACE_MODE_LABELS[m]}
             </button>
           ))}
         </div>
-        <span className="hidden whitespace-nowrap text-xs text-ink-500 xl:inline">
+        <span className="hidden whitespace-nowrap text-xs text-ink-400 xl:inline">
           {modeFromLap !== null && !modeDisabled ? `Ritmo vale a partir da volta ${modeFromLap}` : ''}
         </span>
 
@@ -91,15 +89,15 @@ export function RaceControlBar({
           onClick={onToggle}
           disabled={toggleDisabled}
           className={cx(
-            'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors [--chamfer:8px] disabled:opacity-40 md:ml-auto md:min-w-28',
-            playing ? 'bg-ink-800 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-700' : 'bg-apex-500 text-white hover:bg-apex-400',
+            'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors [--chamfer:8px] md:ml-auto md:min-w-28',
+            playing ? 'bg-ink-800 text-ink-100 shadow-ring hover:bg-ink-700' : 'bg-apex-500 text-white hover:bg-apex-600',
           )}
         >
           {playing ? <Pause size={16} className="shrink-0" aria-hidden /> : <Play size={16} className="shrink-0" aria-hidden />}
           <span className="max-[379px]:sr-only">{playing ? 'Pausar' : playLabel}</span>
         </button>
 
-        <div role="group" aria-label="Velocidade da corrida" className="flex shrink-0 bg-ink-800 shadow-[inset_0_0_0_1px_var(--color-ink-600)]">
+        <div role="group" aria-label="Velocidade da corrida" className="flex shrink-0 bg-ink-800 shadow-ring">
           {speeds.map((s) => (
             <button
               key={s.label}

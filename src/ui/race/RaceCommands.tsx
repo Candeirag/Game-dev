@@ -5,8 +5,8 @@
  */
 import { TYRES, conditionFor, fullName, type RaceSimState } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { CompoundDot } from './raceBits';
-import { Button, Card, cx } from '../components/ui';
+import { feedback } from '../feedback/feedback';
+import { Button, Card, cx, TyreBadge } from '@/ui/kit';
 import { useCareerView } from '../hooks/useCareer';
 
 export function TeamOrderDialog({ race }: { race: RaceSimState }) {
@@ -79,16 +79,18 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
             key={c}
             type="button"
             disabled={!running || autoEngineer}
-            onClick={() => requestPit(pitRequest === c ? null : c)}
+            onClick={() => {
+              // Toque leve ao escolher o pneu.
+              if (pitRequest !== c) feedback('tyreChoice');
+              requestPit(pitRequest === c ? null : c);
+            }}
             aria-pressed={pitRequest === c}
             className={cx(
-              'flex min-h-11 items-center gap-1.5 px-2.5 text-xs font-semibold disabled:opacity-40',
-              pitRequest === c
-                ? 'bg-apex-500/15 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-500)]'
-                : 'text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-800',
+              'flex min-h-11 items-center gap-1.5 px-2.5 text-xs font-semibold',
+              pitRequest === c ? 'bg-apex-500/15 text-ink-100 shadow-ring-accent' : 'text-ink-200 shadow-ring hover:bg-ink-800',
             )}
           >
-            <CompoundDot compound={c} />
+            <TyreBadge compound={c} />
             {TYRES[c].label}
           </button>
         ))}
