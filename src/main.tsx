@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initCrashReporting } from './monitoring/crashReporting';
 import { prepareApp } from './platform/boot';
+import { isFeatureEnabled } from './config/featureFlags';
+import { initSettings } from './ui/settings/settings';
 import './index.css';
 
 // Registra os erros que escapam. O envio para fora (Sentry) fica desligado até a publicação.
@@ -19,6 +21,10 @@ async function start(container: HTMLElement): Promise<void> {
     // Sem a preparação o jogo abre do mesmo jeito, com o armazenamento do navegador.
     console.error(error);
   }
+  // Tamanho do texto, modo para daltônicos e "menos movimento" valem antes do primeiro desenho.
+  initSettings();
+  // Comparativo de títulos (só em desenvolvimento): a Saira Condensed no lugar da Barlow.
+  if (import.meta.env.DEV && isFeatureEnabled('sairaTitles')) await import('./ui/saira.css');
   const [{ App }, { ErrorBoundary }] = await Promise.all([import('./ui/App'), import('./ui/components/ErrorBoundary')]);
   createRoot(container).render(
     <StrictMode>

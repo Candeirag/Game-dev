@@ -1,25 +1,37 @@
 /**
- * Vibração do aparelho: o módulo único por onde ela passa (nenhuma tela chama o plugin direto).
+ * Vibração do aparelho: o único módulo que fala com o plugin (`@capacitor/haptics`). Nenhuma tela
+ * o chama direto: as telas avisam o que aconteceu a `src/ui/feedback`, que decide o padrão.
  *
- * Por enquanto há só o interruptor, guardado nas anotações do aparelho. Os padrões de vibração
- * por evento (momentos importantes, sempre iguais para a mesma ação) entram na Fase 1, aqui.
- * A vibração só existe dentro do aplicativo; no navegador o interruptor nem aparece.
+ * São quatro padrões, sempre iguais para o mesmo tipo de acontecimento:
+ * - `success`: vitória, título, contrato assinado;
+ * - `error`: toque, abandono, punição;
+ * - `warning`: confirmar uma decisão arriscada;
+ * - `selection`: toque leve ao trocar o ritmo ou escolher o pneu.
+ *
+ * A vibração só existe dentro do aplicativo; no navegador nada acontece. Ela nunca é o único
+ * aviso: quem a dispara já mostrou o acontecimento na tela.
  */
-import { readPreference, writePreference } from '@/persistence/preferences';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 import { isNativeApp } from './native';
 
-const KEY = 'haptics';
+export const HAPTIC_PATTERNS = ['success', 'error', 'warning', 'selection'] as const;
+export type HapticPattern = (typeof HAPTIC_PATTERNS)[number];
 
 /** Verdadeiro onde o aparelho pode vibrar (dentro do aplicativo). */
 export function hapticsAvailable(): boolean {
   return isNativeApp();
 }
 
-/** A escolha do jogador; ligada por padrão. */
-export function hapticsEnabled(): boolean {
-  return readPreference(KEY) !== 'off';
-}
-
-export function setHapticsEnabled(enabled: boolean): void {
-  writePreference(KEY, enabled ? null : 'off');
+/** Dispara um padrão. Falha em silêncio: um aparelho sem motor de vibração não pode atrapalhar o jogo. */
+export function vibrate(pattern: HapticPattern): void {
+  if (!hapticsAvailable()) return;
+  const run =
+    pattern === 'success'
+      ? Haptics.notification({ type: NotificationType.Success })
+      : pattern === 'error'
+        ? Haptics.notification({ type: NotificationType.Error })
+        : pattern === 'warning'
+          ? Haptics.notification({ type: NotificationType.Warning })
+          : Haptics.impact({ style: ImpactStyle.Light });
+  void run.catch(() => {});
 }
