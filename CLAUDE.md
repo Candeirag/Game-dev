@@ -58,7 +58,8 @@ Se você precisar contrariar uma delas, pare e pergunte antes.
 2. **Um PR por tarefa, citando a issue** (`Closes #N` no corpo). Use o modelo em
    `.github/pull_request_template.md`. Nada vai para a `main` sem PR.
 3. **Rode `npm run check` antes de abrir ou atualizar um PR** e só abra com tudo passando.
-   Cole o resultado no PR.
+   Cole o resultado no PR. O GitHub Actions (`.github/workflows/check.yml`) roda a mesma
+   verificação em todo PR e a cada envio para a `main`: PR com a verificação vermelha não entra.
 4. **Mostre o plano antes de começar** uma tarefa grande e **confirme que os testes passam**
    antes de passar para a tarefa seguinte.
 5. Commits pequenos e descritivos, citando a issue (`Refs #N`). Formatação automática vai em
