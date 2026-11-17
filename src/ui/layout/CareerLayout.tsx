@@ -25,6 +25,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import { counted } from '@/domain/text';
 import { getNextEvent, isSeasonComplete, managedTeam, trackName } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, advanceButtonClass, cx } from '@/ui/kit';
@@ -116,7 +117,8 @@ function AdvanceButton({ action, className }: { action: PrimaryAction; className
   const navigate = useNavigate();
   const location = useLocation();
   const go = () => {
-    if (location.pathname !== action.to) navigate(action.to);
+    // Na própria tela de destino, mas noutra aba, o botão volta para a aba do passo (a primeira).
+    if (location.pathname !== action.to || location.search !== '') navigate(action.to);
     const anchor = action.anchor;
     if (anchor) window.setTimeout(() => scrollToElement(anchor), 60);
   };
@@ -184,9 +186,14 @@ function CareerShell() {
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
   // Quantos passos de tela estão no encaixe da barra (normalmente zero ou um).
   const [screenActions, setScreenActions] = useState(0);
-  const registerAction = useCallback(() => {
+  const [screenActionInfo, setScreenActionInfo] = useState<string | undefined>(undefined);
+  const registerAction = useCallback((info?: string) => {
     setScreenActions((n) => n + 1);
-    return () => setScreenActions((n) => n - 1);
+    setScreenActionInfo(info);
+    return () => {
+      setScreenActions((n) => n - 1);
+      setScreenActionInfo((current) => (current === info ? undefined : current));
+    };
   }, []);
   const chrome = useMemo(
     () => ({ setRaceBar, wide, topSlot: wide ? topSlot : null, actionSlot: wide ? actionSlot : null, registerAction }),
@@ -228,10 +235,21 @@ function CareerShell() {
     secondary.some((item) => location.pathname.startsWith(item.to)) || ['/finance', '/family'].some((route) => location.pathname.startsWith(route));
   const action = primaryAction(career);
   // Na própria tela de destino o botão não precisa aparecer (a não ser quando rola até as decisões).
-  const showAction = action !== null && (action.anchor !== undefined || location.pathname !== action.to);
+  // Na tela de destino o atalho só sai quando ela já mostra o passo: na aba padrão (sem `?tab=`).
+  const showAction = action !== null && (action.anchor !== undefined || location.pathname !== action.to || location.search !== '');
   // A barra do passo principal (formato largo): aparece quando há o que fazer, fora da corrida (lá o
   // rodapé é da barra de comandos). A página reserva o espaço dela no fim: o conteúdo termina acima.
   const actionBar = wide && !raceBar && (showAction || screenActions > 0);
+  // Linha de contexto da barra: a do passo da tela; senão, a próxima pista; senão, o momento da carreira.
+  const barInfo =
+    (screenActions > 0 ? screenActionInfo : undefined) ??
+    (stageLong !== stage
+      ? stageLong
+      : pending > 0
+        ? `${pending === 1 ? 'Uma decisão espera' : `${counted(pending, 'decisão', 'decisões')} esperam`} por você no Painel`
+        : career.offseason
+          ? `Temporada ${career.year} encerrada: escolha a equipe de ${career.year + 1}`
+          : stage || undefined);
   useEffect(() => {
     document.documentElement.style.setProperty('--action-bar-h', actionBar ? `calc(${ACTION_BAR_HEIGHT} + env(safe-area-inset-bottom))` : '0px');
     return () => {
@@ -464,7 +482,7 @@ function CareerShell() {
             {/* A barra do passo principal, fixa no pé da tela: o botão que faz a carreira avançar fica à
                 direita, perto do polegar. O passo da própria tela (disputar o treino, largar) toma o
                 lugar do atalho padrão. O encaixe existe sempre; a barra só aparece quando há passo. */}
-            <ActionBar visible={actionBar} info={stageLong !== stage ? stageLong : undefined}>
+            <ActionBar visible={actionBar} info={barInfo}>
               <div ref={setActionSlot} className="peer/action contents" />
               <div className="contents peer-[:not(:empty)]/action:hidden">{showAction && action && <AdvanceButton action={action} />}</div>
             </ActionBar>

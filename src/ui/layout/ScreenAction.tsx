@@ -26,11 +26,13 @@ export function ActionBar({ info, children, visible = true }: { info?: ReactNode
       role="region"
       aria-label="Próximo passo"
       className={cx(
-        'fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-30 border-t border-ink-700 bg-ink-900 pb-[var(--safe-bottom)] shadow-bar',
+        // Abaixo do painel "Mais" e dos avisos (z-30), acima do conteúdo que rola por baixo dela.
+        'fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-20 border-t border-ink-700 bg-ink-900 pb-[var(--safe-bottom)] shadow-bar',
         !visible && 'hidden',
       )}
     >
-      <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-4 pl-4 pr-[calc(0.5rem+var(--safe-right))] lg:pl-6 lg:pr-[calc(1.5rem+var(--safe-right))]">
+      {/* Sem trilho (nova carreira), a margem da esquerda respeita o recorte da câmera; com trilho, ele já a inclui. */}
+      <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-4 pl-[max(1rem,calc(var(--safe-left)-var(--rail-w,0px)))] pr-[calc(0.5rem+var(--safe-right))] lg:pl-[max(1.5rem,calc(var(--safe-left)-var(--rail-w,0px)))] lg:pr-[calc(1.5rem+var(--safe-right))]">
         <div className="min-w-0 flex-1 truncate text-xs text-ink-300">{info}</div>
         {children}
       </div>
@@ -56,8 +58,9 @@ export function ScreenAction({
   className?: string;
 }) {
   const { actionSlot, registerAction } = useChrome();
-  // Enquanto este passo estiver na tela, a moldura mostra a barra (mesmo sem o atalho padrão).
-  useEffect(() => (actionSlot ? registerAction() : undefined), [actionSlot, registerAction]);
+  // Enquanto este passo estiver na tela, a moldura mostra a barra (mesmo sem o atalho padrão), com o
+  // `title` do passo como linha de contexto ("Equipe X · F. Elite" ao lado de "Assinar").
+  useEffect(() => (actionSlot ? registerAction(title) : undefined), [actionSlot, registerAction, title]);
   const button = (
     <button type="button" onClick={onClick} disabled={disabled} title={title} className={cx(advanceButtonClass(tone), !actionSlot && className)}>
       {children}

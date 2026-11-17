@@ -26,8 +26,11 @@ export interface Chrome {
    * atalho padrão.
    */
   actionSlot: HTMLElement | null;
-  /** A tela avisa que pôs um passo no encaixe; a função devolvida desfaz o aviso. */
-  registerAction(): () => void;
+  /**
+   * A tela avisa que pôs um passo no encaixe, com a linha de contexto dele para a barra (opcional);
+   * a função devolvida desfaz o aviso.
+   */
+  registerAction(info?: string): () => void;
 }
 
 export const ChromeContext = createContext<Chrome>({ setRaceBar() {}, wide: true, topSlot: null, actionSlot: null, registerAction: () => () => {} });
