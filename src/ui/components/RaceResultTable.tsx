@@ -1,11 +1,11 @@
 import type { RaceResult } from '@/domain/schemas';
 import { DNF_LABELS } from '@/domain/labels';
 import { fullName } from '@/engine';
-import { PositionBadge, TableWrap, TeamSwatch, cx, td, th } from './ui';
+import { cx, Delta, PositionBadge, TableWrap, td, TeamSwatch, th, YouMark } from '@/ui/kit';
 import { formatLap, formatRaceTime } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
-import { GridDelta, Mark } from '../race/raceBits';
+import { Mark } from '../race/raceBits';
 
 /**
  * Resultado oficial de uma corrida. Em temporadas arquivadas, nomes e cores
@@ -39,9 +39,13 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
                 <PositionBadge position={e.position} dnf={e.status === 'dnf'} />
               </td>
               <td className={td}>
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <TeamSwatch team={colorOf(e.teamId)} />
-                  <span className={cx(e.driverId === player.id && 'font-semibold')}>{nameOf(e.driverId)}</span>
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {/* A faixa da equipe e o nome não se separam quando a linha quebra (só as marcas descem). */}
+                  <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                    <TeamSwatch team={colorOf(e.teamId)} />
+                    <span className={cx(e.driverId === player.id && 'font-semibold')}>{nameOf(e.driverId)}</span>
+                  </span>
+                  {e.driverId === player.id && <YouMark />}
                   {result.fastestLap?.driverId === e.driverId && (
                     <Mark title="Volta mais rápida" tone="strong">
                       VMR
@@ -58,7 +62,7 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
               </td>
               <td className={cx(td, 'hidden text-center tabular text-ink-400 sm:table-cell')}>
                 {e.grid}
-                {e.status === 'finished' && <GridDelta gained={e.grid - e.position} className="ml-1" />}
+                {e.status === 'finished' && <Delta value={e.grid - e.position} signless threshold={0.5} className="ml-1 text-2xs" />}
               </td>
               <td className={cx(td, 'text-right tabular')}>
                 {e.status === 'dnf' ? (

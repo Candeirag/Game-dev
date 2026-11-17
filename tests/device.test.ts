@@ -3,7 +3,7 @@
  * anotações com cópia no aparelho e o interruptor da vibração.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DeviceFileStorage, migrateStorage, type DeviceFiles } from '@/persistence/deviceStorage';
@@ -11,7 +11,8 @@ import { readPreference, resetPreferenceMirror, restorePreferences, writePrefere
 import { loadCareer, listSaves, saveCareer } from '@/persistence/saveService';
 import { IndexedDbStorage, MemoryStorage, probeStorage } from '@/persistence/storage';
 import { deliverTextFile } from '@/platform/exportFile';
-import { hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/platform/haptics';
+import { HAPTIC_PATTERNS, hapticsAvailable, vibrate } from '@/platform/haptics';
+import { getSettings, parseSettings, resetSettings, updateSettings } from '@/ui/settings/settings';
 import { isNativeApp } from '@/platform/native';
 import { newCareer } from './helpers';
 
@@ -271,27 +272,45 @@ describe('fora do aplicativo', () => {
 
   it('o interruptor da vibração fica guardado nas anotações e começa ligado', async () => {
     resetPreferenceMirror();
-    expect(hapticsEnabled()).toBe(true);
+    resetSettings();
+    expect(getSettings().haptics).toBe(true);
     const saved = new Map<string, string>();
     await restorePreferences({
       all: async () => ({}),
       set: async (key, value) => void saved.set(key, value),
       remove: async (key) => void saved.delete(key),
     });
-    setHapticsEnabled(false);
-    expect(hapticsEnabled()).toBe(false);
+    updateSettings({ haptics: false });
+    expect(getSettings().haptics).toBe(false);
     await Promise.resolve();
-    expect(saved.get('haptics')).toBe('off');
-    setHapticsEnabled(true);
-    expect(hapticsEnabled()).toBe(true);
-    await Promise.resolve();
-    expect(saved.has('haptics')).toBe(false);
+    expect(JSON.parse(saved.get('settings') ?? '{}')).toMatchObject({ haptics: false });
+    updateSettings({ haptics: true });
+    expect(getSettings().haptics).toBe(true);
     resetPreferenceMirror();
+    resetSettings();
   });
 
-  it('nenhuma tela chama a vibração: o plugin só pode aparecer no módulo único', () => {
+  it('quem tinha desligado a vibração antes da tela Ajustes continua com ela desligada', () => {
+    expect(parseSettings(null, 'off').haptics).toBe(false);
+    expect(parseSettings(null, null).haptics).toBe(true);
+    // O ajuste novo, quando existe, vale sobre a anotação antiga.
+    expect(parseSettings(JSON.stringify({ haptics: true }), 'off').haptics).toBe(true);
+  });
+
+  it('nenhuma tela chama a vibração: o plugin só aparece no módulo único, e só o retorno ao jogador o usa', () => {
     const outside = sourceFiles().filter((file) => !file.endsWith(join('platform', 'haptics.ts')) && /@capacitor\/haptics/.test(readFileSync(file, 'utf8')));
     expect(outside).toEqual([]);
+    // As telas não importam `platform/haptics` para vibrar: avisam `ui/feedback`, que decide o padrão.
+    // (A tela Ajustes só pergunta se o aparelho pode vibrar.)
+    const callers = sourceFiles().filter((file) => /\bvibrate\(/.test(readFileSync(file, 'utf8')));
+    expect(callers.map((file) => relative(join(__dirname, '..', 'src'), file)).sort()).toEqual([
+      join('platform', 'haptics.ts'),
+      join('ui', 'feedback', 'feedback.ts'),
+    ]);
+  });
+
+  it('fora do aplicativo, pedir uma vibração não faz nada (e não falha)', () => {
+    for (const pattern of HAPTIC_PATTERNS) expect(() => vibrate(pattern)).not.toThrow();
   });
 
   it('exportar segue pelo caminho do navegador (download), não pelo compartilhamento do aparelho', async () => {

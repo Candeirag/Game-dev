@@ -5,9 +5,10 @@ import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
 import { computeCareerStats, fullName, overallRating } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { Card, Meter, PageHeader, Pill, RatingBar, Stat, Tabs, cx } from '../components/ui';
-import { Ring } from '../kit/Ring';
-import { formatRating, signed } from '../format';
+import { Card, cx, Delta, Meter, PageHeader, Pill, PortraitOr, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
+import { portraitUrl } from '../images';
+import { TrendLine, attributeSeries } from '../components/TrendLine';
+import { formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
 
@@ -19,16 +20,6 @@ const TABS: { value: DriverTab; label: string }[] = [
 ];
 
 /** Variação de um atributo na temporada: ganho em verde, perda em âmbar. Nada quando não mudou. */
-function Delta({ value, suffix, className = 'text-xs' }: { value: number; suffix?: string; className?: string }) {
-  if (Math.abs(value) < 0.05) return null;
-  return (
-    <span className={cx(className, value > 0 ? 'text-go-400' : 'text-gold-400')}>
-      {signed(value)}
-      {suffix}
-    </span>
-  );
-}
-
 export function DriverScreen() {
   const { career, player, team } = useCareerView();
   const stats = useMemo(() => computeCareerStats(career, player.id), [career, player.id]);
@@ -77,8 +68,8 @@ export function DriverScreen() {
                         <span className="block min-w-0 flex-1">
                           <RatingBar value={value} previous={start[key]} />
                         </span>
-                        <span className="h-3 w-7 shrink-0 text-right">
-                          <Delta value={value - start[key]} className="block text-[11px] leading-3" />
+                        <span className="flex h-3 w-11 shrink-0 justify-end">
+                          <Delta value={value - start[key]} className="text-2xs leading-3" />
                         </span>
                       </span>
                       <span className="mt-1 block text-xs font-normal text-ink-400 md:hidden">{ATTRIBUTE_DESCRIPTIONS[key]}</span>
@@ -89,18 +80,30 @@ export function DriverScreen() {
             </ul>
           </Card>
 
-          <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" />} bodyClassName="p-3">
+          <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" className="text-xs" />} bodyClassName="p-3">
             <div className="flex items-center gap-4">
+              {/* O retrato do piloto, quando importado (sem ele, o cartão fica como era). */}
+              <PortraitOr src={portraitUrl(player.id, true)} name={`${player.firstName} ${player.lastName}`} color={team.color} fallback={null} />
               <Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} tone="accent" size={76} />
               <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
                 <Stat label="Potencial" value={formatRating(player.potential)} />
                 <Stat label="Reputação" value={career.reputation} />
               </div>
             </div>
+            {/* Evolução por temporada: a nota geral ou, com um atributo aberto, a dele. */}
+            <div className="mt-3 border-t border-ink-700 pt-3">
+              <TrendLine
+                title={selected ? ATTRIBUTE_LABELS[selected] : 'Nota geral'}
+                values={attributeSeries(career, player.id, selected ?? 'overall', selected ? player.attributes[selected] : overall)}
+                format={(v) => formatRating(v)}
+                tone="good"
+                threshold={0.5}
+              />
+            </div>
             <div className="mt-3 border-t border-ink-700 pt-3 text-xs text-ink-400 md:min-h-[6.25rem]">
               {selected && (
                 <div className="hidden md:block">
-                  <h3 className="font-display text-sm font-semibold uppercase tracking-[0.06em] text-ink-200">{ATTRIBUTE_LABELS[selected]}</h3>
+                  <h3 className="font-display text-base font-semibold uppercase tracking-[0.06em] text-ink-200">{ATTRIBUTE_LABELS[selected]}</h3>
                   <p className="mt-1 text-ink-300">{ATTRIBUTE_DESCRIPTIONS[selected]}</p>
                 </div>
               )}
@@ -138,7 +141,7 @@ export function DriverScreen() {
       )}
 
       {tab === 'stats' && (
-        <Card title="Estatísticas de carreira" bodyClassName="grid grid-cols-3 gap-x-4 gap-y-5 p-4 md:grid-cols-5">
+        <Card title="Estatísticas de carreira" bodyClassName="grid grid-cols-3 gap-x-4 gap-y-4 p-4 md:grid-cols-5">
           <Stat label="Corridas" value={stats.starts} />
           <Stat label="Vitórias" value={stats.wins} />
           <Stat label="Pódios" value={stats.podiums} />

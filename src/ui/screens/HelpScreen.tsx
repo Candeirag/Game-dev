@@ -5,7 +5,7 @@ import { CATEGORY_NAMES, FIRST_CATEGORY_ID, FIRST_FORMULA_CATEGORY_ID, TOP_CATEG
 import { capitalize } from '@/domain/text';
 import { tutorialSteps } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, PageHeader, cx } from '../components/ui';
+import { Button, Card, cx, PageHeader } from '@/ui/kit';
 import { useCareer } from '../hooks/useCareer';
 
 /**
@@ -33,11 +33,11 @@ export function TutorialCard({ compact = true }: { compact?: boolean }) {
     >
       <ol className={cx('grid gap-y-2', !compact && 'gap-x-6 lg:grid-cols-2')}>
         {steps.map((step, index) => (
-          <li key={step.id} className="flex items-start gap-2.5 text-sm">
+          <li key={step.id} className="flex items-start gap-2 text-sm">
             <span
               aria-hidden
               className={cx(
-                'mt-0.5 grid h-5 w-5 shrink-0 place-items-center font-display text-sm font-bold leading-none',
+                'mt-1 grid h-5 w-5 shrink-0 place-items-center text-xs font-bold leading-none',
                 step.done ? 'bg-go-400/20 text-go-400' : step === next ? 'bg-apex-500 text-white' : 'bg-ink-800 text-ink-400',
               )}
             >
@@ -139,14 +139,15 @@ export function HelpScreen() {
 
   return (
     // Deitado: índice à esquerda (sempre à vista) e o assunto ao lado. Em pé: o índice vira uma faixa que rola de lado.
-    <div className="grid items-start gap-x-4 md:-mb-2 md:grid-cols-[11.5rem_minmax(0,1fr)]">
+    // A linha do título fica com a altura dele; a sobra do índice (que ocupa as duas linhas) vai para a de baixo.
+    <div className="grid items-start gap-x-4 md:-mb-2 md:grid-cols-[11.5rem_minmax(0,1fr)] md:grid-rows-[auto_1fr]">
       <div className="md:col-start-2 md:row-start-1">
         <PageHeader eyebrow="Ajuda" title="Como jogar" />
       </div>
       <div
         role="tablist"
         aria-label="Assuntos da ajuda"
-        className="flex overflow-x-auto bg-ink-900 shadow-[inset_0_0_0_1px_var(--color-ink-700)] md:sticky md:top-[calc(4rem+env(safe-area-inset-top))] md:col-start-1 md:row-span-2 md:row-start-1 md:flex-col md:overflow-visible"
+        className="flex overflow-x-auto bg-ink-900 shadow-frame md:sticky md:top-[calc(4rem+env(safe-area-inset-top))] md:col-start-1 md:row-span-2 md:row-start-1 md:flex-col md:overflow-visible"
       >
         {SECTIONS.map((section) => {
           const selected = section.id === current;
@@ -160,7 +161,7 @@ export function HelpScreen() {
               aria-controls="help-panel"
               onClick={() => open(section.id)}
               className={cx(
-                'flex min-h-11 shrink-0 items-center gap-2.5 px-3 text-left text-sm font-semibold transition-colors',
+                'flex min-h-11 shrink-0 items-center gap-2 px-3 text-left text-sm font-semibold transition-colors',
                 selected
                   ? 'bg-ink-700 text-ink-100 shadow-[inset_0_-3px_0_0_var(--color-apex-500)] md:shadow-[inset_3px_0_0_0_var(--color-apex-500)]'
                   : 'text-ink-400 hover:text-ink-100',
@@ -175,7 +176,7 @@ export function HelpScreen() {
       <div id="help-panel" role="tabpanel" aria-labelledby={`help-tab-${current}`} className="mt-3 min-w-0 md:col-start-2 md:row-start-2 md:mt-0">
         {topic ? (
           <Card title={topic.title}>
-            <ul className="max-w-3xl list-disc space-y-2 pl-5 text-sm leading-snug text-ink-300">
+            <ul className="max-w-3xl list-disc space-y-2 pl-4 text-sm leading-snug text-ink-300">
               {topic.items.map((item) => (
                 <li key={item}>{item}</li>
               ))}

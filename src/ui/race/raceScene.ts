@@ -42,6 +42,13 @@ export interface SceneInput {
   mineIds: ReadonlySet<string>;
   /** Luzes de largada acesas (0 a 5), ou null fora do procedimento de largada. */
   lights: number | null;
+  /**
+   * Menos movimento (pedido ao sistema ou em Ajustes): a câmera fica parada no circuito inteiro,
+   * sem acompanhar carro nem dar zoom, e muda de enquadramento de uma vez.
+   */
+  still: boolean;
+  /** Multiplicador do tamanho dos rótulos (o tamanho de texto do jogo). */
+  textScale: number;
 }
 
 /** Estado que passa de um quadro para o outro (suavizações). */
@@ -373,11 +380,19 @@ function drawMiniMap(g: CanvasRenderingContext2D, input: SceneInput, placed: Pla
     g.fillStyle = input.teams[car.row.teamId]?.color ?? '#9aa3b2';
     g.fill();
     if (mine || focused) {
-      g.strokeStyle = mine ? '#ef3b2d' : '#f4f5f7';
+      g.strokeStyle = mine ? '#ff6250' : '#f4f5f7';
       g.lineWidth = 1.6 / scale;
       g.stroke();
     }
     g.restore();
+    // No minimapa, o carro do jogador ganha também um anel em volta (forma, não só cor).
+    if (mine) {
+      g.beginPath();
+      g.arc(car.x, car.y, size * 1.9, 0, Math.PI * 2);
+      g.strokeStyle = '#ff6250';
+      g.lineWidth = 1.2 / scale;
+      g.stroke();
+    }
   }
   g.restore();
 }
@@ -401,15 +416,16 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
   const rotation = portrait ? -Math.PI / 2 : 0;
   const fit = portrait ? Math.min(width / circuit.height, height / circuit.width) : Math.min(width / circuit.width, height / circuit.height);
   const focus = placed.find((p) => p.row.driverId === input.focusId);
-  const follow = input.camera === 'follow' && focus;
+  const follow = input.camera === 'follow' && focus && !input.still;
   const goal = follow
     ? { x: focus.x, y: focus.y, scale: clamp(Math.min(width, height) / (circuit.style === 'formula' ? 310 : 250), 1.2, 2.9) }
     : { x: circuit.width / 2, y: circuit.height / 2, scale: fit };
   const camera = memory.camera ?? goal;
-  const pan = 1 - Math.exp(-dt * 5);
+  // Com menos movimento, o enquadramento não desliza até o destino: vai direto.
+  const pan = input.still ? 1 : 1 - Math.exp(-dt * 5);
   camera.x += (goal.x - camera.x) * pan;
   camera.y += (goal.y - camera.y) * pan;
-  camera.scale += (goal.scale - camera.scale) * (1 - Math.exp(-dt * 3.5));
+  camera.scale += (goal.scale - camera.scale) * (input.still ? 1 : 1 - Math.exp(-dt * 3.5));
   memory.camera = camera;
   const cos = Math.cos(rotation);
   const sin = Math.sin(rotation);
@@ -532,9 +548,11 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
     const code = driverCode(input.drivers[row.driverId]?.lastName ?? '');
     const named = focused || mine;
     const text = row.state === 'retired' ? 'AB' : named ? `${row.position} ${code}` : String(row.position);
-    g.font = `700 ${named ? 12 : 11}px "Barlow Condensed", "Arial Narrow", sans-serif`;
+    // Texto pequeno é sempre em Inter (a condensada fica para títulos), no tamanho de texto do jogo.
+    const fontSize = 11 * input.textScale;
+    g.font = `700 ${fontSize}px "Inter", "Segoe UI", sans-serif`;
     const w = g.measureText(text).width + (named ? 9 : 7);
-    const h = named ? 17 : 14;
+    const h = (named ? 17 : 14) * input.textScale;
     const x = sx - w / 2;
     const y = sy - Math.max(carPixels * 0.42, 9) - h - 4;
     const overlaps = boxes.some((b) => x < b.x + b.w + 1 && x + w + 1 > b.x && y < b.y + b.h + 1 && y + h + 1 > b.y);
@@ -547,17 +565,26 @@ export function drawScene(g: CanvasRenderingContext2D, input: SceneInput, memory
     g.roundRect(x, y, w, h, 3);
     g.fill();
     if (mine || focused) {
-      g.strokeStyle = mine ? '#ef3b2d' : '#f4f5f7';
-      g.lineWidth = 2;
+      // Dois sinais além da cor: o carro do jogador tem contorno cheio e seta cheia; o carro só em
+      // foco (de outro piloto) tem contorno tracejado e seta vazada.
+      g.strokeStyle = mine ? '#ff6250' : '#f4f5f7';
+      g.lineWidth = mine ? 2.5 : 2;
+      g.setLineDash(mine ? [] : [4, 3]);
       g.stroke();
+      g.setLineDash([]);
       // Seta apontando para o carro.
-      g.fillStyle = mine ? '#ef3b2d' : '#f4f5f7';
       g.beginPath();
-      g.moveTo(sx - 4, y + h + 1);
-      g.lineTo(sx + 4, y + h + 1);
-      g.lineTo(sx, y + h + 6);
+      g.moveTo(sx - 5, y + h + 1);
+      g.lineTo(sx + 5, y + h + 1);
+      g.lineTo(sx, y + h + 7);
       g.closePath();
-      g.fill();
+      if (mine) {
+        g.fillStyle = '#ff6250';
+        g.fill();
+      } else {
+        g.lineWidth = 1.5;
+        g.stroke();
+      }
     }
     g.fillStyle = textOn(colour);
     g.fillText(text, sx, y + h / 2 + 0.5);

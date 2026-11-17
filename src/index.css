@@ -1,129 +1,17 @@
 @import "tailwindcss";
-
-/*
- * Fontes embutidas (SIL Open Font License; ver src/assets/fonts). O jogo não busca nada na
- * internet: precisa funcionar sem rede, dentro do aplicativo.
- */
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("./assets/fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
-    U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url("./assets/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
-    U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: "Barlow Condensed";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 500;
-  src: url("./assets/fonts/barlow-condensed-latin-500-normal.woff2") format("woff2");
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: "Barlow Condensed";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 500;
-  src: url("./assets/fonts/barlow-condensed-latin-ext-500-normal.woff2") format("woff2");
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-@font-face {
-  font-family: "Barlow Condensed";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 600;
-  src: url("./assets/fonts/barlow-condensed-latin-600-normal.woff2") format("woff2");
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: "Barlow Condensed";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 600;
-  src: url("./assets/fonts/barlow-condensed-latin-ext-600-normal.woff2") format("woff2");
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-@font-face {
-  font-family: "Barlow Condensed";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 700;
-  src: url("./assets/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2");
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: "Barlow Condensed";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 700;
-  src: url("./assets/fonts/barlow-condensed-latin-ext-700-normal.woff2") format("woff2");
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-
-/*
- * Tema "muro dos boxes": grafite escuro, chapas em tons de cinza-azulado e cores com significado fixo.
- *
- *   ink-950  fundo do aplicativo            apex   vermelho: ação principal, o jogador e a marca
- *   ink-900  chapa (superfície dos painéis) go     verde: bom (dentro da meta, pódio, salvo)
- *   ink-800  chapa alta (barras de título)  gold   âmbar: atenção (abaixo da meta, pendência, lesão)
- *   ink-700  linha (bordas e grade)
- *   ink-100/300/400  texto principal, secundário e apagado
- *
- * A cor de cada equipe é dado, não tema: aparece só como identidade (uma faixa fina).
- */
-@theme {
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-display: "Barlow Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
-
-  --color-ink-950: #15181d;
-  --color-ink-900: #1d222a;
-  --color-ink-850: #222831;
-  --color-ink-800: #262d38;
-  --color-ink-700: #343d4b;
-  --color-ink-600: #465162;
-  --color-ink-500: #626e7f;
-  --color-ink-400: #7f8b9b;
-  --color-ink-300: #a7b1c0;
-  --color-ink-200: #cfd6df;
-  --color-ink-100: #eef1f5;
-
-  --color-apex-500: #e8402f;
-  --color-apex-400: #ff6250;
-  --color-apex-600: #c2311f;
-  --color-gold-400: #f2b33d;
-  --color-silver-300: #c9d1dc;
-  --color-bronze-400: #d08b4f;
-  --color-go-400: #3ecf8e;
-  --color-rain-400: #6aa9f5;
-}
+/* Fontes embutidas (o jogo não busca nada na rede) e os tokens do visual. */
+@import "./ui/fonts.css";
+@import "./ui/tokens.css";
 
 @layer base {
   html {
     color-scheme: dark;
+    /* Ao levar o foco (ou rolar até uma âncora), o navegador deixa o elemento acima da barra do passo principal. */
+    scroll-padding-bottom: calc(var(--action-bar-h, 0px) + 0.5rem);
     background: var(--color-ink-950);
+    /* O texto segue o tamanho escolhido no aparelho; o navegador não o reajusta por conta própria. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     @apply bg-ink-950 font-sans text-ink-100 antialiased;
@@ -134,13 +22,26 @@
   button {
     cursor: pointer;
   }
-  button:disabled {
-    cursor: not-allowed;
-  }
   :focus-visible {
     outline: 2px solid var(--color-apex-400);
     outline-offset: 2px;
   }
+}
+
+/*
+ * Controle desativado: chapa listrada, texto legível (acima de 4,5:1) e contorno de 3:1. Não usa
+ * opacidade, que apagava o texto. Fica fora das camadas do Tailwind de propósito: vale sobre as
+ * cores que cada botão define para o estado normal.
+ */
+:is(button, input, select, textarea):disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 1;
+  color: var(--color-ink-300);
+  background-color: var(--color-ink-800);
+  background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.05) 0 6px, transparent 6px 14px);
+  box-shadow: var(--shadow-ring);
+  filter: none;
 }
 
 @utility tabular {
@@ -158,18 +59,18 @@
  */
 @utility chamfer {
   clip-path: polygon(
-    var(--chamfer, 12px) 0,
+    var(--chamfer, var(--chamfer-lg)) 0,
     100% 0,
-    100% calc(100% - var(--chamfer, 12px)),
-    calc(100% - var(--chamfer, 12px)) 100%,
+    100% calc(100% - var(--chamfer, var(--chamfer-lg))),
+    calc(100% - var(--chamfer, var(--chamfer-lg))) 100%,
     0 100%,
-    0 var(--chamfer, 12px)
+    0 var(--chamfer, var(--chamfer-lg))
   );
 }
 
 /* Só o canto de baixo à direita (botões e etiquetas). */
 @utility chamfer-br {
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--chamfer, 8px)), calc(100% - var(--chamfer, 8px)) 100%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--chamfer, var(--chamfer-md))), calc(100% - var(--chamfer, var(--chamfer-md))) 100%, 0 100%);
 }
 
 /* Faixas diagonais discretas, como a pintura de segurança de um box. */
@@ -185,35 +86,41 @@
 }
 
 /*
+ * Camada fina sobre a pista: fundo translúcido e sombra; a pista continua aparecendo por trás.
+ * Sem desfoque de fundo de propósito: sobre a pista em movimento ele seria refeito a cada quadro,
+ * em cada camada, e pesaria nos celulares mais simples.
+ */
+@utility overlay {
+  background-color: color-mix(in srgb, var(--color-ink-950) 90%, transparent);
+  box-shadow: var(--shadow-overlay);
+}
+
+/*
  * Movimento. Entradas e saídas duram de 150 a 300 ms e são transições (interrompíveis); ver
  * src/ui/motion.ts. `enter` anima a entrada de um elemento que acabou de aparecer, só com CSS.
  */
-@theme {
-  --motion-fast: 150ms;
-  --motion-base: 220ms;
-  --motion-slow: 300ms;
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
 @utility enter {
   transition:
     opacity var(--motion-base) var(--ease-out),
     translate var(--motion-base) var(--ease-out);
   @starting-style {
     opacity: 0;
-    translate: 0 6px;
+    translate: 0 var(--enter-shift);
   }
 }
 
 /* Entrada de quem sobe do rodapé (a barra de comandos da corrida). */
 @utility enter-up {
-  transition: translate var(--motion-base) var(--ease-out);
+  transition:
+    opacity var(--motion-base) var(--ease-out),
+    translate var(--motion-base) var(--ease-out);
   @starting-style {
-    translate: 0 100%;
+    opacity: 0;
+    translate: 0 var(--enter-rise);
   }
 }
 
-/* Destaque rápido de uma linha que acabou de entrar (um evento novo na corrida). */
+/* Destaque rápido de uma linha que acabou de entrar (um evento novo na corrida). Acontece uma vez só. */
 @keyframes flash-in {
   from {
     background-color: color-mix(in oklab, var(--color-apex-500) 22%, transparent);
@@ -227,7 +134,23 @@
   animation: flash-in var(--motion-slow) ease-out;
 }
 
-/* Quem pede menos movimento ao sistema não vê transições nem animações de interface. */
+/*
+ * Um item de grid ou de coluna flex tem largura mínima "auto": conteúdo largo
+ * (uma tabela, uma linha comprida) empurra o item para fora da tela no
+ * celular. Com largura mínima zero, quem rola é a tabela, dentro do cartão.
+ */
+main > *,
+.grid > * {
+  min-width: 0;
+}
+
+/*
+ * Menos movimento: quem pede isso ao sistema, ou liga em Ajustes, não vê nada deslizar, crescer
+ * ou girar. O que entra e sai só esmaece (a opacidade continua em transição, curta); posição e
+ * tamanho mudam de uma vez. O bloco aparece duas vezes porque uma consulta de mídia e um
+ * atributo não se combinam num seletor só: a consulta vale antes de o jogo carregar; o atributo
+ * (posto por src/ui/a11y) vale também para o ajuste do jogo.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -237,18 +160,24 @@
     /* biome-ignore lint/complexity/noImportantStyles: idem */
     animation-iteration-count: 1 !important;
     /* biome-ignore lint/complexity/noImportantStyles: idem */
-    transition-duration: 0.01ms !important;
+    transition-property: opacity, color, background-color, border-color, box-shadow !important;
+    /* biome-ignore lint/complexity/noImportantStyles: idem */
+    transition-duration: var(--motion-fast) !important;
     /* biome-ignore lint/complexity/noImportantStyles: idem */
     scroll-behavior: auto !important;
   }
 }
-
-/*
- * Um item de grid ou de coluna flex tem largura mínima "auto": conteúdo largo
- * (uma tabela, uma linha comprida) empurra o item para fora da tela no
- * celular. Com largura mínima zero, quem rola é a tabela, dentro do cartão.
- */
-main > *,
-.grid > * {
-  min-width: 0;
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: precisa vencer qualquer transição definida nas telas */
+  animation-duration: 0.01ms !important;
+  /* biome-ignore lint/complexity/noImportantStyles: idem */
+  animation-iteration-count: 1 !important;
+  /* biome-ignore lint/complexity/noImportantStyles: idem */
+  transition-property: opacity, color, background-color, border-color, box-shadow !important;
+  /* biome-ignore lint/complexity/noImportantStyles: idem */
+  transition-duration: var(--motion-fast) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: idem */
+  scroll-behavior: auto !important;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { feedback } from '../feedback/feedback';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardPaste, Copy, Download, FileUp } from 'lucide-react';
 import { CATEGORY_NAMES, FIRST_CATEGORY_ID } from '@/domain/categoryNames';
@@ -6,7 +7,7 @@ import { SAVE_SLOTS, type OriginalCopyInfo, type SaveSlotId } from '@/persistenc
 import { deliverTextFile } from '@/platform/exportFile';
 import { isNativeApp } from '@/platform/native';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, PageHeader, cx } from '../components/ui';
+import { Button, Card, cx, PageHeader } from '@/ui/kit';
 import { ExportReminder } from '../components/SaveNotices';
 import { formatDateTime } from '../format';
 
@@ -105,14 +106,14 @@ export function SavesScreen() {
               const summary = slot?.status === 'ok' ? slot.summary : undefined;
               return (
                 // Slot vazio cabe numa linha; com carreira, o resumo fica em cima e os botões embaixo (ou ao lado, quando há largura).
-                <li key={id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 px-3 py-2">
+                <li key={id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2">
                   <div className={cx('min-w-0 flex-1', empty ? 'basis-16' : 'basis-72')}>
                     <div className="flex items-baseline gap-2">
                       <span className="shrink-0 text-sm font-semibold">{SLOT_LABELS[id]}</span>
                       {slot?.status === 'ok' && slot.savedAt && <span className="truncate text-xs text-ink-400">{formatDateTime(slot.savedAt)}</span>}
                     </div>
                     <div className="text-xs text-ink-300">
-                      {empty && <span className="text-ink-500">Vazio</span>}
+                      {empty && <span className="text-ink-400">Vazio</span>}
                       {summary && (
                         <>
                           {summary.playerName} · {summary.categoryName ?? CATEGORY_NAMES[FIRST_CATEGORY_ID].shortName} · {summary.teamName} · {summary.year} ·{' '}
@@ -150,7 +151,15 @@ export function SavesScreen() {
                         Confirmar exclusão
                       </Button>
                     ) : (
-                      <Button variant="ghost" disabled={empty} onClick={() => setConfirmDelete(id)}>
+                      <Button
+                        variant="ghost"
+                        disabled={empty}
+                        onClick={() => {
+                          // Apagar não tem volta: o alerta acompanha o pedido de confirmação.
+                          feedback('riskyDecision');
+                          setConfirmDelete(id);
+                        }}
+                      >
                         Apagar
                       </Button>
                     )}
@@ -168,7 +177,7 @@ export function SavesScreen() {
               </p>
               <ul className="mt-1 divide-y divide-ink-800">
                 {originalCopies.map((copy) => (
-                  <li key={`${copy.slot}-${copy.version}`} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2">
+                  <li key={`${copy.slot}-${copy.version}`} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2">
                     <div className="min-w-0 flex-1 basis-72">
                       <div className="flex items-baseline gap-2">
                         <span className="shrink-0 text-sm font-semibold">
@@ -250,7 +259,7 @@ export function SavesScreen() {
                   if (transfer.mode === 'copy') e.target.select();
                 }}
                 spellCheck={false}
-                className="block w-full border border-ink-700 bg-ink-850 px-3 py-2 font-mono text-xs text-ink-100 transition-colors focus:border-apex-500 focus:outline-none"
+                className="block w-full border border-ink-500 bg-ink-850 px-3 py-2 font-mono text-xs text-ink-100 transition-colors focus:border-apex-500 focus:outline-none"
               />
               <div className="flex flex-wrap gap-2">
                 {transfer.mode === 'paste' && (

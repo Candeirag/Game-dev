@@ -5,7 +5,7 @@ import { ASSET_RULES } from '@/data/assets';
 import { getCategory } from '@/data/categories';
 import { overallRating } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, PageHeader, Pill, Stat } from '../components/ui';
+import { Button, Card, PageHeader, Pill, Stat } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareer } from '../hooks/useCareer';
 
@@ -97,7 +97,7 @@ export function SuccessionScreen() {
                       : `Os ${siblings} irmãos recebem a parte deles e saem do seu acompanhamento.`}
                   </p>
                 )}
-                <div className="mt-2.5 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Button variant="primary" disabled={!heir.canDrive} onClick={() => resolve(heir.id, 'driver')}>
                     Continuar nas pistas
                   </Button>

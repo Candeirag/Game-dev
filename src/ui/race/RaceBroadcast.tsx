@@ -8,23 +8,48 @@
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronUp, Crosshair, FastForward, Flag, ListOrdered, Pause, Play, Radio, RotateCcw, SkipForward, Video } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronUp,
+  CircleUser,
+  Crosshair,
+  Eye,
+  FastForward,
+  Flag,
+  ListOrdered,
+  type LucideIcon,
+  Pause,
+  Play,
+  Radio,
+  RotateCcw,
+  ScrollText,
+  SkipForward,
+  Video,
+  Wrench,
+  X,
+} from 'lucide-react';
 import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/domain/labels';
 import { getTrack } from '@/data/tracks';
-import { TYRES, buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName, isRaceFinished, lapInfoAt, standingsAt, type StandingRow } from '@/engine';
+import { buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName, isRaceFinished, lapInfoAt, standingsAt, type StandingRow } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
 import { RaceResultPanel } from '../components/RaceView';
-import { Button, cx } from '../components/ui';
-import { formatLap, trackCredit } from '../format';
+import { Button, cx, Delta, PortraitOr, Tower, type TowerRow, TyreBadge, TyreLegend, tyreName, WholeRows } from '@/ui/kit';
+import { portraitUrl } from '../images';
+import { feedback } from '../feedback/feedback';
+import { formatInterval, formatLap, trackCredit } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { useChrome, useMediaQuery } from '../layout/chrome';
-import { CompoundDot, EVENT_TONE, HeaderButton } from './raceBits';
+import { EVENT_TONE, HeaderButton, Mark } from './raceBits';
 import { RaceCanvas } from './RaceCanvas';
 import { PitStrategyCard, TeamOrderDialog } from './RaceCommands';
 import { RaceControlBar } from './RaceControlBar';
 import { driverCode, type CameraMode } from './raceScene';
+import { useRaceFeedback } from './useRaceFeedback';
 import { SPEEDS, useRacePlayback } from './useRacePlayback';
+import { useSettings } from '../settings/useSettings';
+import { systemPrefersReducedMotion } from '../settings/settings';
 
 const DNF_SHORT: Record<string, string> = { crash: 'Batida', collision: 'Toque', mechanical: 'Quebra', damage: 'Danos', fuel: 'Pane seca' };
 
@@ -44,8 +69,12 @@ function gapText(row: StandingRow, mode: 'leader' | 'interval', started: boolean
   if (row.position === 1) return row.state === 'finished' ? 'Vencedor' : 'Líder';
   if (row.lapsDown > 0 && row.state !== 'finished') return `+${row.lapsDown} v`;
   const value = mode === 'leader' ? row.gap : row.interval;
-  return value === null ? '' : `+${value.toFixed(value < 100 ? 1 : 0)}`;
+  // Diferenças de tempo sempre com três casas (regra 6).
+  return value === null ? '' : formatInterval(value);
 }
+
+/** Dois carros a menos disso um do outro estão em disputa: a torre realça o par em foco. Só exibição. */
+const BATTLE_GAP_SECONDS = 1.5;
 
 /**
  * `spectator`: a corrida já foi simulada por inteiro e o jogador só assiste (dirigente no muro dos boxes
@@ -57,6 +86,10 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   // Mouse de verdade: tela de toque não conta, mesmo quando o sistema diz que o ponteiro é fino.
   const finePointer = useMediaQuery('(pointer: fine)') && navigator.maxTouchPoints === 0 && !('ontouchstart' in window);
   const [side, setSide] = useState<SidePanel>('tower');
+  // No formato largo a torre fica sempre à vista; piloto, boxes e eventos abrem numa camada sobre a pista.
+  const [drawer, setDrawer] = useState<Exclude<SidePanel, 'tower'> | null>(null);
+  // Menos movimento: a câmera não acompanha nem dá zoom; fica parada no circuito inteiro.
+  const stillCamera = useSettings().reduceMotion || systemPrefersReducedMotion();
   const { career, player, drivers, teams, category } = useCareerView();
   const race = useGameStore((s) => s.liveRace);
   const timeline = useGameStore((s) => s.raceTimeline);
@@ -64,7 +97,8 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   const setRaceMode = useGameStore((s) => s.setRaceMode);
   const playback = useRacePlayback();
   // A corrida abre acompanhando o carro do jogador, com o circuito inteiro no minimapa.
-  const [camera, setCamera] = useState<CameraMode>('follow');
+  const [chosenCamera, setCamera] = useState<CameraMode>('follow');
+  const camera: CameraMode = stillCamera ? 'overview' : chosenCamera;
   const [focusId, setFocusId] = useState<string | null>(null);
   const [gapMode, setGapMode] = useState<'leader' | 'interval'>('leader');
 
@@ -124,6 +158,14 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   useEffect(() => {
     if (!spectator) useGameStore.getState().noteLapShown(shownLap);
   }, [shownLap, spectator]);
+
+  // Vibração e som: o que acontece com o carro do jogador e a bandeirada, no instante em que aparecem.
+  useRaceFeedback({
+    events,
+    mineIds,
+    playing: playback.playing,
+    chequered: timeline !== null && timeline.winnerTime !== null && time >= timeline.winnerTime,
+  });
 
   if (!race || !timeline || !circuit) return null;
 
@@ -212,17 +254,17 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   // ocupa a barra superior do jogo, para a pista ficar com toda a altura da tela.
   const header = (
     <div className={cx('flex min-w-0 flex-1 items-center gap-x-3', !topSlot && 'flex-wrap py-1')}>
-      <div className="flex shrink-0 items-baseline gap-1.5 leading-none">
-        <span className="text-[11px] font-medium text-ink-400">Volta</span>
+      <div className="flex shrink-0 items-baseline gap-2 leading-none">
+        <span className="text-2xs font-medium text-ink-400">Volta</span>
         <span className="font-display text-2xl font-bold leading-none">
           {leaderLap}
-          <span className="text-ink-500">/{raceLaps}</span>
+          <span className="text-ink-400">/{raceLaps}</span>
         </span>
       </div>
       <span
         role="status"
         className={cx(
-          'chamfer-br inline-flex shrink-0 items-center gap-1.5 px-2 py-1.5 font-display text-sm font-semibold uppercase leading-none tracking-wide [--chamfer:6px]',
+          'chamfer-br inline-flex shrink-0 items-center gap-2 px-2 py-2 text-xs font-bold uppercase leading-none tracking-wide [--chamfer:6px]',
           FLAG_STYLE[flag.tone],
         )}
       >
@@ -230,7 +272,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         {flag.label}
       </span>
       <span className="hidden min-w-0 truncate text-xs text-ink-300 lg:inline">{weatherText}</span>
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {playback.behindLive && !timeline.finished && <HeaderButton icon={Radio} label="Voltar ao vivo" onClick={playback.goLive} />}
         <HeaderButton
           icon={SkipForward}
@@ -277,19 +319,25 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
     <>
       {orderDue && <TeamOrderDialog race={race} />}
       {playback.phase === 'suspended' && (
-        <div role="status" className="bg-ink-950/90 px-3 py-2 text-xs font-semibold text-apex-400 shadow-[inset_3px_0_0_0_var(--color-apex-500)]">
+        <div
+          role="status"
+          className="overlay px-2 py-2 text-xs font-semibold text-apex-400 shadow-[inset_3px_0_0_0_var(--color-apex-400),var(--shadow-overlay)]"
+        >
           Bandeira vermelha: corrida interrompida. Os carros voltam ao grid para uma relargada parada.
           {rules.pitStops ? ' A troca de pneus é livre: escolha um composto na aba Boxes, se quiser trocar.' : ''} Toque em Relargar quando estiver pronto.
         </div>
       )}
       {info?.flag !== 'green' && info && started && !chequered && playback.phase !== 'suspended' && (
-        <div role="status" className="bg-ink-950/90 px-3 py-2 text-xs font-semibold text-gold-400 shadow-[inset_3px_0_0_0_var(--color-gold-400)]">
+        <div
+          role="status"
+          className="overlay px-2 py-2 text-xs font-semibold text-gold-400 shadow-[inset_3px_0_0_0_var(--color-gold-400),var(--shadow-overlay)]"
+        >
           {info.flag === 'sc' ? 'Safety car na pista' : 'Safety car virtual'}: ultrapassagens proibidas
           {rules.pitStops ? '; parar agora custa menos tempo.' : '.'}
         </div>
       )}
       {timeline.finished && playback.phase !== 'finished' && (
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-ink-950/90 px-3 py-1.5 text-xs text-ink-200">
+        <div className="overlay flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-xs text-ink-100">
           <span>
             {spectator
               ? 'Você acompanha do muro dos boxes: na corrida, os pilotos decidem ritmo e paradas.'
@@ -301,343 +349,458 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
     </>
   );
 
-  const towerRow = (row: StandingRow) => {
-    const isMe = mineIds.has(row.driverId);
+  // A disputa em foco: o piloto em destaque e o vizinho mais próximo, se estiverem colados.
+  const battleIds = new Set<string>();
+  if (started && focus && focus.state !== 'retired') {
+    const gapAhead = ahead && ahead.state !== 'retired' && focus.interval !== null ? focus.interval : Number.POSITIVE_INFINITY;
+    const gapBehind = behind && behind.state !== 'retired' && behind.interval !== null ? behind.interval : Number.POSITIVE_INFINITY;
+    const rival = gapAhead <= gapBehind ? ahead : behind;
+    if (rival && Math.min(gapAhead, gapBehind) <= BATTLE_GAP_SECONDS) {
+      battleIds.add(focus.driverId);
+      battleIds.add(rival.driverId);
+    }
+  }
+
+  const towerRows: TowerRow[] = rows.map((row) => {
+    const out = row.state === 'retired';
     const gained = row.grid - row.position;
-    const content = (
-      <>
-        <span className="text-right font-display text-base font-bold leading-none">{row.state === 'retired' ? '–' : row.position}</span>
-        <span className="h-4 w-1" style={{ background: teams[row.teamId]?.color }} />
-        <span className="flex min-w-0 items-baseline gap-1.5">
-          <b className={cx('font-display text-[15px] leading-none tracking-wide', isMe && 'text-apex-400')}>{codeOf(row.driverId)}</b>
-          <span className="truncate text-[11px] text-ink-400">{row.number}</span>
-          {started && row.state !== 'retired' && gained !== 0 && (
-            <span className={cx('flex items-center text-[10px] font-semibold', gained > 0 ? 'text-go-400' : 'text-gold-400')}>
-              {gained > 0 ? <ChevronUp size={10} strokeWidth={3} aria-hidden /> : <ChevronDown size={10} strokeWidth={3} aria-hidden />}
-              {Math.abs(gained)}
-            </span>
-          )}
-          {row.penaltySeconds > 0 && <span className="bg-gold-400/20 px-1 text-[9px] font-bold text-gold-400">+{row.penaltySeconds}s</span>}
-        </span>
-        <span className={cx('text-right text-xs', row.state === 'pit' ? 'font-bold text-ink-100' : 'text-ink-300')}>
-          {row.state === 'pit' ? 'BOX' : gapText(row, gapMode, started)}
-        </span>
-        <span className="flex items-center justify-end gap-1">
-          {rules.pitStops ? <CompoundDot compound={row.compound} /> : null}
-          <span className="h-1.5 w-5 overflow-hidden bg-ink-800" title={`${Math.round((1 - row.wear) * 100)}% de pneu`}>
+    const tyreLeft = Math.round((1 - row.wear) * 100);
+    return {
+      id: row.driverId,
+      position: out ? '–' : row.position,
+      color: teams[row.teamId]?.color,
+      name: codeOf(row.driverId),
+      team: teams[row.teamId]?.name,
+      marks: (
+        <>
+          {started && !out && <Delta value={gained} signless threshold={0.5} className="shrink-0 text-2xs" />}
+          {row.penaltySeconds > 0 && <Mark tone="attention" title="Punição somada ao tempo final">{`+${row.penaltySeconds}s`}</Mark>}
+        </>
+      ),
+      value: row.state === 'pit' ? <b className="text-ink-100">BOX</b> : gapText(row, gapMode, started),
+      tyre: (
+        <>
+          {rules.pitStops && <TyreBadge compound={row.compound} />}
+          {/* O comprimento da barra é o quanto resta de pneu; a cor só reforça. */}
+          <span role="img" aria-label={`${tyreLeft}% de pneu`} title={`${tyreLeft}% de pneu`} className="h-1.5 w-5 overflow-hidden bg-ink-700">
             <span
               className={cx('block h-full', row.wear > 0.75 ? 'bg-gold-400' : row.wear > 0.45 ? 'bg-ink-200' : 'bg-go-400')}
-              style={{ width: `${Math.max(6, (1 - row.wear) * 100)}%` }}
+              style={{ width: `${Math.max(6, tyreLeft)}%` }}
             />
           </span>
-        </span>
-      </>
-    );
-    const rowClass = cx(
-      'grid h-[30px] w-full grid-cols-[22px_4px_minmax(0,1fr)_auto_auto] items-center gap-1.5 px-2 text-left text-[13px]',
-      isMe && 'bg-apex-500/15',
-      row.driverId === focus?.driverId && 'shadow-[inset_0_0_0_1px_var(--color-ink-300)]',
-      row.state === 'retired' && 'opacity-50',
-    );
-    return (
-      <li
-        key={row.driverId}
-        title={`${nameOf(row.driverId)} · ${teams[row.teamId]?.name ?? ''}`}
-        // A linha do jogador não some ao rolar a lista: gruda no alto ou no pé do painel.
-        className={cx(isMe && 'sticky bottom-0 top-0 z-10 bg-ink-900')}
-      >
-        {/* Com mouse, clicar na linha destaca o piloto. No toque a linha é só leitura (é baixa demais
-            para um alvo de 44 px): o destaque muda pelas setas da aba Piloto ou tocando no carro. */}
-        {finePointer ? (
-          <button
-            type="button"
-            onClick={() => setFocusId(row.driverId)}
-            aria-pressed={row.driverId === focus?.driverId}
-            className={cx(rowClass, 'transition-colors hover:bg-ink-800')}
-          >
-            {content}
-          </button>
-        ) : (
-          <div className={rowClass}>{content}</div>
-        )}
-      </li>
-    );
-  };
+        </>
+      ),
+      mine: mineIds.has(row.driverId),
+      battle: battleIds.has(row.driverId),
+      out,
+      title: `${nameOf(row.driverId)} · ${teams[row.teamId]?.name ?? ''}`,
+    };
+  });
+  // Com mouse, clicar na linha destaca o piloto. No toque a linha é só leitura (é baixa demais para um
+  // alvo de 44 px): o destaque muda pelas setas do painel Piloto ou tocando no carro.
+  // A torre mostra sempre linhas inteiras (WholeRows): a linha acima da do jogador, que gruda no pé,
+  // não fica cortada. Nas categorias com troca de pneus, a legenda das letras dos selos fica no pé do
+  // painel, à vista sem rolar.
+  const tower = (
+    <>
+      <WholeRows>
+        <Tower label="Ordem da corrida" rows={towerRows} onSelect={finePointer ? setFocusId : undefined} selectedId={focus?.driverId} />
+      </WholeRows>
+      {rules.pitStops && <TyreLegend compounds={[...rules.dryCompounds, ...rules.wetCompounds]} className="shrink-0 border-t border-ink-700 px-2 py-1" />}
+    </>
+  );
+  // Um toque troca a diferença mostrada: para o líder ou para o carro da frente.
+  const gapToggle = (
+    <button
+      type="button"
+      onClick={() => setGapMode(gapMode === 'leader' ? 'interval' : 'leader')}
+      className="flex min-h-11 w-full shrink-0 items-center justify-between gap-2 border-b border-ink-700 bg-ink-800 px-2 text-left text-xs text-ink-200 transition-colors hover:text-ink-100"
+    >
+      {/* Sem reticências: o modo é a informação. Com o texto grande, a frase quebra em duas linhas. */}
+      <span className="min-w-0 py-1 leading-tight">
+        Diferença para <b className="font-semibold text-ink-100">{gapMode === 'leader' ? 'o líder' : 'o carro da frente'}</b>
+      </span>
+      <span className="flex shrink-0 items-center gap-1 font-semibold text-ink-100">
+        <ArrowLeftRight size={16} aria-hidden />
+        Trocar
+      </span>
+    </button>
+  );
 
   const fact = (label: string, value: ReactNode) => (
     <div className="min-w-0">
-      <dt className="text-[10px] font-medium text-ink-400">{label}</dt>
+      <dt className="text-2xs font-medium text-ink-400">{label}</dt>
       <dd className="truncate font-display text-lg font-semibold leading-tight">{value}</dd>
     </div>
   );
+  const intervalAhead = ahead && started && focus && focus.interval !== null && focus.state !== 'retired' ? focus.interval : null;
+  const intervalBehind =
+    behind && started && focus && behind.interval !== null && behind.state !== 'retired' && focus.state !== 'retired' ? behind.interval : null;
 
-  const sideContent = (
-    <>
-      {panel === 'tower' && (
-        <>
-          <ol>{rows.map(towerRow)}</ol>
-          {/* A troca fica no fim da lista: assim a ordem ocupa toda a altura do painel. */}
-          <button
-            type="button"
-            onClick={() => setGapMode(gapMode === 'leader' ? 'interval' : 'leader')}
-            className="flex min-h-11 w-full items-center justify-between gap-2 border-t border-ink-700 px-3 text-left text-[11px] text-ink-400 hover:text-ink-100"
-          >
-            <span>{gapMode === 'leader' ? 'Diferença para o líder' : 'Intervalo para o carro da frente'}</span>
-            <span className="font-semibold text-ink-200">Trocar</span>
-          </button>
-        </>
-      )}
-      {panel === 'driver' && focus && (
-        <div className="p-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => stepFocus(-1)}
-              disabled={focusIndex <= 0}
-              aria-label="Piloto da frente"
-              className="grid h-11 w-11 shrink-0 place-items-center bg-ink-800 text-ink-200 hover:bg-ink-700 disabled:opacity-40"
-            >
-              <ChevronUp size={18} aria-hidden />
-            </button>
-            <div className="min-w-0 flex-1 text-center leading-tight">
-              <div className="truncate font-display text-xl font-bold uppercase">
-                {focus.state === 'retired' ? 'AB' : `P${focus.position}`} · {codeOf(focus.driverId)} <span className="text-ink-400">#{focus.number}</span>
-              </div>
-              <div className="truncate text-[11px] text-ink-400">
-                {nameOf(focus.driverId)}
-                {focusIsPlayer ? ' · você' : focusIsMine ? ' · sua equipe' : ''}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => stepFocus(1)}
-              disabled={focusIndex >= rows.length - 1}
-              aria-label="Piloto de trás"
-              className="grid h-11 w-11 shrink-0 place-items-center bg-ink-800 text-ink-200 hover:bg-ink-700 disabled:opacity-40"
-            >
-              <ChevronDown size={18} aria-hidden />
-            </button>
+  const driverPanel = focus && (
+    <div className="p-2">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => stepFocus(-1)}
+          disabled={focusIndex <= 0}
+          aria-label="Piloto da frente"
+          className="grid h-11 w-11 shrink-0 place-items-center bg-ink-800 text-ink-100 shadow-ring hover:bg-ink-700"
+        >
+          <ChevronUp size={18} aria-hidden />
+        </button>
+        <div className="min-w-0 flex-1 text-center leading-tight">
+          <div className="truncate font-display text-xl font-bold uppercase">
+            {focus.state === 'retired' ? 'AB' : `P${focus.position}`} · {codeOf(focus.driverId)} <span className="text-ink-300">#{focus.number}</span>
           </div>
-          <div className="mt-1.5 flex items-center gap-2">
-            <CarSprite
-              categoryId={category.id}
-              teamId={focus.teamId}
-              color={teams[focus.teamId]?.color ?? '#9aa3b2'}
-              driverId={focus.driverId}
-              number={focus.number}
-              className="w-14 shrink-0"
-            />
-            <span className="min-w-0 truncate text-[11px] text-ink-400">{teams[focus.teamId]?.name}</span>
+          <div className="truncate text-2xs text-ink-300">
+            {nameOf(focus.driverId)}
+            {focusIsPlayer ? ' · você' : focusIsMine ? ' · sua equipe' : ''}
           </div>
-          <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-1.5">
-            {fact('Velocidade', `${Math.round(focus.speed)} km/h`)}
-            {fact('Volta', `${Math.min(raceLaps, started ? focus.sample.lap : 0)}/${raceLaps}`)}
-            {fact(
-              'Pneus',
-              <span className="flex items-center gap-1">
-                {rules.pitStops && <CompoundDot compound={focus.compound} />}
-                {Math.round((1 - focus.wear) * 100)}%
-              </span>,
-            )}
-            {fact('À frente', ahead && started && focus.interval !== null && focus.state !== 'retired' ? `+${focus.interval.toFixed(1)}s` : '–')}
-            {fact(
-              'Atrás',
-              behind && started && behind.interval !== null && behind.state !== 'retired' && focus.state !== 'retired'
-                ? `+${behind.interval.toFixed(1)}s`
-                : '–',
-            )}
-            {fact(rules.pitStops ? 'Paradas' : 'Largou em', rules.pitStops ? focus.pitStops : `${focus.grid}º`)}
-            {fact('Última volta', formatLap(focus.lastLap))}
-            {fact('Melhor', formatLap(focus.bestLap))}
-          </dl>
-          {(focus.damage >= 0.05 || focus.penaltySeconds > 0 || (rules.fuel && focusIsPlayer && focus.sample.record)) && (
-            <p className="mt-2 text-xs text-gold-400">
-              {rules.fuel && focusIsPlayer && focus.sample.record && (
-                <span className="text-ink-300">
-                  Combustível: {focus.sample.record.fuel.toFixed(1)} voltas no tanque, {Math.max(0, raceLaps - focus.sample.record.lap)} por correr.{' '}
-                </span>
-              )}
-              {focus.damage >= 0.05 && `Dano no carro: ${Math.round(Math.min(1, focus.damage) * 100)}%. `}
-              {focus.penaltySeconds > 0 && `Punições: ${focus.penaltySeconds}s somados ao tempo final.`}
-            </p>
-          )}
-          {!spectator && (
-            <p className="mt-3 border-t border-ink-700 pt-2 text-xs leading-snug text-ink-400">
-              <b className="font-semibold text-ink-200">{RACE_MODE_LABELS[raceMode]}.</b> {RACE_MODE_DESCRIPTIONS[raceMode]}
-              {rules.fuel ? ' O ritmo também muda o consumo de combustível.' : ''}
-            </p>
-          )}
         </div>
-      )}
-      {panel === 'pits' && <PitStrategyCard race={race} bare />}
-      {panel === 'events' && (
-        <ul>
-          {events.length === 0 && (
-            <li className="px-3 py-3 text-sm text-ink-400">
-              Os carros estão alinhados no grid.{' '}
-              {rules.pitStops ? `Compostos: ${[...rules.dryCompounds, ...rules.wetCompounds].map((c) => TYRES[c].label.toLowerCase()).join(', ')}.` : ''}
-            </li>
+        <button
+          type="button"
+          onClick={() => stepFocus(1)}
+          disabled={focusIndex >= rows.length - 1}
+          aria-label="Piloto de trás"
+          className="grid h-11 w-11 shrink-0 place-items-center bg-ink-800 text-ink-100 shadow-ring hover:bg-ink-700"
+        >
+          <ChevronDown size={18} aria-hidden />
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <PortraitOr
+          src={portraitUrl(focus.driverId, focus.driverId === player.id)}
+          name={nameOf(focus.driverId)}
+          color={teams[focus.teamId]?.color}
+          size="sm"
+          fallback={null}
+        />
+        <CarSprite
+          categoryId={category.id}
+          teamId={focus.teamId}
+          color={teams[focus.teamId]?.color ?? '#9aa3b2'}
+          driverId={focus.driverId}
+          number={focus.number}
+          className="w-14 shrink-0"
+        />
+        <span className="min-w-0 truncate text-2xs text-ink-300">{teams[focus.teamId]?.name}</span>
+      </div>
+      <dl className="mt-2 grid grid-cols-3 gap-2">
+        {fact('Velocidade', `${Math.round(focus.speed)} km/h`)}
+        {fact('Volta', `${Math.min(raceLaps, started ? focus.sample.lap : 0)}/${raceLaps}`)}
+        {fact(
+          'Pneus',
+          <span className="flex items-center gap-1">
+            {rules.pitStops && <TyreBadge compound={focus.compound} />}
+            {Math.round((1 - focus.wear) * 100)}%
+          </span>,
+        )}
+        {fact('À frente', intervalAhead !== null ? formatInterval(intervalAhead) : '–')}
+        {fact('Atrás', intervalBehind !== null ? formatInterval(intervalBehind) : '–')}
+        {fact(rules.pitStops ? 'Paradas' : 'Largou em', rules.pitStops ? focus.pitStops : `${focus.grid}º`)}
+        {fact('Última volta', formatLap(focus.lastLap))}
+        {fact('Melhor', formatLap(focus.bestLap))}
+      </dl>
+      {(focus.damage >= 0.05 || focus.penaltySeconds > 0 || (rules.fuel && focusIsPlayer && focus.sample.record)) && (
+        <p className="mt-2 text-xs text-gold-400">
+          {rules.fuel && focusIsPlayer && focus.sample.record && (
+            <span className="text-ink-200">
+              Combustível: {focus.sample.record.fuel.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} voltas no tanque,{' '}
+              {Math.max(0, raceLaps - focus.sample.record.lap)} por correr.{' '}
+            </span>
           )}
-          {[...events]
-            .reverse()
-            .slice(0, 60)
-            .map((e) => (
-              <li
-                key={e.index}
-                className={cx(
-                  'flex gap-2 border-t border-ink-700/70 px-3 py-1.5 text-xs first:border-t-0',
-                  (isMine(e.driverId) || isMine(e.otherDriverId)) && 'bg-apex-500/10',
-                )}
-              >
-                <span className="w-7 shrink-0 text-ink-500">V{e.lap}</span>
-                <span className={EVENT_TONE[e.type] ?? 'text-ink-300'}>{e.message}</span>
-              </li>
-            ))}
-        </ul>
+          {focus.damage >= 0.05 && `Dano no carro: ${Math.round(Math.min(1, focus.damage) * 100)}%. `}
+          {focus.penaltySeconds > 0 && `Punições: ${focus.penaltySeconds}s somados ao tempo final.`}
+        </p>
       )}
-    </>
+      {!spectator && (
+        <p className="mt-2 border-t border-ink-700 pt-2 text-xs leading-snug text-ink-300">
+          <b className="font-semibold text-ink-100">{RACE_MODE_LABELS[raceMode]}.</b> {RACE_MODE_DESCRIPTIONS[raceMode]}
+          {rules.fuel ? ' O ritmo também muda o consumo de combustível.' : ''}
+        </p>
+      )}
+    </div>
   );
 
-  const credit = trackId ? trackCredit(trackId) : null;
-  const cameraButton = (active: boolean) =>
-    cx('flex min-h-11 items-center gap-1.5 px-2.5 text-xs font-semibold', active ? 'bg-apex-500 text-white' : 'bg-ink-950/80 text-ink-200 hover:bg-ink-800');
-
-  return (
-    <div className={wide ? '' : 'space-y-3'}>
-      {topSlot ? (
-        createPortal(header, topSlot)
-      ) : (
-        <div className="chamfer flex min-h-12 items-center bg-ink-900 px-3 shadow-[inset_0_0_0_1px_var(--color-ink-700)]">{header}</div>
+  const eventsPanel = (
+    <ul>
+      {events.length === 0 && (
+        <li className="p-2 text-sm text-ink-300">
+          Os carros estão alinhados no grid.{' '}
+          {rules.pitStops ? `Compostos: ${[...rules.dryCompounds, ...rules.wetCompounds].map((c) => tyreName(c)).join(', ')}.` : ''}
+        </li>
       )}
+      {[...events]
+        .reverse()
+        .slice(0, 60)
+        .map((e) => (
+          <li
+            key={e.index}
+            className={cx(
+              'flex gap-2 border-t border-ink-700/70 px-2 py-2 text-xs first:border-t-0',
+              (isMine(e.driverId) || isMine(e.otherDriverId)) && 'bg-apex-500/15 shadow-[inset_3px_0_0_0_var(--color-apex-400)]',
+            )}
+          >
+            <span className="w-7 shrink-0 text-ink-300">V{e.lap}</span>
+            <span className={EVENT_TONE[e.type] ?? 'text-ink-200'}>{e.message}</span>
+          </li>
+        ))}
+    </ul>
+  );
+  const panelContent = (which: Exclude<SidePanel, 'tower'>) =>
+    which === 'driver' ? driverPanel : which === 'pits' ? <PitStrategyCard race={race} bare /> : eventsPanel;
 
-      {/* Em tela larga tudo cabe sem rolar: classificação à esquerda, pista no centro e a barra fixa embaixo. */}
-      <div
-        className={wide ? 'grid min-h-[13.5rem] grid-cols-[13.5rem_minmax(0,1fr)] gap-2 xl:grid-cols-[17rem_minmax(0,1fr)]' : 'flex flex-col gap-3'}
-        style={wide ? { height: `calc(100dvh - ${showBar ? '8.75rem' : '5.5rem'} - env(safe-area-inset-top) - env(safe-area-inset-bottom))` } : undefined}
+  const credit = trackId ? trackCredit(trackId) : null;
+  const pickMine = () => {
+    if (!best) return;
+    setFocusId(
+      focusIsMine && camera === 'follow' && mineIds.size > 1
+        ? (rows.find((r) => mineIds.has(r.driverId) && r.driverId !== focus?.driverId)?.driverId ?? best.driverId)
+        : best.driverId,
+    );
+    setCamera('follow');
+  };
+  /** Botão da coluna lateral da pista: ícone com o nome embaixo, 56×44, ao alcance do polegar direito. */
+  const sideButton = (
+    icon: LucideIcon,
+    label: string,
+    pressed: boolean,
+    onClick: () => void,
+    extra?: { disabled?: boolean; title?: string; name?: string },
+  ) => {
+    const Icon = icon;
+    return (
+      <button
+        key={label}
+        type="button"
+        onClick={onClick}
+        aria-pressed={pressed}
+        aria-label={extra?.name}
+        disabled={extra?.disabled}
+        title={extra?.title}
+        className={cx(
+          'flex h-11 w-14 flex-col items-center justify-center gap-1 text-2xs font-semibold leading-none transition-colors',
+          pressed ? 'bg-apex-500 text-white shadow-overlay' : 'overlay text-ink-100 hover:bg-ink-800',
+        )}
       >
-        <aside className={cx('flex min-h-0 flex-col bg-ink-900 shadow-[inset_0_0_0_1px_var(--color-ink-700)]', !wide && 'order-2')}>
-          <div role="tablist" aria-label="Painel da corrida" className="grid shrink-0 auto-cols-fr grid-flow-col border-b border-ink-700 bg-ink-800">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={panel === t.id}
-                onClick={() => setSide(t.id)}
-                className={cx(
-                  'min-h-11 px-1 text-xs font-semibold',
-                  panel === t.id ? 'text-ink-100 shadow-[inset_0_-3px_0_0_var(--color-apex-500)]' : 'text-ink-400 hover:text-ink-100',
-                )}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <div className={cx('min-h-0 flex-1 overflow-y-auto overscroll-contain', !wide && 'max-h-[26rem]')}>{sideContent}</div>
-        </aside>
+        <Icon size={18} strokeWidth={1.75} aria-hidden />
+        {label}
+      </button>
+    );
+  };
+  const stillTitle = 'Com "menos movimento" ligado, a câmera fica parada no circuito inteiro';
+  const cameraButtons = (
+    <>
+      {sideButton(Video, 'Geral', camera === 'overview', () => setCamera('overview'), { name: 'Câmera geral' })}
+      {best &&
+        sideButton(Crosshair, mineIds.has(player.id) ? 'Meu' : 'Equipe', camera === 'follow' && focusIsMine, pickMine, {
+          name: ownLabel,
+          title: mineIds.size > 1 ? 'Acompanha um carro da sua equipe; toque de novo para alternar' : undefined,
+        })}
+      {followLabel &&
+        focus &&
+        sideButton(Eye, codeOf(focus.driverId), camera === 'follow', () => setCamera('follow'), {
+          name: followLabel,
+          disabled: stillCamera,
+          title: stillCamera ? stillTitle : undefined,
+        })}
+    </>
+  );
+  const panelButtons = (
+    <>
+      {sideButton(CircleUser, 'Piloto', drawer === 'driver', () => setDrawer(drawer === 'driver' ? null : 'driver'))}
+      {rules.pitStops && !spectator && sideButton(Wrench, 'Boxes', drawer === 'pits', () => setDrawer(drawer === 'pits' ? null : 'pits'))}
+      {sideButton(ScrollText, 'Eventos', drawer === 'events', () => setDrawer(drawer === 'events' ? null : 'events'))}
+    </>
+  );
+  const drawerTitle = drawer === 'driver' ? 'Piloto em foco' : drawer === 'pits' ? 'Boxes e estratégia' : 'Eventos da corrida';
 
-        {/* Na transmissão, placares e nomes ficam sobre a pista de propósito (o teste visual pula esta área). */}
-        <div data-overlay-ok className={cx('relative min-h-0 min-w-0 overflow-hidden shadow-[inset_0_0_0_1px_var(--color-ink-700)]', !wide && 'order-1')}>
-          <RaceCanvas
-            timeline={timeline}
-            circuit={circuit}
-            teams={teams}
-            drivers={drivers}
-            timeRef={playback.timeRef}
-            camera={camera}
-            focusId={focus?.driverId ?? ''}
-            mineIds={mineIds}
-            lights={playback.lights}
-            onSelect={setFocusId}
-            className={wide ? 'h-full w-full' : 'aspect-[4/5] w-full'}
-          />
-          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-1.5">
-            <div className="pointer-events-auto flex min-w-0 max-w-[62%] flex-col gap-1">{notices}</div>
-            <div className="pointer-events-auto ml-auto flex shrink-0 flex-col items-end gap-1 sm:flex-row" role="group" aria-label="Câmera">
-              <button type="button" onClick={() => setCamera('overview')} aria-pressed={camera === 'overview'} className={cameraButton(camera === 'overview')}>
-                <Video size={16} aria-hidden />
-                Câmera geral
-              </button>
-              {best && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFocusId(
-                      focusIsMine && camera === 'follow' && mineIds.size > 1
-                        ? (rows.find((r) => mineIds.has(r.driverId) && r.driverId !== focus?.driverId)?.driverId ?? best.driverId)
-                        : best.driverId,
-                    );
-                    setCamera('follow');
-                  }}
-                  aria-pressed={camera === 'follow' && focusIsMine}
-                  title={mineIds.size > 1 ? 'Acompanha um carro da sua equipe; toque de novo para alternar' : undefined}
-                  className={cameraButton(camera === 'follow' && focusIsMine)}
-                >
-                  <Crosshair size={16} aria-hidden />
-                  {ownLabel}
-                </button>
-              )}
-              {followLabel && (
-                <button type="button" onClick={() => setCamera('follow')} aria-pressed={camera === 'follow'} className={cameraButton(camera === 'follow')}>
-                  <Crosshair size={16} aria-hidden />
-                  {followLabel}
-                </button>
-              )}
-            </div>
-          </div>
-          {focus && (
-            <div className="pointer-events-none absolute bottom-1.5 right-1.5 flex items-stretch bg-ink-950/85 text-ink-100">
-              <div className="w-1.5" style={{ background: teams[focus.teamId]?.color }} />
-              <div className="px-2.5 py-1.5">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display text-2xl font-bold leading-none">{focus.state === 'retired' ? 'AB' : `P${focus.position}`}</span>
-                  <span className={cx('font-display text-lg font-bold leading-none tracking-wide', focusIsMine && 'text-apex-400')}>
-                    {codeOf(focus.driverId)}
-                  </span>
-                  <span className="text-[11px] text-ink-400">#{focus.number}</span>
-                </div>
-                <div className="mt-1 flex items-center gap-3 text-[11px] text-ink-300">
-                  <span>
-                    <b className="font-display text-base text-ink-100">{Math.round(focus.speed)}</b> km/h
-                  </span>
-                  {started && focus.state !== 'retired' && focus.interval !== null && (
-                    <span className="flex items-center">
-                      <ChevronUp size={12} aria-hidden /> {focus.interval.toFixed(1)}s
-                    </span>
-                  )}
-                  {started && focus.state !== 'retired' && behind && behind.interval !== null && behind.state !== 'retired' && (
-                    <span className="flex items-center">
-                      <ChevronDown size={12} aria-hidden /> {behind.interval.toFixed(1)}s
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
+  // O piloto em foco, num cartão fino no pé da pista.
+  const focusCard = focus && (
+    <div className="overlay pointer-events-none flex shrink-0 items-stretch text-ink-100">
+      <div aria-hidden className="w-1.5" style={{ background: teams[focus.teamId]?.color }} />
+      <div className="px-2 py-1">
+        <div className="flex items-baseline gap-2">
+          <span className="font-display text-2xl font-bold leading-none">{focus.state === 'retired' ? 'AB' : `P${focus.position}`}</span>
+          <span className={cx('font-display text-lg font-bold leading-none tracking-wide', focusIsMine && 'text-apex-400')}>{codeOf(focus.driverId)}</span>
+          <span className="text-2xs text-ink-200">#{focus.number}</span>
+          {focusIsMine && <span className="text-2xs font-semibold text-ink-100">{mineIds.has(player.id) ? 'você' : 'sua equipe'}</span>}
+        </div>
+        <div className="mt-1 flex items-center gap-2 text-2xs text-ink-200">
+          <span>
+            <b className="font-display text-base text-ink-100">{Math.round(focus.speed)}</b> km/h
+          </span>
+          {intervalAhead !== null && (
+            <span className="flex items-center">
+              <ChevronUp size={12} aria-label="para o carro da frente" /> {formatInterval(intervalAhead)}
+            </span>
           )}
-          <ul className={cx('pointer-events-none absolute left-1.5 max-w-[56%] space-y-1', credit ? 'bottom-6' : 'bottom-1.5')} aria-live="polite">
-            {ticker.map((e) => (
-              <li
-                key={e.index}
-                className={cx(
-                  'w-fit bg-ink-950/80 px-2 py-1 text-xs',
-                  EVENT_TONE[e.type] ?? 'text-ink-200',
-                  (isMine(e.driverId) || isMine(e.otherDriverId)) && 'shadow-[inset_2px_0_0_0_var(--color-apex-500)]',
-                )}
-              >
-                {e.message}
-              </li>
-            ))}
-          </ul>
-          {credit && <span className="pointer-events-none absolute bottom-1.5 left-1.5 bg-ink-950/70 px-1 text-[9px] text-ink-300">Traçado: {credit}</span>}
+          {intervalBehind !== null && (
+            <span className="flex items-center">
+              <ChevronDown size={12} aria-label="para o carro de trás" /> {formatInterval(intervalBehind)}
+            </span>
+          )}
         </div>
       </div>
+    </div>
+  );
+  const tickerList = (
+    <ul className="space-y-1" aria-live="polite">
+      {ticker.map((e) => (
+        <li
+          key={e.index}
+          className={cx(
+            'overlay w-fit max-w-full px-2 py-1 text-xs',
+            EVENT_TONE[e.type] ?? 'text-ink-100',
+            (isMine(e.driverId) || isMine(e.otherDriverId)) && 'shadow-[inset_3px_0_0_0_var(--color-apex-400),var(--shadow-overlay)]',
+          )}
+        >
+          {e.message}
+        </li>
+      ))}
+    </ul>
+  );
+  const creditLine = credit && <span className="overlay w-fit px-1 text-2xs text-ink-200">Traçado: {credit}</span>;
+  const canvas = (
+    <RaceCanvas
+      timeline={timeline}
+      circuit={circuit}
+      teams={teams}
+      drivers={drivers}
+      timeRef={playback.timeRef}
+      camera={camera}
+      focusId={focus?.driverId ?? ''}
+      mineIds={mineIds}
+      lights={playback.lights}
+      onSelect={setFocusId}
+      still={stillCamera}
+      className={wide ? 'h-full w-full' : 'aspect-[4/5] w-full'}
+    />
+  );
+  const changeMode = (mode: typeof raceMode) => {
+    // Toque leve ao trocar o ritmo (só quando muda de fato).
+    if (mode !== raceMode) feedback('paceChange');
+    setRaceMode(mode);
+  };
+
+  return (
+    <div className={wide ? '' : 'space-y-4'}>
+      {topSlot ? createPortal(header, topSlot) : <div className="chamfer flex min-h-12 items-center bg-ink-900 px-2 shadow-frame">{header}</div>}
+
+      {wide ? (
+        // Em tela larga tudo cabe sem rolar: a torre fixa à esquerda, a pista dominando e a barra de comandos embaixo.
+        <div
+          className="grid min-h-[13.5rem] grid-cols-[15rem_minmax(0,1fr)] gap-2 xl:grid-cols-[19rem_minmax(0,1fr)]"
+          style={{
+            height: `calc(100dvh - ${showBar ? '8.75rem' : '5.5rem'} - env(safe-area-inset-top) - max(var(--action-bar-h, 0px), env(safe-area-inset-bottom)))`,
+          }}
+        >
+          <aside aria-label="Classificação da corrida" className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
+            {gapToggle}
+            {tower}
+          </aside>
+
+          {/* Na transmissão, placares e nomes ficam sobre a pista de propósito (o teste visual pula esta área):
+              camadas finas, translúcidas e com sombra; a pista domina. */}
+          <div data-overlay-ok className="relative min-h-0 min-w-0 overflow-hidden shadow-frame">
+            {canvas}
+            {/* Avisos que pedem atenção: no alto, à esquerda. */}
+            <div className="pointer-events-none absolute left-2 top-2 flex max-w-[calc(100%-13rem)] flex-col gap-1 *:pointer-events-auto">{notices}</div>
+            {/* Coluna da direita, ao alcance do polegar: câmera em cima, painéis embaixo. */}
+            <div className="absolute bottom-2 right-2 top-2 flex flex-col items-end justify-between gap-2">
+              <div role="group" aria-label="Câmera" className="flex gap-2">
+                {cameraButtons}
+              </div>
+              <div role="group" aria-label="Painéis da corrida" className="flex flex-col gap-2">
+                {panelButtons}
+              </div>
+            </div>
+            {drawer && (
+              <section
+                aria-label={drawerTitle}
+                className="overlay enter absolute bottom-2 right-[4.5rem] top-[3.75rem] flex w-[min(18rem,calc(100%-5.5rem))] flex-col text-ink-100"
+              >
+                <header className="flex shrink-0 items-center justify-between gap-2 border-b border-ink-600 pl-2">
+                  <h2 className="font-display text-base font-semibold uppercase leading-none tracking-wide">{drawerTitle}</h2>
+                  <button
+                    type="button"
+                    onClick={() => setDrawer(null)}
+                    aria-label="Fechar painel"
+                    className="grid h-11 w-11 shrink-0 place-items-center text-ink-100 hover:bg-ink-800"
+                  >
+                    <X size={18} aria-hidden />
+                  </button>
+                </header>
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{panelContent(drawer)}</div>
+              </section>
+            )}
+            {/* Pé da pista: o lugar da tarja inferior (os lances decisivos da Fase 4 entram aqui, com
+                `LowerThird`), os eventos recentes e o piloto em foco. */}
+            <div className="pointer-events-none absolute bottom-2 left-2 right-[4.5rem] flex items-end justify-between gap-2">
+              <div data-slot="tarja-inferior" className="flex min-w-0 flex-col items-start gap-1">
+                {!drawer && tickerList}
+                {creditLine}
+              </div>
+              {!drawer && focusCard}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div data-overlay-ok className="relative min-h-0 min-w-0 overflow-hidden shadow-frame">
+            {canvas}
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2">
+              <div className="pointer-events-auto flex min-w-0 max-w-[62%] flex-col gap-1">{notices}</div>
+              <div className="pointer-events-auto ml-auto flex shrink-0 flex-col items-end gap-2" role="group" aria-label="Câmera">
+                {cameraButtons}
+              </div>
+            </div>
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-end justify-between gap-2">
+              <div data-slot="tarja-inferior" className="flex min-w-0 flex-col items-start gap-1">
+                {tickerList}
+                {creditLine}
+              </div>
+              {focusCard}
+            </div>
+          </div>
+          <aside className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
+            <div role="tablist" aria-label="Painel da corrida" className="grid shrink-0 auto-cols-fr grid-flow-col border-b border-ink-700 bg-ink-800">
+              {tabs.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={panel === t.id}
+                  onClick={() => setSide(t.id)}
+                  className={cx(
+                    'min-h-11 px-1 text-xs font-semibold',
+                    panel === t.id ? 'text-ink-100 shadow-[inset_0_-3px_0_0_var(--color-apex-400)]' : 'text-ink-300 hover:text-ink-100',
+                  )}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {panel === 'tower' ? (
+              // O espaço em cima separa o botão de troca das abas (8 px entre alvos de toque).
+              <div className="flex h-[24rem] flex-col pt-2">
+                {gapToggle}
+                {tower}
+              </div>
+            ) : (
+              <div className="max-h-[26rem] min-h-0 flex-1 overflow-y-auto overscroll-contain">{panelContent(panel)}</div>
+            )}
+          </aside>
+        </div>
+      )}
 
       {showBar && myRow && (
         <RaceControlBar
           position={myRow.state === 'retired' ? 'AB' : `P${started ? myRow.position : myRow.grid}`}
           lap={`Volta ${Math.min(raceLaps, started ? myRow.sample.lap : 0)}/${raceLaps}`}
           mode={raceMode}
-          onMode={setRaceMode}
+          onMode={changeMode}
           modeDisabled={myCar?.status !== 'running' || finished}
           modeFromLap={race.currentLap < race.totalLaps ? race.currentLap + 1 : null}
           playing={playback.playing}
@@ -654,7 +817,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
             {playback.playing ? <Pause size={16} aria-hidden /> : <Play size={16} aria-hidden />}
             {playLabel}
           </Button>
-          <div className="flex bg-ink-900 shadow-[inset_0_0_0_1px_var(--color-ink-700)]" role="group" aria-label="Velocidade da corrida">
+          <div className="flex bg-ink-900 shadow-ring" role="group" aria-label="Velocidade da corrida">
             {SPEEDS.map((s) => (
               <button
                 key={s}
@@ -663,7 +826,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
                 aria-pressed={playback.speed === s}
                 className={cx(
                   'min-h-11 min-w-11 px-1 text-sm font-semibold',
-                  playback.speed === s ? 'bg-apex-500 text-white' : 'text-ink-300 hover:text-ink-100',
+                  playback.speed === s ? 'bg-apex-500 text-white' : 'text-ink-200 hover:text-ink-100',
                 )}
               >
                 {s}×

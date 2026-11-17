@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { useGameStore } from '@/store/gameStore';
 import { careerCurrency } from '@/engine';
@@ -18,6 +18,7 @@ import { MainMenuScreen } from './screens/MainMenuScreen';
 import { ManagementScreen } from './screens/ManagementScreen';
 import { NewCareerScreen } from './screens/NewCareerScreen';
 import { SavesScreen } from './screens/SavesScreen';
+import { MenuSettingsScreen, SettingsScreen } from './screens/SettingsScreen';
 import { StandingsScreen } from './screens/StandingsScreen';
 import { TeamScreen } from './screens/TeamScreen';
 import { WeekendScreen } from './screens/WeekendScreen';
@@ -27,6 +28,13 @@ import { WeekendScreen } from './screens/WeekendScreen';
 const syncCurrency = (career: ReturnType<typeof useGameStore.getState>['career']) => setDisplayCurrency(career ? careerCurrency(career) : 'BRL');
 syncCurrency(useGameStore.getState().career);
 useGameStore.subscribe((state) => syncCurrency(state.career));
+
+/**
+ * Catálogo dos componentes: só existe no servidor de desenvolvimento (`npm run dev`, em
+ * `#/dev/catalogo`). No build de produção a condição é falsa, a rota não é registrada e o
+ * arquivo nem entra no pacote.
+ */
+const Catalog = import.meta.env.DEV ? lazy(() => import('./dev/CatalogScreen')) : null;
 
 /** Escolhe a tela pelo modo da carreira: piloto ou dirigente. */
 function ByMode({ driver, executive }: { driver: ReactNode; executive: ReactNode }) {
@@ -45,6 +53,17 @@ export function App() {
       <Routes>
         <Route path="/" element={<MainMenuScreen />} />
         <Route path="/new" element={<NewCareerScreen />} />
+        <Route path="/ajustes" element={<MenuSettingsScreen />} />
+        {Catalog && (
+          <Route
+            path="/dev/catalogo"
+            element={
+              <Suspense fallback={null}>
+                <Catalog />
+              </Suspense>
+            }
+          />
+        )}
         <Route element={<CareerLayout />}>
           <Route path="/dashboard" element={<ByMode driver={<DashboardScreen />} executive={<ExecutiveDashboardScreen />} />} />
           <Route path="/weekend" element={<ByMode driver={<WeekendScreen />} executive={<ExecutiveWeekendScreen />} />} />
@@ -59,6 +78,7 @@ export function App() {
           <Route path="/standings" element={<StandingsScreen />} />
           <Route path="/history" element={<HistoryScreen />} />
           <Route path="/saves" element={<SavesScreen />} />
+          <Route path="/settings" element={<SettingsScreen />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

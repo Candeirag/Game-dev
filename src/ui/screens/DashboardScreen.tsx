@@ -28,17 +28,16 @@ import {
   tutorialSteps,
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
+import { CategoryCarArt } from '../components/CategoryCarArt';
+import { portraitUrl } from '../images';
 import { CarSprite } from '../components/CarSprite';
 import { CircuitMap } from '../components/CircuitMap';
 import { EventsPanel } from '../components/EventsPanel';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { cx } from '../components/ui';
+import { cx, Gauge, NumberPlate, Panel, PortraitOr, type RecentResult, ResultChips, Ring, Tag, type Tone, WeatherTag } from '@/ui/kit';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { scrollToElement } from '../motion';
-import { Panel, Tag, type Tone } from '../kit/Panel';
-import { Ring } from '../kit/Ring';
-import { Gauge, NumberPlate, ResultChips, WeatherTag, type RecentResult } from '../kit/bits';
 import { primaryAction, useChrome, useMediaQuery } from '../layout/chrome';
 
 const MESSAGE_KIND: Record<InboxMessage['category'], string> = {
@@ -110,14 +109,23 @@ export function DashboardScreen() {
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:col-span-6 lg:col-span-5 landscape:col-span-6 lg:landscape:col-span-5">
+        <div className="grid grid-cols-2 gap-2 md:col-span-6 lg:col-span-5 landscape:col-span-6 lg:landscape:col-span-5">
           <SummaryCard to="/driver" title="Piloto" ring={<Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} size={ringSize} />}>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <NumberPlate number={carNumbers[player.id]} color={team.color} />
+              {/* Com o retrato do jogador importado, ele entra aqui; sem ele, fica a placa com o número. */}
+              <PortraitOr
+                src={portraitUrl(player.id, true)}
+                name={fullName(player)}
+                color={team.color}
+                size="sm"
+                fallback={<NumberPlate number={carNumbers[player.id]} color={team.color} />}
+              />
               <span className="min-w-0 truncate text-sm font-semibold">{player.lastName}</span>
             </div>
-            <div className="mt-1.5 text-xs leading-tight text-ink-400">
-              {driverRank}º do grid · {player.age} anos
+            <div className="mt-1 text-xs leading-tight text-ink-400">
+              {/* Espaço inquebrável entre o número e "anos" (no texto de JSX o escape tem de ir entre chaves). */}
+              {driverRank}º do grid · {player.age}
+              {'\u00a0'}anos
             </div>
           </SummaryCard>
 
@@ -126,13 +134,20 @@ export function DashboardScreen() {
             title={machine}
             ring={<Ring value={Math.round(teamStrength(team))} label="Nota" fraction={teamStrength(team) / 100} size={ringSize} />}
           >
-            <CarSprite
+            {/* A arte do carro da categoria atual, se já foi importada; senão, o carro com a pintura da equipe. */}
+            <CategoryCarArt
               categoryId={category.id}
-              teamId={team.id}
-              color={team.color}
-              driverId={player.id}
-              number={carNumbers[player.id]}
-              className="w-full max-w-28"
+              className="w-28"
+              fallback={
+                <CarSprite
+                  categoryId={category.id}
+                  teamId={team.id}
+                  color={team.color}
+                  driverId={player.id}
+                  number={carNumbers[player.id]}
+                  className="w-full max-w-28"
+                />
+              }
             />
             <div className="mt-1 text-xs leading-tight text-ink-400">
               {carRank}º do grid<span className="max-lg:hidden"> · {VEHICLES[category.id].name}</span>
@@ -152,10 +167,10 @@ export function DashboardScreen() {
             }
           >
             <div className="flex gap-2">
-              <span aria-hidden className="mt-0.5 h-4 w-1 shrink-0" style={{ backgroundColor: team.color }} />
+              <span aria-hidden className="mt-1 h-4 w-1 shrink-0" style={{ backgroundColor: team.color }} />
               <span className="line-clamp-2 min-w-0 text-sm font-semibold leading-tight">{team.name}</span>
             </div>
-            <div className="mt-1.5 truncate text-xs leading-tight text-ink-400">{teammate ? `Com ${teammate.lastName}` : 'Sem companheiro'}</div>
+            <div className="mt-2 truncate text-xs leading-tight text-ink-400">{teammate ? `Com ${teammate.lastName}` : 'Sem companheiro'}</div>
           </SummaryCard>
 
           <SummaryCard
@@ -172,11 +187,11 @@ export function DashboardScreen() {
             }
           >
             <div className="font-display text-xl font-semibold leading-none">
-              {me?.points ?? 0} <span className="text-sm font-medium text-ink-400">{pluralWord(me?.points ?? 0, 'ponto', 'pontos')}</span>
+              {me?.points ?? 0} <span className="font-sans text-sm font-medium text-ink-400">{pluralWord(me?.points ?? 0, 'ponto', 'pontos')}</span>
             </div>
             <div
               className={cx(
-                'mt-1.5 text-xs leading-tight',
+                'mt-2 text-xs leading-tight',
                 targetTone === 'good' ? 'text-go-400' : targetTone === 'attention' ? 'text-gold-400' : 'text-ink-400',
               )}
             >
@@ -197,7 +212,7 @@ export function DashboardScreen() {
           title="Classificação"
           flush
           action={
-            <Link to="/standings" className="-my-1 flex min-h-11 items-center gap-0.5 text-xs font-semibold text-ink-300 hover:text-ink-100">
+            <Link to="/standings" className="-my-1 flex min-h-11 items-center gap-1 text-xs font-semibold text-ink-300 hover:text-ink-100">
               Tabela completa <ChevronRight size={14} aria-hidden />
             </Link>
           }
@@ -230,7 +245,7 @@ export function DashboardScreen() {
                   />
                 )}
               </ol>
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-ink-700 px-4 py-2.5 text-xs text-ink-400">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-ink-700 px-4 py-2 text-xs text-ink-400">
                 <span>
                   {leader && me
                     ? leader.driverId === me.driverId
@@ -256,7 +271,7 @@ export function DashboardScreen() {
         </Panel>
 
         <Panel title="Condição e treino" action={player.injury ? <Tag tone="attention">Lesionado</Tag> : undefined}>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <Gauge label="Fase" value={player.condition.form} />
             <Gauge label="Confiança" value={player.condition.confidence} />
             <Gauge label="Moral" value={player.condition.morale} />
@@ -290,7 +305,7 @@ export function DashboardScreen() {
               <li key={m.id} className="px-4 py-3">
                 <div className="flex items-baseline gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">{m.title}</span>
-                  <span className="shrink-0 text-[11px] text-ink-400">
+                  <span className="shrink-0 text-2xs text-ink-400">
                     {MESSAGE_KIND[m.category]} · {formatDate(m.date)}
                   </span>
                 </div>
@@ -312,8 +327,8 @@ function SummaryCard({ to, title, ring, children }: { to: string; title: string;
       <Panel
         title={title}
         className="h-full transition-colors group-hover:bg-ink-500"
-        bodyClassName="flex items-center gap-2.5 !p-2.5 lg:gap-3 lg:!p-3"
-        action={<ChevronRight size={16} aria-hidden className="text-ink-500 transition-colors group-hover:text-ink-100" />}
+        bodyClassName="flex items-center gap-2 !p-2 lg:gap-3 lg:!p-3"
+        action={<ChevronRight size={16} aria-hidden className="text-ink-400 transition-colors group-hover:text-ink-100" />}
       >
         {ring}
         <div className="min-w-0 flex-1">{children}</div>
@@ -369,7 +384,7 @@ function TutorialStrip() {
   return (
     <div className="chamfer bg-ink-700 p-px">
       <div className="chamfer flex flex-wrap items-center gap-x-4 gap-y-2 bg-ink-900 py-2 pl-4 pr-2">
-        <span className="font-display text-[15px] font-semibold uppercase leading-none tracking-[0.06em] text-ink-200">
+        <span className="font-display text-base font-semibold uppercase leading-none tracking-[0.06em] text-ink-200">
           Primeiros passos{' '}
           <span className="text-ink-400">
             {done}/{steps.length}
@@ -378,7 +393,7 @@ function TutorialStrip() {
         <span className="min-w-0 flex-1 basis-56 text-sm text-ink-300">
           <b className="font-semibold text-ink-100">{step.title}.</b> {step.text}
         </span>
-        <span className="flex gap-1">
+        <span className="flex gap-2">
           <button
             type="button"
             onClick={() => navigate(step.route)}
@@ -436,23 +451,31 @@ function NextEventPanel() {
   const credit = trackCredit(track.id);
   return (
     <section className="chamfer h-full bg-ink-700 p-px [--chamfer:18px]" aria-label={inProgress ? 'Fim de semana em andamento' : 'Próxima etapa'}>
-      <div className="chamfer relative flex h-full min-h-[17.5rem] flex-col overflow-hidden bg-ink-900 [--chamfer:18px]">
+      {/* Altura mínima pensada para a primeira fileira do Painel caber acima da barra do passo principal em 844×390. */}
+      <div className="chamfer relative flex h-full min-h-[16rem] flex-col overflow-hidden bg-ink-900 [--chamfer:18px]">
         {/* O traçado ocupa o lado direito, sobre uma grade de prancheta. */}
         <div aria-hidden className="gridlines absolute inset-y-0 right-0 w-[58%] [mask-image:linear-gradient(to_right,transparent,black_35%)]" />
         <div aria-hidden className="stripes absolute -right-8 top-0 h-full w-24 -skew-x-12 opacity-70" />
-        <CircuitMap track={track} style={category.vehicle} className="pointer-events-none absolute right-3 top-3 h-[calc(100%-5.25rem)] w-[44%]" />
+        <CircuitMap
+          track={track}
+          style={category.vehicle}
+          className="pointer-events-none absolute right-3 top-3 h-[calc(100%-1.25rem-4rem*var(--text-scale))] w-[44%]"
+        />
 
         <div className="relative flex min-h-0 flex-1 flex-col p-4 pr-[48%]">
-          <div className="flex items-center gap-2 whitespace-nowrap text-xs font-semibold text-ink-300">
-            <span className="h-3 w-1 shrink-0 bg-apex-500" aria-hidden />
-            {inProgress ? 'Em andamento' : 'Próxima etapa'}
-            <span className="font-normal text-ink-400">
+          {/* Com o texto grande, a contagem da etapa desce para a linha de baixo em vez de invadir o mapa. */}
+          <div className="flex flex-wrap items-center gap-x-2 text-xs font-semibold text-ink-300">
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <span className="h-3 w-1 shrink-0 bg-apex-500" aria-hidden />
+              {inProgress ? 'Em andamento' : 'Próxima etapa'}
+            </span>
+            <span className="whitespace-nowrap font-normal text-ink-400">
               {event.round} de {career.calendar.length}
             </span>
           </div>
           <h2 className="mt-2 font-display text-[clamp(1.6rem,3.1vw,2.75rem)] font-bold uppercase leading-[0.95] tracking-wide">{track.name}</h2>
-          <div className="mt-1.5 text-sm text-ink-300">
-            {trackLocation(track)} · {formatDate(event.date).replace(/ \d{4}$/, '')}
+          <div className="mt-2 text-sm text-ink-300">
+            {trackLocation(track)} · {formatDate(event.date).replace(/\s\d{4}$/, '')}
           </div>
           <p className="mt-3 hidden max-w-md text-sm leading-snug text-ink-400 xl:block">{track.description}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -460,7 +483,7 @@ function NextEventPanel() {
             <span className="text-xs text-ink-400">previsão para a corrida</span>
           </div>
           {!availability.available && (
-            <Tag tone="attention" className="mt-3 !items-start whitespace-normal py-1.5 leading-snug">
+            <Tag tone="attention" className="mt-3 !items-start whitespace-normal py-2 leading-snug">
               {availability.reason === 'ban'
                 ? 'Você está suspenso desta etapa por pontos de punição.'
                 : `Lesionado (${player.injury?.description}): fora por ${counted(player.injury?.roundsRemaining ?? 0, 'etapa', 'etapas')}.`}{' '}
@@ -477,7 +500,7 @@ function NextEventPanel() {
           <Fact label="Desgaste" value={describeTyreWear(track.tyreWear)} />
           <Fact label="Favorece" value={describePower(track.powerSensitivity).replace('favorece o ', '')} />
         </dl>
-        {credit && <span className="pointer-events-none absolute bottom-[3.25rem] right-3 text-[9px] leading-none text-ink-500">Traçado: {credit}</span>}
+        {credit && <span className="pointer-events-none absolute bottom-[3.25rem] right-3 text-2xs leading-none text-ink-400">Traçado: {credit}</span>}
       </div>
     </section>
   );
@@ -485,14 +508,14 @@ function NextEventPanel() {
 
 function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="px-1 py-1.5">
-      <dt className="text-[10px] font-medium text-ink-400">{label}</dt>
+    <div className="px-1 py-2">
+      <dt className="text-2xs font-medium text-ink-400">{label}</dt>
       <dd className="truncate font-display text-base font-semibold leading-tight first-letter:uppercase">{value}</dd>
     </div>
   );
 }
 
-/** Com a tela em pé não há barra superior com o botão de avançar: ele aparece dentro do painel principal. */
+/** Com a tela em pé não há a barra do passo principal: o botão de avançar aparece dentro do painel principal. */
 function AdvanceInPlace() {
   const { career } = useCareerView();
   const { wide } = useChrome();
@@ -507,7 +530,7 @@ function AdvanceInPlace() {
         else navigate(action.to);
       }}
       className={cx(
-        'chamfer-br mt-4 flex min-h-11 w-fit items-center gap-1.5 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide [--chamfer:10px]',
+        'chamfer-br mt-4 flex min-h-11 w-fit items-center gap-2 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide [--chamfer:10px]',
         action.tone === 'attention' ? 'bg-gold-400 text-ink-950' : 'bg-apex-500 text-white',
       )}
     >

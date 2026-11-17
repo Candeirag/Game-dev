@@ -3,8 +3,9 @@
  *
  * - A tela de corrida avisa quando a barra fixa de comandos está aberta: a moldura esconde a
  *   navegação inferior do celular em pé e reserva o espaço no fim da página.
- * - As telas sabem se a moldura está no formato largo (trilho lateral e barra superior com o
- *   botão de avançar) ou no formato em pé, em que o botão de avançar fica dentro da própria tela.
+ * - As telas sabem se a moldura está no formato largo (trilho lateral, barra superior e a barra
+ *   do passo principal, fixa no pé da tela) ou no formato em pé, em que o botão de avançar fica
+ *   dentro da própria tela.
  */
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { CareerState } from '@/domain/schemas';
@@ -20,13 +21,19 @@ export interface Chrome {
    */
   topSlot: HTMLElement | null;
   /**
-   * Encaixe do botão principal (só no formato largo): a tela põe ali o passo que faz a carreira
-   * avançar (disputar o treino, largar, concluir a etapa), no lugar do atalho padrão.
+   * Encaixe do botão principal (só no formato largo, na barra fixa do pé da tela): a tela põe ali
+   * o passo que faz a carreira avançar (disputar o treino, largar, concluir a etapa), no lugar do
+   * atalho padrão.
    */
   actionSlot: HTMLElement | null;
+  /**
+   * A tela avisa que pôs um passo no encaixe, com a linha de contexto dele para a barra (opcional);
+   * a função devolvida desfaz o aviso.
+   */
+  registerAction(info?: string): () => void;
 }
 
-export const ChromeContext = createContext<Chrome>({ setRaceBar() {}, wide: true, topSlot: null, actionSlot: null });
+export const ChromeContext = createContext<Chrome>({ setRaceBar() {}, wide: true, topSlot: null, actionSlot: null, registerAction: () => () => {} });
 
 /** Enquanto o componente estiver montado com `open`, a moldura abre espaço para a barra de corrida. */
 export function useRaceBarSpace(open: boolean): void {
@@ -67,7 +74,7 @@ export interface PrimaryAction {
 }
 
 /**
- * O próximo passo da carreira: é o que o botão principal da barra superior faz.
+ * O próximo passo da carreira: é o que o botão principal (na barra fixa do pé da tela) faz.
  * Não decide nada do jogo; só aponta para a tela em que o jogador avança.
  */
 export function primaryAction(career: CareerState): PrimaryAction | null {

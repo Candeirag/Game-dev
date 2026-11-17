@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Track } from '@/domain/schemas';
 import { CIRCUIT, buildCircuit, pitLateralAt, poseAt, type CircuitStyle } from '@/engine';
-import { cx } from './ui';
+import { cx } from '@/ui/kit';
 
 /**
  * Mapa do circuito: o mesmo traçado em que a corrida acontece, desenhado como miniatura.

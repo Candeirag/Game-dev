@@ -19,6 +19,27 @@ coluna "Hoje"; nenhuma tela fica com um espaço vazio.
 Os carros são pintados pelo jogo com a cor de cada equipe e o número de cada piloto; por isso as
 imagens são em tons neutros, vistas de cima, com fundo transparente.
 
+## Imagens geradas: carros por categoria e retratos
+
+Os originais ficam em `assets/higgsfield/` (fora do pacote do jogo). `npm run app:images`
+(`scripts/importar-imagens.mjs`) os converte para WebP, nos tamanhos de celular, em
+`src/assets/generated/`, de onde o jogo os carrega. A pasta de origem pode não existir: nesse
+caso o comando não faz nada e o jogo segue como está.
+
+| Origem                        | Nome do arquivo                                                                                                               | Saída                                                      | Onde aparece                                                                              | Reserva (sem a imagem)                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `assets/higgsfield/carros/`   | o id da categoria: `kart-regional`, `kart-national`, `kart-international`, `f4`, `f3`, `f2`, `f1` (`.png`, `.jpg` ou `.webp`) | `src/assets/generated/carros/<id>.webp`, 640 px de largura | Cartão do carro no Painel (o da categoria atual)                                          | O carro desenhado pelo jogo, com a pintura da equipe |
+| `assets/higgsfield/retratos/` | `jogador.*` para o piloto do jogador; qualquer outro nome entra no elenco                                                     | `src/assets/generated/retratos/<nome>.webp`, 256×320 (4:5) | Painel (cartão Piloto), Piloto (Avaliação), Equipe (pilotos) e o painel Piloto da corrida | A placa com o número do piloto                       |
+
+- Os retratos usam a moldura padrão (`Portrait`, em `src/ui/kit`): proporção 4:5, canto chanfrado
+  e a cor da equipe na base. O corte é centrado no alto da imagem, onde costuma ficar o rosto.
+- Cada piloto do elenco recebe sempre o mesmo retrato (escolhido pelo id dele); com poucos
+  retratos, eles se repetem entre pilotos.
+- Na pista, os carros continuam sendo os sprites vistos de cima, pintados com a cor de cada
+  equipe: uma arte única por categoria não mostra a pintura nem o número de cada carro.
+- Depois de importar, confira as telas (`npm run test:e2e`) e rode `npm run app:sync` para levar
+  as imagens ao aplicativo. Registre a origem das artes em `THIRD_PARTY_LICENSES.md`.
+
 ## Provisório (trocar antes de publicar)
 
 Gerado por `npm run app:icons` (`scripts/gerar-icones-do-app.mjs`) a partir da marca atual: o "A"
@@ -47,14 +68,14 @@ redimensionar a partir deles (ou use `npx @capacitor/assets generate`), depois r
 
 ### Dentro do jogo (opcional; hoje há um substituto)
 
-| Arte                        | Hoje                                                          | Sugestão                                                                                     |
-| --------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Escudo de cada equipe       | Faixa com a cor da equipe ao lado do nome                     | SVG ou WebP 256×256 com transparência, um por equipe (ou um conjunto de formas combináveis). |
-| Retrato de piloto           | Placa com o número do piloto e a cor da equipe                | WebP 256×320 com transparência; um conjunto de rostos e capacetes combináveis.               |
-| Marca dos patrocinadores    | Nome do patrocinador em texto                                 | SVG monocromático, altura de 64 px.                                                          |
-| Troféu e pódio              | Posição em número grande, com a cor do resultado              | WebP 512×512 com transparência (troféu); ilustração 1600×600 (pódio).                        |
-| Imagem de fundo do menu     | Grafite com faixas diagonais e linhas de grade (feito em CSS) | WebP 2400×1080, escura o bastante para o texto claro ficar legível por cima.                 |
-| Carros de outras categorias | Não se aplica hoje (as sete categorias têm imagem)            | WebP de 320 px de largura, vista de cima, tons neutros, fundo transparente.                  |
+| Arte                        | Hoje                                                          | Sugestão                                                                                                |
+| --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Escudo de cada equipe       | Faixa com a cor da equipe ao lado do nome                     | SVG ou WebP 256×256 com transparência, um por equipe (ou um conjunto de formas combináveis).            |
+| Retrato de piloto           | Placa com o número do piloto e a cor da equipe                | Ver "Imagens geradas", acima: o caminho já existe; faltam os arquivos em `assets/higgsfield/retratos/`. |
+| Marca dos patrocinadores    | Nome do patrocinador em texto                                 | SVG monocromático, altura de 64 px.                                                                     |
+| Troféu e pódio              | Posição em número grande, com a cor do resultado              | WebP 512×512 com transparência (troféu); ilustração 1600×600 (pódio).                                   |
+| Imagem de fundo do menu     | Grafite com faixas diagonais e linhas de grade (feito em CSS) | WebP 2400×1080, escura o bastante para o texto claro ficar legível por cima.                            |
+| Carros de outras categorias | Não se aplica hoje (as sete categorias têm imagem)            | WebP de 320 px de largura, vista de cima, tons neutros, fundo transparente.                             |
 
 ## Regras para qualquer imagem nova
 

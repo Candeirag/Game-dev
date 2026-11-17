@@ -1,6 +1,7 @@
 /** Apoio aos testes no navegador: tamanhos de tela, abertura de saves e a verificação visual. */
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
+import { descrever, medirContraste, reprovadas } from './contraste';
 
 /**
  * Formatos conferidos. O aplicativo é feito para a tela deitada (844×390) e escala para tablet
@@ -215,23 +216,288 @@ export async function alvosPequenos(page: Page): Promise<string[]> {
 }
 
 /**
- * Tira o print da tela inteira e confere sobreposição de imagem com texto, transbordo lateral e,
- * nos formatos de toque, o tamanho das áreas de toque.
+ * Números fora da largura fixa: todo texto com algarismo tem de usar `tabular-nums` (tempos,
+ * diferenças, dinheiro, posições e atributos não podem dançar quando mudam).
+ */
+export async function numerosSemLarguraFixa(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? '';
+      const parent = node.parentElement;
+      if (!/\d/.test(text) || !parent || parent.closest('svg, script, style, option, .sr-only')) continue;
+      if (!parent.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      if (!getComputedStyle(parent).fontVariantNumeric.includes('tabular-nums')) found.add(`"${text.slice(0, 40)}"`);
+    }
+    return [...found];
+  });
+}
+
+/**
+ * Texto pequeno em fonte condensada: a fonte de título (Barlow Condensed) só vale a partir de
+ * 16 px, na escala de texto em vigor; abaixo disso é Inter.
+ */
+export async function condensadaPequena(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const scale = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale-user') || '1') || 1;
+    const system = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale-system') || '1') || 1;
+    const minimum = 16 * scale * system - 0.5;
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? '';
+      const parent = node.parentElement;
+      if (!text || !parent || parent.closest('svg, script, style, option, .sr-only')) continue;
+      if (!parent.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      const style = getComputedStyle(parent);
+      const family = style.fontFamily.split(',')[0]?.replace(/["']/g, '').trim() ?? '';
+      if (/Condensed/i.test(family) && Number.parseFloat(style.fontSize) < minimum) found.add(`"${text.slice(0, 40)}" (${style.fontSize})`);
+    }
+    return [...found];
+  });
+}
+
+/**
+ * Alvos de toque colados: vizinhos precisam de uns 8 px entre si. Ficam de fora os que formam
+ * um controle só, encostados de propósito e cada um com 44 px ou mais (abas, navegação, grupos
+ * de botões como as velocidades da corrida) e as linhas de uma lista, uma embaixo da outra.
+ */
+export async function alvosColados(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const GAP = 7.5;
+    const targets = [...document.querySelectorAll('button, a[href], input, select, textarea, summary')].filter((element) => {
+      if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) || element.closest('.sr-only, [inert]')) return false;
+      if (element instanceof HTMLInputElement && (element.type === 'file' || element.type === 'hidden')) return false;
+      const box = element.getBoundingClientRect();
+      return box.width > 0 && box.height > 0;
+    });
+    const group = (element: Element) => element.closest('[role="tablist"], [role="group"], [role="radiogroup"], [role="toolbar"], nav, ul, ol, table');
+    // Barras fixas e grudadas passam por cima do conteúdo ao rolar: não são vizinhas dele.
+    const floating = (element: Element): boolean => {
+      for (let node: Element | null = element; node && node !== document.body; node = node.parentElement) {
+        const position = getComputedStyle(node).position;
+        if (position === 'fixed' || position === 'sticky') return true;
+      }
+      return false;
+    };
+    const name = (element: Element) => (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 30);
+    const found = new Set<string>();
+    for (let i = 0; i < targets.length; i++) {
+      for (let j = i + 1; j < targets.length; j++) {
+        const a = targets[i];
+        const b = targets[j];
+        if (!a || !b || a.contains(b) || b.contains(a)) continue;
+        if (floating(a) !== floating(b)) continue;
+        // Partes de um mesmo controle (abas, navegação, lista) encostam de propósito.
+        const shared = group(a);
+        if (shared && shared === group(b)) continue;
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        const overlapX = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+        const overlapY = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+        const gapX = Math.max(ra.left, rb.left) - Math.min(ra.right, rb.right);
+        const gapY = Math.max(ra.top, rb.top) - Math.min(ra.bottom, rb.bottom);
+        const side = overlapY > 4 && gapX >= -0.5 && gapX < GAP;
+        const stacked = overlapX > 4 && gapY >= -0.5 && gapY < GAP;
+        if (side || stacked) found.add(`"${name(a)}" e "${name(b)}" (${Math.round(side ? gapX : gapY)} px)`);
+      }
+    }
+    return [...found];
+  });
+}
+
+/**
+ * Conteúdo escondido atrás das barras presas ao pé da tela (a barra do passo principal, a de
+ * comandos da corrida, a navegação inferior). Com a página rolada até o fim, nenhum texto pode
+ * ficar atrás delas: o conteúdo tem de terminar acima. Avisos passageiros (`data-transient`)
+ * ficam de fora.
+ */
+export async function escondidoNoRodape(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const bars = [...document.querySelectorAll('body *')].filter((element) => {
+      if (element.closest('[data-transient], [role="dialog"]')) return false;
+      const style = getComputedStyle(element);
+      if (style.position !== 'fixed' || !element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
+      const box = element.getBoundingClientRect();
+      return box.height > 0 && box.width > window.innerWidth * 0.3 && box.bottom >= window.innerHeight - 2;
+    });
+    const floating = (element: Element): boolean => {
+      for (let node: Element | null = element; node && node !== document.body; node = node.parentElement) {
+        const position = getComputedStyle(node).position;
+        if (position === 'fixed' || position === 'sticky') return true;
+      }
+      return false;
+    };
+    /** Parte da caixa que os contêineres com rolagem ou corte deixam aparecer. */
+    const clipped = (element: Element, rect: DOMRect): { left: number; top: number; right: number; bottom: number } | null => {
+      let box: { left: number; top: number; right: number; bottom: number } | null = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+      for (let node = element.parentElement; box && node && node !== document.body; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.overflowX !== 'visible' || style.overflowY !== 'visible' || style.clipPath !== 'none') {
+          const clip = node.getBoundingClientRect();
+          const next = {
+            left: Math.max(box.left, clip.left),
+            top: Math.max(box.top, clip.top),
+            right: Math.min(box.right, clip.right),
+            bottom: Math.min(box.bottom, clip.bottom),
+          };
+          box = next.right - next.left > 0.5 && next.bottom - next.top > 0.5 ? next : null;
+        }
+      }
+      return box;
+    };
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? '';
+      const parent = node.parentElement;
+      if (!text || !parent || floating(parent) || parent.closest('svg, script, style, .sr-only, [inert]')) continue;
+      if (!parent.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      range.selectNodeContents(node);
+      for (const whole of range.getClientRects()) {
+        const rect = clipped(parent, whole);
+        if (!rect) continue;
+        for (const bar of bars) {
+          const box = bar.getBoundingClientRect();
+          const overlapX = Math.min(rect.right, box.right) - Math.max(rect.left, box.left);
+          const overlapY = Math.min(rect.bottom, box.bottom) - Math.max(rect.top, box.top);
+          if (overlapX > 2 && overlapY > 2) found.add(`"${text.slice(0, 40)}" atrás de ${bar.getAttribute('aria-label') ?? bar.tagName.toLowerCase()}`);
+        }
+      }
+    }
+    window.scrollTo(0, 0);
+    return [...found];
+  });
+}
+
+/**
+ * Linhas cortadas nas listas de linhas inteiras (`data-whole-rows`, como a torre da corrida):
+ * parada, e também depois de rolada pelo jogador (até o meio de uma linha, até o fim e um pouco
+ * acima do fim), a lista mostra cada linha inteira ou não mostra; a linha que gruda (a do
+ * jogador) cobre por inteiro a vaga em que está.
+ */
+export async function linhasCortadas(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const found: string[] = [];
+    const check = (list: Element, momento: string) => {
+      const view = list.getBoundingClientRect();
+      const rows = [...list.querySelectorAll<HTMLElement>('[data-row]')];
+      const stuck = rows.filter((row) => getComputedStyle(row).position === 'sticky').map((row) => row.getBoundingClientRect());
+      for (const row of rows) {
+        const box = row.getBoundingClientRect();
+        const label = `"${row.textContent?.trim().slice(0, 30)}" (${momento})`;
+        if (getComputedStyle(row).position === 'sticky') {
+          const shown = Math.min(box.bottom, view.bottom) - Math.max(box.top, view.top);
+          if (shown > 0.5 && shown < box.height - 0.5) found.push(`linha grudada cortada: ${label}`);
+          continue;
+        }
+        let top = Math.max(box.top, view.top);
+        let bottom = Math.min(box.bottom, view.bottom);
+        // O pedaço coberto pela linha grudada não conta como visível.
+        for (const cover of stuck) {
+          if (cover.top <= top + 0.5 && cover.bottom > top) top = Math.max(top, cover.bottom);
+          if (cover.bottom >= bottom - 0.5 && cover.top < bottom) bottom = Math.min(bottom, cover.top);
+        }
+        const shown = bottom - top;
+        if (shown > 0.5 && shown < box.height - 0.5) found.push(`${label}: ${Math.round(shown)} de ${Math.round(box.height)} px`);
+      }
+    };
+    for (const list of document.querySelectorAll<HTMLElement>('[data-whole-rows]')) {
+      if (!list.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      check(list, 'parada');
+      // Rolada pelo jogador até um ponto qualquer, e até o fim: depois de assentar, também só linhas inteiras.
+      const row = list.querySelector<HTMLElement>('[data-row]');
+      const height = row?.getBoundingClientRect().height ?? 0;
+      const max = list.scrollHeight - list.clientHeight;
+      if (height <= 0 || max <= 0) continue;
+      const start = list.scrollTop;
+      for (const [target, momento] of [
+        [Math.min(max, height * 1.4), 'rolada até o meio de uma linha'],
+        [max, 'rolada até o fim'],
+        [Math.max(0, max - height * 0.6), 'subindo um pouco do fim'],
+      ] as const) {
+        list.scrollTop = target;
+        list.dispatchEvent(new Event('scroll'));
+        await wait(700);
+        check(list, momento);
+      }
+      list.scrollTop = start;
+      await wait(300);
+    }
+    return found;
+  });
+}
+
+/**
+ * Escapes escritos ao pé da letra na tela ("\\u00a0", "\\n"): no texto de JSX o JavaScript não
+ * interpreta escapes, então um `\\u00a0` fora das chaves aparece para o jogador como está.
+ */
+export async function escapesNaTela(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      const match = /\\(u[0-9a-fA-F]{4}|u\{[0-9a-fA-F]+\}|x[0-9a-fA-F]{2}|[ntr])/.exec(text);
+      if (match) found.add(`"${text.trim().slice(0, 50)}"`);
+    }
+    return [...found];
+  });
+}
+
+/**
+ * Tira o print da tela inteira e confere: sobreposição de imagem com texto, transbordo lateral,
+ * contraste (texto, ícones e contornos), algarismos de largura fixa, fonte condensada só em texto
+ * grande, linhas inteiras na torre, nada escondido atrás das barras do rodapé e, nos formatos de
+ * toque, o tamanho das áreas de toque e o espaço entre elas.
  */
 export async function conferirTela(page: Page, tela: string, formato: string): Promise<void> {
   await page.waitForTimeout(250);
+  // Espera as entradas em curso terminarem (medir uma cor no meio de um esmaecer daria um valor errado).
+  await page.evaluate(async () => {
+    const running = document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY);
+    await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+  });
   // Nome de arquivo sem acentos nem espaços.
   const arquivo = tela
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-');
   await page.screenshot({ path: `test-results/telas/${formato}/${arquivo}.png`, fullPage: true });
+  // DOBRA=1: também o que aparece antes de rolar (a primeira dobra), para a revisão visual.
+  if (process.env.DOBRA) await page.screenshot({ path: `test-results/dobra/${formato}/${arquivo}.png` });
+  // AUDITORIA=<nome>: só levanta as medidas de contraste de cada tela (test-results/auditoria/<nome>), sem reprovar.
+  if (process.env.AUDITORIA) {
+    const pasta = `test-results/auditoria/${process.env.AUDITORIA}/${formato}`;
+    mkdirSync(pasta, { recursive: true });
+    writeFileSync(`${pasta}/${arquivo}.json`, JSON.stringify(await medirContraste(page)));
+    return;
+  }
   const achados = await sobreposicoes(page);
   const toque = TELAS.find((item) => item.nome === formato)?.toque ?? true;
   const pequenos = toque ? await alvosPequenos(page) : [];
+  const medidas = reprovadas(await medirContraste(page));
+  const soltos = await numerosSemLarguraFixa(page);
+  const condensadas = await condensadaPequena(page);
+  const cortadas = await linhasCortadas(page);
+  const escapes = await escapesNaTela(page);
+  const escondidos = await escondidoNoRodape(page);
+  const colados = toque ? await alvosColados(page) : [];
   if (process.env.LEVANTAR) {
     for (const a of achados) console.log(`ACHADO ${formato} | ${tela} | ${a.imagem} × "${a.texto}" (${a.area})`);
     for (const alvo of pequenos) console.log(`ACHADO ${formato} | ${tela} | toque pequeno: ${alvo}`);
+    for (const par of colados) console.log(`ACHADO ${formato} | ${tela} | alvos colados: ${par}`);
+    for (const m of medidas) console.log(`ACHADO ${formato} | ${tela} | contraste: ${descrever(m)}`);
+    for (const n of soltos) console.log(`ACHADO ${formato} | ${tela} | número sem largura fixa: ${n}`);
+    for (const c of condensadas) console.log(`ACHADO ${formato} | ${tela} | condensada pequena: ${c}`);
+    for (const c of cortadas) console.log(`ACHADO ${formato} | ${tela} | linha cortada: ${c}`);
+    for (const e of escapes) console.log(`ACHADO ${formato} | ${tela} | escape literal na tela: ${e}`);
+    for (const e of escondidos) console.log(`ACHADO ${formato} | ${tela} | escondido no rodapé: ${e}`);
     const sobra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (sobra > 0) console.log(`ACHADO ${formato} | ${tela} | transbordo de ${sobra} px`);
     return;
@@ -240,4 +506,11 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(transbordo, `${tela} (${formato}): a página passa ${transbordo} px da largura da tela`).toBeLessThanOrEqual(0);
   expect(pequenos, `${tela} (${formato}): áreas de toque menores que 44 px\n  ${pequenos.join('\n  ')}`).toEqual([]);
+  expect(colados, `${tela} (${formato}): alvos de toque com menos de 8 px entre si\n  ${colados.join('\n  ')}`).toEqual([]);
+  expect(medidas.map(descrever), `${tela} (${formato}): contraste abaixo do mínimo`).toEqual([]);
+  expect(soltos, `${tela} (${formato}): números sem algarismos de largura fixa`).toEqual([]);
+  expect(condensadas, `${tela} (${formato}): texto pequeno em fonte condensada`).toEqual([]);
+  expect(cortadas, `${tela} (${formato}): linha cortada na lista`).toEqual([]);
+  expect(escapes, `${tela} (${formato}): escape escrito ao pé da letra no texto (use {'\\u00a0'} no JSX)`).toEqual([]);
+  expect(escondidos, `${tela} (${formato}): conteúdo escondido atrás da barra do rodapé (com a página rolada até o fim)`).toEqual([]);
 }

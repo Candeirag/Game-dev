@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { EVENT_CATEGORY_LABELS } from '@/domain/labels';
 import { useGameStore } from '@/store/gameStore';
 import { useCareer } from '../hooks/useCareer';
-import { Panel, Tag } from '../kit/Panel';
+import { Panel, Tag } from '@/ui/kit';
 
 /** Decisões pendentes: cada evento exige uma escolha antes do próximo fim de semana. */
 export function EventsPanel() {
@@ -19,7 +19,7 @@ export function EventsPanel() {
           <div className="chamfer flex items-start justify-between gap-3 bg-ink-800 py-3 pl-4 pr-2 text-sm">
             <div>
               <div className="font-display text-base font-semibold uppercase tracking-wide text-ink-100">{lastOutcome.title}</div>
-              <div className="mt-0.5 text-ink-200">{lastOutcome.text}</div>
+              <div className="mt-1 text-ink-200">{lastOutcome.text}</div>
             </div>
             <button
               type="button"
@@ -40,18 +40,18 @@ export function EventsPanel() {
           action={<Tag tone="attention">{EVENT_CATEGORY_LABELS[event.category]}</Tag>}
         >
           <h3 className="font-display text-2xl font-bold uppercase leading-tight">{event.title}</h3>
-          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-300">{event.body}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-300">{event.body}</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {event.choices.map((choice) => (
               <button
                 key={choice.id}
                 type="button"
                 onClick={() => resolveEvent(event.id, choice.id)}
-                className="chamfer-br flex min-h-11 flex-col items-start gap-1 border border-ink-600 bg-ink-800 p-3 text-left transition-colors hover:border-gold-400 hover:bg-ink-700"
+                className="chamfer-br flex min-h-11 flex-col items-start gap-1 border border-ink-500 bg-ink-800 p-3 text-left transition-colors hover:border-gold-400 hover:bg-ink-700"
               >
                 <span className="text-sm font-semibold text-ink-100">{choice.label}</span>
                 <span className="text-xs leading-snug text-ink-300">{choice.description}</span>
-                {choice.outcomes.length > 1 && <span className="mt-0.5 text-[11px] font-semibold text-gold-400">Desfecho incerto</span>}
+                {choice.outcomes.length > 1 && <span className="mt-1 text-2xs font-semibold text-gold-400">Desfecho incerto</span>}
               </button>
             ))}
           </div>

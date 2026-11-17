@@ -2,7 +2,7 @@ import { useEffect, useRef, type CSSProperties } from 'react';
 import type { CategoryId } from '@/domain/schemas';
 import { VEHICLES } from '@/data/vehicles';
 import { accentFor, drawVectorCar, helmetFor, liveryFor, loadCarSprites, spriteAspect } from '../race/liveries';
-import { cx } from './ui';
+import { cx } from '@/ui/kit';
 
 interface Props {
   categoryId: CategoryId;

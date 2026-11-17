@@ -5,8 +5,8 @@
  */
 import { TYRES, conditionFor, fullName, type RaceSimState } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { CompoundDot } from './raceBits';
-import { Button, Card, cx } from '../components/ui';
+import { feedback } from '../feedback/feedback';
+import { Button, Card, cx, TyreBadge, tyreName } from '@/ui/kit';
 import { useCareerView } from '../hooks/useCareer';
 
 export function TeamOrderDialog({ race }: { race: RaceSimState }) {
@@ -55,13 +55,47 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
       Engenheiro automático
     </label>
   );
+  // A ação principal (o pneu da próxima parada) vem primeiro: no painel estreito da corrida, o resto
+  // fica abaixo, ao rolar, e o pedido de parada aparece sem rolar.
   const content = (
     <>
-      {bare && engineer}
-      <p className="text-sm text-ink-300">
+      <div className="text-xs font-semibold text-ink-300">
+        {redFlagRestart ? 'Trocar pneus na relargada (sem custo)' : `Entrar nos boxes no fim da volta ${nextLap} com`}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {compounds.map((c) => (
+          <button
+            key={c}
+            type="button"
+            disabled={!running || autoEngineer}
+            onClick={() => {
+              // Toque leve ao escolher o pneu.
+              if (pitRequest !== c) feedback('tyreChoice');
+              requestPit(pitRequest === c ? null : c);
+            }}
+            aria-pressed={pitRequest === c}
+            className={cx(
+              'flex min-h-11 items-center gap-2 px-2 text-xs font-semibold',
+              pitRequest === c ? 'bg-apex-500/15 text-ink-100 shadow-ring-accent' : 'text-ink-200 shadow-ring hover:bg-ink-800',
+            )}
+          >
+            <TyreBadge compound={c} />
+            {TYRES[c].label}
+          </button>
+        ))}
+      </div>
+      {pitRequest && (
+        <p className="mt-2 text-xs font-semibold text-ink-100">
+          {redFlagRestart ? 'Troca confirmada para a relargada' : `Parada confirmada para a volta ${nextLap}`}: pneu {tyreName(pitRequest)}
+          {me.damage > 0.05 && !redFlagRestart ? ', com reparo do carro' : ''}.
+        </p>
+      )}
+      {/* Logo abaixo dos botões: com o engenheiro ligado eles ficam desativados, e o interruptor que os libera fica à vista. */}
+      {bare && <div className="mt-2">{engineer}</div>}
+      <p className="mt-3 text-sm text-ink-300">
         {nextStop ? (
           <>
-            Próxima parada planejada: <b className="text-ink-100">volta {nextStop.lap}</b>, pneu {TYRES[nextStop.compound].label.toLowerCase()}.
+            Próxima parada planejada: <b className="text-ink-100">volta {nextStop.lap}</b>, pneu {tyreName(nextStop.compound)}.
           </>
         ) : (
           'Nenhuma parada planejada.'
@@ -70,35 +104,6 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
           <span className="text-gold-400"> Você ainda precisa usar um segundo composto (30s de punição se não usar).</span>
         )}
       </p>
-      <div className="mt-3 text-xs font-semibold text-ink-300">
-        {redFlagRestart ? 'Trocar pneus na relargada (sem custo)' : `Entrar nos boxes no fim da volta ${nextLap} com`}
-      </div>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {compounds.map((c) => (
-          <button
-            key={c}
-            type="button"
-            disabled={!running || autoEngineer}
-            onClick={() => requestPit(pitRequest === c ? null : c)}
-            aria-pressed={pitRequest === c}
-            className={cx(
-              'flex min-h-11 items-center gap-1.5 px-2.5 text-xs font-semibold disabled:opacity-40',
-              pitRequest === c
-                ? 'bg-apex-500/15 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-500)]'
-                : 'text-ink-300 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-800',
-            )}
-          >
-            <CompoundDot compound={c} />
-            {TYRES[c].label}
-          </button>
-        ))}
-      </div>
-      {pitRequest && (
-        <p className="mt-2 text-xs font-semibold text-ink-100">
-          {redFlagRestart ? 'Troca confirmada para a relargada' : `Parada confirmada para a volta ${nextLap}`}: pneu {TYRES[pitRequest].label.toLowerCase()}
-          {me.damage > 0.05 && !redFlagRestart ? ', com reparo do carro' : ''}.
-        </p>
-      )}
       {nextStop && !autoEngineer && (
         <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2 text-xs text-ink-300">
           <input

@@ -24,6 +24,15 @@
  */
 
 /**
+ * Limites de registro (não mudam o jogo; só o quanto de história o save guarda).
+ */
+export const HISTORY_LIMITS = {
+  // Temporadas guardadas para os gráficos de tendência (atributos e caixa). 60 cobre duas
+  // gerações inteiras de uma dinastia e pesa menos de 20 kB no save.
+  SEASON_TREND: 60,
+} as const;
+
+/**
  * Mapa das tabelas de balanceamento que moram fora deste arquivo: caminho do módulo → nomes
  * exportados. Dados por categoria, pista e equipe ficam em `src/data`; regras gerais de cada
  * sistema, no próprio módulo do motor.

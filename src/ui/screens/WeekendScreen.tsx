@@ -21,8 +21,8 @@ import { buildCircuit, type CircuitStyle } from '@/engine';
 import { CarSprite } from '../components/CarSprite';
 import { CircuitMap } from '../components/CircuitMap';
 import { RaceBroadcast } from '../race/RaceBroadcast';
-import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, Stat, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
-import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackCredit, trackLocation } from '../format';
+import { Button, Card, ChoiceCard, cx, EmptyState, PageHeader, Pill, Stat, TableWrap, td, TeamSwatch, th, WeatherBadge, YouMark } from '@/ui/kit';
+import { describeOvertaking, describeTyreWear, formatDate, formatInterval, formatLap, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { ScreenAction } from '../layout/ScreenAction';
 import { counted, pluralWord } from '@/domain/text';
@@ -120,19 +120,19 @@ export function WeekendScreen() {
       {/* Com a corrida na tela, o cabeçalho e as etapas do fim de semana dão lugar à pista. */}
       {!liveRace && (
         <PageHeader eyebrow={`${trackLocation(track)} · ${raceLaps(track, category)} voltas`} title={track.name}>
-          <ol className="flex flex-wrap items-center gap-1.5" aria-label="Sessões do fim de semana">
+          <ol className="flex flex-wrap items-center gap-2" aria-label="Sessões do fim de semana">
             {STEPS.map((step, i) => (
               <li
                 key={step.key}
                 aria-current={i === activeIndex ? 'step' : undefined}
                 className={cx(
-                  'chamfer-br flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold leading-none [--chamfer:6px]',
+                  'chamfer-br flex items-center gap-2 px-2 py-2 text-xs font-semibold leading-none [--chamfer:6px]',
                   i === activeIndex ? 'bg-apex-500 text-white' : i < activeIndex ? 'bg-ink-800 text-ink-200' : 'bg-ink-850 text-ink-400',
                 )}
               >
                 {i < activeIndex && <Check size={12} strokeWidth={3} className="text-go-400" aria-label="Concluída" />}
                 {step.label}
-                <span className="font-normal opacity-80">{WEATHER_LABELS[event.weather[step.key].condition]}</span>
+                <span className="font-normal">{WEATHER_LABELS[event.weather[step.key].condition]}</span>
               </li>
             ))}
           </ol>
@@ -269,10 +269,11 @@ function QualifyingPhase() {
                       <span className="flex items-center gap-2">
                         <TeamSwatch team={teams[e.teamId]} />
                         {drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
+                        {e.driverId === player.id && <YouMark />}
                       </span>
                     </td>
                     <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
-                    <td className={cx(td, 'text-right tabular text-ink-400')}>{i === 0 ? '' : `+${(e.bestLap - best).toFixed(3)}`}</td>
+                    <td className={cx(td, 'text-right tabular text-ink-400')}>{i === 0 ? '' : formatInterval(e.bestLap - best)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -352,26 +353,29 @@ function PreRacePhase() {
                   {qualifying.entries.map((e) => (
                     <tr key={e.driverId} className={cx('border-t border-ink-800', e.driverId === player.id && 'bg-apex-500/10')}>
                       <td className={cx(td, 'font-semibold tabular')}>{e.position}</td>
-                      <td className={td}>
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="flex items-center gap-2">
+                      {/* A coluna do piloto fica com a largura que sobra (nome cortado com reticências, se preciso):
+                          assim a tabela nunca passa da borda do cartão e a diferença aparece inteira. */}
+                      <td className={cx(td, 'w-full max-w-0')}>
+                        <span className="flex min-w-0 flex-wrap items-center gap-2">
+                          <span className="flex min-w-0 items-center gap-2">
                             <CarSprite
                               categoryId={category.id}
                               teamId={e.teamId}
                               color={teams[e.teamId]?.color ?? '#9aa3b2'}
                               driverId={e.driverId}
                               number={carNumbers[e.driverId]}
-                              className="w-10 shrink-0"
+                              className="hidden w-10 shrink-0 lg:block"
                             />
                             <span className="w-6 shrink-0 text-right text-xs text-ink-400">{carNumbers[e.driverId]}</span>
-                            <span className="whitespace-nowrap">{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
+                            <span className="min-w-0 truncate">{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
+                            {e.driverId === player.id && <YouMark />}
                           </span>
                           {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
                           {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
                         </span>
                       </td>
                       <td className={cx(td, 'hidden text-xs tabular text-ink-400 xl:table-cell')}>
-                        <span className="flex flex-wrap items-center gap-x-1.5">
+                        <span className="flex flex-wrap items-center gap-x-2">
                           {e.attempts.map((t, n) =>
                             t === null ? (
                               // biome-ignore lint/suspicious/noArrayIndexKey: as tentativas não mudam de ordem
@@ -383,9 +387,9 @@ function PreRacePhase() {
                           )}
                         </span>
                       </td>
-                      <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
-                      <td className={cx(td, 'text-right tabular text-ink-400')}>
-                        {e.position === 1 || e.bestLap === null || pole === null || e.eliminatedIn ? '' : `+${(e.bestLap - pole).toFixed(3)}`}
+                      <td className={cx(td, 'whitespace-nowrap text-right tabular')}>{formatLap(e.bestLap)}</td>
+                      <td className={cx(td, 'whitespace-nowrap text-right tabular text-ink-400')}>
+                        {e.position === 1 || e.bestLap === null || pole === null || e.eliminatedIn ? '' : formatInterval(e.bestLap - pole)}
                       </td>
                     </tr>
                   ))}
@@ -411,7 +415,7 @@ function PreRacePhase() {
                     title={o.label}
                     description={
                       options.length > 1
-                        ? `Perda estimada: ${o.estimatedLoss.toFixed(1)}s${i === 0 ? ' (a mais rápida no papel)' : ` (+${(o.estimatedLoss - (options[0]?.estimatedLoss ?? 0)).toFixed(1)}s)`}`
+                        ? `Perda estimada: ${o.estimatedLoss.toFixed(3)} s${i === 0 ? ' (a mais rápida no papel)' : ` (${formatInterval(o.estimatedLoss - (options[0]?.estimatedLoss ?? 0))})`}`
                         : 'Reaja às condições da pista durante a corrida.'
                     }
                   />
@@ -425,7 +429,7 @@ function PreRacePhase() {
               <p className="mt-2 text-xs text-ink-400">
                 Sentido {circuitDirection(getTrack(event.trackId), category.vehicle)} · a seta vermelha marca a largada · {VEHICLES[category.id].name} na pista.
               </p>
-              {trackCredit(event.trackId) && <p className="mt-1 text-[11px] text-ink-500">Traçado: {trackCredit(event.trackId)}</p>}
+              {trackCredit(event.trackId) && <p className="mt-1 text-2xs text-ink-400">Traçado: {trackCredit(event.trackId)}</p>}
             </div>
           </Card>
           <Card title="Antes da largada">
@@ -446,7 +450,7 @@ function PreRacePhase() {
               )}
               {forecast && forecast.kind === 'stable' && rules.changingWeather && <span>Sem mudança prevista.</span>}
             </div>
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-400">
+            <ul className="mt-3 list-disc space-y-1 pl-4 text-sm text-ink-400">
               <li>O ritmo de pilotagem pode ser trocado a cada volta.</li>
               {rules.fuel && <li>O combustível é contado: atacar o tempo todo acaba com o tanque antes do fim.</li>}
               {rules.safetyCar && (

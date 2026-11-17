@@ -45,7 +45,7 @@ describe('aplicativo 100% local', () => {
   it('as fontes estão embutidas no projeto', () => {
     const fonts = readdirSync(join(ROOT, 'src/assets/fonts')).filter((name) => name.endsWith('.woff2'));
     expect(fonts.length).toBeGreaterThanOrEqual(8);
-    expect(readFileSync(join(ROOT, 'src/index.css'), 'utf8')).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
+    expect(readFileSync(join(ROOT, 'src/ui/tokens.css'), 'utf8')).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
   });
 
   it('só a pasta src/platform conhece o Capacitor', () => {

@@ -1,0 +1,182 @@
+/*
+ * TOKENS DO VISUAL "MURO DOS BOXES": o único arquivo que define cor, espaçamento, canto,
+ * sombra, tipografia e movimento. Telas e componentes só usam o que está aqui (pelas classes do
+ * Tailwind geradas a partir destes nomes); nenhum valor solto de cor ou de tamanho de texto.
+ * O catálogo (`#/dev/catalogo`, no servidor de desenvolvimento) mostra tudo numa tela.
+ *
+ * CORES: cada uma tem um papel fixo, e nenhuma informação depende só da cor.
+ *
+ *   ink-950  fundo do aplicativo                 apex-500  vermelho: preenchimento da ação principal
+ *   ink-900  chapa (superfície dos painéis)      apex-400  vermelho em texto e ícone sobre o escuro
+ *   ink-850  chapa realçada (linha sob o dedo)   apex-600  vermelho pressionado
+ *   ink-800  chapa alta (títulos, controles)     go-400    verde: bom (na meta, pódio, salvo)
+ *   ink-700  linha decorativa (grade, divisor)   gold-400  âmbar: atenção (pendência, lesão, perigo)
+ *   ink-600  linha decorativa mais forte         rain-400  azul: pista molhada
+ *   ink-500  contorno de botões e campos (3:1 sobre as chapas; não é cor de texto)
+ *   ink-400  texto apagado (4,5:1 sobre ink-950 a ink-800)
+ *   ink-300  texto secundário        ink-200  texto de apoio        ink-100  texto principal
+ *
+ * Contraste (conferido em todas as telas por e2e/contraste.ts): texto normal 4,5:1; texto
+ * grande, ícones e contornos 3:1. Texto branco só sobre apex-500/600; texto escuro (ink-950)
+ * sobre gold, go, rain e apex-400. Sobre ink-700 o texto é ink-300 ou mais claro.
+ *
+ * A cor de cada equipe é dado, não tema: aparece só como identidade (uma faixa fina).
+ */
+@theme {
+  /* ---------- Fontes ---------- */
+  /* Inter: texto, tabelas, cronômetro e todo texto pequeno. */
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* Barlow Condensed: títulos, nomes e números grandes, sempre a partir de 16 px (text-base). */
+  --font-display: "Barlow Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* ---------- Cores ---------- */
+  --color-ink-950: #15181d;
+  --color-ink-900: #1d222a;
+  --color-ink-850: #222831;
+  --color-ink-800: #262d38;
+  --color-ink-700: #343d4b;
+  --color-ink-600: #465162;
+  --color-ink-500: #6f7c8e;
+  --color-ink-400: #99a4b2;
+  --color-ink-300: #b7c0cc;
+  --color-ink-200: #d3d9e1;
+  --color-ink-100: #eef1f5;
+
+  --color-apex-600: #c2311f;
+  --color-apex-500: #d93826;
+  --color-apex-400: #ff6250;
+  --color-gold-400: #f2b33d;
+  --color-go-400: #3ecf8e;
+  --color-rain-400: #6aa9f5;
+  --color-silver-300: #c9d1dc;
+  --color-bronze-400: #d08b4f;
+
+  /* Compostos de pneu: cor do regulamento + letra própria (ver kit/TyreBadge). */
+  --color-tyre-soft: #d93826;
+  --color-tyre-medium: #f2b33d;
+  --color-tyre-hard: #eef1f5;
+  --color-tyre-inter: #3ecf8e;
+  --color-tyre-wet: #6aa9f5;
+  --color-tyre-kart: #6f7c8e;
+
+  /* ---------- Tipografia ---------- */
+  /*
+   * Escala de texto. Cada tamanho é multiplicado por --text-scale: o tamanho de texto escolhido
+   * no aparelho vezes o ajuste do jogo (Ajustes → Tamanho do texto). Nada abaixo de 11 px.
+   */
+  --text-2xs: calc(0.6875rem * var(--text-scale));
+  --text-2xs--line-height: calc(1 / 0.6875);
+  --text-xs: calc(0.75rem * var(--text-scale));
+  --text-xs--line-height: calc(1 / 0.75);
+  --text-sm: calc(0.875rem * var(--text-scale));
+  --text-sm--line-height: calc(1.25 / 0.875);
+  --text-base: calc(1rem * var(--text-scale));
+  --text-base--line-height: calc(1.5 / 1);
+  --text-lg: calc(1.125rem * var(--text-scale));
+  --text-lg--line-height: calc(1.75 / 1.125);
+  --text-xl: calc(1.25rem * var(--text-scale));
+  --text-xl--line-height: calc(1.75 / 1.25);
+  --text-2xl: calc(1.5rem * var(--text-scale));
+  --text-2xl--line-height: calc(2 / 1.5);
+  --text-3xl: calc(1.875rem * var(--text-scale));
+  --text-3xl--line-height: calc(2.25 / 1.875);
+  --text-4xl: calc(2.25rem * var(--text-scale));
+  --text-4xl--line-height: calc(2.5 / 2.25);
+  --text-5xl: calc(3rem * var(--text-scale));
+  --text-5xl--line-height: 1;
+  --text-6xl: calc(3.75rem * var(--text-scale));
+  --text-6xl--line-height: 1;
+  /* Título de tela. */
+  --text-title: calc(1.75rem * var(--text-scale));
+  --text-title--line-height: 1;
+
+  /* ---------- Espaçamento ---------- */
+  /*
+   * Grade de 8 px. A unidade do Tailwind é 4 px: os passos pares (p-2, gap-4, mt-6…) são os
+   * múltiplos de 8; o meio passo de 4 px (p-1, gap-1) fica para o ajuste fino entre ícone e
+   * texto. Em CSS escrito à mão, use --space-N.
+   */
+  --spacing: 0.25rem;
+  --space-half: 0.25rem;
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2rem;
+  --space-6: 3rem;
+  --space-8: 4rem;
+
+  /* ---------- Cantos ---------- */
+  /*
+   * Cantos retos e chanfrados (utilitários `chamfer` e `chamfer-br`); círculo só no selo de
+   * pneu e em marcadores. Tamanhos do corte:
+   */
+  --chamfer-sm: 6px;
+  --chamfer-md: 8px;
+  --chamfer-lg: 12px;
+
+  /* ---------- Sombras ---------- */
+  /* Contorno de controle (anel interno de 1 px, 3:1 sobre as chapas). */
+  --shadow-ring: inset 0 0 0 1px var(--color-ink-500);
+  /* Contorno do que está selecionado. */
+  --shadow-ring-accent: inset 0 0 0 1px var(--color-apex-400);
+  /* Moldura decorativa de painel (não é contorno de controle). */
+  --shadow-frame: inset 0 0 0 1px var(--color-ink-700);
+  /* Camada fina sobre a pista (placar, tarja, aviso). */
+  --shadow-overlay: 0 2px 10px rgb(0 0 0 / 0.5);
+  /* O que flutua sobre a tela (aviso passageiro, gaveta). */
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5);
+  /* Barra presa ao rodapé. */
+  --shadow-bar: 0 -8px 24px rgb(0 0 0 / 0.45);
+
+  /* ---------- Movimento ---------- */
+  /* Entradas e saídas de 150 a 300 ms, por transição (interrompível); ver src/ui/motion.ts. */
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 300ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root {
+  /* Tamanho do texto: o do aparelho (medido em src/ui/a11y) vezes o ajuste do jogo. */
+  --text-scale-system: 1;
+  --text-scale-user: 1;
+  --text-scale: calc(var(--text-scale-system) * var(--text-scale-user));
+
+  /* Área de toque: mínimo de 44 px; 48 px onde houver espaço. */
+  --touch-min: 2.75rem;
+  --touch-comfort: 3rem;
+
+  /* Margens de segurança do aparelho (recorte da câmera, ilha dinâmica, barra de gestos). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* Quanto um elemento desliza ao entrar; zero para quem pede menos movimento. */
+  --enter-shift: 6px;
+  --enter-rise: 100%;
+}
+
+/*
+ * Modo para daltônicos (Ajustes): o verde de "bom" vira azul e os compostos de pneu usam uma
+ * paleta que se distingue sem vermelho contra verde. As letras, setas e ícones continuam iguais.
+ */
+:root[data-vision="daltonico"] {
+  --color-go-400: #56b4e9;
+  --color-rain-400: #b9a2ff;
+  --color-tyre-soft: #d55e00;
+  --color-tyre-medium: #f0e442;
+  --color-tyre-hard: #ffffff;
+  --color-tyre-inter: #2fc4a0;
+  --color-tyre-wet: #56b4e9;
+}
+
+/*
+ * Menos movimento (pedido ao sistema ou ligado em Ajustes; `data-motion` é posto por
+ * src/ui/a11y): nada desliza, cresce ou gira; o que entra e sai só esmaece.
+ */
+:root[data-motion="reduce"] {
+  --enter-shift: 0px;
+  --enter-rise: 0%;
+}

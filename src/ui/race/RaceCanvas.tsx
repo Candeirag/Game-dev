@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import type { Driver, Team } from '@/domain/schemas';
 import { vehicleFor } from '@/data/vehicles';
 import type { Circuit, RaceTimeline } from '@/engine';
-import { cx } from '../components/ui';
+import { currentTextScale } from '../settings/settings';
+import { useSettings } from '../settings/useSettings';
+import { cx } from '@/ui/kit';
 import { loadCarSprites } from './liveries';
 import { createSceneMemory, drawScene, type CameraMode, type SceneInput } from './raceScene';
 import { buildTrackArt, loadScenery } from './trackPainter';
@@ -17,12 +19,14 @@ interface Props {
   focusId: string;
   mineIds: ReadonlySet<string>;
   lights: number | null;
+  /** Menos movimento: a câmera não desliza nem dá zoom (ver SceneInput.still). */
+  still?: boolean;
   onSelect(driverId: string): void;
   className?: string;
 }
 
 /** Canvas da corrida: pista e carros, redesenhados a cada quadro a partir do tempo da reprodução. */
-export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera, focusId, mineIds, lights, onSelect, className }: Props) {
+export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera, focusId, mineIds, lights, still = false, onSelect, className }: Props) {
   const wrapper = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const memory = useRef(createSceneMemory());
@@ -38,8 +42,10 @@ export function RaceCanvas({ timeline, circuit, teams, drivers, timeRef, camera,
   const art = useMemo(() => buildTrackArt(circuit, boxColors, timeline.order.length), [circuit, boxColors, timeline.order.length]);
 
   // O laço de desenho lê sempre os dados mais recentes, sem ser recriado a cada atualização.
-  const latest = useRef<Omit<SceneInput, 'time'>>({ timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights });
-  latest.current = { timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights };
+  const latest = useRef<Omit<SceneInput, 'time'>>({ timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights, still, textScale: 1 });
+  // Os rótulos da pista seguem o tamanho de texto do jogo (o do aparelho vezes o de Ajustes).
+  const textSize = useSettings().textSize;
+  latest.current = { timeline, circuit, art, teams, drivers, camera, focusId, mineIds, lights, still, textScale: currentTextScale(textSize) };
 
   const vehicle = vehicleFor(timeline.categoryId);
   useEffect(() => {

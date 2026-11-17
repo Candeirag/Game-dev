@@ -21,15 +21,15 @@ import {
   teamStandings,
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, ChoiceCard, Pill, Stat, TableWrap, Tabs, TeamSwatch, cx } from '../../components/ui';
+import { Button, Card, ChoiceCard, cx, Pill, Stat, TableWrap, Tabs, TeamSwatch } from '@/ui/kit';
 import { currencySymbol, formatMoney } from '../../format';
 import { useCareer } from '../../hooks/useCareer';
 
 /** Campo de formulário (texto, número, seleção) com 44 px de altura. */
-const field = 'min-h-11 border border-ink-700 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
+const field = 'min-h-11 border border-ink-500 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
 /** Células das tabelas com botões na linha: o botão já dá a altura, a célula não soma mais. */
-const head = 'px-2 py-1.5 text-left text-[11px] font-medium text-ink-400';
-const cell = 'px-2 py-0.5 text-sm';
+const head = 'px-2 py-2 text-left text-2xs font-medium text-ink-400';
+const cell = 'px-2 py-1 text-sm';
 const note = 'text-xs leading-snug text-ink-400';
 
 const pct = (v: number, digits = 0) => `${(v * 100).toFixed(digits).replace('.', ',')}%`;
@@ -200,7 +200,7 @@ function AssetRow({
         aria-expanded={open}
         onClick={onToggle}
         className={cx(
-          'flex min-h-11 w-full items-center gap-2 px-4 py-1.5 text-left transition-colors hover:bg-ink-800 focus-visible:outline-offset-[-2px]',
+          'flex min-h-11 w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-ink-800 focus-visible:outline-offset-[-2px]',
           open && 'bg-ink-800',
         )}
       >
@@ -405,12 +405,12 @@ export function StakesPanel() {
         }
         padded={false}
       >
-        <ul className="grid px-4 md:grid-cols-2 md:gap-x-6">
+        <ul className="grid px-4 pt-1 md:grid-cols-2 md:gap-x-6">
           {ranked.map((team) => {
             const position = standings.find((s) => s.teamId === team.id)?.position;
             const price = stakePrice(career, team.id, share);
             return (
-              <li key={team.id} className="flex min-h-12 items-center gap-2 border-ink-800 border-b py-0.5">
+              <li key={team.id} className="flex min-h-12 items-center gap-2 border-ink-800 border-b py-1">
                 <TeamSwatch team={team} />
                 <span className="min-w-0 flex-1 truncate text-sm">{team.name}</span>
                 <span className="shrink-0 text-xs text-ink-400">{position ? `${position}º` : '–'}</span>

@@ -68,10 +68,17 @@ As fontes do jogo ficam embutidas em `src/assets/fonts/` (arquivos `.woff2`,
 subconjuntos latino e latino estendido), para o jogo funcionar sem internet.
 
 - **Barlow Condensed** (pesos 500, 600 e 700), © 2017 The Barlow Project Authors.
-- **Inter** (variável), © 2016 The Inter Project Authors.
+  Títulos, nomes e números grandes.
+- **Inter** (variável), © 2016 The Inter Project Authors. Texto, tabelas e
+  cronômetro.
 
-Ambas sob a SIL Open Font License 1.1; o texto da licença acompanha os
-arquivos (`OFL-BarlowCondensed.txt` e `OFL-Inter.txt`).
+As duas sob a SIL Open Font License 1.1, que permite uso comercial, embutir e
+redistribuir (os nomes reservados "Barlow" e "Inter" não podem ser usados em
+versões modificadas). O texto da licença acompanha os arquivos
+(`OFL-BarlowCondensed.txt` e `OFL-Inter.txt`). Os arquivos vêm dos pacotes
+`@fontsource/*`, sem modificação.
+
+O jogo não usa fontes oficiais de campeonatos reais nem recriações delas.
 
 ## Ícones: Lucide
 

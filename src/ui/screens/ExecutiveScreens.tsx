@@ -38,6 +38,7 @@ import {
   Card,
   Check,
   ChoiceCard,
+  cx,
   EmptyState,
   PageHeader,
   Pill,
@@ -45,12 +46,11 @@ import {
   Stat,
   TableWrap,
   Tabs,
-  TeamSwatch,
-  WeatherBadge,
-  cx,
   td,
+  TeamSwatch,
   th,
-} from '../components/ui';
+  WeatherBadge,
+} from '@/ui/kit';
 import { formatDate, formatMoney, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { useChrome } from '../layout/chrome';
@@ -60,11 +60,11 @@ import { TutorialCard } from './HelpScreen';
 import { ExportReminder } from '../components/SaveNotices';
 
 /** Campo de formulário: reto, com 44 px de altura para o toque. */
-const field = 'min-h-11 border border-ink-700 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
+const field = 'min-h-11 border border-ink-500 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
 /** Ação discreta na barra de título de um cartão (a área de toque passa da barra, sem aumentá-la). */
-const headerLink = '-my-1 flex min-h-11 items-center gap-0.5 text-xs font-semibold text-ink-300 transition-colors hover:text-ink-100';
+const headerLink = '-my-1 flex min-h-11 items-center gap-1 text-xs font-semibold text-ink-300 transition-colors hover:text-ink-100';
 /** Rótulo pequeno acima de um grupo de opções. */
-const groupLabel = 'text-[11px] font-semibold uppercase tracking-wider text-ink-400';
+const groupLabel = 'text-2xs font-semibold uppercase tracking-wider text-ink-400';
 
 /* ------------------------------------------------------------------ */
 /* Painel                                                              */
@@ -96,7 +96,7 @@ export function ExecutiveDashboardScreen() {
       </PageHeader>
 
       {tutorialActive(career) && <TutorialCard />}
-      {/* O botão da barra superior rola até aqui quando há decisões pendentes. */}
+      {/* O botão de avançar (na barra do pé da tela) rola até aqui quando há decisões pendentes. */}
       <div id="decisoes" className="scroll-mt-16 empty:hidden">
         <EventsPanel />
       </div>
@@ -111,7 +111,7 @@ export function ExecutiveDashboardScreen() {
                   : ''}
                 Decida o rumo da próxima temporada: pilotos, patrocinadores, propostas de cargo e equipes à venda.
               </p>
-              {/* No formato largo, o botão da barra superior já leva à tela Carreira. */}
+              {/* No formato largo, o botão de avançar (na barra do pé da tela) já leva à tela Carreira. */}
               {!wide && (
                 <Button variant="primary" className="mt-3" onClick={() => navigate('/career')}>
                   Decidir a próxima temporada
@@ -131,8 +131,8 @@ export function ExecutiveDashboardScreen() {
                       Etapa {next.round} de {career.calendar.length}
                     </span>
                   </div>
-                  <h2 className="mt-1.5 font-display text-[clamp(1.5rem,3vw,2.5rem)] font-bold uppercase leading-[0.95] tracking-wide">{track.name}</h2>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-300">
+                  <h2 className="mt-2 font-display text-[clamp(1.5rem,3vw,2.5rem)] font-bold uppercase leading-[0.95] tracking-wide">{track.name}</h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-300">
                     <span>
                       {trackLocation(track)} · {formatDate(next.date)}
                     </span>
@@ -183,7 +183,7 @@ export function ExecutiveDashboardScreen() {
               </div>
               <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                 {lineup.map((d) => (
-                  <li key={d.id} className="min-w-0 bg-ink-850 px-3 py-1.5">
+                  <li key={d.id} className="min-w-0 bg-ink-850 px-3 py-2">
                     <div className="truncate text-sm font-semibold">{fullName(d)}</div>
                     <div className="text-xs text-ink-400">
                       moral {Math.round(d.condition.morale)} · confiança {Math.round(d.condition.confidence)}
@@ -212,7 +212,7 @@ export function ExecutiveDashboardScreen() {
               }
               bodyClassName="!p-3"
             >
-              <ul className="space-y-1.5 text-sm">
+              <ul className="space-y-2 text-sm">
                 {racing.map((c) => {
                   const last = c.racing?.seasons[c.racing.seasons.length - 1];
                   return (
@@ -232,7 +232,7 @@ export function ExecutiveDashboardScreen() {
         <Card title="Campeonato de equipes" padded={false}>
           <ol className="divide-y divide-ink-800">
             {teamStandings.slice(0, 10).map((s) => (
-              <li key={s.teamId} className={cx('flex items-center gap-2.5 px-4 py-1 text-sm', s.teamId === m?.teamId && 'bg-apex-500/10')}>
+              <li key={s.teamId} className={cx('flex items-center gap-2 px-4 py-1 text-sm', s.teamId === m?.teamId && 'bg-apex-500/10')}>
                 <span className="w-5 text-right tabular text-ink-400">{s.position}</span>
                 <TeamSwatch team={teams[s.teamId]} />
                 <span className={cx('flex-1 truncate', s.teamId === m?.teamId && 'font-semibold text-ink-100')}>{teams[s.teamId]?.name}</span>
@@ -246,12 +246,12 @@ export function ExecutiveDashboardScreen() {
       <Card title="Mensagens" padded={false}>
         <ul className="max-h-80 divide-y divide-ink-800 overflow-y-auto">
           {career.inbox.map((msg) => (
-            <li key={msg.id} className="px-4 py-2.5">
+            <li key={msg.id} className="px-4 py-2">
               <div className="flex items-center gap-2">
                 <span className="truncate text-sm font-semibold">{msg.title}</span>
-                <span className="ml-auto shrink-0 text-[11px] text-ink-500">{formatDate(msg.date)}</span>
+                <span className="ml-auto shrink-0 text-2xs text-ink-400">{formatDate(msg.date)}</span>
               </div>
-              <p className="mt-0.5 text-xs leading-snug text-ink-300">{msg.body}</p>
+              <p className="mt-1 text-xs leading-snug text-ink-300">{msg.body}</p>
             </li>
           ))}
         </ul>
@@ -313,7 +313,7 @@ export function ExecutiveWeekendScreen() {
       <PageHeader eyebrow={who} title={seasonOver ? 'Temporada encerrada' : next && track ? `Etapa ${next.round}: ${track.name}` : 'Fim de semana'}>
         {planning && (
           <>
-            {/* Com decisões pendentes, a barra superior mostra o atalho para resolvê-las. */}
+            {/* Com decisões pendentes, a barra do pé da tela mostra o atalho para resolvê-las. */}
             {!pending && (
               <ScreenAction onClick={watch} className="min-h-12">
                 Assistir à corrida
@@ -354,9 +354,9 @@ export function ExecutiveWeekendScreen() {
             bodyClassName="!p-3"
           >
             {m ? (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 <div>
-                  <div className="mb-1.5 flex items-center gap-2">
+                  <div className="mb-2 flex items-center gap-2">
                     <span className={groupLabel}>Treino livre dos seus pilotos</span>
                     <WeatherBadge weather={next.weather.practice} compact />
                   </div>
@@ -373,7 +373,7 @@ export function ExecutiveWeekendScreen() {
                   </div>
                 </div>
                 <div>
-                  <div className="mb-1.5 flex items-center gap-2">
+                  <div className="mb-2 flex items-center gap-2">
                     <span className={groupLabel}>Classificação</span>
                     <WeatherBadge weather={next.weather.qualifying} compact />
                   </div>
@@ -396,7 +396,7 @@ export function ExecutiveWeekendScreen() {
                   <p className="text-sm text-ink-300">
                     Sem equipe para comandar, você acompanha o resultado. A etapa é simulada por inteiro pelo mesmo motor de corrida.
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-400">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-400">
                     <span className="flex items-center gap-2">
                       Treino: <WeatherBadge weather={next.weather.practice} compact />
                     </span>
@@ -429,7 +429,7 @@ export function ExecutiveWeekendScreen() {
           padded={false}
         >
           {mine.length > 0 && (
-            <div className={cx('flex flex-wrap gap-x-5 gap-y-2 px-4 py-2.5', fullResult && 'border-b border-ink-800')}>
+            <div className={cx('flex flex-wrap gap-x-4 gap-y-2 px-4 py-2', fullResult && 'border-b border-ink-800')}>
               {mine.map((e) => (
                 <div key={e.driverId} className="flex items-center gap-2 text-sm">
                   <PositionBadge position={e.position} dnf={e.status === 'dnf'} />
@@ -504,7 +504,7 @@ export function ExecutiveCareerScreen() {
         </Card>
         <div className={cx('grid items-start gap-3', career.executiveLog.length > 0 && 'md:grid-cols-2')}>
           <Card title="Como funciona">
-            <ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-300">
+            <ul className="list-disc space-y-2 pl-4 text-sm text-ink-300">
               <li>
                 No fim de cada temporada, esta tela traz as decisões: dupla de pilotos, patrocinadores, propostas para chefiar outras equipes, equipes à venda e
                 a opção de fundar a sua.
@@ -537,7 +537,7 @@ export function ExecutiveCareerScreen() {
     <div className="space-y-3">
       <PageHeader eyebrow={`Fim da temporada ${career.year}`} title="Próxima temporada">
         <Tabs value={tab} options={tabs} onChange={setTab} />
-        {/* O passo que começa a temporada vai para a barra superior. Com decisões pendentes, ela mostra o atalho para resolvê-las. */}
+        {/* O passo que começa a temporada vai para a barra do pé da tela. Com decisões pendentes, ela mostra o atalho para resolvê-las. */}
         {!pending &&
           (keepsTeam ? (
             <ScreenAction
@@ -552,7 +552,7 @@ export function ExecutiveCareerScreen() {
           ))}
       </PageHeader>
       {pending && (
-        <div className="flex flex-wrap items-center justify-between gap-x-4 border border-gold-400/40 bg-gold-400/10 py-1.5 pl-4 pr-1.5 text-sm text-gold-400">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 border border-gold-400/40 bg-gold-400/10 py-2 pl-4 pr-2 text-sm text-gold-400">
           Resolva as decisões pendentes no painel antes de começar a temporada.
           <Button variant="danger" onClick={() => navigate('/dashboard')}>
             Ir para o painel
@@ -579,7 +579,7 @@ export function ExecutiveCareerScreen() {
                 </div>
               )}
               {off.notes.length > 0 ? (
-                <ul className="list-disc space-y-1 pl-5 text-sm text-ink-300">
+                <ul className="list-disc space-y-1 pl-4 text-sm text-ink-300">
                   {off.notes.map((note, i) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: notas de texto sem id, lista só de leitura
                     <li key={i}>{note}</li>
@@ -596,7 +596,7 @@ export function ExecutiveCareerScreen() {
             {keepsTeam && m ? (
               <div className="space-y-3">
                 <Card title="Antes de seguir">
-                  <ul className="space-y-1.5">
+                  <ul className="space-y-2">
                     <Check met={off.lineup.length === 2}>Dupla de pilotos: {off.lineup.length} de 2 escolhidos</Check>
                     <li className="pl-6 text-sm text-ink-300">
                       Patrocínio: {m.sponsors.length} de {MANAGEMENT.SPONSOR_SLOTS} cotas ocupadas,{' '}
@@ -674,13 +674,7 @@ export function ExecutiveCareerScreen() {
                 const slot = off.lineup.indexOf(c.driverId);
                 const toggle = () => store.setLineup(slot >= 0 ? off.lineup.filter((id) => id !== c.driverId) : [...off.lineup, c.driverId].slice(-2));
                 return (
-                  <li
-                    key={c.driverId}
-                    className={cx(
-                      'flex items-center gap-3 py-1 pl-3 pr-1',
-                      slot >= 0 ? 'bg-apex-500/10 shadow-[inset_0_0_0_1px_var(--color-apex-500)]' : 'bg-ink-850',
-                    )}
-                  >
+                  <li key={c.driverId} className={cx('flex items-center gap-3 py-1 pl-3 pr-1', slot >= 0 ? 'bg-apex-500/10 shadow-ring-accent' : 'bg-ink-850')}>
                     <span className="w-8 shrink-0 text-center font-display text-2xl font-bold leading-none" title="Nota">
                       <span className="sr-only">Nota </span>
                       {Math.floor(c.rating)}
@@ -705,7 +699,7 @@ export function ExecutiveCareerScreen() {
                         {slot === 0 ? '1º piloto' : slot === 1 ? '2º piloto' : 'Escalar'}
                       </Button>
                     ) : (
-                      <span className="flex min-h-11 shrink-0 items-center px-3 text-xs text-ink-500">Não aceita</span>
+                      <span className="flex min-h-11 shrink-0 items-center px-3 text-xs text-ink-400">Não aceita</span>
                     )}
                   </li>
                 );
@@ -829,7 +823,7 @@ export function ExecutiveCareerScreen() {
                 type="color"
                 value={foundColor}
                 onChange={(e) => setFoundColor(e.target.value)}
-                className="mt-1 block h-11 w-14 cursor-pointer border border-ink-700 bg-ink-850"
+                className="mt-1 block h-11 w-14 cursor-pointer border border-ink-500 bg-ink-850"
               />
             </label>
             <Button

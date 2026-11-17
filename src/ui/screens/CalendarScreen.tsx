@@ -3,10 +3,9 @@ import { Flag } from 'lucide-react';
 import { getTrack, raceLaps } from '@/data/tracks';
 import { fullName } from '@/engine';
 import { CircuitMap } from '../components/CircuitMap';
-import { Card, PageHeader, Pill, PositionBadge, WeatherBadge, cx } from '../components/ui';
+import { Card, cx, PageHeader, Pill, PositionBadge, ResultChips, WeatherBadge } from '@/ui/kit';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
-import { ResultChips } from '../kit/bits';
 import { useReveal } from './useReveal';
 
 const DETAIL_ID = 'etapa-escolhida';
@@ -57,18 +56,16 @@ export function CalendarScreen() {
                     aria-pressed={isSelected}
                     className={cx(
                       'flex min-h-11 w-full items-center gap-2 px-2 py-1 text-left transition-colors',
-                      isSelected ? 'bg-ink-700 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
+                      isSelected ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
                     )}
                   >
-                    <span className={cx('w-5 shrink-0 font-display text-lg font-bold leading-none', isUpcoming ? 'text-apex-400' : 'text-ink-500')}>
+                    <span className={cx('w-5 shrink-0 font-display text-lg font-bold leading-none', isUpcoming ? 'text-apex-400' : 'text-ink-400')}>
                       {String(event.round).padStart(2, '0')}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-display text-sm font-semibold uppercase leading-tight text-ink-100 lg:text-base lg:leading-tight">
-                        {track.name}
-                      </span>
-                      <span className="block truncate text-[11px] leading-tight text-ink-400">
-                        {formatDate(event.date).replace(/ \d{4}$/, '')} · {track.city}
+                      <span className="block truncate font-display text-base font-semibold uppercase leading-tight text-ink-100">{track.name}</span>
+                      <span className="block truncate text-2xs leading-tight text-ink-400">
+                        {formatDate(event.date).replace(/\s\d{4}$/, '')} · {track.city}
                       </span>
                     </span>
                     {record ? (
@@ -108,7 +105,7 @@ export function CalendarScreen() {
               }
             >
               {held.record && (
-                <div className="flex items-center justify-between gap-3 border-t border-ink-700 pt-2.5 text-xs text-ink-400">
+                <div className="flex items-center justify-between gap-3 border-t border-ink-700 pt-2 text-xs text-ink-400">
                   <span className="min-w-0">
                     Vencedor: <b className="font-semibold text-ink-200">{winner ? fullName(winner) : '-'}</b>
                   </span>
@@ -121,7 +118,7 @@ export function CalendarScreen() {
           </div>
         )}
       </div>
-      {credit && <p className="mt-3 text-[11px] text-ink-500">Traçados das pistas: {credit}</p>}
+      {credit && <p className="mt-3 text-2xs text-ink-400">Traçados das pistas: {credit}</p>}
     </div>
   );
 }
@@ -146,7 +143,7 @@ function EventDetail({
   const { category } = useCareerView();
   const track = getTrack(trackId);
   return (
-    <Card title={`Etapa ${round} de ${total}`} action={status} bodyClassName="space-y-2.5 p-3">
+    <Card title={`Etapa ${round} de ${total}`} action={status} bodyClassName="space-y-2 p-3">
       {/* O traçado tem largura fixa e não encolhe: o texto fica na coluna ao lado, sem cruzar o desenho. */}
       <div className="flex items-center gap-3">
         <CircuitMap track={track} style={category.vehicle} className="h-20 w-28 shrink-0 lg:h-28 lg:w-40" />
@@ -173,7 +170,7 @@ function EventDetail({
 function Trait({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] leading-tight text-ink-400">{label}</dt>
+      <dt className="text-2xs leading-tight text-ink-400">{label}</dt>
       <dd className="font-semibold leading-tight text-ink-100">{value}</dd>
     </div>
   );

@@ -38,6 +38,7 @@ import { renewSponsors } from './sponsors';
 import { money } from './selectors';
 import { categoryRef } from '@/domain/categoryNames';
 import { counted } from '@/domain/text';
+import { recordSeasonTrend } from './trend';
 
 /** A pré-temporada equivale a 2 ciclos de treino. */
 const OFFSEASON_TRAINING_CYCLES = 2;
@@ -504,6 +505,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     pendingEvents: [],
     offseason: null,
     history: trimHistory([...career.history, summary], familyDriverIds(career)),
+    seasonTrend: recordSeasonTrend(career),
   };
   state = { ...state, marketInterest: updateMarketInterest(state, 1) };
 

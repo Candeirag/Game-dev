@@ -1,6 +1,7 @@
 /**
- * Movimento da interface: entradas e saídas curtas (150 a 300 ms), interrompíveis, e nenhuma
- * transição para quem pede menos movimento ao sistema.
+ * Movimento da interface: entradas e saídas curtas (150 a 300 ms), interrompíveis; nada piscando
+ * a 3 Hz ou mais; e, para quem pede menos movimento (ao sistema ou em Ajustes), só um esmaecer
+ * curto no lugar de deslizamento e zoom, com a câmera da corrida parada.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { SAVES, abrirSave } from './apoio';
@@ -53,15 +54,99 @@ test('nenhuma transição das telas passa de 300 ms', async ({ page }) => {
   expect(await maiorDuracao(page)).toBeLessThanOrEqual(300);
 });
 
+/** Propriedades que se movem (posição, tamanho, giro) em transição em algum elemento da página. */
+async function transicoesDeMovimento(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const moving = /(^|,\s*)(all|translate|transform|scale|rotate|width|height|top|left|right|bottom|margin|padding)/;
+    const found = new Set<string>();
+    for (const element of document.querySelectorAll('*')) {
+      const style = getComputedStyle(element);
+      const longest = Math.max(
+        0,
+        ...style.transitionDuration.split(',').map((part) => (part.trim().endsWith('ms') ? parseFloat(part) : parseFloat(part) * 1000)),
+      );
+      if (longest > 1 && moving.test(style.transitionProperty)) found.add(style.transitionProperty);
+    }
+    return [...found];
+  });
+}
+
+/** Animações em laço com período menor que um terço de segundo: piscariam três vezes por segundo ou mais. */
+async function piscando(page: Page): Promise<string[]> {
+  return page.evaluate(() =>
+    document
+      .getAnimations()
+      .filter((animation) => {
+        const timing = animation.effect?.getComputedTiming();
+        return timing?.iterations === Number.POSITIVE_INFINITY && Number(timing.duration) < 334;
+      })
+      .map((animation) => (animation as CSSAnimation).animationName ?? 'animação'),
+  );
+}
+
+test('nada pisca três vezes por segundo ou mais', async ({ page }) => {
+  await abrirSave(page, SAVES.naLargada);
+  expect(await piscando(page)).toEqual([]);
+  await page
+    .getByRole('navigation', { name: 'Navegação principal' })
+    .getByRole('link', { name: /^Fim de semana/ })
+    .click();
+  await page.getByRole('button', { name: 'Ir para a largada' }).click();
+  await page.getByRole('region', { name: 'Comandos da corrida' }).getByRole('button', { name: 'Largar' }).click();
+  await page.waitForTimeout(1500);
+  expect(await piscando(page)).toEqual([]);
+});
+
+/** O que vale com menos movimento, venha o pedido do sistema ou do ajuste do jogo. */
+async function conferirMenosMovimento(page: Page): Promise<void> {
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduce');
+  await page.getByRole('button', { name: 'Mais', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Mais telas' })).toBeVisible();
+  // Nada desliza, cresce ou gira: só a opacidade e as cores ainda têm transição, e curta.
+  expect(await transicoesDeMovimento(page)).toEqual([]);
+  expect(await maiorDuracao(page)).toBeLessThanOrEqual(150);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--enter-shift').trim())).toBe('0px');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Mais telas' })).toHaveCount(0, { timeout: 1000 });
+  // Na corrida, a câmera fica parada no circuito inteiro: acompanhar um carro é deslizar e dar zoom.
+  await page
+    .getByRole('navigation', { name: 'Navegação principal' })
+    .getByRole('link', { name: /^Fim de semana/ })
+    .click();
+  await page.getByRole('button', { name: 'Ir para a largada' }).click();
+  await expect(page.getByRole('button', { name: 'Câmera geral' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Meu piloto' })).toHaveAttribute('aria-pressed', 'false');
+  expect(await transicoesDeMovimento(page)).toEqual([]);
+}
+
 test.describe('com "reduzir movimento" ligado no sistema', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('não há transições nem rolagem suave', async ({ page }) => {
+  test('deslizamento e zoom viram um esmaecer curto, e a câmera da corrida fica parada', async ({ page }) => {
     await abrirSave(page, SAVES.naLargada);
+    await conferirMenosMovimento(page);
+  });
+
+  test('a tela Ajustes mostra que o aparelho já pede menos movimento', async ({ page }) => {
+    await page.goto('/#/ajustes');
+    const interruptor = page.getByRole('switch', { name: /Menos movimento/ });
+    await expect(interruptor).toBeChecked();
+    await expect(interruptor).toBeDisabled();
+    await expect(page.getByRole('main')).toContainText('O aparelho já pede menos movimento');
+  });
+});
+
+test.describe('com "menos movimento" ligado em Ajustes', () => {
+  test('vale o mesmo que o pedido do sistema, e a corrida abre com a câmera geral', async ({ page }) => {
+    await abrirSave(page, SAVES.naLargada);
+    // Sem o ajuste, a corrida acompanha o carro do jogador e as telas deslizam.
+    await expect(page.locator('html')).not.toHaveAttribute('data-motion', 'reduce');
     await page.getByRole('button', { name: 'Mais', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Mais telas' })).toBeVisible();
-    expect(await maiorDuracao(page)).toBeLessThan(1);
-    await page.keyboard.press('Escape');
-    await expect(page.getByRole('dialog', { name: 'Mais telas' })).toHaveCount(0, { timeout: 500 });
+    await page
+      .getByRole('dialog', { name: 'Mais telas' })
+      .getByRole('link', { name: /^Ajustes/ })
+      .click();
+    await page.getByRole('switch', { name: /Menos movimento/ }).check();
+    await conferirMenosMovimento(page);
   });
 });

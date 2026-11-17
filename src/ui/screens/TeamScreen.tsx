@@ -5,9 +5,9 @@ import { ROLE_LABELS } from '@/domain/labels';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
 import { computeCareerStats, fullName, getReserve, overallRating, rankTeams } from '@/engine';
 import { VEHICLES } from '@/data/vehicles';
+import { portraitUrl } from '../images';
 import { CarSprite } from '../components/CarSprite';
-import { Card, Meter, PageHeader, Stat, Tabs, TeamSwatch, cx } from '../components/ui';
-import { NumberPlate } from '../kit/bits';
+import { Card, cx, Meter, NumberPlate, PageHeader, PortraitOr, Stat, Tabs, TeamSwatch } from '@/ui/kit';
 import { formatMoney, formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
@@ -36,7 +36,7 @@ function Term({ label, children }: { label: string; children: ReactNode }) {
 function Figure({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="w-11 text-right">
-      <dt className="text-[11px] font-medium text-ink-400">{label}</dt>
+      <dt className="text-2xs font-medium text-ink-400">{label}</dt>
       <dd className="font-display text-lg font-semibold leading-tight">{value}</dd>
     </div>
   );
@@ -81,7 +81,7 @@ export function TeamScreen() {
           <Card title={`Garagem · ${vehicle.name}`} bodyClassName="p-3">
             <ul className="space-y-2">
               {lineup.map((d) => (
-                <li key={d.id} className="flex items-center gap-3 bg-ink-850 px-2 py-1.5">
+                <li key={d.id} className="flex items-center gap-3 bg-ink-850 px-2 py-2">
                   <div className="grid w-[min(42%,160px)] shrink-0 place-items-center" style={{ minHeight: SPRITE_HEIGHT }}>
                     <CarSprite
                       categoryId={category.id}
@@ -95,7 +95,14 @@ export function TeamScreen() {
                     />
                   </div>
                   <div className="flex min-w-0 items-center gap-3">
-                    <NumberPlate number={carNumbers[d.id]} color={team.color} className="shrink-0" />
+                    {/* Retrato do elenco, quando importado; sem ele, a placa com o número. */}
+                    <PortraitOr
+                      src={portraitUrl(d.id, d.id === player.id)}
+                      name={fullName(d)}
+                      color={team.color}
+                      size="sm"
+                      fallback={<NumberPlate number={carNumbers[d.id]} color={team.color} className="shrink-0" />}
+                    />
                     <div className="min-w-0">
                       <div className="font-display text-lg font-bold uppercase leading-tight">{fullName(d)}</div>
                       <div className="text-xs text-ink-400">
@@ -114,7 +121,8 @@ export function TeamScreen() {
           </Card>
 
           <Card title="Equipamento e estrutura" bodyClassName="p-3">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            {/* Duas colunas, ou uma só quando o texto grande não deixa "Confiabilidade" e o número caberem lado a lado. */}
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,calc(11rem*var(--text-scale))),1fr))] gap-x-4 gap-y-3">
               <Meter tone="neutral" label="Motor" value={team.car.engine} />
               <Meter tone="neutral" label="Chassi" value={team.car.chassis} />
               <Meter tone="neutral" label="Confiabilidade" value={team.car.reliability} />
@@ -138,7 +146,7 @@ export function TeamScreen() {
       {tab === 'contract' && (
         <div className={cx('grid items-start gap-4', career.academy ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
           <Card title="Seu contrato" bodyClassName="p-3">
-            <dl className="space-y-1.5 text-sm">
+            <dl className="space-y-2 text-sm">
               <Term label="Papel">
                 <span className="font-semibold">{ROLE_LABELS[career.contract.role]}</span>
               </Term>
@@ -203,7 +211,7 @@ export function TeamScreen() {
                       <div className="font-semibold leading-tight">
                         {fullName(d)} {d.isPlayer && <span className="text-xs font-normal text-apex-400">(você)</span>}
                       </div>
-                      <div className="mt-0.5 text-xs text-ink-400">
+                      <div className="mt-1 text-xs text-ink-400">
                         <span className="font-semibold text-ink-200">{ROLE_LABELS[d.role ?? 'second']}</span> · {d.age} anos · geral{' '}
                         {formatRating(overallRating(d.attributes))}
                         {d.injury ? ` · lesionado (${counted(d.injury.roundsRemaining, 'etapa', 'etapas')})` : ''}
@@ -220,7 +228,7 @@ export function TeamScreen() {
               <li className="flex items-center justify-between gap-3 py-2">
                 <div className="min-w-0">
                   <div className="font-semibold leading-tight">{reserve ? fullName(reserve) : 'Sem reserva'}</div>
-                  <div className="mt-0.5 text-xs text-ink-400">
+                  <div className="mt-1 text-xs text-ink-400">
                     <span className="font-semibold text-ink-200">{ROLE_LABELS.reserve}</span>
                     {reserve ? ` · ${reserve.age} anos · geral ${formatRating(overallRating(reserve.attributes))}` : ''}
                   </div>

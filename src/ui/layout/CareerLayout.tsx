@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   CalendarDays,
@@ -15,6 +15,7 @@ import {
   LoaderCircle,
   LogOut,
   Save,
+  Settings,
   Star,
   TrendingUp,
   TriangleAlert,
@@ -24,15 +25,17 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
+import { counted } from '@/domain/text';
 import { getNextEvent, isSeasonComplete, managedTeam, trackName } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, cx } from '../components/ui';
-import { hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/platform/haptics';
+import { Button, advanceButtonClass, cx } from '@/ui/kit';
+import { feedback } from '../feedback/feedback';
 import { StorageWarning } from '../components/SaveNotices';
 import { formatDate, formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { scrollToElement, usePresence } from '../motion';
 import { SuccessionScreen } from '../screens/SuccessionScreen';
+import { ACTION_BAR_HEIGHT, ActionBar } from './ScreenAction';
 import { ChromeContext, WIDE_QUERY, primaryAction, useMediaQuery, type PrimaryAction } from './chrome';
 
 interface NavItem {
@@ -57,6 +60,7 @@ const NAV: readonly NavItem[] = [
   { to: '/history', label: 'Histórico', icon: History, modes: 'both' },
   { to: '/saves', label: 'Saves', icon: Save, modes: 'both' },
   { to: '/help', label: 'Como jogar', icon: CircleHelp, modes: 'both' },
+  { to: '/settings', label: 'Ajustes', icon: Settings, modes: 'both' },
 ];
 
 /** Áreas principais, por formato e por modo de carreira; as demais ficam em "Mais". */
@@ -101,8 +105,8 @@ function TopStat({ icon: Icon, label, value, attention = false }: { icon: Lucide
     <div className="flex shrink-0 items-center gap-2" title={label}>
       <Icon size={16} aria-hidden className="text-ink-400" />
       <div className="leading-none">
-        <div className="text-[10px] font-medium text-ink-400">{label}</div>
-        <div className={cx('mt-0.5 font-display text-lg font-semibold leading-none', attention ? 'text-gold-400' : 'text-ink-100')}>{value}</div>
+        <div className="text-2xs font-medium text-ink-400">{label}</div>
+        <div className={cx('mt-1 font-display text-lg font-semibold leading-none', attention ? 'text-gold-400' : 'text-ink-100')}>{value}</div>
       </div>
     </div>
   );
@@ -113,20 +117,13 @@ function AdvanceButton({ action, className }: { action: PrimaryAction; className
   const navigate = useNavigate();
   const location = useLocation();
   const go = () => {
-    if (location.pathname !== action.to) navigate(action.to);
+    // Na própria tela de destino, mas noutra aba, o botão volta para a aba do passo (a primeira).
+    if (location.pathname !== action.to || location.search !== '') navigate(action.to);
     const anchor = action.anchor;
     if (anchor) window.setTimeout(() => scrollToElement(anchor), 60);
   };
   return (
-    <button
-      type="button"
-      onClick={go}
-      className={cx(
-        'chamfer-br flex min-h-11 shrink-0 items-center gap-1.5 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide transition-colors [--chamfer:10px]',
-        action.tone === 'attention' ? 'bg-gold-400 text-ink-950 hover:brightness-110' : 'bg-apex-500 text-white hover:bg-apex-400',
-        className,
-      )}
-    >
+    <button type="button" onClick={go} className={cx(advanceButtonClass(action.tone), className)}>
       {action.label}
       <ChevronRight size={18} strokeWidth={2.5} aria-hidden />
     </button>
@@ -147,6 +144,12 @@ function CareerShell() {
   const teamLabel = executive ? (managed?.name ?? 'Sem equipe') : team.name;
   const pending = career.pendingEvents.length;
   const offers = career.offseason !== null || career.executiveOffseason !== null;
+  // Propostas chegando (o fechamento da temporada abriu): um som curto, junto do aviso na navegação.
+  const hadOffers = useRef(offers);
+  useEffect(() => {
+    if (offers && !hadOffers.current) feedback('offerArrived');
+    hadOffers.current = offers;
+  }, [offers]);
   const notice = useGameStore((s) => s.notice);
   const dismissNotice = useGameStore((s) => s.dismissNotice);
   // O aviso passageiro sai sozinho depois de alguns segundos (ou no toque em fechar).
@@ -181,9 +184,22 @@ function CareerShell() {
   const [raceBar, setRaceBar] = useState(false);
   const [topSlot, setTopSlot] = useState<HTMLElement | null>(null);
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
-  const chrome = useMemo(() => ({ setRaceBar, wide, topSlot: wide ? topSlot : null, actionSlot: wide ? actionSlot : null }), [wide, topSlot, actionSlot]);
+  // Quantos passos de tela estão no encaixe da barra (normalmente zero ou um).
+  const [screenActions, setScreenActions] = useState(0);
+  const [screenActionInfo, setScreenActionInfo] = useState<string | undefined>(undefined);
+  const registerAction = useCallback((info?: string) => {
+    setScreenActions((n) => n + 1);
+    setScreenActionInfo(info);
+    return () => {
+      setScreenActions((n) => n - 1);
+      setScreenActionInfo((current) => (current === info ? undefined : current));
+    };
+  }, []);
+  const chrome = useMemo(
+    () => ({ setRaceBar, wide, topSlot: wide ? topSlot : null, actionSlot: wide ? actionSlot : null, registerAction }),
+    [wide, topSlot, actionSlot, registerAction],
+  );
   const [moreOpen, setMoreOpen] = useState(false);
-  const [haptics, setHaptics] = useState(hapticsEnabled);
   // O "Mais" entra e sai com transição; fica montado só enquanto aparece.
   const more = usePresence(moreOpen);
   // biome-ignore lint/correctness/useExhaustiveDependencies: fecha o "Mais" a cada troca de tela ou de formato
@@ -219,13 +235,33 @@ function CareerShell() {
     secondary.some((item) => location.pathname.startsWith(item.to)) || ['/finance', '/family'].some((route) => location.pathname.startsWith(route));
   const action = primaryAction(career);
   // Na própria tela de destino o botão não precisa aparecer (a não ser quando rola até as decisões).
-  const showAction = action !== null && (action.anchor !== undefined || location.pathname !== action.to);
+  // Na tela de destino o atalho só sai quando ela já mostra o passo: na aba padrão (sem `?tab=`).
+  const showAction = action !== null && (action.anchor !== undefined || location.pathname !== action.to || location.search !== '');
+  // A barra do passo principal (formato largo): aparece quando há o que fazer, fora da corrida (lá o
+  // rodapé é da barra de comandos). A página reserva o espaço dela no fim: o conteúdo termina acima.
+  const actionBar = wide && !raceBar && (showAction || screenActions > 0);
+  // Linha de contexto da barra: a do passo da tela; senão, a próxima pista; senão, o momento da carreira.
+  const barInfo =
+    (screenActions > 0 ? screenActionInfo : undefined) ??
+    (stageLong !== stage
+      ? stageLong
+      : pending > 0
+        ? `${pending === 1 ? 'Uma decisão espera' : `${counted(pending, 'decisão', 'decisões')} esperam`} por você no Painel`
+        : career.offseason
+          ? `Temporada ${career.year} encerrada: escolha a equipe de ${career.year + 1}`
+          : stage || undefined);
+  useEffect(() => {
+    document.documentElement.style.setProperty('--action-bar-h', actionBar ? `calc(${ACTION_BAR_HEIGHT} + env(safe-area-inset-bottom))` : '0px');
+    return () => {
+      document.documentElement.style.removeProperty('--action-bar-h');
+    };
+  }, [actionBar]);
   const badge = (to: string) => (
     <>
       {to === '/dashboard' && pending > 0 && (
         <span
           role="img"
-          className="grid h-4 min-w-4 place-items-center bg-gold-400 px-1 font-display text-xs font-bold leading-none text-ink-950"
+          className="grid h-4 min-w-4 place-items-center bg-gold-400 px-1 text-2xs font-bold leading-none text-ink-950"
           aria-label={`${pending} pendentes`}
         >
           {pending}
@@ -256,7 +292,7 @@ function CareerShell() {
             className={({ isActive }) =>
               cx(
                 'flex min-h-11 items-center gap-3 border px-3 text-sm font-semibold',
-                isActive ? 'border-apex-500 bg-apex-500/15 text-ink-100' : 'border-ink-700 text-ink-200 hover:border-ink-500',
+                isActive ? 'border-apex-500 bg-apex-500/15 text-ink-100' : 'border-ink-500 text-ink-200 hover:border-ink-300',
               )
             }
           >
@@ -268,28 +304,10 @@ function CareerShell() {
       <button
         type="button"
         onClick={() => useGameStore.getState().exitToMenu()}
-        className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 border border-ink-700 text-sm font-semibold text-ink-300 hover:border-ink-500"
+        className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 border border-ink-500 text-sm font-semibold text-ink-300 hover:border-ink-300"
       >
         <LogOut size={16} aria-hidden /> Menu principal
       </button>
-      {/* Ajustes do aplicativo. A vibração só existe nele: no navegador o aparelho não vibra. */}
-      {hapticsAvailable() && (
-        <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 border-t border-ink-700 px-1 pt-2 text-sm text-ink-200">
-          <input
-            type="checkbox"
-            checked={haptics}
-            onChange={(event) => {
-              setHapticsEnabled(event.target.checked);
-              setHaptics(event.target.checked);
-            }}
-            className="h-5 w-5 shrink-0 accent-apex-500"
-          />
-          <span>
-            <span className="block text-[11px] font-medium text-ink-400">Ajustes</span>
-            Vibração
-          </span>
-        </label>
-      )}
     </>
   );
 
@@ -299,16 +317,16 @@ function CareerShell() {
       {/* Aviso passageiro (save importado, erro ao salvar): flutua no canto, sem empurrar a tela. */}
       {notice && (
         <div
+          data-transient
           role="status"
           className={cx(
-            'enter fixed right-[calc(0.75rem+env(safe-area-inset-right))] z-30 flex max-w-[min(24rem,calc(100vw-1.5rem))] items-center gap-2 bg-ink-800 py-1 pl-4 pr-1 text-sm text-ink-100 shadow-[inset_3px_0_0_0_var(--color-gold-400),0_8px_24px_rgba(0,0,0,0.5)]',
+            'enter fixed z-30 flex max-w-[min(24rem,calc(100vw-1.5rem))] items-center gap-2 bg-ink-800 py-1 pl-4 pr-1 text-sm text-ink-100 shadow-[inset_3px_0_0_0_var(--color-gold-400),var(--shadow-pop)]',
             wide
-              ? raceBar
-                ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))]'
-                : 'bottom-[calc(0.75rem+env(safe-area-inset-bottom))]'
-              : raceBar
-                ? 'bottom-[calc(9rem+env(safe-area-inset-bottom))]'
-                : 'bottom-[calc(5rem+env(safe-area-inset-bottom))]',
+              ? cx(
+                  'left-[calc(var(--rail-w,0px)+0.75rem)]',
+                  raceBar ? 'bottom-[calc(5.25rem+var(--safe-bottom))]' : 'bottom-[calc(0.75rem+max(var(--action-bar-h,0px),var(--safe-bottom)))]',
+                )
+              : cx('right-[calc(0.75rem+var(--safe-right))]', raceBar ? 'bottom-[calc(9rem+var(--safe-bottom))]' : 'bottom-[calc(5rem+var(--safe-bottom))]'),
           )}
         >
           <span className="min-w-0 flex-1 py-2">{notice}</span>
@@ -329,7 +347,8 @@ function CareerShell() {
           wide
             ? raceBar
               ? 'pb-[calc(4.75rem+env(safe-area-inset-bottom))]'
-              : 'pb-6'
+              : // O conteúdo termina acima da barra do passo principal (ou da margem da barra de gestos).
+                'pb-[calc(1.5rem+max(var(--action-bar-h,0px),env(safe-area-inset-bottom)))]'
             : raceBar
               ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]'
               : 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]',
@@ -375,7 +394,7 @@ function CareerShell() {
                   to={item.to}
                   className={({ isActive }) =>
                     cx(
-                      'relative flex min-h-[3.25rem] shrink-0 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-[1.1] transition-colors',
+                      'relative flex min-h-[3.25rem] shrink-0 flex-col items-center justify-center gap-1 px-1 text-center text-2xs font-semibold leading-[1.1] transition-colors',
                       isActive ? 'bg-ink-800 text-ink-100 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'text-ink-400 hover:bg-ink-850 hover:text-ink-100',
                     )
                   }
@@ -391,7 +410,7 @@ function CareerShell() {
                 aria-haspopup="dialog"
                 aria-expanded={moreOpen}
                 className={cx(
-                  'mt-auto flex min-h-[3.25rem] shrink-0 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold leading-[1.1] transition-colors',
+                  'mt-auto flex min-h-[3.25rem] shrink-0 flex-col items-center justify-center gap-1 px-1 text-2xs font-semibold leading-[1.1] transition-colors',
                   inSecondary || moreOpen
                     ? 'bg-ink-800 text-ink-100 shadow-[inset_3px_0_0_0_var(--color-apex-500)]'
                     : 'text-ink-400 hover:bg-ink-850 hover:text-ink-100',
@@ -438,7 +457,7 @@ function CareerShell() {
           )}
 
           <div className="flex min-w-0 flex-1 flex-col">
-            {/* Barra superior: onde a carreira está e o botão que a faz avançar, sempre à direita. */}
+            {/* Barra superior: onde a carreira está (categoria, etapa, caixa, reputação, campeonato). */}
             <header className="sticky top-0 z-20 flex min-h-12 items-center gap-4 border-b border-ink-700 bg-ink-900/95 pl-4 pr-[calc(0.75rem+env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] backdrop-blur lg:pl-6">
               {/* A tela de corrida ocupa este encaixe; enquanto ele está cheio, os números da carreira saem. */}
               <div ref={setTopSlot} className="peer contents" />
@@ -449,19 +468,24 @@ function CareerShell() {
                   </div>
                   <div className="mt-1 truncate text-xs text-ink-400">
                     {stage}
-                    <span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span>
+                    {/* Com a barra do passo principal à vista, a pista da próxima etapa vai nela. */}
+                    {!actionBar && <span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span>}
                   </div>
                 </div>
                 <TopStat icon={Wallet} label="Caixa" value={formatMoney(career.finance.cash)} attention={career.finance.cash < 0} />
                 <TopStat icon={Star} label="Reputação" value={Math.floor(career.reputation)} />
                 <TopStat icon={Trophy} label={executive ? 'Equipes' : 'Campeonato'} value={position} />
                 <SaveIndicator />
-                {/* O passo da própria tela (disputar o treino, largar) toma o lugar do atalho padrão. */}
-                <div ref={setActionSlot} className="peer/action contents" />
-                <div className="contents peer-[:not(:empty)]/action:hidden">{showAction && action && <AdvanceButton action={action} />}</div>
               </div>
             </header>
             {content}
+            {/* A barra do passo principal, fixa no pé da tela: o botão que faz a carreira avançar fica à
+                direita, perto do polegar. O passo da própria tela (disputar o treino, largar) toma o
+                lugar do atalho padrão. O encaixe existe sempre; a barra só aparece quando há passo. */}
+            <ActionBar visible={actionBar} info={barInfo}>
+              <div ref={setActionSlot} className="peer/action contents" />
+              <div className="contents peer-[:not(:empty)]/action:hidden">{showAction && action && <AdvanceButton action={action} />}</div>
+            </ActionBar>
           </div>
         </div>
       </ChromeContext.Provider>
@@ -483,7 +507,7 @@ function CareerShell() {
             <div className="truncate font-display text-base font-semibold uppercase leading-none tracking-wide">
               {category.shortName} {career.year}
             </div>
-            <div className="mt-0.5 truncate text-[11px] text-ink-400">{stage}</div>
+            <div className="mt-1 truncate text-2xs text-ink-400">{stage}</div>
           </div>
           <span className={cx('shrink-0 font-display text-base font-semibold', career.finance.cash < 0 ? 'text-gold-400' : 'text-ink-100')}>
             {formatMoney(career.finance.cash)}
@@ -503,7 +527,7 @@ function CareerShell() {
                 to={item.to}
                 className={({ isActive }) =>
                   cx(
-                    'relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] font-semibold leading-[1.05]',
+                    'relative flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-center text-2xs font-semibold leading-[1.05]',
                     isActive ? 'text-ink-100 shadow-[inset_0_3px_0_0_var(--color-apex-500)]' : 'text-ink-400',
                   )
                 }
@@ -519,7 +543,7 @@ function CareerShell() {
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
               className={cx(
-                'flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold leading-[1.05]',
+                'flex min-h-14 flex-col items-center justify-center gap-1 px-1 text-2xs font-semibold leading-[1.05]',
                 inSecondary || moreOpen ? 'text-ink-100 shadow-[inset_0_3px_0_0_var(--color-apex-500)]' : 'text-ink-400',
               )}
             >
@@ -545,7 +569,7 @@ function CareerShell() {
             />
             <div
               data-shown={more.shown}
-              className="absolute inset-x-0 bottom-0 max-h-[85vh] translate-y-full transition-[translate] duration-(--motion-base) ease-(--ease-out) data-[shown=true]:translate-y-0 overflow-y-auto border-t border-ink-700 bg-ink-900 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+              className="absolute inset-x-0 bottom-0 max-h-[85vh] translate-y-full opacity-0 transition-[translate,opacity] duration-(--motion-base) ease-(--ease-out) data-[shown=true]:translate-y-0 data-[shown=true]:opacity-100 overflow-y-auto border-t border-ink-700 bg-ink-900 px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]"
             >
               <div className="mb-2 flex items-start justify-between gap-3">
                 {who}

@@ -22,6 +22,11 @@ for (const formato of TELAS) {
       await conferirTela(page, 'menu', formato.nome);
       await page.getByRole('button', { name: 'Nova carreira' }).click();
       await conferirTela(page, 'nova-carreira', formato.nome);
+      // Ajustes também abre pelo menu, sem carreira carregada.
+      await page.getByRole('button', { name: 'Voltar' }).click();
+      await page.getByRole('button', { name: 'Ajustes' }).click();
+      await expect(page.getByRole('heading', { name: 'Ajustes', level: 1 })).toBeVisible();
+      await conferirTela(page, 'ajustes-menu', formato.nome);
       expect(erros).toEqual([]);
     });
 
@@ -91,6 +96,7 @@ for (const formato of TELAS) {
         ['Classificação', 'classificacao', ['Equipes']],
         ['Histórico', 'historico', []],
         ['Saves', 'saves', []],
+        ['Ajustes', 'ajustes', []],
         ['Como jogar', 'como-jogar', ['Fim de semana', 'Dinheiro']],
       ] as const) {
         await irPara(page, nome);
@@ -218,3 +224,129 @@ for (const formato of TELAS) {
     });
   });
 }
+
+/** As telas principais do critério de aceite da Fase 1, na tela deitada. */
+const PRINCIPAIS = ['Fim de semana', 'Piloto', 'Equipe', 'Carreira', 'Saves', 'Ajustes'] as const;
+
+test.describe('ajustes de acessibilidade em 844×390', () => {
+  test.use({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+
+  test('texto muito grande: as telas principais continuam cabendo, legíveis e tocáveis', async ({ page }) => {
+    const erros = vigiarErros(page);
+    await abrirSave(page, SAVES.formula);
+    await irPara(page, 'Ajustes');
+    await page.getByRole('radio', { name: 'Muito grande' }).click();
+    await expect(page.locator('html')).toHaveCSS('--text-scale-user', '1.3');
+    await conferirTela(page, 'texto-grande-ajustes', 'deitado');
+    await irPara(page, 'Painel');
+    await conferirTela(page, 'texto-grande-painel', 'deitado');
+    for (const nome of PRINCIPAIS.filter((n) => n !== 'Ajustes')) {
+      await irPara(page, nome);
+      await conferirTela(page, `texto-grande-${nome.toLowerCase().replaceAll(' ', '-')}`, 'deitado');
+    }
+    // O ajuste fica guardado no aparelho: vale depois de recarregar, já no menu.
+    await page.reload();
+    await expect(page.locator('html')).toHaveCSS('--text-scale-user', '1.3');
+    expect(erros).toEqual([]);
+  });
+
+  test('texto muito grande na corrida: a torre e os comandos cabem', async ({ page }) => {
+    const erros = vigiarErros(page);
+    await abrirSave(page, SAVES.naLargada);
+    await irPara(page, 'Ajustes');
+    await page.getByRole('radio', { name: 'Muito grande' }).click();
+    await irPara(page, 'Fim de semana');
+    await page.getByRole('button', { name: 'Ir para a largada' }).click();
+    await page.getByRole('region', { name: 'Comandos da corrida' }).getByRole('button', { name: 'Largar' }).click();
+    await page.waitForTimeout(3000);
+    await conferirTela(page, 'texto-grande-corrida', 'deitado');
+    expect(erros).toEqual([]);
+  });
+
+  test('modo para daltônicos: a paleta troca, o contraste se mantém e o ajuste fica guardado', async ({ page }) => {
+    const erros = vigiarErros(page);
+    await abrirSave(page, SAVES.formula);
+    await irPara(page, 'Ajustes');
+    const verde = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-go-400').trim());
+    await page.getByRole('switch', { name: /Modo para daltônicos/ }).check();
+    await expect(page.locator('html')).toHaveAttribute('data-vision', 'daltonico');
+    const azul = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-go-400').trim());
+    expect(azul).not.toBe(verde);
+    await conferirTela(page, 'daltonico-ajustes', 'deitado');
+    await irPara(page, 'Painel');
+    await conferirTela(page, 'daltonico-painel', 'deitado');
+    await irPara(page, 'Carreira');
+    await conferirTela(page, 'daltonico-carreira', 'deitado');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-vision', 'daltonico');
+    expect(erros).toEqual([]);
+  });
+
+  test('os volumes e os interruptores ficam guardados no aparelho', async ({ page }) => {
+    await page.goto('/#/ajustes');
+    await page.getByRole('slider', { name: 'Efeitos' }).fill('30');
+    await page.getByRole('slider', { name: 'Música' }).fill('0');
+    await page.getByRole('switch', { name: /Menos movimento/ }).check();
+    await page.reload();
+    await expect(page.getByRole('slider', { name: 'Efeitos' })).toHaveValue('30');
+    await expect(page.getByRole('slider', { name: 'Música' })).toHaveValue('0');
+    await expect(page.getByRole('switch', { name: /Menos movimento/ })).toBeChecked();
+    // No navegador o aparelho não vibra: o interruptor aparece desativado, com a explicação.
+    await expect(page.getByRole('switch', { name: /Vibração/ })).toBeDisabled();
+    await expect(page.getByRole('main')).toContainText('Só existe no aplicativo instalado');
+  });
+
+  test('o catálogo de componentes não existe no build de produção', async ({ page }) => {
+    await page.goto('/#/dev/catalogo');
+    // A rota não é registrada: o jogo volta para o menu inicial.
+    await expect(page.getByRole('button', { name: 'Nova carreira' })).toBeVisible();
+    await expect(page).toHaveURL(/#\/$/);
+  });
+});
+
+test.describe('torre da corrida em 844×390', () => {
+  test.use({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+
+  test('não rola sozinha quando os carros trocam de posição, e com o jogador em P1 o segundo aparece inteiro', async ({ page }) => {
+    const erros = vigiarErros(page);
+    // No save de monopostos o jogador larga na pole.
+    await abrirSave(page, SAVES.formula);
+    await irPara(page, 'Fim de semana');
+    await page.getByRole('button', { name: 'Iniciar fim de semana' }).click();
+    await page.getByRole('button', { name: 'Disputar treino livre' }).click();
+    await page.getByRole('button', { name: 'Disputar classificação' }).click();
+    await page.getByRole('button', { name: 'Ir para a largada' }).click();
+    const barra = page.getByRole('region', { name: 'Comandos da corrida' });
+    await barra.getByRole('button', { name: '8×' }).click();
+    await barra.getByRole('button', { name: 'Largar' }).click();
+    const torre = page.locator('[data-whole-rows]');
+    const leituras = async () => {
+      const valores: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        await page.waitForTimeout(800);
+        valores.push(await torre.evaluate((list) => Math.round(list.scrollTop)));
+      }
+      return valores;
+    };
+    // No alto, com ultrapassagens acontecendo: a lista fica parada.
+    expect(await leituras()).toEqual([0, 0, 0, 0, 0]);
+    // A primeira linha é a do jogador (grudada no alto) e a segunda aparece inteira, sem nada por cima.
+    const linhas = await torre.evaluate((list) => {
+      const rows = [...list.querySelectorAll<HTMLElement>('[data-row]')].map((row) => row.getBoundingClientRect());
+      return { primeira: rows[0], segunda: rows[1] };
+    });
+    expect(linhas.segunda?.top ?? 0).toBeGreaterThanOrEqual((linhas.primeira?.bottom ?? 0) - 0.5);
+    await expect(torre.locator('[data-row]').first()).toContainText('(você)');
+    // Rolada uma linha para baixo (onde a âncora de rolagem do navegador agiria): também fica parada.
+    const linha = await torre.evaluate((list) => {
+      const altura = list.querySelector<HTMLElement>('[data-row]')?.getBoundingClientRect().height ?? 0;
+      list.scrollTop = altura;
+      list.dispatchEvent(new Event('scroll'));
+      return Math.round(altura);
+    });
+    expect(linha).toBeGreaterThan(0);
+    await page.waitForTimeout(600);
+    expect(await leituras()).toEqual([linha, linha, linha, linha, linha]);
+    expect(erros).toEqual([]);
+  });
+});
