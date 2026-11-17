@@ -1,7 +1,7 @@
 {
   "name": "apex-motorsport-dynasty",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,9 +17,21 @@
     "check": "npm run check:fast && npm run test:e2e",
     "calibrate": "CALIBRATE=1 vitest run --reporter=verbose",
     "sim": "vite build --ssr sim/main.ts --outDir node_modules/.cache/sim --logLevel warn && node node_modules/.cache/sim/main.js",
-    "bench": "BENCH=1 vitest run --reporter=verbose"
+    "bench": "BENCH=1 vitest run --reporter=verbose",
+    "app:sync": "npm run build && cap sync",
+    "app:android": "npm run app:sync && cap open android",
+    "app:ios": "npm run app:sync && cap open ios",
+    "app:icons": "node scripts/gerar-icones-do-app.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.6.2",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2",
     "lucide-react": "^1.73.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -29,6 +41,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.7",
+    "@capacitor/cli": "^8.6.2",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^26.6.6",

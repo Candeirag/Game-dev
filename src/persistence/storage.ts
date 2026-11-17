@@ -1,9 +1,10 @@
 /**
- * Adaptadores de armazenamento chave-valor. O jogo usa IndexedDB quando
- * disponível, localStorage como alternativa e memória nos testes.
+ * Adaptadores de armazenamento chave-valor. No navegador o jogo usa IndexedDB quando
+ * disponível e localStorage como alternativa; no aplicativo, arquivos do aparelho
+ * (`deviceStorage.ts`); nos testes, memória.
  */
 export interface StorageAdapter {
-  readonly kind: 'indexeddb' | 'localstorage' | 'memory';
+  readonly kind: 'device' | 'indexeddb' | 'localstorage' | 'memory';
   get(key: string): Promise<unknown>;
   /** Grava várias chaves de uma vez; no IndexedDB, em uma única transação (tudo ou nada). */
   setMany(entries: Record<string, unknown>): Promise<void>;
@@ -162,8 +163,9 @@ async function works(storage: StorageAdapter): Promise<boolean> {
  * embutidas e bloqueio de dados podem derrubar o IndexedDB ou o localStorage mesmo quando eles
  * existem; nesse caso o jogo cai para a memória, e a interface avisa que nada fica guardado.
  */
-export async function probeStorage(): Promise<StorageAdapter> {
-  const candidates: (() => StorageAdapter)[] = [];
+export async function probeStorage(preferred: (() => StorageAdapter)[] = []): Promise<StorageAdapter> {
+  // `preferred` vem antes dos armazenamentos do navegador: é por onde entra o do aparelho, no aplicativo.
+  const candidates: (() => StorageAdapter)[] = [...preferred];
   if (typeof indexedDB !== 'undefined') candidates.push(() => new IndexedDbStorage());
   candidates.push(() => new LocalStorageAdapter());
   for (const make of candidates) {

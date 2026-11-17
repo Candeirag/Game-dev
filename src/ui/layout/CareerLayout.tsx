@@ -27,6 +27,7 @@ import {
 import { getNextEvent, isSeasonComplete, managedTeam, trackName } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, cx } from '../components/ui';
+import { hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/platform/haptics';
 import { StorageWarning } from '../components/SaveNotices';
 import { formatDate, formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
@@ -182,6 +183,7 @@ function CareerShell() {
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
   const chrome = useMemo(() => ({ setRaceBar, wide, topSlot: wide ? topSlot : null, actionSlot: wide ? actionSlot : null }), [wide, topSlot, actionSlot]);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [haptics, setHaptics] = useState(hapticsEnabled);
   // O "Mais" entra e sai com transição; fica montado só enquanto aparece.
   const more = usePresence(moreOpen);
   // biome-ignore lint/correctness/useExhaustiveDependencies: fecha o "Mais" a cada troca de tela ou de formato
@@ -270,6 +272,24 @@ function CareerShell() {
       >
         <LogOut size={16} aria-hidden /> Menu principal
       </button>
+      {/* Ajustes do aplicativo. A vibração só existe nele: no navegador o aparelho não vibra. */}
+      {hapticsAvailable() && (
+        <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 border-t border-ink-700 px-1 pt-2 text-sm text-ink-200">
+          <input
+            type="checkbox"
+            checked={haptics}
+            onChange={(event) => {
+              setHapticsEnabled(event.target.checked);
+              setHaptics(event.target.checked);
+            }}
+            className="h-5 w-5 shrink-0 accent-apex-500"
+          />
+          <span>
+            <span className="block text-[11px] font-medium text-ink-400">Ajustes</span>
+            Vibração
+          </span>
+        </label>
+      )}
     </>
   );
 
@@ -304,7 +324,8 @@ function CareerShell() {
       )}
       <main
         className={cx(
-          'mx-auto w-full max-w-[1500px] flex-1 px-4 pt-4 lg:px-6',
+          // À direita, o recorte da câmera (com o aparelho deitado para o outro lado) soma-se à margem.
+          'mx-auto w-full max-w-[1500px] flex-1 pl-4 pr-[calc(1rem+env(safe-area-inset-right))] pt-4 lg:pl-6 lg:pr-[calc(1.5rem+env(safe-area-inset-right))]',
           wide
             ? raceBar
               ? 'pb-[calc(4.75rem+env(safe-area-inset-bottom))]'

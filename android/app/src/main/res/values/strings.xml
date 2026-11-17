@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Apex Motorsport Dynasty</string>
+    <string name="title_activity_main">Apex Motorsport Dynasty</string>
+    <string name="package_name">com.apexmotorsportdynasty.app</string>
+    <string name="custom_url_scheme">com.apexmotorsportdynasty.app</string>
+</resources>

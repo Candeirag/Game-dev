@@ -53,7 +53,7 @@ export function RaceControlBar({
       aria-label="Comandos da corrida"
       className="enter-up fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-40 border-t border-ink-700 bg-ink-900/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.45)] backdrop-blur"
     >
-      <div className="mx-auto grid max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 px-3 py-2 md:flex md:gap-3 lg:px-6">
+      <div className="mx-auto grid max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 py-2 pl-3 pr-[calc(0.75rem+env(safe-area-inset-right))] md:flex md:gap-3 lg:pl-6 lg:pr-[calc(1.5rem+env(safe-area-inset-right))]">
         <div className="min-w-[3.75rem] shrink-0 leading-none md:flex md:items-baseline md:gap-2" aria-live="off">
           <div className="font-display text-2xl font-bold tabular">{position}</div>
           <div className="mt-0.5 whitespace-nowrap text-[11px] font-semibold text-ink-300 tabular md:mt-0 md:text-sm">{lap}</div>

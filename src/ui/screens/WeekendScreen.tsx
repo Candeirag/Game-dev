@@ -11,6 +11,7 @@ import {
 } from '@/domain/labels';
 import { getTrack, raceLaps } from '@/data/tracks';
 import { buildWetnessProfile, fullName, getNextEvent, isSeasonComplete, playerAvailability, playerStrategyOptions, sessionSeed } from '@/engine';
+import { readPreference, writePreference } from '@/persistence/preferences';
 import { useGameStore } from '@/store/gameStore';
 import { EventsPanel } from '../components/EventsPanel';
 import { RaceResultTable } from '../components/RaceResultTable';
@@ -501,28 +502,18 @@ function RoundSummary({ record }: { record: RoundRecord }) {
   );
 }
 
-const RACE_VIEW_KEY = 'apex.raceView';
+const RACE_VIEW_KEY = 'raceView';
 
-/** Corrida em andamento: transmissão visual (padrão) ou a tabela de cronometragem. A escolha fica guardada no navegador. */
+/** Corrida em andamento: transmissão visual (padrão) ou a tabela de cronometragem. A escolha fica guardada nas anotações do jogo. */
 function RaceStage() {
-  const [view, setView] = useState<'broadcast' | 'timing'>(() => {
-    try {
-      return localStorage.getItem(RACE_VIEW_KEY) === 'timing' ? 'timing' : 'broadcast';
-    } catch {
-      return 'broadcast';
-    }
-  });
+  const [view, setView] = useState<'broadcast' | 'timing'>(() => (readPreference(RACE_VIEW_KEY) === 'timing' ? 'timing' : 'broadcast'));
   // A corrida abre com a pista na tela, mesmo que o jogador tenha rolado a página antes da largada.
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
   const choose = (next: 'broadcast' | 'timing') => {
     setView(next);
-    try {
-      localStorage.setItem(RACE_VIEW_KEY, next);
-    } catch {
-      // Sem armazenamento disponível, a escolha vale só para esta corrida.
-    }
+    writePreference(RACE_VIEW_KEY, next);
   };
   if (view === 'broadcast') return <RaceBroadcast onTimingView={() => choose('timing')} />;
   return <RaceView onBroadcastView={() => choose('broadcast')} />;

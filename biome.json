@@ -12,6 +12,8 @@
       "!docs",
       "!tools",
       "!dist",
+      "!android",
+      "!ios",
       "!test-results",
       "!tests/fixtures",
       "!tests/golden",

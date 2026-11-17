@@ -76,6 +76,8 @@ Se você precisar contrariar uma delas, pare e pergunte antes.
 | `npm run test:e2e`   | Só os testes no navegador (`e2e/`).                                                         |
 | `npm run sim`        | **Simulador sem interface:** joga carreiras com o robô e imprime o relatório de equilíbrio. |
 | `npm run calibrate`  | Relatórios de balanceamento detalhados (não fazem parte da verificação).                    |
+| `npm run app:sync`   | Build e cópia para os projetos do aplicativo (`android/`, `ios/`).                          |
+| `npm run app:icons`  | Regenera o ícone e a tela de abertura provisórios do aplicativo.                            |
 
 O Playwright usa o Chromium. Em uma máquina nova: `npx playwright install chromium`.
 Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
@@ -128,6 +130,12 @@ simulador, que só usam a API pública do motor).
   colunas a partir de `md:`, abas (na URL, `?tab=`) quando a tela fica comprida, e o passo que
   faz a carreira avançar sempre na barra superior (`src/ui/layout/ScreenAction.tsx`).
 - Relatório de travamentos (Sentry) preparado e desligado: `src/monitoring/crashReporting.ts`.
+- Aplicativo (Capacitor, Android e iOS): só `src/platform` importa `@capacitor/*`; o resto do
+  jogo pergunta a `isNativeApp()`. No aplicativo os saves vão para arquivos do aparelho
+  (`src/persistence/deviceStorage.ts`) e nada vem da rede (`tests/offline.test.ts`). As pastas
+  `android/` e `ios/` são projetos nativos versionados: mexa nelas só para configuração
+  (orientação, ícones, permissões) e rode `npm run app:sync` depois de mudar o jogo. Imagens
+  que existem e que faltam: `ASSETS.md`.
 
 ## Convenções
 

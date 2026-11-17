@@ -3,13 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { ClipboardPaste, Copy, Download, FileUp } from 'lucide-react';
 import { CATEGORY_NAMES, FIRST_CATEGORY_ID } from '@/domain/categoryNames';
 import { SAVE_SLOTS, type OriginalCopyInfo, type SaveSlotId } from '@/persistence/saveService';
+import { deliverTextFile } from '@/platform/exportFile';
+import { isNativeApp } from '@/platform/native';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, PageHeader, cx } from '../components/ui';
 import { ExportReminder } from '../components/SaveNotices';
 import { formatDateTime } from '../format';
 
 const SLOT_LABELS: Record<SaveSlotId, string> = { auto: 'Save automático', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
-const STORAGE_LABELS = { indexeddb: 'IndexedDB do navegador', localstorage: 'localStorage do navegador', memory: 'Memória (não persistente)' };
+const STORAGE_LABELS = {
+  device: 'Armazenamento do aparelho',
+  indexeddb: 'IndexedDB do navegador',
+  localstorage: 'localStorage do navegador',
+  memory: 'Memória (não persistente)',
+};
 
 export function SavesScreen() {
   const { slots, storage, refreshSlots, saveToSlot, loadSlot, removeSlot, exportJson, importJson, markExported, career } = useGameStore();
@@ -39,25 +46,21 @@ export function SavesScreen() {
     void refreshOriginalCopies();
   }
 
-  function saveFile(name: string, json: string) {
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function download() {
+  /** No navegador é um download; no aplicativo, a folha de compartilhamento do sistema. */
+  async function download() {
     const json = exportJson();
     if (!json || !career) return;
-    saveFile(`apex-carreira-${career.year}-etapa-${career.rounds.length}.json`, json);
-    markExported();
+    setMessage(null);
+    try {
+      const outcome = await deliverTextFile(`apex-carreira-${career.year}-etapa-${career.rounds.length}.json`, json);
+      if (outcome !== 'cancelled') markExported();
+    } catch {
+      setMessage({ tone: 'error', text: 'Não foi possível exportar o arquivo. Use "Copiar carreira como texto".' });
+    }
   }
 
   async function downloadOriginal(copy: OriginalCopyInfo) {
-    saveFile(`apex-save-original-${copy.slot}-formato-${copy.version}.json`, await exportOriginalCopy(copy.slot, copy.version));
+    await deliverTextFile(`apex-save-original-${copy.slot}-formato-${copy.version}.json`, await exportOriginalCopy(copy.slot, copy.version));
   }
 
   /** Alternativa ao download: há páginas e aplicativos que bloqueiam arquivos baixados. */
@@ -198,7 +201,7 @@ export function SavesScreen() {
         <Card title="Exportar e importar" bodyClassName="p-3">
           <ExportReminder link={false} className="mb-3" />
           <div className="grid gap-2">
-            <Button onClick={download}>
+            <Button onClick={() => void download()}>
               <Download size={16} aria-hidden className="shrink-0" />
               Exportar carreira (.json)
             </Button>
@@ -272,8 +275,11 @@ export function SavesScreen() {
             </div>
           )}
           <p className="mt-3 text-xs text-ink-400">
-            Serve de backup e para levar a carreira a outro aparelho. Se o download não começar (há aplicativos e páginas que bloqueiam arquivos baixados),
-            copie a carreira como texto. Saves alterados à mão são recusados pelo checksum.
+            Serve de backup e para levar a carreira a outro aparelho.{' '}
+            {isNativeApp()
+              ? 'Ao exportar, escolha onde guardar o arquivo (Arquivos, e-mail, mensagem); se preferir, copie a carreira como texto.'
+              : 'Se o download não começar (há aplicativos e páginas que bloqueiam arquivos baixados), copie a carreira como texto.'}{' '}
+            Saves alterados à mão são recusados pelo checksum.
           </p>
         </Card>
       </div>
