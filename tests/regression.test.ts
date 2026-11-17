@@ -13,7 +13,7 @@ import { CAREER_SCHEMA_VERSION } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { exportCareer, importCareer } from '@/persistence/saveService';
 import { completeWeekend, createWeekendRace, buildRaceContext, simulateRemainingRace, startNextSeason } from './engineApi';
-import { NOW, pickBestOffer, playRound } from './helpers';
+import { NOW, botExecutiveOffseason, pickBestOffer, playExecutiveRound, playRound } from './helpers';
 import { referenceCheckpoints, type Checkpoint } from './regression/digest';
 
 const GOLDEN = 'tests/golden/simulation.json';
@@ -24,7 +24,7 @@ describe('simulação com semente fixa', () => {
     if (process.env.UPDATE_GOLDEN || !existsSync(GOLDEN)) writeFileSync(GOLDEN, `${JSON.stringify(current, null, 1)}\n`);
     const recorded = JSON.parse(readFileSync(GOLDEN, 'utf8')) as Checkpoint[];
     expect(current.length).toBe(recorded.length);
-    // Percorre do kart regional à Fórmula 4, mais a Fórmula 2 do save gravado.
+    // Percorre do kart regional à Fórmula Júnior, mais a Fórmula Elite do save gravado.
     expect([...new Set(current.map((c) => c.category))]).toEqual(['kart-regional', 'kart-national', 'kart-international', 'f4', 'f2']);
     // Aponta o primeiro ponto que divergiu e em quê, em vez de despejar a lista inteira.
     for (let i = 0; i < recorded.length; i++) {
@@ -42,7 +42,8 @@ describe('simulação com semente fixa', () => {
 });
 
 describe('saves gravados', () => {
-  const folders = ['v1', 'v2', 'v3'];
+  // Todas as versões do formato, da primeira à atual: uma versão nova entra aqui sozinha.
+  const folders = readdirSync('tests/fixtures').filter((name) => /^v\d+$/.test(name));
   const files = folders.flatMap((folder) =>
     readdirSync(`tests/fixtures/${folder}`)
       .filter((name) => name.endsWith('.json'))
@@ -63,13 +64,17 @@ describe('saves gravados', () => {
     // Nenhum texto antigo sobra com a moeda errada ou com plural entre parênteses.
     const text = JSON.stringify(career);
     expect(text).not.toMatch(/\d [a-zãõç]+\((s|ns)\)/);
+    // Nem com o nome de uma marca real, nem com a concordância errada dos campeonatos de kart.
+    expect(text).not.toMatch(/\bF[1-4]\b|Fórmula [1-4]\b|Azure F1|Stallion F1/);
+    expect(text).not.toMatch(/(?:^|[ "(])(?:a|à|da|na|pela) (?:Campeonato (?:Regional|Brasileiro|Mundial) de Kart|Kart (?:Regional|Nacional|Internacional))/i);
     // Regravar e abrir de novo não muda nada.
     expect(importCareer(exportCareer(career, NOW))).toEqual({ ...career, updatedAt: NOW });
 
     // Continua jogável: segue em frente a partir do ponto em que o save parou.
-    if (career.mode !== 'driver' || career.succession || career.status !== 'active') return;
+    if (career.succession || career.status !== 'active') return;
     let next = career;
-    if (career.offseason) next = startNextSeason(career, pickBestOffer(career));
+    if (career.mode === 'executive') next = career.executiveOffseason ? botExecutiveOffseason(career) : playExecutiveRound(career);
+    else if (career.offseason) next = startNextSeason(career, pickBestOffer(career));
     else if (career.weekend?.qualifying && career.weekend.playerParticipates) {
       const race = simulateRemainingRace(createWeekendRace(career), buildRaceContext(career), { mode: 'balanced', auto: true });
       next = completeWeekend(career, race);

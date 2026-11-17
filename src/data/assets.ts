@@ -134,7 +134,7 @@ export interface BusinessDefinition {
 /**
  * O lucro depende da fama do dono: lucro = base × nível × (0,4 + reputação/60)
  * × sorte do ano (0,7 a 1,3). Um piloto desconhecido mal empata; um campeão de
- * F1 dobra o retorno.
+ * Grand Prix Mundial dobra o retorno.
  */
 export const BUSINESSES: readonly BusinessDefinition[] = [
   { id: 'marca', name: 'Marca de roupas', description: 'Linha de bonés e camisetas com o seu nome.', cost: 80_000, baseProfit: 9_000, minReputation: 15 },

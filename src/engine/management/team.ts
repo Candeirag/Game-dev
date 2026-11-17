@@ -108,7 +108,7 @@ export function researchNeeded(gains: number): number {
   return MANAGEMENT.RESEARCH_BASE * (1 + gains * MANAGEMENT.RESEARCH_GROWTH);
 }
 
-/** Fração das horas de túnel de vento a que a equipe tem direito (só existe limite na F1). */
+/** Fração das horas de túnel de vento a que a equipe tem direito (só existe limite no Grand Prix Mundial). */
 export function windTunnelAllowance(m: ManagedTeam): number {
   if (m.categoryId !== 'f1') return 1;
   const position = m.previousPosition ?? m.boardTarget;
@@ -221,7 +221,7 @@ export function buildSponsorOffers(
 
 /**
  * Quanto um piloto custa ou paga para correr por uma equipe.
- * Na F1, a equipe paga: o salário pedido cresce com a nota do piloto. Nas
+ * No Grand Prix Mundial, a equipe paga: o salário pedido cresce com a nota do piloto. Nas
  * categorias de base, é o piloto que paga pela vaga, e quanto melhor ele é,
  * menos paga: de 105% do preço de tabela (o mais fraco do grid) a 65% (o
  * melhor). A ambição diz que tamanho de equipe ele aceita: é comparada com a

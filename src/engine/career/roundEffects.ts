@@ -146,7 +146,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   if (entry && entry.penaltyPoints > 0) license = { ...license, penaltyPoints: license.penaltyPoints + entry.penaltyPoints };
   if (license.penaltyPoints >= PENALTY_POINTS_BAN) {
     license = { ...license, penaltyPoints: license.penaltyPoints - PENALTY_POINTS_BAN, banRounds: license.banRounds + 1 };
-    msg('ban', 'race', 'Suspensão por pontos na licença', `Você atingiu ${PENALTY_POINTS_BAN} pontos de punição e está suspenso da próxima etapa.`);
+    msg('ban', 'race', 'Suspensão por pontos de punição', `Você atingiu ${PENALTY_POINTS_BAN} pontos de punição e está suspenso da próxima etapa.`);
   }
   // As punições de grid anteriores foram cumpridas nesta etapa; ficam as novas.
   career = { ...career, license, gridPenalties: { ...gridDrops } };
@@ -236,7 +236,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
       'race',
       'race',
       `Etapa ${round}: ${track.name}`,
-      `${result} Vencedor: ${winner ? fullName(winner) : '-'}. No campeonato, você é o ${me?.position ?? '-'}º, com ${me?.points ?? 0} pontos.`,
+      `${result} Vencedor: ${winner ? fullName(winner) : '-'}. No campeonato, você é o ${me?.position ?? '-'}º, com ${counted(me?.points ?? 0, 'ponto', 'pontos')}.`,
     );
     let reaction: string;
     if (entry.status === 'dnf' && (entry.dnfReason === 'crash' || entry.dnfReason === 'fuel'))

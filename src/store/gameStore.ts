@@ -32,10 +32,14 @@ import { IndexedDbStorage, LocalStorageAdapter, createDefaultStorage, probeStora
 import { capacitorFiles } from '@/platform/deviceFiles';
 import { isNativeApp } from '@/platform/native';
 import {
+  NewerSaveError,
+  type OriginalCopyInfo,
   SaveError,
   deleteSave,
   exportCareer,
+  exportOriginalCopy,
   importCareer,
+  listOriginalCopies,
   listSaves,
   loadCareer,
   saveCareer,
@@ -81,6 +85,8 @@ export interface GameStore {
   lastExportAt: string | null;
   saveStatus: SaveStatus;
   slots: SlotInfo[];
+  /** Cópias intactas de saves de formato anterior, guardadas quando o slot foi convertido. */
+  originalCopies: OriginalCopyInfo[];
   notice: string | null;
   /** Desfecho do último evento resolvido, para mostrar ao jogador. */
   lastOutcome: { title: string; text: string } | null;
@@ -88,6 +94,9 @@ export interface GameStore {
   /** Testa o armazenamento do navegador e escolhe o que funciona (chamado uma vez, na abertura). */
   initStorage(): Promise<void>;
   refreshSlots(): Promise<void>;
+  refreshOriginalCopies(): Promise<void>;
+  /** Texto JSON de uma cópia de formato anterior, como o save foi gravado. */
+  exportOriginalCopy(slot: SaveSlotId, version: number): Promise<string>;
   /** Anota que a carreira acabou de ser exportada. */
   markExported(): void;
   newCareer(input: NewCareerInput): Promise<void>;
@@ -178,28 +187,21 @@ export interface GameStore {
 
 const now = () => new Date().toISOString();
 
-/**
- * Semente de uma carreira nova. É o único ponto do jogo com aleatoriedade não
- * determinística, de propósito: cada carreira nova tem a sua própria sorte.
- * Daí em diante, tudo deriva desta semente.
- */
-function newSeed(): number {
-  const buffer = new Uint32Array(1);
-  crypto.getRandomValues(buffer);
-  return buffer[0] ?? 1;
-}
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
 export const useGameStore = create<GameStore>((set, get) => {
+  /** O aviso de "save de versão mais nova no slot automático" já foi mostrado nesta sessão. */
+  let newerSaveWarned = false;
+
   /** Salva no slot automático. Erros aparecem no indicador de save, sem interromper o jogo. */
   async function autosave(career: CareerState) {
     set({ saveStatus: { kind: 'saving' } });
     try {
       await saveCareer(get().storage, 'auto', career, now());
       set({ saveStatus: { kind: 'saved', at: now(), slot: 'auto' } });
+      newerSaveWarned = false;
       void get().refreshSlots();
     } catch (error) {
       set({
@@ -208,7 +210,12 @@ export const useGameStore = create<GameStore>((set, get) => {
           message: errorMessage(error),
           ...(error instanceof SaveError ? { problems: error.problems } : {}),
         },
+        // O slot automático guarda um save de versão mais nova, que não é sobrescrito: o jogador
+        // precisa saber por que a gravação automática parou. O aviso aparece uma vez; o indicador
+        // de save continua mostrando a falha.
+        ...(error instanceof NewerSaveError && !newerSaveWarned ? { notice: error.message } : {}),
       });
+      if (error instanceof NewerSaveError) newerSaveWarned = true;
     }
   }
 
@@ -275,6 +282,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     autoEngineer: false,
     saveStatus: { kind: 'idle' },
     slots: [],
+    originalCopies: [],
     notice: null,
     lastOutcome: null,
     lastExportAt: readLastExport(),
@@ -308,8 +316,16 @@ export const useGameStore = create<GameStore>((set, get) => {
       set({ slots: await listSaves(get().storage) });
     },
 
+    async refreshOriginalCopies() {
+      set({ originalCopies: await listOriginalCopies(get().storage) });
+    },
+
+    exportOriginalCopy(slot, version) {
+      return exportOriginalCopy(get().storage, slot, version);
+    },
+
     async newCareer(input) {
-      const career = engine.createCareer(input, newSeed(), now());
+      const career = engine.createCareer(input, engine.randomSeed(), now());
       set({ career, ...RACE_RESET, notice: null, lastOutcome: null });
       await autosave(career);
     },

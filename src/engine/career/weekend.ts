@@ -221,7 +221,7 @@ export function completeWeekend(career: CareerState, race: RaceSimState): Career
 
 /**
  * Simula a etapa inteira sem o jogador no carro: lesionado, suspenso,
- * descansando ou, no modo dirigente, no pit wall. O dirigente escolhe o
+ * descansando ou, no modo dirigente, no muro dos boxes. O dirigente escolhe o
  * programa de treino e a abordagem de classificação dos pilotos da equipe.
  */
 export function simulateAbsentWeekend(career: CareerState, choices: { program?: PracticeProgram; approach?: QualifyingApproach } = {}): CareerState {

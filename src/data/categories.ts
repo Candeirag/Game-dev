@@ -1,11 +1,13 @@
+import { CATEGORY_NAMES } from '@/domain/categoryNames';
 import type { CategoryId, TyreCompound } from '@/domain/schemas';
 
 /**
- * As sete categorias da escada, do kart regional à Fórmula 1.
+ * As sete categorias da escada, do kart regional ao Grand Prix Mundial.
  *
  * Cada categoria define as regras de corrida, o nível técnico do grid, a
  * economia e o que é preciso para entrar nela. O motor não tem nenhum "if"
- * por categoria: ele lê estas definições.
+ * por categoria: ele lê estas definições. Os nomes (campeonato, rótulo curto
+ * e licença) vêm todos de `src/domain/categoryNames.ts`.
  */
 export interface RaceRules {
   /** Há pit lane e troca de pneus durante a corrida. */
@@ -36,14 +38,14 @@ export interface CategoryDefinition {
   id: CategoryId;
   name: string;
   shortName: string;
-  /** Degrau na escada: 1 (kart regional) a 7 (Fórmula 1). */
+  /** Degrau na escada: 1 (kart regional) a 7 (Grand Prix Mundial). */
   tier: number;
   vehicle: 'kart' | 'formula';
   /** Como o equipamento é chamado nos textos. */
   machine: string;
   rounds: number;
   trackIds: readonly string[];
-  /** Fator sobre o tempo de referência da pista (um F4 é mais lento que um F1). */
+  /** Fator sobre o tempo de referência da pista (um Monoposto Júnior é mais lento que um Monoposto Grand Prix). */
   lapTimeFactor: number;
   /** Peso do equipamento no tempo de volta, em relação ao kart regional. */
   carFactor: number;
@@ -139,21 +141,23 @@ const CIRCUITS = [
 
 /**
  * Valores e sua origem:
- * - Custos na ordem de grandeza real, em euros, de cada categoria (uma temporada
- *   de F4 custa algumas centenas de milhares; uma de F2, mais de 2 milhões).
- * - Os pontos de licença seguem o espírito da superlicença da FIA: 40 pontos
- *   em três temporadas para chegar à F1; as três primeiras posições da F2
- *   garantem os 40 de uma vez.
+ * - Custos na ordem de grandeza real, em euros, das categorias de base do automobilismo (uma
+ *   temporada no primeiro degrau de monopostos custa algumas centenas de milhares; no último
+ *   antes do topo, mais de 2 milhões).
+ * - Os pontos de licença seguem a lógica das licenças por pontos do automobilismo: 40 pontos
+ *   em três temporadas para chegar ao Grand Prix Mundial; as três primeiras posições da
+ *   Fórmula Elite garantem os 40 de uma vez.
  * - carFactor: no kart e nas categorias monomarca, o equipamento pesa pouco;
- *   na F1, o carro vale quatro vezes mais.
+ *   no Grand Prix Mundial, o carro vale quatro vezes mais.
  * - lapTimeFactor: razão aproximada entre os tempos de volta de cada carro e
- *   os de um F1 na mesma pista.
+ *   os do Monoposto Grand Prix na mesma pista.
  */
+/** Identificação de uma categoria: o id (fixo) e os nomes que saem do arquivo central. */
+const named = <T extends CategoryId>(id: T) => ({ id, name: CATEGORY_NAMES[id].name, shortName: CATEGORY_NAMES[id].shortName });
+
 export const CATEGORIES: readonly CategoryDefinition[] = [
   {
-    id: 'kart-regional',
-    name: 'Campeonato Regional de Kart',
-    shortName: 'Kart Regional',
+    ...named('kart-regional'),
     tier: 1,
     vehicle: 'kart',
     machine: 'kart',
@@ -169,13 +173,11 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     race: KART_RACE,
     field: { driverLevel: 68, driverSpread: 16, minAge: 13, maxAge: 20 },
     economy: { seatCost: [30_000, 16_000], salary: [0, 0], living: 5_000, sponsorBase: 16_000, damageBill: 1_500, trainingCost: 250, winBonus: 0 },
-    requirements: { minAge: 12, licensePoints: 0, minReputation: 0, minExperience: 0, licenseName: 'Licença de Kart Regional' },
+    requirements: { minAge: 12, licensePoints: 0, minReputation: 0, minExperience: 0, licenseName: CATEGORY_NAMES['kart-regional'].licenseName },
     licensePoints: [10, 8, 6, 5, 4, 3, 2, 2, 1, 1],
   },
   {
-    id: 'kart-national',
-    name: 'Campeonato Brasileiro de Kart',
-    shortName: 'Kart Nacional',
+    ...named('kart-national'),
     tier: 2,
     vehicle: 'kart',
     machine: 'kart',
@@ -191,13 +193,11 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     race: KART_RACE,
     field: { driverLevel: 72, driverSpread: 14, minAge: 14, maxAge: 21 },
     economy: { seatCost: [60_000, 34_000], salary: [0, 0], living: 9_000, sponsorBase: 40_000, damageBill: 3_000, trainingCost: 500, winBonus: 0 },
-    requirements: { minAge: 13, licensePoints: 2, minReputation: 10, minExperience: 26, licenseName: 'Licença Nacional de Kart' },
+    requirements: { minAge: 13, licensePoints: 2, minReputation: 10, minExperience: 26, licenseName: CATEGORY_NAMES['kart-national'].licenseName },
     licensePoints: [15, 12, 10, 8, 6, 5, 4, 3, 2, 1],
   },
   {
-    id: 'kart-international',
-    name: 'Campeonato Mundial de Kart',
-    shortName: 'Kart Internacional',
+    ...named('kart-international'),
     tier: 3,
     vehicle: 'kart',
     machine: 'kart',
@@ -213,13 +213,11 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     race: KART_RACE,
     field: { driverLevel: 75, driverSpread: 14, minAge: 14, maxAge: 22 },
     economy: { seatCost: [150_000, 90_000], salary: [0, 0], living: 18_000, sponsorBase: 85_000, damageBill: 6_000, trainingCost: 1_000, winBonus: 0 },
-    requirements: { minAge: 14, licensePoints: 8, minReputation: 18, minExperience: 34, licenseName: 'Licença Internacional de Kart' },
+    requirements: { minAge: 14, licensePoints: 8, minReputation: 18, minExperience: 34, licenseName: CATEGORY_NAMES['kart-international'].licenseName },
     licensePoints: [20, 16, 13, 10, 8, 6, 5, 4, 3, 2],
   },
   {
-    id: 'f4',
-    name: 'Fórmula 4',
-    shortName: 'F4',
+    ...named('f4'),
     tier: 4,
     vehicle: 'formula',
     machine: 'carro',
@@ -249,13 +247,11 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     },
     field: { driverLevel: 76, driverSpread: 13, minAge: 15, maxAge: 21 },
     economy: { seatCost: [380_000, 240_000], salary: [0, 0], living: 30_000, sponsorBase: 210_000, damageBill: 28_000, trainingCost: 2_500, winBonus: 0 },
-    requirements: { minAge: 15, licensePoints: 12, minReputation: 25, minExperience: 40, licenseName: 'Licença Internacional D' },
+    requirements: { minAge: 15, licensePoints: 12, minReputation: 25, minExperience: 40, licenseName: CATEGORY_NAMES.f4.licenseName },
     licensePoints: [25, 20, 16, 13, 10, 8, 6, 4, 3, 2],
   },
   {
-    id: 'f3',
-    name: 'Fórmula 3',
-    shortName: 'F3',
+    ...named('f3'),
     tier: 5,
     vehicle: 'formula',
     machine: 'carro',
@@ -285,13 +281,11 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     },
     field: { driverLevel: 78, driverSpread: 12, minAge: 16, maxAge: 23 },
     economy: { seatCost: [950_000, 620_000], salary: [0, 0], living: 50_000, sponsorBase: 520_000, damageBill: 70_000, trainingCost: 5_000, winBonus: 8_000 },
-    requirements: { minAge: 16, licensePoints: 18, minReputation: 36, minExperience: 50, licenseName: 'Licença Internacional C' },
+    requirements: { minAge: 16, licensePoints: 18, minReputation: 36, minExperience: 50, licenseName: CATEGORY_NAMES.f3.licenseName },
     licensePoints: [30, 25, 20, 15, 12, 9, 7, 5, 3, 2],
   },
   {
-    id: 'f2',
-    name: 'Fórmula 2',
-    shortName: 'F2',
+    ...named('f2'),
     tier: 6,
     vehicle: 'formula',
     machine: 'carro',
@@ -329,13 +323,11 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
       trainingCost: 10_000,
       winBonus: 25_000,
     },
-    requirements: { minAge: 17, licensePoints: 25, minReputation: 48, minExperience: 58, licenseName: 'Licença Internacional B' },
+    requirements: { minAge: 17, licensePoints: 25, minReputation: 48, minExperience: 58, licenseName: CATEGORY_NAMES.f2.licenseName },
     licensePoints: [40, 40, 40, 30, 20, 10, 8, 6, 4, 3],
   },
   {
-    id: 'f1',
-    name: 'Fórmula 1',
-    shortName: 'F1',
+    ...named('f1'),
     tier: 7,
     vehicle: 'formula',
     machine: 'carro',
@@ -373,7 +365,7 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
       trainingCost: 30_000,
       winBonus: 300_000,
     },
-    requirements: { minAge: 18, licensePoints: 40, minReputation: 60, minExperience: 64, licenseName: 'Superlicença' },
+    requirements: { minAge: 18, licensePoints: 40, minReputation: 60, minExperience: 64, licenseName: CATEGORY_NAMES.f1.licenseName },
     licensePoints: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   },
 ];
@@ -391,5 +383,5 @@ export function categoryByTier(tier: number): CategoryDefinition | undefined {
 /** Pontos de punição na licença que causam suspensão de uma etapa. */
 export const PENALTY_POINTS_BAN = 12;
 
-/** Temporadas consideradas na soma de pontos de licença (como na superlicença). */
+/** Temporadas consideradas na soma de pontos de licença. */
 export const LICENSE_WINDOW_SEASONS = 3;

@@ -6,7 +6,7 @@
  * redesenhado a cada quadro sob a transformação da câmera. Assim o zoom da
  * câmera que acompanha um carro continua nítido.
  */
-import { CIRCUIT, pitBoxAt, pitLateralAt, poseAt, type Circuit } from '@/engine';
+import { CIRCUIT, pitBoxAt, pitLateralAt, poseAt, textHash01, type Circuit } from '@/engine';
 import grandstandUrl from '@/assets/race/scenery/grandstand.webp';
 import treeUrl from '@/assets/race/scenery/tree.webp';
 
@@ -121,21 +121,6 @@ function slab(circuit: Circuit, s: number, lateral: number, along: number, acros
   return path;
 }
 
-function hash01(text: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  // Embaralha os bits: sem isto, textos que só diferem no último caractere dão valores vizinhos.
-  h ^= h >>> 16;
-  h = Math.imul(h, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  h ^= h >>> 16;
-  return (h >>> 0) / 4294967296;
-}
-
 /** Menor distância de um ponto ao eixo da pista. */
 function distanceToTrack(circuit: Circuit, x: number, y: number): number {
   let best = Infinity;
@@ -151,15 +136,15 @@ function scatterTrees(circuit: Circuit): TrackArt['trees'] {
   const pitTo = poseAt(circuit, circuit.pit.exit, Math.sign(circuit.pit.offset) * pitReach * 0.5);
   const wanted = Math.round((46 * circuit.width * circuit.height) / (CIRCUIT.WORLD_WIDTH * CIRCUIT.WORLD_HEIGHT));
   for (let i = 0; i < wanted * 4 && trees.length < wanted; i++) {
-    const x = -60 + hash01(`tx|${circuit.trackId}|${i}`) * (circuit.width + 120);
-    const y = -60 + hash01(`ty|${circuit.trackId}|${i}`) * (circuit.height + 120);
+    const x = -60 + textHash01(`tx|${circuit.trackId}|${i}`) * (circuit.width + 120);
+    const y = -60 + textHash01(`ty|${circuit.trackId}|${i}`) * (circuit.height + 120);
     if (distanceToTrack(circuit, x, y) < 52) continue;
     // Faixa dos boxes: distância ao segmento entre a entrada e a saída do pit lane.
     const dx = pitTo.x - pitFrom.x;
     const dy = pitTo.y - pitFrom.y;
     const t = Math.min(1, Math.max(0, ((x - pitFrom.x) * dx + (y - pitFrom.y) * dy) / (dx * dx + dy * dy || 1)));
     if (Math.hypot(pitFrom.x + dx * t - x, pitFrom.y + dy * t - y) < pitReach * 0.75) continue;
-    trees.push({ x, y, r: 7 + hash01(`tr|${circuit.trackId}|${i}`) * 8 });
+    trees.push({ x, y, r: 7 + textHash01(`tr|${circuit.trackId}|${i}`) * 8 });
   }
   return trees;
 }

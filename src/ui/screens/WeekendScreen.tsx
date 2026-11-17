@@ -81,7 +81,7 @@ export function WeekendScreen() {
             {!availability.available && (
               <p className="mt-3 text-sm text-gold-400">
                 {availability.reason === 'ban'
-                  ? 'Você está suspenso desta etapa por pontos na licença.'
+                  ? 'Você está suspenso desta etapa por pontos de punição.'
                   : `Você está fora por lesão (${player.injury?.description}).`}{' '}
                 O piloto reserva corre no seu lugar.
               </p>

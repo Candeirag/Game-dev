@@ -50,7 +50,7 @@ export const PRACTICE_PROGRAM_LABELS: Record<PracticeProgram, string> = {
 };
 
 export const PRACTICE_PROGRAM_DESCRIPTIONS: Record<PracticeProgram, string> = {
-  setup: 'Prioriza o acerto do kart. É o maior ganho de ritmo, valendo para a classificação e para a corrida.',
+  setup: 'Prioriza o acerto do equipamento. É o maior ganho de ritmo, valendo para a classificação e para a corrida.',
   qualifying: 'Voltas lançadas com pneus novos. Garante uma volta mais rápida na classificação.',
   longRun: 'Stints longos. Reduz em 15% o desgaste de pneus na corrida, o que é decisivo em pistas abrasivas.',
 };

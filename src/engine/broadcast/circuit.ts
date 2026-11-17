@@ -62,7 +62,7 @@ export const CIRCUIT = {
 
 /** Perfil de velocidade por tipo de veículo (valores relativos à velocidade máxima). */
 /**
- * Perfil dos traçados reais, em metros: um F1 faz de pé embaixo curvas com mais de 240 m de raio,
+ * Perfil dos traçados reais, em metros: um carro do topo faz de pé embaixo curvas com mais de 240 m de raio,
  * precisa de uns 400 m para ir da velocidade de um grampo à máxima e de uns 110 m para o inverso.
  * Para os karts não há traçado real cadastrado; o valor fica pronto para quando houver.
  */
@@ -531,7 +531,7 @@ function assemble(spec: PathSpec): { circuit: Circuit; valid: boolean } {
     }
   }
   // A velocidade máxima não passa de um múltiplo plausível da média da volta (cerca de 330 km/h
-  // para 230 km/h de média num F1). Em traçados muito travados o perfil é achatado até caber.
+  // para 230 km/h de média num carro do topo). Em traçados muito travados o perfil é achatado até caber.
   let tau = lapFractions(speed, step);
   if (peakPace(tau, count) > profile.peak) {
     let low = 0.2;

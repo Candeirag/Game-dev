@@ -11,7 +11,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORY_IDS, PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type CategoryId, type PracticeProgram, type QualifyingApproach } from '@/domain/schemas';
 import { PRACTICE_PROGRAM_LABELS, QUALIFYING_APPROACH_LABELS } from '@/domain/labels';
-import { counted } from '@/domain/text';
+import { TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
+import { amongTheFirst, counted } from '@/domain/text';
 import { getCategory } from '@/data/categories';
 import { MANAGEMENT, REGULATIONS } from '@/data/management';
 import { getTrack } from '@/data/tracks';
@@ -139,7 +140,7 @@ export function ExecutiveDashboardScreen() {
                   </div>
                   {!wide && (
                     <Button variant="primary" className="mt-3" disabled={pending} onClick={() => navigate('/weekend')}>
-                      {pending ? 'Resolva as decisões pendentes' : m ? 'Ir para o pit wall' : 'Acompanhar a etapa'}
+                      {pending ? 'Resolva as decisões pendentes' : m ? 'Ir para o muro dos boxes' : 'Acompanhar a etapa'}
                     </Button>
                   )}
                 </div>
@@ -305,7 +306,7 @@ export function ExecutiveWeekendScreen() {
   if (liveRace) return <RaceBroadcast spectator />;
 
   const planning = !seasonOver && next && track;
-  const who = m && team ? `Pit wall · ${team.name}` : 'Acompanhando o campeonato';
+  const who = m && team ? `Muro dos boxes · ${team.name}` : 'Acompanhando o campeonato';
 
   return (
     <div className="space-y-3">
@@ -516,7 +517,7 @@ export function ExecutiveCareerScreen() {
                 Como <b className="text-ink-100">dono</b>, o lucro (e o prejuízo) é seu, e a equipe passa aos herdeiros.
               </li>
               <li>
-                Regulamento da {category.shortName}: {REGULATIONS[category.id].summary}
+                Regulamento {categoryRef(category.id, 'de')}: {REGULATIONS[category.id].summary}
               </li>
             </ul>
           </Card>
@@ -692,9 +693,9 @@ export function ExecutiveCareerScreen() {
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-x-3 text-xs text-ink-400">
-                        <span className="whitespace-nowrap">
-                          {c.age} anos · contrato de {counted(c.years, 'ano', 'anos')}
-                        </span>
+                        {/* A idade do candidato já é a da temporada para a qual ele assina. */}
+                        <span className="whitespace-nowrap">{c.age} anos na próxima temporada</span>
+                        <span className="whitespace-nowrap">Contrato de {counted(c.years, 'temporada', 'temporadas')}</span>
                         {c.salary > 0 && <span className="whitespace-nowrap text-ink-200">Salário: {formatMoney(c.salary)}</span>}
                         {c.seatFee > 0 && <span className="whitespace-nowrap text-ink-200">Paga {formatMoney(c.seatFee)} pela vaga</span>}
                       </div>
@@ -711,9 +712,9 @@ export function ExecutiveCareerScreen() {
               })}
           </ul>
           <p className="mt-3 text-xs text-ink-400">
-            O primeiro escolhido é o primeiro piloto. Pilotos melhores pedem salário maior (na F1) ou pagam menos pela vaga (nas categorias de base), e só
-            aceitam equipes à altura da ambição deles. Quem recusa quer uma equipe mais forte, ou chegou à idade-limite da categoria. Um filho corre pela equipe
-            da família sem salário e sem pagar pela vaga.
+            O primeiro escolhido é o primeiro piloto. Pilotos melhores pedem salário maior ({categoryRef(TOP_CATEGORY_ID, 'em')}) ou pagam menos pela vaga (nas
+            categorias de base), e só aceitam equipes à altura da ambição deles. Quem recusa quer uma equipe mais forte, ou chegou à idade-limite da categoria.
+            Um filho corre pela equipe da família sem salário e sem pagar pela vaga.
           </p>
         </Card>
       )}
@@ -738,7 +739,7 @@ export function ExecutiveCareerScreen() {
                     {formatMoney(s.perSeason)}
                     <span className="font-sans text-xs font-normal text-ink-400"> por temporada</span>
                   </div>
-                  <div className="text-xs text-ink-400">Exige a equipe entre as {s.targetPosition} primeiras.</div>
+                  <div className="text-xs text-ink-400">Exige a equipe {amongTheFirst(s.targetPosition)}.</div>
                   <Button className="mt-2" disabled={m.sponsors.length >= MANAGEMENT.SPONSOR_SLOTS} onClick={() => store.acceptTeamSponsor(s.id)}>
                     Aceitar
                   </Button>
@@ -748,8 +749,8 @@ export function ExecutiveCareerScreen() {
           )}
           {m.sponsors.length > 0 && (
             <p className="mt-3 text-xs text-ink-400">
-              Atuais: {m.sponsors.map((s) => `${s.name} (${formatMoney(s.perSeason)}, top ${s.targetPosition})`).join(' · ')}. Para trocar, dispense um na tela
-              Gestão.
+              Atuais: {m.sponsors.map((s) => `${s.name} (${formatMoney(s.perSeason)}, ${amongTheFirst(s.targetPosition)})`).join(' · ')}. Para trocar, dispense
+              um na tela Gestão.
             </p>
           )}
         </Card>

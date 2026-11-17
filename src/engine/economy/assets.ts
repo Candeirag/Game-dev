@@ -24,6 +24,7 @@ import { netWorth, post } from '../career/economy';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { rankTeams } from '../world/generation';
 import { money } from '../career/selectors';
+import { counted } from '@/domain/text';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -79,7 +80,7 @@ export function buyStock(career: CareerState, stockId: string, shares: number): 
   const holding: StockHolding = held
     ? { stockId, shares: held.shares + shares, avgCost: (held.avgCost * held.shares + price * shares) / (held.shares + shares) }
     : { stockId, shares, avgCost: price };
-  const finance = post(career.finance, career.season, round(career), 'assets', -total, `Compra de ${shares} ações da ${stock.name}`);
+  const finance = post(career.finance, career.season, round(career), 'assets', -total, `Compra: ${counted(shares, 'ação', 'ações')} ${stock.name}`);
   return { ...career, finance: { ...finance, stocks: [...finance.stocks.filter((h) => h.stockId !== stockId), holding] } };
 }
 
@@ -89,7 +90,7 @@ export function sellStock(career: CareerState, stockId: string, shares: number):
   const stock = getStock(stockId);
   const proceeds = Math.round(stockPrice(career.finance, stockId) * shares);
   const tax = capitalGainsTax(proceeds, held.avgCost * shares);
-  let finance = post(career.finance, career.season, round(career), 'assets', proceeds, `Venda de ${shares} ações da ${stock.name}`);
+  let finance = post(career.finance, career.season, round(career), 'assets', proceeds, `Venda: ${counted(shares, 'ação', 'ações')} ${stock.name}`);
   finance = post(finance, career.season, round(career), 'tax', -tax, 'Imposto sobre ganho de capital');
   const rest = held.shares - shares;
   return {
@@ -401,10 +402,10 @@ export function liquidateAssets(finance: Finance, season: number, round: number,
     const price = stockPrice(f, holding.stockId);
     const shares = Math.min(holding.shares, Math.ceil(remaining / price));
     const proceeds = Math.round(price * shares);
-    f = post(f, season, round, 'assets', proceeds, `Execução: ações da ${getStock(holding.stockId).name}`);
+    f = post(f, season, round, 'assets', proceeds, `Execução: ações ${getStock(holding.stockId).name}`);
     f = { ...f, stocks: f.stocks.map((h) => (h.stockId === holding.stockId ? { ...h, shares: h.shares - shares } : h)).filter((h) => h.shares > 0) };
     remaining -= proceeds;
-    sold.push(`ações da ${getStock(holding.stockId).name}`);
+    sold.push(`ações ${getStock(holding.stockId).name}`);
   }
   for (const property of f.properties) {
     if (remaining <= 0) break;

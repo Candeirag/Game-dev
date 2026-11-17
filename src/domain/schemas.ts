@@ -116,7 +116,7 @@ export const TeamSchema = z.object({
   car: CarPerformanceSchema,
   /** Qualidade da equipe de box: paradas mais rápidas e menos erros. */
   crew: RatingSchema,
-  /** Equipe de F1 a cuja academia esta equipe é ligada (null se independente). */
+  /** Equipe do Grand Prix Mundial a cuja academia esta equipe é ligada (null se independente). */
   affiliation: z.string().nullable(),
   /** Posição no campeonato de pilotos que a equipe espera do seu piloto. */
   driverTarget: z.number().int().min(1).max(30),
@@ -655,7 +655,7 @@ export const ChildRacingSchema = z.object({
   teamRank: z.number().int().min(0).max(9),
   reputation: RatingSchema,
   license: z.array(LicenseHistoryEntrySchema),
-  /** Academia de F1 que o apoia (null = nenhuma). */
+  /** Academia de uma equipe do Grand Prix Mundial que o apoia (null = nenhuma). */
   academy: z.string().nullable(),
   seasons: z.array(ChildSeasonSchema),
   /** Temporadas seguidas sem conseguir bancar a vaga; com 2, a carreira acaba. */
@@ -1084,7 +1084,12 @@ export const TRAINING_INTENSITIES = ['light', 'normal', 'intense'] as const;
 export const TrainingIntensitySchema = z.enum(TRAINING_INTENSITIES);
 export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
 
-export const CAREER_SCHEMA_VERSION = 3;
+/**
+ * Versão do formato do save. Sobe a cada mudança no que é gravado, sempre junto com uma migração
+ * em src/persistence/migrations.ts e um save novo em tests/fixtures (o passo a passo está lá).
+ * Versão 4 (Fase 0): nomes próprios das categorias e das equipes nos textos gravados.
+ */
+export const CAREER_SCHEMA_VERSION = 4;
 
 export const CareerStateSchema = z.object({
   schemaVersion: z.literal(CAREER_SCHEMA_VERSION),

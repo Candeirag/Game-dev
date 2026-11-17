@@ -281,7 +281,7 @@ export const WORLD_KART_TRACKS: readonly Track[] = fromRows([
 
 /**
  * Autódromos dos monopostos. Nomes fictícios em cidades reais. O tempo de
- * referência é o de um F1; cada categoria aplica o seu fator. O campo "laps"
+ * referência é o do Monoposto Grand Prix; cada categoria aplica o seu fator. O campo "laps"
  * não é usado aqui: o número de voltas vem da duração da prova na categoria.
  */
 export const CIRCUITS: readonly Track[] = fromRows([

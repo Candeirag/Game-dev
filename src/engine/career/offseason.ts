@@ -36,6 +36,7 @@ import { promotedRivals, runAiMarket, updateMarketInterest } from './market';
 import { familyDriverIds, fullName, getPlayer, getTeam } from './selectors';
 import { renewSponsors } from './sponsors';
 import { money } from './selectors';
+import { categoryRef } from '@/domain/categoryNames';
 import { counted } from '@/domain/text';
 
 /** A pré-temporada equivale a 2 ciclos de treino. */
@@ -54,7 +55,7 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
  * prestígio" = base da categoria + bônus pela posição final, e a reputação
  * anda metade do caminho até essa nota, mais 0,5 por vitória.
  *
- * Bases: 5 (kart regional), 15, 27, 38, 50, 62 e 74 (Fórmula 1).
+ * Bases: 5 (kart regional), 15, 27, 38, 50, 62 e 74 (Grand Prix Mundial).
  * Bônus: campeão +22, vice +18, 3º +15, até 5º +13, até 10º +6, até 15º 0,
  * abaixo disso −5.
  *
@@ -433,7 +434,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
 
   let academy = career.academy;
   if (academy && next.tier === 7) {
-    news.push(`Você se formou na ${academy.name}: chegou à Fórmula 1.`);
+    news.push(`Você se formou na ${academy.name}: chegou ${categoryRef(next.id, 'a')}.`);
     academy = null;
   }
 
@@ -448,7 +449,7 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
   } else {
     teams = evolveTeams(career.teams, career);
     if (isRegulationChange(career.seed, career.season, career.categoryId))
-      news.push(`Regulamento técnico novo na ${next.shortName}: as equipes refizeram o projeto e a ordem de forças pode ter mudado.`);
+      news.push(`Regulamento técnico novo ${categoryRef(next.id, 'em')}: as equipes refizeram o projeto e a ordem de forças pode ter mudado.`);
     const before = career.teams.find((t) => t.id === offer.teamId);
     const after = teams.find((t) => t.id === offer.teamId);
     if (before && after) {
@@ -512,9 +513,9 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
 
   const kindText = changingCategory
     ? next.tier > getCategory(career.categoryId).tier
-      ? `Você subiu para a ${next.name}`
-      : `Você vai disputar a ${next.name}`
-    : `Você segue na ${next.name}`;
+      ? `Você subiu ${categoryRef(next.id, 'para')}`
+      : `Você vai disputar ${categoryRef(next.id, 'the')}`
+    : `Você segue ${categoryRef(next.id, 'em')}`;
   const messages: InboxMessage[] = [
     {
       id: `s${nextSeason}-start`,

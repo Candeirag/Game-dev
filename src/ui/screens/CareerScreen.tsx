@@ -1,10 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ArrowRight, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { FIRST_FORMULA_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import type { Offer, Offseason } from '@/domain/schemas';
 import { OFFER_KIND_LABELS, ROLE_LABELS } from '@/domain/labels';
 import { CATEGORIES, LICENSE_WINDOW_SEASONS, PENALTY_POINTS_BAN, categoryByTier, getCategory } from '@/data/categories';
 import {
+  CONTRACT_RULES,
   canAcceptOffer,
   categoryRequirements,
   fullName,
@@ -84,6 +86,17 @@ function LadderTab() {
   const { career, player, team, category } = useCareerView();
   const next = categoryByTier(category.tier + 1);
   const requirements = useMemo(() => (next ? categoryRequirements(career, next.id) : []), [career, next]);
+  // Durante a temporada, o interesse da equipe mais interessada do degrau de cima é uma estimativa:
+  // as propostas só saem no fechamento, com as contas do ano. No fechamento, vale o que saiu.
+  const promotionOffer = next && career.offseason ? career.offseason.offers.some((o) => o.kind === 'promotion' && o.categoryId === next.id) : null;
+  const bestInterest = next
+    ? Math.max(
+        0,
+        ...Object.entries(career.marketInterest)
+          .filter(([key]) => key.startsWith(`${next.id}:`))
+          .map(([, value]) => value),
+      )
+    : 0;
 
   return (
     <>
@@ -116,7 +129,7 @@ function LadderTab() {
                 >
                   {c.shortName}
                 </div>
-                {/* O veículo de cada degrau, em proporção: do kart de entrada ao F1. Na categoria atual, com a pintura da equipe. */}
+                {/* O veículo de cada degrau, em proporção: do kart de entrada ao Monoposto Grand Prix. Na categoria atual, com a pintura da equipe. */}
                 <div
                   className="my-1 flex shrink-0 items-center overflow-hidden"
                   style={{ height: `calc(var(--u) * ${WIDEST_VEHICLE} + 4px)` }}
@@ -149,11 +162,13 @@ function LadderTab() {
           })}
         </ol>
         {career.categoryId === 'kart-national' && (
-          <p className="mt-2 text-xs text-ink-400">Do kart nacional é possível ir direto para a Fórmula 4, se você cumprir os requisitos dela.</p>
+          <p className="mt-2 text-xs text-ink-400">
+            Do kart nacional é possível ir direto {categoryRef(FIRST_FORMULA_CATEGORY_ID, 'para')}, se você cumprir os requisitos.
+          </p>
         )}
       </Card>
 
-      <Card title={next ? `Requisitos para a ${next.shortName}` : 'Topo da escada'}>
+      <Card title={next ? `Requisitos ${categoryRef(next.id, 'para', { short: true })}` : 'Topo da escada'}>
         {next ? (
           <>
             <ul className="grid gap-x-6 gap-y-2 md:grid-cols-2">
@@ -162,18 +177,24 @@ function LadderTab() {
                   <b>{r.label}:</b> {r.detail}
                 </Check>
               ))}
-              <Check met={Object.entries(career.marketInterest).some(([key, value]) => key.startsWith(`${next.id}:`) && value >= 50)}>
-                <b>Proposta de uma equipe:</b> pelo menos uma equipe da {next.shortName} precisa ter interesse de 50 ou mais.
+              <Check met={promotionOffer ?? bestInterest >= CONTRACT_RULES.MIN_INTEREST.promotion}>
+                <b>Interesse de uma equipe {categoryRef(next.id, 'de')}:</b>{' '}
+                {promotionOffer === null
+                  ? `${Math.floor(bestInterest)} hoje (as propostas saem no fim da temporada, a partir de ${CONTRACT_RULES.MIN_INTEREST.promotion})`
+                  : promotionOffer
+                    ? 'há proposta para a próxima temporada'
+                    : 'nenhuma proposta neste fim de temporada'}
               </Check>
             </ul>
             <p className="mt-3 text-xs text-ink-400">
-              A idade vale para o início da próxima temporada. Você também precisa bancar a vaga (veja Finanças e as propostas no fim do ano); os três primeiros
-              do campeonato ganham bolsa de 60%, 35% e 20% na vaga do degrau de cima.
+              Você também precisa bancar a vaga (veja Finanças e as propostas no fim do ano); os três primeiros do campeonato ganham bolsa de 60%, 35% e 20% na
+              vaga do degrau de cima.
             </p>
           </>
         ) : (
           <p className="text-sm text-ink-300">
-            Você chegou à Fórmula 1. Agora é disputar vitórias e títulos enquanto a idade permitir: a partir dos 31 anos, a velocidade começa a cair.
+            Você chegou {categoryRef(category.id, 'a')}. Agora é disputar vitórias e títulos enquanto a idade permitir: a partir dos 31 anos, a velocidade
+            começa a cair.
           </p>
         )}
       </Card>

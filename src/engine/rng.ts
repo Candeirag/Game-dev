@@ -1,8 +1,10 @@
 /**
  * Gerador pseudoaleatório determinístico (mulberry32).
  *
- * Toda a variabilidade do jogo passa por aqui. Nada usa Math.random(). Isso
- * garante três coisas:
+ * Toda a variabilidade do jogo passa por aqui: este é o único módulo de acaso
+ * do projeto, e nenhum outro arquivo sorteia nada por conta própria
+ * (`tests/determinism.test.ts` falha se alguém tentar). Isso garante três
+ * coisas:
  * 1. Reprodutibilidade: a mesma semente sempre gera a mesma sequência, o que
  *    torna a simulação testável e os saves consistentes.
  * 2. Variabilidade controlada: a sorte entra em pontos definidos (ruído de
@@ -16,6 +18,17 @@ export interface Rng {
   next(): number;
   /** Estado interno atual; permite pausar e retomar a sequência. */
   readonly state: number;
+}
+
+/**
+ * Semente de uma carreira nova. É o único ponto do jogo com acaso de verdade,
+ * de propósito: cada carreira nova tem a sua própria sorte. A semente vai para
+ * o save (`career.seed`) e, daí em diante, tudo deriva dela.
+ */
+export function randomSeed(): number {
+  const buffer = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(buffer);
+  return buffer[0] ?? 1;
 }
 
 export function createRng(seed: number): Rng {
@@ -48,6 +61,33 @@ export function hashSeed(...parts: (string | number)[]): number {
     hash = Math.imul(hash, 0x01000193);
   }
   return hash >>> 0;
+}
+
+/**
+ * Número estável tirado de um texto (FNV-1a com os bits embaralhados no fim), em 32 bits. Serve
+ * para a aparência: a cor de detalhe de uma equipe, o lado em que um carro aparece numa disputa,
+ * onde ficam as árvores de uma pista. O mesmo texto dá sempre o mesmo número, em qualquer
+ * aparelho, e nada disso entra no estado do jogo. Para sortear algo que muda a carreira, use
+ * `createRng(hashSeed(career.seed, …))`.
+ */
+export function textHash(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  // Embaralha os bits: sem isto, textos que só diferem no último caractere dão valores vizinhos.
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
+
+/** O mesmo, como fração em [0, 1). */
+export function textHash01(text: string): number {
+  return textHash(text) / 4294967296;
 }
 
 /** Uniforme em [min, max). */

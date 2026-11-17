@@ -3,6 +3,7 @@
  * entre as temporadas.
  */
 import type { CareerState, CategoryId, Driver, Team } from '@/domain/schemas';
+import { compareText } from '@/domain/text';
 import { categoryByTier, getCategory, type CategoryDefinition } from '@/data/categories';
 import { initialTeams } from '@/data/teams';
 import { computeDriverStandings } from '../championship/standings';
@@ -33,8 +34,8 @@ export function teamsOfCategory(career: CareerState, categoryId: CategoryId): Te
 /**
  * Categorias em que o jogador pode correr na próxima temporada: um degrau
  * abaixo, o atual e um acima. Há um atalho, como na vida real: do kart
- * nacional já se pode ir direto para a Fórmula 4, sem passar pelo kart
- * internacional, desde que os requisitos da F4 sejam cumpridos.
+ * nacional já se pode ir direto para a Fórmula Júnior, sem passar pelo kart
+ * internacional, desde que os requisitos dela sejam cumpridos.
  */
 export function reachableCategories(career: CareerState): CategoryDefinition[] {
   const tier = getCategory(career.categoryId).tier;
@@ -56,7 +57,7 @@ export function targetInterest(career: CareerState, category: CategoryDefinition
   const player = getPlayer(career);
   const current = getCategory(career.categoryId);
   const me = driverStandings(career).find((s) => s.driverId === player.id);
-  // No atalho do kart nacional para a F4, o salto conta como um degrau só.
+  // No atalho do kart nacional para a Fórmula Júnior, o salto conta como um degrau só.
   const steps = Math.max(-1, Math.min(1, category.tier - current.tier));
   const equivalentPosition = (me?.position ?? 12) + steps * MARKET.TIER_POSITION_SHIFT;
   const performance = career.rounds.length >= 2 ? clamp(0.5 + (team.driverTarget + 2 - equivalentPosition) / 10, 0, 1) : 0.4;
@@ -97,7 +98,7 @@ export interface MarketResult {
  * Movimentação da IA dentro da categoria, entre duas temporadas.
  *
  * 1. Saídas: os três melhores da IA no campeonato sobem de categoria (exceto
- *    na F1); quem passou da idade da categoria sai; na F1, aposenta-se quem
+ *    no Grand Prix Mundial); quem passou da idade da categoria sai; no Grand Prix Mundial, aposenta-se quem
  *    tem 38 anos ou mais, ou 34 e nível abaixo do grid.
  * 2. Ficam livres: quem saiu de contrato, os reservas e o segundo piloto que
  *    superou o primeiro da própria equipe (insatisfeito, pede para sair).
@@ -185,7 +186,7 @@ export function runAiMarket(
   }
 
   // 4. Preenchimento das vagas, da equipe mais forte para a mais fraca.
-  free.sort((a, b) => value(b) - value(a) || a.id.localeCompare(b.id));
+  free.sort((a, b) => value(b) - value(a) || compareText(a.id, b.id));
   const previousTeam = new Map(drivers.map((d) => [d.id, d.teamId]));
   for (const team of ranked) {
     const list = seats.get(team.id) ?? [];

@@ -164,7 +164,7 @@ export const PRACTICE_PROGRAM_EFFECTS = {
  *
  * Calibragem: com desgaste-base de 3,2% por volta, o médio chega ao "penhasco"
  * (80% de desgaste) em cerca de 26 voltas, o macio em 15 e o duro em 37. Numa
- * corrida de F1 de 58 voltas, uma parada (médio + duro) e duas paradas (macio +
+ * corrida do Grand Prix Mundial de 58 voltas, uma parada (médio + duro) e duas paradas (macio +
  * médio + médio) custam quase o mesmo tempo total; a escolha depende da pista,
  * do piloto e das neutralizações.
  */
@@ -253,7 +253,7 @@ export const RACE = {
   /** Chance de o atacante ser considerado culpado por um toque. */
   COLLISION_FAULT_CHANCE: 0.6,
   COLLISION_PENALTY: 5,
-  /** Toque que tira um rival da corrida: 10 s, 2 pontos na licença e 3 posições no próximo grid. */
+  /** Toque que tira um rival da corrida: 10 s, 2 pontos de punição e 3 posições no próximo grid. */
   COLLISION_DNF_PENALTY: 10,
   COLLISION_DNF_GRID_DROP: 3,
   PIT_PENALTY: 5,
