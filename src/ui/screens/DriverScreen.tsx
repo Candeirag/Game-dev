@@ -6,6 +6,7 @@ import { NATIONALITIES } from '@/data/rules';
 import { computeCareerStats, fullName, overallRating } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
 import { Card, cx, Delta, Meter, PageHeader, Pill, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
+import { TrendLine, attributeSeries } from '../components/TrendLine';
 import { formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
@@ -86,6 +87,16 @@ export function DriverScreen() {
                 <Stat label="Reputação" value={career.reputation} />
               </div>
             </div>
+            {/* Evolução por temporada: a nota geral ou, com um atributo aberto, a dele. */}
+            <div className="mt-3 border-t border-ink-700 pt-3">
+              <TrendLine
+                title={selected ? ATTRIBUTE_LABELS[selected] : 'Nota geral'}
+                values={attributeSeries(career, player.id, selected ?? 'overall', selected ? player.attributes[selected] : overall)}
+                format={(v) => formatRating(v)}
+                tone="good"
+                threshold={0.5}
+              />
+            </div>
             <div className="mt-3 border-t border-ink-700 pt-3 text-xs text-ink-400 md:min-h-[6.25rem]">
               {selected && (
                 <div className="hidden md:block">
@@ -127,7 +138,7 @@ export function DriverScreen() {
       )}
 
       {tab === 'stats' && (
-        <Card title="Estatísticas de carreira" bodyClassName="grid grid-cols-3 gap-x-4 gap-y-5 p-4 md:grid-cols-5">
+        <Card title="Estatísticas de carreira" bodyClassName="grid grid-cols-3 gap-x-4 gap-y-4 p-4 md:grid-cols-5">
           <Stat label="Corridas" value={stats.starts} />
           <Stat label="Vitórias" value={stats.wins} />
           <Stat label="Pódios" value={stats.podiums} />

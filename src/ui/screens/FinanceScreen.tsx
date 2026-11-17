@@ -4,6 +4,7 @@ import { LEDGER_KEYS } from '@/domain/schemas';
 import { LEDGER_LABELS } from '@/domain/labels';
 import { ECONOMY, SPONSOR_RULES, commercialSponsors, expectedRoundResult, netWorth, ownedTeamValue, stocksValue } from '@/engine';
 import { Card, cx, Delta, Meter, PageHeader, Pill, Stat, TableWrap, Tabs } from '@/ui/kit';
+import { TrendLine, cashSeries } from '../components/TrendLine';
 import { formatMoney, formatMoneyFull } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { CreditPanel, PropertyPanel, SavingsPanel, StakesPanel, StocksPanel } from './finance/AssetPanels';
@@ -26,8 +27,8 @@ const LEDGER_VIEWS: { value: LedgerView; label: string }[] = [
 ];
 
 /** Células compactas das tabelas de leitura (sem botões na linha). */
-const head = 'px-2 py-1.5 text-left text-2xs font-medium leading-tight text-ink-400';
-const cell = 'px-2 py-1.5 text-sm';
+const head = 'px-2 py-2 text-left text-2xs font-medium leading-tight text-ink-400';
+const cell = 'px-2 py-2 text-sm';
 /** Cor de um valor em dinheiro: verde no positivo, âmbar no negativo. */
 const moneyTone = (v: number) => (v < 0 ? 'text-gold-400' : 'text-go-400');
 
@@ -125,6 +126,17 @@ function SummaryTab() {
           value={<Delta value={balance} showZero threshold={0.5} format={(v) => formatMoney(v)} />}
           hint="Receitas menos despesas"
         />
+        {/* Caixa por temporada: o saldo no fechamento de cada ano e o de hoje. */}
+        <div className="col-span-2 border-t border-ink-700 pt-3 md:col-span-4">
+          <TrendLine
+            title="Caixa"
+            values={cashSeries(career)}
+            format={(v) => formatMoney(v)}
+            tone={f.cash < 0 ? 'attention' : 'good'}
+            zeroLine
+            threshold={0.5}
+          />
+        </div>
       </Card>
 
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
