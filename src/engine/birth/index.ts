@@ -4,6 +4,7 @@ export {
   activeBirth,
   birthRaceProfile,
   birthTrainingFactor,
+  charismaSponsorFactor,
   hasTrait,
   interiorWeighs,
   isDebutRound,

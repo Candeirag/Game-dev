@@ -12,6 +12,18 @@ test('criar carreira, disputar uma etapa inteira e recarregar o save', async ({ 
   const erros = vigiarErros(page);
   await page.goto('/');
   await page.getByRole('button', { name: 'Nova carreira' }).click();
+  // Etapa 1: o nascimento sorteado. Refazer o sorteio gasta um dos três; recarregar a página não devolve.
+  await expect(page.getByRole('heading', { name: 'Nascimento', level: 1 })).toBeVisible();
+  const sorteio = page.getByRole('button', { name: /^Sortear de novo/ });
+  await expect(sorteio).toHaveAccessibleName('Sortear de novo: 3 sorteios restantes');
+  await sorteio.click();
+  await expect(sorteio).toHaveAccessibleName('Sortear de novo: 2 sorteios restantes');
+  const cidade = await page.getByRole('banner').first().textContent();
+  await page.reload();
+  await expect(page.getByRole('button', { name: /^Sortear de novo/ })).toHaveAccessibleName('Sortear de novo: 2 sorteios restantes');
+  await expect(page.getByRole('banner').first()).toHaveText(cidade ?? '');
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  // Etapa 2: o piloto.
   await page.getByLabel(/^Nome/).first().fill('Rui');
   await page.getByLabel(/Sobrenome/).fill('Prado');
   await page
@@ -23,7 +35,8 @@ test('criar carreira, disputar uma etapa inteira e recarregar o save', async ({ 
   // O Painel mostra a primeira etapa e o botão de avançar leva ao fim de semana.
   const topo = page.getByRole('banner').first();
   await expect(topo).toContainText('Etapa 1 de 10');
-  await expect(topo).toContainText('R$ 30.000');
+  // O caixa inicial são as economias da família, que o nascimento sorteou.
+  await expect(topo).toContainText(/R\$\s\d{1,2}\.\d{3}/);
   await page.getByRole('button', { name: 'Ir para o fim de semana' }).click();
   await page.waitForURL(/#\/weekend/);
 

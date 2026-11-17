@@ -97,6 +97,24 @@ test('nada pisca três vezes por segundo ou mais', async ({ page }) => {
   expect(await piscando(page)).toEqual([]);
 });
 
+/** Opacidade de cada item da ficha do nascimento (a revelação em sequência). */
+async function opacidadesDaFicha(page: Page): Promise<number[]> {
+  return page.evaluate(() => [...document.querySelectorAll('[data-shown]')].map((element) => Number(getComputedStyle(element).opacity)));
+}
+
+test('o nascimento se revela item por item, cada um em até 300 ms', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Nova carreira' }).click();
+  await expect(page.getByRole('heading', { name: 'Nascimento', level: 1 })).toBeVisible();
+  // Logo depois de abrir, a ficha ainda está se preenchendo: os últimos itens não apareceram.
+  const logo = await opacidadesDaFicha(page);
+  expect(logo.length).toBeGreaterThan(10);
+  expect(logo.some((value) => value < 1)).toBe(true);
+  expect(await maiorDuracao(page)).toBeLessThanOrEqual(300);
+  // Em pouco tempo, tudo está à vista.
+  await expect.poll(async () => (await opacidadesDaFicha(page)).every((value) => value === 1), { timeout: 4000 }).toBe(true);
+});
+
 /** O que vale com menos movimento, venha o pedido do sistema ou do ajuste do jogo. */
 async function conferirMenosMovimento(page: Page): Promise<void> {
   await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduce');
@@ -125,6 +143,19 @@ test.describe('com "reduzir movimento" ligado no sistema', () => {
   test('deslizamento e zoom viram um esmaecer curto, e a câmera da corrida fica parada', async ({ page }) => {
     await abrirSave(page, SAVES.naLargada);
     await conferirMenosMovimento(page);
+  });
+
+  test('o nascimento aparece inteiro de uma vez, sem animação', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Nova carreira' }).click();
+    await expect(page.getByRole('heading', { name: 'Nascimento', level: 1 })).toBeVisible();
+    const logo = await opacidadesDaFicha(page);
+    expect(logo.length).toBeGreaterThan(10);
+    expect(logo.every((value) => value === 1)).toBe(true);
+    expect(await transicoesDeMovimento(page)).toEqual([]);
+    // Um novo sorteio também aparece de uma vez.
+    await page.getByRole('button', { name: /^Sortear de novo/ }).click();
+    expect((await opacidadesDaFicha(page)).every((value) => value === 1)).toBe(true);
   });
 
   test('a tela Ajustes mostra que o aparelho já pede menos movimento', async ({ page }) => {

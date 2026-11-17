@@ -71,10 +71,15 @@ export function birthTrainingFactor(career: CareerState): number {
   return traits * (interiorWeighs(career) ? BIRTH.INTERIOR_TRAINING_FACTOR : 1);
 }
 
-/** Multiplicador do valor das propostas de patrocínio, pelo carisma. */
+/** Multiplicador do valor das propostas de patrocínio para um carisma (0 a 100). */
+export function charismaSponsorFactor(charisma: number): number {
+  return 1 + ((charisma - 50) / 50) * APTITUDE_EFFECTS.CHARISMA_SPONSOR_VALUE;
+}
+
+/** Multiplicador do valor das propostas de patrocínio do jogador, pelo carisma de nascença. */
 export function sponsorValueFactor(career: CareerState): number {
   const birth = activeBirth(career);
-  return birth ? 1 + centered(birth, 'charisma') * APTITUDE_EFFECTS.CHARISMA_SPONSOR_VALUE : 1;
+  return birth ? charismaSponsorFactor(birth.aptitudes.charisma) : 1;
 }
 
 /** Pontos de satisfação que o carisma soma (ou tira) a cada patrocinador por etapa. */

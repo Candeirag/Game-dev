@@ -18,6 +18,7 @@ import {
   Delta,
   EmptyState,
   Gauge,
+  LockedCard,
   LowerThird,
   Meter,
   NumberPlate,
@@ -26,7 +27,9 @@ import {
   PositionBadge,
   ProgressBar,
   ResultChips,
+  RevealItem,
   Ring,
+  SecretCard,
   Segmented,
   Slider,
   Sparkline,
@@ -39,6 +42,7 @@ import {
   type TowerRow,
   TyreBadge,
   TyreLegend,
+  useRevealSequence,
   WholeRows,
 } from '@/ui/kit';
 import { formatInterval, formatMoneyAs } from '../format';
@@ -90,6 +94,24 @@ function Swatch({ token, role }: { token: string; role: string }) {
       <div className="h-10 shadow-frame" style={{ background: `var(--color-${token})` }} />
       <div className="mt-1 truncate text-xs font-semibold text-ink-100">{token}</div>
       <div className="truncate text-2xs text-ink-400">{role}</div>
+    </div>
+  );
+}
+
+/** A revelação em sequência, com um botão para recomeçar. */
+function RevealDemo() {
+  const [round, setRound] = useState(0);
+  const sequence = useRevealSequence(round);
+  return (
+    <div className="space-y-2">
+      <div className="grid gap-2 md:grid-cols-4">
+        {['Reflexo 72', 'Físico 48', 'Frieza 61', 'Carisma 35'].map((text, i) => (
+          <RevealItem key={text} index={i} sequence={sequence}>
+            <div className="bg-ink-850 p-2 text-sm text-ink-100 shadow-frame">{text}</div>
+          </RevealItem>
+        ))}
+      </div>
+      <Button onClick={() => setRound((r) => r + 1)}>Revelar de novo</Button>
     </div>
   );
 }
@@ -403,6 +425,36 @@ export default function CatalogScreen() {
             <Check met={false}>Reputação 40 (você tem 31)</Check>
           </ul>
           <EmptyState title="Nenhuma proposta">As propostas chegam no fim da temporada.</EmptyState>
+        </Section>
+
+        <Section title="Revelação, segredos e opções bloqueadas" wide>
+          <RevealDemo />
+          <div className="grid gap-2 md:grid-cols-3">
+            <SecretCard hidden hint="Talento ou defeito" />
+            <SecretCard
+              hidden={false}
+              kind="talent"
+              title="Gênio na chuva"
+              description="Mais rápido e mais seguro com a pista molhada."
+              meta="Temporada 1, etapa 4"
+            />
+            <SecretCard
+              hidden={false}
+              kind="defect"
+              title="Esquentado"
+              description="Ataca com vontade demais: mais toques nas disputas."
+              meta="Temporada 2, etapa 1"
+            />
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            <LockedCard title="Filho de ex-piloto" summary="O sobrenome abre portas no paddock.">
+              <span className="text-xs text-ink-300">O que a opção daria, sem botão de compra.</span>
+            </LockedCard>
+          </div>
+          <p className="text-xs text-ink-400">
+            A revelação entra item por item (cada um em 300 ms, só o atraso cresce); com menos movimento, tudo aparece de uma vez. O segredo escondido mostra só
+            o "?"; revelado, talento e defeito vêm com ícone e palavra, nunca só com a cor.
+          </p>
         </Section>
 
         <Section title="Tarja inferior (transmissão)" wide>

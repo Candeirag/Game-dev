@@ -68,6 +68,10 @@ const TOPICS: { id: string; title: string; icon: LucideIcon; items: string[] }[]
       'Nove atributos de 0 a 100. O treino (foco e intensidade) rende a cada etapa, até o limite do potencial.',
       'Fase, confiança e moral mudam com os resultados e com a vida fora das pistas, e mexem no ritmo, nos erros e no aproveitamento do treino.',
       'A partir dos 31 anos, velocidade e reflexos caem um pouco a cada ano.',
+      'O nascimento é sorteado: cidade, profissão dos pais e quanto a família pode ajudar (pouco e por poucos anos). Dá para sortear de novo três vezes antes de começar.',
+      'Reflexo, físico, inteligência, frieza e carisma mexem nos atributos iniciais; o físico pesa nas provas longas e na chuva, a frieza nas disputas e na última volta, o carisma nos patrocinadores.',
+      'Três talentos ou defeitos ficam ocultos ("?" na ficha do piloto) e já agem desde a primeira corrida. A pista revela cada um: o de chuva na primeira corrida molhada, o de toque no primeiro toque.',
+      'Quem nasce no interior começa na equipe menor do regional e paga viagens a cada etapa até se mudar para São Paulo.',
     ],
   },
   {

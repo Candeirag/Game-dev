@@ -26,6 +26,8 @@ export const SAVES = {
   antigoComAcademia: 'tests/fixtures/v3/fase0-monoposto-com-academia.json',
   antigoNoTopo: 'tests/fixtures/v3/fase0-topo-fim-de-temporada.json',
   antigoDirigente: 'tests/fixtures/v3/fase0-dirigente-dono-de-equipe.json',
+  /** Save da versão 6: nascido no interior, com a mudança para São Paulo pendente e um traço revelado. */
+  nascimento: 'tests/fixtures/v6/nascimento-mudanca-pendente.json',
 } as const;
 
 /** Nomes de marcas reais que saves antigos traziam por extenso e que não podem aparecer em tela nenhuma. */

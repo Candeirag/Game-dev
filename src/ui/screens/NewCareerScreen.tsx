@@ -1,23 +1,27 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Lock, Minus, Plus } from 'lucide-react';
 import type { AttributeKey } from '@/domain/schemas';
 import { ATTRIBUTE_LABELS } from '@/domain/labels';
 import { counted } from '@/domain/text';
-import {
-  NATIONALITIES,
-  PLAYER_BACKGROUNDS,
-  PLAYER_BONUS_MAX_PER_ATTRIBUTE,
-  PLAYER_BONUS_POINTS,
-  PLAYER_MAX_AGE,
-  PLAYER_MIN_AGE,
-  type PlayerBackground,
-} from '@/data/rules';
+import { BIRTH } from '@/config/balance';
+import { PLAYER_BACKGROUNDS, PLAYER_BONUS_MAX_PER_ATTRIBUTE, PLAYER_BONUS_POINTS, PLAYER_MAX_AGE, PLAYER_MIN_AGE, type PlayerBackground } from '@/data/rules';
 import { ROOKIE_TEAM_IDS, TEAMS } from '@/data/teams';
-import { TRAINABLE_ATTRIBUTES, overallRating, validateNewCareerInput, type NewCareerInput } from '@/engine';
+import {
+  PLAYER_DRIVER_ID,
+  TRAINABLE_ATTRIBUTES,
+  birthAttributeBonus,
+  birthPotentialBonus,
+  drawBirth,
+  overallRating,
+  playerStartingAttributes,
+  validateNewCareerInput,
+  type NewCareerInput,
+} from '@/engine';
 import { useGameStore } from '@/store/gameStore';
+import { hometownOf } from '../components/BirthSheet';
 import { CarSprite } from '../components/CarSprite';
-import { Card, ChoiceCard, cx, RatingBar, TeamSwatch } from '@/ui/kit';
+import { Card, ChoiceCard, cx, Delta, RatingBar, TeamSwatch } from '@/ui/kit';
 import { formatRating } from '../format';
 import { ActionBar, ScreenAction } from '../layout/ScreenAction';
 import { WIDE_QUERY, useMediaQuery } from '../layout/chrome';
@@ -27,31 +31,45 @@ const field =
 const fieldLabel = 'block text-2xs font-medium text-ink-400';
 const stepButton = 'grid h-11 w-11 shrink-0 place-items-center border border-ink-500 text-ink-300 transition-colors hover:border-ink-300';
 
+/** Etapa 2 da carreira nova: com o nascimento sorteado na etapa 1, o jogador cria o piloto. */
 export function NewCareerScreen() {
+  const draft = useGameStore((s) => s.birthDraft);
+  // Sem nascimento sorteado (endereço aberto direto), volta para a etapa 1.
+  if (!draft) return <Navigate to="/new" replace />;
+  return <PilotForm seed={draft.seed} attempt={draft.attempt} />;
+}
+
+function PilotForm({ seed, attempt }: { seed: number; attempt: number }) {
   const navigate = useNavigate();
   const newCareer = useGameStore((s) => s.newCareer);
+  const birth = useMemo(() => drawBirth(seed, attempt, PLAYER_DRIVER_ID), [seed, attempt]);
+  // Quem nasce no interior não escolhe: só a equipe menor do regional tem vaga para quem mora longe.
+  const forcedTeam = birth.region === 'interior' ? BIRTH.INTERIOR_TEAM_ID : null;
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [nationality, setNationality] = useState('BR');
   const [age, setAge] = useState(15);
   const [background, setBackground] = useState<PlayerBackground>('natural');
   const [bonus, setBonus] = useState<Partial<Record<AttributeKey, number>>>({});
-  const [teamId, setTeamId] = useState<string>(ROOKIE_TEAM_IDS[1] ?? 'cerrado');
+  const [chosenTeam, setChosenTeam] = useState<string>(ROOKIE_TEAM_IDS[1] ?? 'cerrado');
+  const teamId = forcedTeam ?? chosenTeam;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // O mesmo corte da moldura da carreira: tela deitada (ou larga) põe o formulário em duas colunas.
   const wide = useMediaQuery(WIDE_QUERY);
+  // No jogo grátis todo piloto nasce no Brasil (nascer em outro país é da versão premium).
+  const nationality = 'BR';
+  const town = hometownOf(birth);
 
   const preset = PLAYER_BACKGROUNDS.find((b) => b.id === background) ?? PLAYER_BACKGROUNDS[0]!;
   const used = Object.values(bonus).reduce((a, b) => a + (b ?? 0), 0);
   const remaining = PLAYER_BONUS_POINTS - used;
-  const attributes = useMemo(() => {
-    const a = { ...preset.attributes };
-    for (const key of TRAINABLE_ATTRIBUTES) a[key] += bonus[key] ?? 0;
-    return a;
-  }, [preset, bonus]);
+  // A mesma conta do motor: perfil, pontos livres e o corpo e a mente de nascença.
+  const attributes = useMemo(() => playerStartingAttributes({ background, bonus }, birth.aptitudes), [background, bonus, birth]);
+  const beforeBonus = useMemo(() => playerStartingAttributes({ background, bonus: {} }, birth.aptitudes), [background, birth]);
+  const fromBirth = useMemo(() => birthAttributeBonus(birth.aptitudes), [birth]);
+  const potential = Math.min(100, preset.potential + birthPotentialBonus(birth.aptitudes));
 
-  const input: NewCareerInput = { firstName, lastName, nationality, age, background, bonus, teamId };
+  const input: NewCareerInput = { firstName, lastName, nationality, age, background, bonus, teamId, birthAttempt: attempt };
   const problems = validateNewCareerInput(input);
 
   function adjust(key: AttributeKey, delta: number) {
@@ -84,7 +102,7 @@ export function NewCareerScreen() {
           <button
             type="button"
             aria-label="Voltar"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/new')}
             className="-ml-2 grid h-11 w-11 shrink-0 place-items-center text-ink-300 transition-colors hover:text-ink-100"
           >
             <ArrowLeft size={20} aria-hidden />
@@ -92,7 +110,7 @@ export function NewCareerScreen() {
           <div className="min-w-40 flex-1">
             <div className="flex items-baseline gap-x-3">
               <h1 className="font-display text-2xl font-bold uppercase leading-none tracking-wide">Crie seu piloto</h1>
-              <span className="truncate text-xs font-medium text-ink-400">Nova carreira</span>
+              <span className="truncate text-xs font-medium text-ink-400">Nova carreira · 2 de 2</span>
             </div>
             <div className="mt-1 truncate text-xs text-ink-300">
               {problems.length > 0 ? (
@@ -102,7 +120,7 @@ export function NewCareerScreen() {
                   <span className="font-semibold text-apex-400">
                     {firstName.trim()} {lastName.trim()}
                   </span>{' '}
-                  · {NATIONALITIES.find((n) => n.code === nationality)?.name} · {age} anos · {preset.name} · {TEAMS.find((t) => t.id === teamId)?.name}
+                  · {town?.name ?? 'Brasil'} · {age} anos · {preset.name} · {TEAMS.find((t) => t.id === teamId)?.name}
                 </>
               )}
             </div>
@@ -110,7 +128,7 @@ export function NewCareerScreen() {
           <div className={cx('flex items-center gap-4', !wide && 'w-full justify-between')}>
             <div className="flex items-center gap-4">
               <HeaderStat label="Geral" value={formatRating(overallRating(attributes))} />
-              <HeaderStat label="Potencial" value={preset.potential} muted />
+              <HeaderStat label="Potencial" value={potential} muted />
             </div>
             {/* Deitado, o botão de começar vai para a barra fixa do pé da tela, perto do polegar. */}
             {wide ? (
@@ -152,16 +170,10 @@ export function NewCareerScreen() {
                 <span className={fieldLabel}>Sobrenome</span>
                 <input className={field} value={lastName} maxLength={24} onChange={(e) => setLastName(e.target.value)} placeholder="Ex.: Ribeiro" />
               </label>
-              <label className="col-span-4 space-y-1">
-                <span className={fieldLabel}>Nacionalidade</span>
-                <select className={cx(field, 'px-2')} value={nationality} onChange={(e) => setNationality(e.target.value)}>
-                  {NATIONALITIES.map((n) => (
-                    <option key={n.code} value={n.code}>
-                      {n.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="col-span-4 space-y-1">
+                <span className={fieldLabel}>Nascimento</span>
+                <div className="flex min-h-11 items-center truncate px-2 text-sm text-ink-200 shadow-frame">{town ? `${town.name} (BR)` : 'Brasil'}</div>
+              </div>
               <div className="col-span-6 space-y-1">
                 {/* A dica fica fora das opções: o texto do campo fechado cabe inteiro. */}
                 <div className="flex items-baseline gap-2 text-2xs">
@@ -198,7 +210,7 @@ export function NewCareerScreen() {
                   onSelect={() => setBackground(b.id)}
                   title={b.name}
                   description={b.description}
-                  meta={`Potencial ${b.potential} · Experiência inicial ${b.attributes.experience}`}
+                  meta={`Potencial ${Math.min(100, b.potential + birthPotentialBonus(birth.aptitudes))} · Experiência inicial ${b.attributes.experience}`}
                 />
               ))}
             </div>
@@ -216,16 +228,20 @@ export function NewCareerScreen() {
             bodyClassName="p-3"
           >
             <p className="mb-2 text-xs text-ink-400">
-              Distribua {PLAYER_BONUS_POINTS} pontos, no máximo {PLAYER_BONUS_MAX_PER_ATTRIBUTE} por atributo. A experiência só cresce competindo.
+              Distribua {PLAYER_BONUS_POINTS} pontos, no máximo {PLAYER_BONUS_MAX_PER_ATTRIBUTE} por atributo. A experiência só cresce competindo. A seta ao
+              lado do número é o que o corpo e a mente de nascença somam ou tiram.
             </p>
             <div className="grid gap-2">
               {TRAINABLE_ATTRIBUTES.map((key) => (
                 <div key={key} className="flex items-center gap-2">
                   <div className="w-[7.5rem] shrink-0 text-sm leading-tight">{ATTRIBUTE_LABELS[key]}</div>
                   <div className="min-w-8 flex-1">
-                    <RatingBar value={attributes[key]} previous={preset.attributes[key]} />
+                    <RatingBar value={attributes[key]} previous={beforeBonus[key]} />
                   </div>
                   <div className="w-7 shrink-0 text-right font-display text-lg font-semibold leading-none">{attributes[key]}</div>
+                  <div className="flex w-10 shrink-0 justify-start">
+                    <Delta value={fromBirth[key] ?? 0} className="text-2xs" />
+                  </div>
                   <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
@@ -253,15 +269,19 @@ export function NewCareerScreen() {
         </div>
 
         <Card title="4 · Equipe" bodyClassName="p-3" className={cx(wide && 'col-span-2')}>
-          <p className="mb-2 text-xs text-ink-400">
-            Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança e o custo da vaga.
+          <p className="mb-2 flex items-start gap-2 text-xs text-ink-400">
+            {forcedTeam && <Lock size={14} aria-hidden className="mt-px shrink-0" />}
+            {forcedTeam
+              ? `Quem vem de ${town?.name ?? 'interior'} só consegue vaga na equipe menor do regional, a única que aceita um piloto que mora longe.`
+              : 'Como estreante, só as equipes de entrada oferecem vaga. Um kart melhor aumenta a cobrança e o custo da vaga.'}
           </p>
           <div className={cx('grid gap-2', wide && 'grid-cols-3')}>
             {TEAMS.filter((t) => ROOKIE_TEAM_IDS.includes(t.id)).map((t) => (
               <ChoiceCard
                 key={t.id}
                 selected={teamId === t.id}
-                onSelect={() => setTeamId(t.id)}
+                onSelect={() => setChosenTeam(t.id)}
+                disabled={forcedTeam !== null && t.id !== forcedTeam}
                 title={
                   <span className="flex items-center gap-2">
                     <TeamSwatch team={t} />
