@@ -376,22 +376,24 @@ export async function escondidoNoRodape(page: Page): Promise<string[]> {
 
 /**
  * Linhas cortadas nas listas de linhas inteiras (`data-whole-rows`, como a torre da corrida):
- * parada, a lista mostra cada linha inteira ou não mostra; a linha que gruda (a do jogador)
- * cobre por inteiro a vaga em que está.
+ * parada, e também depois de rolada pelo jogador (até o meio de uma linha, até o fim e um pouco
+ * acima do fim), a lista mostra cada linha inteira ou não mostra; a linha que gruda (a do
+ * jogador) cobre por inteiro a vaga em que está.
  */
 export async function linhasCortadas(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const found: string[] = [];
-    for (const list of document.querySelectorAll('[data-whole-rows]')) {
-      if (!list.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+    const check = (list: Element, momento: string) => {
       const view = list.getBoundingClientRect();
       const rows = [...list.querySelectorAll<HTMLElement>('[data-row]')];
       const stuck = rows.filter((row) => getComputedStyle(row).position === 'sticky').map((row) => row.getBoundingClientRect());
       for (const row of rows) {
         const box = row.getBoundingClientRect();
+        const label = `"${row.textContent?.trim().slice(0, 30)}" (${momento})`;
         if (getComputedStyle(row).position === 'sticky') {
           const shown = Math.min(box.bottom, view.bottom) - Math.max(box.top, view.top);
-          if (shown > 0.5 && shown < box.height - 0.5) found.push(`linha grudada cortada: "${row.textContent?.trim().slice(0, 30)}"`);
+          if (shown > 0.5 && shown < box.height - 0.5) found.push(`linha grudada cortada: ${label}`);
           continue;
         }
         let top = Math.max(box.top, view.top);
@@ -402,9 +404,30 @@ export async function linhasCortadas(page: Page): Promise<string[]> {
           if (cover.bottom >= bottom - 0.5 && cover.top < bottom) bottom = Math.min(bottom, cover.top);
         }
         const shown = bottom - top;
-        if (shown > 0.5 && shown < box.height - 0.5)
-          found.push(`"${row.textContent?.trim().slice(0, 30)}" (${Math.round(shown)} de ${Math.round(box.height)} px)`);
+        if (shown > 0.5 && shown < box.height - 0.5) found.push(`${label}: ${Math.round(shown)} de ${Math.round(box.height)} px`);
       }
+    };
+    for (const list of document.querySelectorAll<HTMLElement>('[data-whole-rows]')) {
+      if (!list.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      check(list, 'parada');
+      // Rolada pelo jogador até um ponto qualquer, e até o fim: depois de assentar, também só linhas inteiras.
+      const row = list.querySelector<HTMLElement>('[data-row]');
+      const height = row?.getBoundingClientRect().height ?? 0;
+      const max = list.scrollHeight - list.clientHeight;
+      if (height <= 0 || max <= 0) continue;
+      const start = list.scrollTop;
+      for (const [target, momento] of [
+        [Math.min(max, height * 1.4), 'rolada até o meio de uma linha'],
+        [max, 'rolada até o fim'],
+        [Math.max(0, max - height * 0.6), 'subindo um pouco do fim'],
+      ] as const) {
+        list.scrollTop = target;
+        list.dispatchEvent(new Event('scroll'));
+        await wait(700);
+        check(list, momento);
+      }
+      list.scrollTop = start;
+      await wait(300);
     }
     return found;
   });

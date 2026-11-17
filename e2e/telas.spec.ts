@@ -303,3 +303,37 @@ test.describe('ajustes de acessibilidade em 844×390', () => {
     await expect(page).toHaveURL(/#\/$/);
   });
 });
+
+test.describe('torre da corrida em 844×390', () => {
+  test.use({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+
+  test('não rola sozinha quando os carros trocam de posição, e com o jogador em P1 o segundo aparece inteiro', async ({ page }) => {
+    const erros = vigiarErros(page);
+    // No save de monopostos o jogador larga na pole.
+    await abrirSave(page, SAVES.formula);
+    await irPara(page, 'Fim de semana');
+    await page.getByRole('button', { name: 'Iniciar fim de semana' }).click();
+    await page.getByRole('button', { name: 'Disputar treino livre' }).click();
+    await page.getByRole('button', { name: 'Disputar classificação' }).click();
+    await page.getByRole('button', { name: 'Ir para a largada' }).click();
+    const barra = page.getByRole('region', { name: 'Comandos da corrida' });
+    await barra.getByRole('button', { name: '8×' }).click();
+    await barra.getByRole('button', { name: 'Largar' }).click();
+    const torre = page.locator('[data-whole-rows]');
+    // Várias leituras durante a corrida, com ultrapassagens acontecendo: a lista fica no alto.
+    const leituras: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      await page.waitForTimeout(1000);
+      leituras.push(await torre.evaluate((list) => list.scrollTop));
+    }
+    expect(leituras).toEqual([0, 0, 0, 0, 0, 0]);
+    // A primeira linha é a do jogador (grudada no alto) e a segunda aparece inteira, sem nada por cima.
+    const linhas = await torre.evaluate((list) => {
+      const rows = [...list.querySelectorAll<HTMLElement>('[data-row]')].map((row) => row.getBoundingClientRect());
+      return { primeira: rows[0], segunda: rows[1] };
+    });
+    expect(linhas.segunda?.top ?? 0).toBeGreaterThanOrEqual((linhas.primeira?.bottom ?? 0) - 0.5);
+    await expect(torre.locator('[data-row]').first()).toContainText('(você)');
+    expect(erros).toEqual([]);
+  });
+});
