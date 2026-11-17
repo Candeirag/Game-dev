@@ -235,8 +235,8 @@ export async function numerosSemLarguraFixa(page: Page): Promise<string[]> {
 }
 
 /**
- * Texto pequeno em fonte condensada: a fonte de título (Barlow Condensed, ou a Saira do
- * comparativo) só vale a partir de 16 px, na escala de texto em vigor; abaixo disso é Inter.
+ * Texto pequeno em fonte condensada: a fonte de título (Barlow Condensed) só vale a partir de
+ * 16 px, na escala de texto em vigor; abaixo disso é Inter.
  */
 export async function condensadaPequena(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -308,9 +308,113 @@ export async function alvosColados(page: Page): Promise<string[]> {
 }
 
 /**
+ * Conteúdo escondido atrás das barras presas ao pé da tela (a barra do passo principal, a de
+ * comandos da corrida, a navegação inferior). Com a página rolada até o fim, nenhum texto pode
+ * ficar atrás delas: o conteúdo tem de terminar acima. Avisos passageiros (`data-transient`)
+ * ficam de fora.
+ */
+export async function escondidoNoRodape(page: Page): Promise<string[]> {
+  return page.evaluate(async () => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const bars = [...document.querySelectorAll('body *')].filter((element) => {
+      if (element.closest('[data-transient], [role="dialog"]')) return false;
+      const style = getComputedStyle(element);
+      if (style.position !== 'fixed' || !element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return false;
+      const box = element.getBoundingClientRect();
+      return box.height > 0 && box.width > window.innerWidth * 0.3 && box.bottom >= window.innerHeight - 2;
+    });
+    const floating = (element: Element): boolean => {
+      for (let node: Element | null = element; node && node !== document.body; node = node.parentElement) {
+        const position = getComputedStyle(node).position;
+        if (position === 'fixed' || position === 'sticky') return true;
+      }
+      return false;
+    };
+    /** Parte da caixa que os contêineres com rolagem ou corte deixam aparecer. */
+    const clipped = (element: Element, rect: DOMRect): { left: number; top: number; right: number; bottom: number } | null => {
+      let box: { left: number; top: number; right: number; bottom: number } | null = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+      for (let node = element.parentElement; box && node && node !== document.body; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.overflowX !== 'visible' || style.overflowY !== 'visible' || style.clipPath !== 'none') {
+          const clip = node.getBoundingClientRect();
+          const next = {
+            left: Math.max(box.left, clip.left),
+            top: Math.max(box.top, clip.top),
+            right: Math.min(box.right, clip.right),
+            bottom: Math.min(box.bottom, clip.bottom),
+          };
+          box = next.right - next.left > 0.5 && next.bottom - next.top > 0.5 ? next : null;
+        }
+      }
+      return box;
+    };
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? '';
+      const parent = node.parentElement;
+      if (!text || !parent || floating(parent) || parent.closest('svg, script, style, .sr-only, [inert]')) continue;
+      if (!parent.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      range.selectNodeContents(node);
+      for (const whole of range.getClientRects()) {
+        const rect = clipped(parent, whole);
+        if (!rect) continue;
+        for (const bar of bars) {
+          const box = bar.getBoundingClientRect();
+          const overlapX = Math.min(rect.right, box.right) - Math.max(rect.left, box.left);
+          const overlapY = Math.min(rect.bottom, box.bottom) - Math.max(rect.top, box.top);
+          if (overlapX > 2 && overlapY > 2) found.add(`"${text.slice(0, 40)}" atrás de ${bar.getAttribute('aria-label') ?? bar.tagName.toLowerCase()}`);
+        }
+      }
+    }
+    window.scrollTo(0, 0);
+    return [...found];
+  });
+}
+
+/**
+ * Linhas cortadas nas listas de linhas inteiras (`data-whole-rows`, como a torre da corrida):
+ * parada, a lista mostra cada linha inteira ou não mostra; a linha que gruda (a do jogador)
+ * cobre por inteiro a vaga em que está.
+ */
+export async function linhasCortadas(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found: string[] = [];
+    for (const list of document.querySelectorAll('[data-whole-rows]')) {
+      if (!list.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      const view = list.getBoundingClientRect();
+      const rows = [...list.querySelectorAll<HTMLElement>('[data-row]')];
+      const stuck = rows.filter((row) => getComputedStyle(row).position === 'sticky').map((row) => row.getBoundingClientRect());
+      for (const row of rows) {
+        const box = row.getBoundingClientRect();
+        if (getComputedStyle(row).position === 'sticky') {
+          const shown = Math.min(box.bottom, view.bottom) - Math.max(box.top, view.top);
+          if (shown > 0.5 && shown < box.height - 0.5) found.push(`linha grudada cortada: "${row.textContent?.trim().slice(0, 30)}"`);
+          continue;
+        }
+        let top = Math.max(box.top, view.top);
+        let bottom = Math.min(box.bottom, view.bottom);
+        // O pedaço coberto pela linha grudada não conta como visível.
+        for (const cover of stuck) {
+          if (cover.top <= top + 0.5 && cover.bottom > top) top = Math.max(top, cover.bottom);
+          if (cover.bottom >= bottom - 0.5 && cover.top < bottom) bottom = Math.min(bottom, cover.top);
+        }
+        const shown = bottom - top;
+        if (shown > 0.5 && shown < box.height - 0.5)
+          found.push(`"${row.textContent?.trim().slice(0, 30)}" (${Math.round(shown)} de ${Math.round(box.height)} px)`);
+      }
+    }
+    return found;
+  });
+}
+
+/**
  * Tira o print da tela inteira e confere: sobreposição de imagem com texto, transbordo lateral,
  * contraste (texto, ícones e contornos), algarismos de largura fixa, fonte condensada só em texto
- * grande e, nos formatos de toque, o tamanho das áreas de toque e o espaço entre elas.
+ * grande, linhas inteiras na torre, nada escondido atrás das barras do rodapé e, nos formatos de
+ * toque, o tamanho das áreas de toque e o espaço entre elas.
  */
 export async function conferirTela(page: Page, tela: string, formato: string): Promise<void> {
   await page.waitForTimeout(250);
@@ -325,6 +429,8 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-');
   await page.screenshot({ path: `test-results/telas/${formato}/${arquivo}.png`, fullPage: true });
+  // DOBRA=1: também o que aparece antes de rolar (a primeira dobra), para a revisão visual.
+  if (process.env.DOBRA) await page.screenshot({ path: `test-results/dobra/${formato}/${arquivo}.png` });
   // AUDITORIA=<nome>: só levanta as medidas de contraste de cada tela (test-results/auditoria/<nome>), sem reprovar.
   if (process.env.AUDITORIA) {
     const pasta = `test-results/auditoria/${process.env.AUDITORIA}/${formato}`;
@@ -338,6 +444,8 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   const medidas = reprovadas(await medirContraste(page));
   const soltos = await numerosSemLarguraFixa(page);
   const condensadas = await condensadaPequena(page);
+  const cortadas = await linhasCortadas(page);
+  const escondidos = await escondidoNoRodape(page);
   const colados = toque ? await alvosColados(page) : [];
   if (process.env.LEVANTAR) {
     for (const a of achados) console.log(`ACHADO ${formato} | ${tela} | ${a.imagem} × "${a.texto}" (${a.area})`);
@@ -346,6 +454,8 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
     for (const m of medidas) console.log(`ACHADO ${formato} | ${tela} | contraste: ${descrever(m)}`);
     for (const n of soltos) console.log(`ACHADO ${formato} | ${tela} | número sem largura fixa: ${n}`);
     for (const c of condensadas) console.log(`ACHADO ${formato} | ${tela} | condensada pequena: ${c}`);
+    for (const c of cortadas) console.log(`ACHADO ${formato} | ${tela} | linha cortada: ${c}`);
+    for (const e of escondidos) console.log(`ACHADO ${formato} | ${tela} | escondido no rodapé: ${e}`);
     const sobra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (sobra > 0) console.log(`ACHADO ${formato} | ${tela} | transbordo de ${sobra} px`);
     return;
@@ -358,4 +468,6 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   expect(medidas.map(descrever), `${tela} (${formato}): contraste abaixo do mínimo`).toEqual([]);
   expect(soltos, `${tela} (${formato}): números sem algarismos de largura fixa`).toEqual([]);
   expect(condensadas, `${tela} (${formato}): texto pequeno em fonte condensada`).toEqual([]);
+  expect(cortadas, `${tela} (${formato}): linha cortada na lista`).toEqual([]);
+  expect(escondidos, `${tela} (${formato}): conteúdo escondido atrás da barra do rodapé (com a página rolada até o fim)`).toEqual([]);
 }
