@@ -57,18 +57,19 @@ export function expectedLapTime(ctx: LapContext): number {
 /**
  * Desvio-padrão do ruído da volta, como fração do tempo de volta. Depende da
  * consistência e, com o passar da corrida, do cansaço (concentração baixa).
- * A pista molhada amplia a irregularidade de todos.
+ * A pista molhada amplia a irregularidade de todos. `fatigueFactor` multiplica o
+ * cansaço (o físico de nascença nas provas longas; 1 para os demais).
  */
-export function lapNoiseSigma(a: DriverAttributes, weather: SessionWeather, raceProgress: number): number {
+export function lapNoiseSigma(a: DriverAttributes, weather: SessionWeather, raceProgress: number, fatigueFactor = 1): number {
   const base = SIM.NOISE_BASE + (100 - a.consistency) * SIM.NOISE_PER_CONSISTENCY_POINT;
-  const fatigue = (100 - a.focus) * SIM.FATIGUE_PER_FOCUS_POINT * clamp(raceProgress, 0, 1);
+  const fatigue = (100 - a.focus) * SIM.FATIGUE_PER_FOCUS_POINT * clamp(raceProgress, 0, 1) * fatigueFactor;
   return (base + fatigue) * (1 + SIM.WET_NOISE_MULTIPLIER * weather.wetness);
 }
 
-/** Chance de erro na volta, antes do multiplicador do modo de pilotagem. */
-export function errorProbability(a: DriverAttributes, weather: SessionWeather, raceProgress: number): number {
+/** Chance de erro na volta, antes do multiplicador do modo de pilotagem. `fatigueFactor` como em lapNoiseSigma. */
+export function errorProbability(a: DriverAttributes, weather: SessionWeather, raceProgress: number, fatigueFactor = 1): number {
   const consistencyRisk = (100 - a.consistency) * SIM.ERROR_PER_CONSISTENCY_POINT;
-  const focusRisk = (100 - a.focus) * SIM.ERROR_PER_FOCUS_POINT * clamp(raceProgress, 0, 1);
+  const focusRisk = (100 - a.focus) * SIM.ERROR_PER_FOCUS_POINT * clamp(raceProgress, 0, 1) * fatigueFactor;
   const wetRisk = SIM.ERROR_WET_EXTRA * weather.wetness * (1 - a.wetSkill / 100);
   return SIM.ERROR_BASE + consistencyRisk + focusRisk + wetRisk;
 }

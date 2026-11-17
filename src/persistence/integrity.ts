@@ -4,6 +4,7 @@
  * contrato e progresso da temporada.
  */
 import type { CareerState } from '@/domain/schemas';
+import { BIRTH_TRAITS, HOMETOWNS } from '@/data/birth';
 import { CATEGORIES } from '@/data/categories';
 import { TRACKS } from '@/data/tracks';
 
@@ -115,6 +116,17 @@ export function validateCareerIntegrity(career: CareerState): string[] {
   if (!current || current.driverId !== career.playerDriverId) problems.push('A linhagem não termina no personagem atual.');
   if (current && current.generation !== career.dynasty.generation) problems.push('Geração da dinastia incoerente com a linhagem.');
   if (career.succession && !career.succession.heirs.some((h) => h.canDrive || h.canManage)) problems.push('Sucessão sem herdeiro que possa assumir.');
+
+  // Nascimento: de um personagem da linhagem, com traços sem repetição e sem os dois lados de um par.
+  if (career.birth) {
+    const birth = career.birth;
+    if (!lineage.some((entry) => entry.driverId === birth.driverId)) problems.push('O nascimento é de um personagem fora da linhagem.');
+    const ids = birth.traits.map((t) => t.id);
+    if (new Set(ids).size !== ids.length) problems.push('Traço de nascimento repetido.');
+    if (ids.some((id) => ids.includes(BIRTH_TRAITS[id].opposite))) problems.push('Traços de nascimento opostos no mesmo piloto.');
+    if (!HOMETOWNS.some((h) => h.id === birth.hometownId && h.region === birth.region)) problems.push('Cidade de nascimento desconhecida.');
+    if (birth.movedSeason !== null && birth.region !== 'interior') problems.push('Mudança para a capital de quem já nasceu nela.');
+  }
 
   // Patrimônio.
   for (const holding of career.finance.stocks) if (!(holding.stockId in career.finance.stockPrices)) problems.push(`Ação sem cotação: ${holding.stockId}.`);

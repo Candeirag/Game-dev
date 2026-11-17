@@ -1,4 +1,13 @@
-import { CAREER_SCHEMA_VERSION, type AttributeKey, type CareerState, type ChampionshipEvent, type Contract, type Driver } from '@/domain/schemas';
+import {
+  CAREER_SCHEMA_VERSION,
+  type AttributeKey,
+  type Birth,
+  type CareerState,
+  type ChampionshipEvent,
+  type Contract,
+  type Driver,
+  type DriverAttributes,
+} from '@/domain/schemas';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { AI_DRIVERS, NEUTRAL_CONDITION, ROOKIE_SEAT_DRIVER } from '@/data/drivers';
 import {
@@ -19,13 +28,16 @@ import { hashSeed } from '../rng';
 import { generateEventWeather } from '../simulation/weather';
 import { generateReserve, rankTeams } from '../world/generation';
 import { emptyFamily } from '../dynasty/family';
-import { ECONOMY, emptyFinance } from './economy';
+import { emptyFinance } from './economy';
 import { updateMarketInterest } from './market';
 import { fullName } from './selectors';
 import { familySupport } from './sponsors';
 import { TRAINABLE_ATTRIBUTES } from './training';
 import { categoryRef } from '@/domain/categoryNames';
 import { currencyForNationality, formatMoney } from '@/domain/money';
+import { BIRTH } from '@/config/balance';
+import { HOMETOWNS } from '@/data/birth';
+import { birthAttributeBonus, birthPotentialBonus, drawBirth, maxBirthRerolls } from '../birth/draw';
 
 export const PLAYER_DRIVER_ID = 'player';
 
@@ -36,7 +48,13 @@ export interface NewCareerInput {
   age: number;
   background: PlayerBackground;
   bonus: Partial<Record<AttributeKey, number>>;
+  /** Equipe escolhida. Quem nasce no interior não escolhe: começa na equipe menor do regional. */
   teamId: string;
+  /**
+   * Qual sorteio do nascimento vale (Fase 2): 0 é o primeiro; cada "sortear de novo" soma 1. O
+   * nascimento sai da semente da carreira e deste número (ver `drawBirth`).
+   */
+  birthAttempt?: number;
 }
 
 /** Valida a criação do piloto e devolve a lista de problemas (vazia se estiver tudo certo). */
@@ -60,6 +78,8 @@ export function validateNewCareerInput(input: NewCareerInput): string[] {
     total += value ?? 0;
   }
   if (total > PLAYER_BONUS_POINTS) problems.push(`No máximo ${PLAYER_BONUS_POINTS} pontos de bônus.`);
+  const attempt = input.birthAttempt ?? 0;
+  if (!Number.isInteger(attempt) || attempt < 0 || attempt > maxBirthRerolls()) problems.push('Sorteio de nascimento inválido.');
   return problems;
 }
 
@@ -78,6 +98,37 @@ export function buildCalendar(
   }));
 }
 
+/**
+ * Atributos do piloto no primeiro dia: o perfil escolhido, os pontos livres e o que o corpo e a
+ * mente de nascença somam (ou tiram). A tela de criação mostra a mesma conta.
+ */
+export function playerStartingAttributes(input: Pick<NewCareerInput, 'background' | 'bonus'>, aptitudes: Birth['aptitudes'] | null): DriverAttributes {
+  const background = PLAYER_BACKGROUNDS.find((b) => b.id === input.background) ?? PLAYER_BACKGROUNDS[0];
+  if (!background) throw new Error('Perfil inválido.');
+  const attributes = { ...background.attributes };
+  for (const key of TRAINABLE_ATTRIBUTES) attributes[key] += input.bonus[key] ?? 0;
+  if (aptitudes) {
+    for (const [key, value] of Object.entries(birthAttributeBonus(aptitudes)) as [AttributeKey, number][]) {
+      attributes[key] = Math.min(100, Math.max(0, attributes[key] + value));
+    }
+  }
+  return attributes;
+}
+
+/** A frase sobre o dinheiro da família na mensagem de boas-vindas. */
+function familyHelpText(birth: Birth, currency: ReturnType<typeof currencyForNationality>): string {
+  const town = HOMETOWNS.find((h) => h.id === birth.hometownId);
+  const help =
+    birth.support.seasons > 0
+      ? `a família ajuda com ${formatMoney(birth.support.perSeason, currency)} por ano ${birth.support.seasons === 1 ? 'na primeira temporada' : `nas ${birth.support.seasons} primeiras temporadas`}.`
+      : 'a família não tem como ajudar.';
+  const interior =
+    birth.region === 'interior'
+      ? ` Morar em ${town?.name ?? 'cidade do interior'} custa viagens a cada etapa; a mudança para São Paulo vai ser assunto em breve.`
+      : '';
+  return `${help}${interior}`;
+}
+
 /** Desconto no custo da vaga para o estreante: as equipes de entrada apostam em jovens. */
 const ROOKIE_SEAT_DISCOUNT = 0.25;
 
@@ -91,8 +142,10 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
   if (!background) throw new Error('Perfil inválido.');
   const category = getCategory('kart-regional');
 
-  const attributes = { ...background.attributes };
-  for (const key of TRAINABLE_ATTRIBUTES) attributes[key] += input.bonus[key] ?? 0;
+  // Nascimento: a família, o corpo e a mente e os traços ocultos saem da semente da carreira.
+  const birth = drawBirth(seed, input.birthAttempt ?? 0, PLAYER_DRIVER_ID);
+  const teamId = birth.region === 'interior' ? BIRTH.INTERIOR_TEAM_ID : input.teamId;
+  const attributes = playerStartingAttributes(input, birth.aptitudes);
 
   const player: Driver = {
     id: PLAYER_DRIVER_ID,
@@ -100,19 +153,19 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     lastName: input.lastName.trim(),
     nationality: input.nationality,
     age: input.age,
-    teamId: input.teamId,
+    teamId,
     role: 'second',
     contractEnd: 1,
     isPlayer: true,
     attributes,
-    potential: background.potential,
+    potential: Math.min(100, background.potential + birthPotentialBonus(birth.aptitudes)),
     trainingFocus: 'balanced',
     condition: { ...NEUTRAL_CONDITION },
     injury: null,
   };
 
   // O estreante que cede a vaga ao jogador vira o reserva da equipe.
-  const displacedId = ROOKIE_SEAT_DRIVER[input.teamId];
+  const displacedId = ROOKIE_SEAT_DRIVER[teamId];
   const aiDrivers: Driver[] = AI_DRIVERS.map((d) => ({
     ...d,
     attributes: { ...d.attributes },
@@ -122,11 +175,11 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
   }));
 
   const teams = initialTeams('kart-regional');
-  const team = teams.find((t) => t.id === input.teamId);
+  const team = teams.find((t) => t.id === teamId);
   if (!team) throw new Error('Equipe inválida.');
   const ranked = rankTeams(teams);
   const usedNames = new Set([fullName(player), ...aiDrivers.map(fullName)]);
-  const reserves = ranked.filter((t) => t.id !== input.teamId).map((t) => generateReserve(category, t, ranked.indexOf(t), seed, 1, usedNames));
+  const reserves = ranked.filter((t) => t.id !== teamId).map((t) => generateReserve(category, t, ranked.indexOf(t), seed, 1, usedNames));
 
   const rank = ranked.findIndex((t) => t.id === team.id);
   const [seatTop, seatBottom] = category.economy.seatCost;
@@ -171,8 +224,8 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     playerSeasonStartAttributes: { ...attributes },
     trainingIntensity: 'normal',
     contract,
-    finance: emptyFinance(ECONOMY.STARTING_CASH),
-    sponsors: [familySupport()],
+    finance: emptyFinance(birth.savings),
+    sponsors: birth.support.seasons > 0 ? [familySupport(birth.support.perSeason, birth.support.seasons)] : [],
     academy: null,
     license: { history: [], penaltyPoints: 0, banRounds: 0 },
     relations: { teamTrust: 50, teammate: 50, rivalries: {} },
@@ -208,13 +261,14 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     executiveLog: [],
     succession: null,
     tutorial: { done: [], dismissed: false },
+    birth,
     inbox: [
       {
         id: 's1-welcome',
         date: firstDate,
         category: 'team',
         title: `Bem-vindo à ${team.name}`,
-        body: `Você é o novo piloto da ${team.name} ${categoryRef(category.id, 'em')} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. A vaga custa ${formatMoney(seatCost, currencyForNationality(input.nationality))} por temporada, pagos em parcelas por etapa; a família ajuda nos cinco primeiros anos. Escolha o programa de treino no painel e prepare-se para a etapa de abertura.`,
+        body: `Você é o novo piloto da ${team.name} ${categoryRef(category.id, 'em')} de ${year}. A equipe espera que você termine o campeonato entre os ${team.driverTarget} primeiros. A vaga custa ${formatMoney(seatCost, currencyForNationality(input.nationality))} por temporada, pagos em parcelas por etapa; ${familyHelpText(birth, currencyForNationality(input.nationality))} Escolha o programa de treino no painel e prepare-se para a etapa de abertura.`,
       },
     ],
   };

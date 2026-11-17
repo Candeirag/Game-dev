@@ -97,13 +97,15 @@ function playOut(career: CareerState, tag: string, log: Checkpoint[]): CareerSta
 /**
  * As carreiras de referência:
  * - A: robô talentoso, cinco temporadas a partir do kart regional (passa pelo kart nacional e
- *   pelo internacional e chega à Fórmula Júnior), com todas as viradas de temporada;
+ *   pelo internacional e chega à Fórmula Júnior), com todas as viradas de temporada. Desde a Fase 2
+ *   a carreira tem nascimento sorteado; o quarto sorteio da semente (o terceiro refeito) é o que
+ *   mantém o caminho por todas essas categorias;
  * - C: save de monopostos gravado no meio de uma temporada de Fórmula Elite, jogado até o fim do ano
  *   (boxes, compostos, combustível, safety car, ordens de equipe).
  */
 export function referenceCheckpoints(): Checkpoint[] {
   const log: Checkpoint[] = [];
-  let a = botCareer(20260311, 9);
+  let a = botCareer(20260311, 9, { birthAttempt: 3 });
   for (let i = 0; i < 5; i++) {
     a = playOut(a, 'A', log);
     a = startNextSeason(a, pickBestOffer(a));

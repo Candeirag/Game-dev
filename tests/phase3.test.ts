@@ -1026,7 +1026,8 @@ describe('compatibilidade com saves da Fase 2', () => {
 describe('auditoria: dívida, insolvência e brechas fechadas', () => {
   it('dívida de piloto: quem tem bens não tem dívida perdoada; os credores executam o patrimônio', () => {
     const closed = resolvePending(playSeason(newCareer(93)));
-    const offer = pickBestOffer(closed);
+    // A rede de segurança não exige nada: com qualquer dívida, a temporada seguinte começa.
+    const offer = closed.offseason!.offers.find((o) => o.kind === 'fallback')!.id;
     // Sem bens: a dívida acima do teto é perdoada, com dano à reputação (regra da Fase 2).
     const broke = engine.startNextSeason(withCash(closed, -5_000_000), offer);
     expect(broke.finance.cash).toBeGreaterThan(-200_000);

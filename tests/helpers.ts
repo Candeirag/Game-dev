@@ -44,6 +44,6 @@ export function newCareer(seed = 12345, input: Partial<NewCareerInput> = {}): Ca
  * um bônus de talento (pontos somados a todos os atributos treináveis e ao
  * potencial), que representa um jogador que decide melhor que o robô.
  */
-export function botCareer(seed: number, talent = 0): CareerState {
-  return withTalent(setTrainingFocus(newCareer(seed), 'speed'), talent);
+export function botCareer(seed: number, talent = 0, input: Partial<NewCareerInput> = {}): CareerState {
+  return withTalent(setTrainingFocus(newCareer(seed, input), 'speed'), talent);
 }

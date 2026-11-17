@@ -22,6 +22,7 @@ import {
   type StrategyOption,
   type StrategyPlan,
 } from '../simulation/race';
+import { birthRaceProfile } from '../birth/effects';
 import { checkFatalAccident } from '../dynasty/succession';
 import { applyExecutiveRoundEffects, closeExecutiveSeason } from '../management/executive';
 import { isUnavailable } from './condition';
@@ -132,11 +133,13 @@ export function runQualifying(career: CareerState, playerApproach: QualifyingApp
   const participants = entrantDrivers(career, weekend).map(({ driver, team }) => {
     const entry = practice.entries.find((e) => e.driverId === driver.id);
     if (!entry) throw new Error(`Piloto ${driver.id} sem resultado de treino.`);
+    const profile = driver.id === career.playerDriverId ? birthRaceProfile(career, track, category, weekend.round) : null;
     return {
       driver,
       team,
       approach: directedByPlayer(career, driver) ? playerApproach : chooseAiQualifyingApproach(driver.attributes, weather),
       modifiers: entry.modifiers,
+      ...(profile ? { profile } : {}),
     };
   });
   const qualifying = simulateQualifying(participants, track, weather, sessionSeed(career, weekend.round, 'qualifying'), category, career.gridPenalties);
@@ -146,12 +149,17 @@ export function runQualifying(career: CareerState, playerApproach: QualifyingApp
 export function buildRaceContext(career: CareerState): RaceContext {
   const event = career.calendar.find((e) => e.round === career.weekend?.round);
   if (!event) throw new Error('Nenhuma etapa em andamento.');
+  const track = getTrack(event.trackId);
+  const category = getCategory(career.categoryId);
+  // Nascimento (Fase 2): aptidões e talentos e defeitos do jogador viram modificadores na pista.
+  const profile = birthRaceProfile(career, track, category, event.round);
   return {
-    track: getTrack(event.trackId),
-    category: getCategory(career.categoryId),
+    track,
+    category,
     drivers: driverMap(career),
     teams: teamMap(career),
     rivalries: career.relations.rivalries,
+    ...(profile ? { profiles: { [career.playerDriverId]: profile } } : {}),
   };
 }
 

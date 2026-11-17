@@ -8,6 +8,7 @@
 import type { CareerState, RaceEntryResult, Sponsor } from '@/domain/schemas';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { createRng, hashSeed } from '../rng';
+import { sponsorValueFactor } from '../birth/effects';
 import { ECONOMY } from './economy';
 
 export const SPONSOR_RULES = {
@@ -32,14 +33,19 @@ const NAMES: readonly (readonly string[])[] = [
   ['Petro Aurora', 'Relógios Chronos', 'Tecnologia Nexa', 'Companhia Aérea Zênite', 'Bebidas Kora', 'Grupo Financeiro Lumen'],
 ];
 
-export function familySupport(): Sponsor {
+/**
+ * Apoio da família: um valor por temporada, até a temporada `seasons`. Sem argumentos, é o apoio
+ * de antes dos nascimentos sorteados (usado pela migração dos saves antigos); numa carreira nova,
+ * o valor e a duração vêm do nascimento.
+ */
+export function familySupport(perSeason: number = ECONOMY.FAMILY_SUPPORT, seasons: number = ECONOMY.FAMILY_SUPPORT_SEASONS): Sponsor {
   return {
     id: 'family',
     name: 'Apoio da família',
     tier: 0,
-    perSeason: ECONOMY.FAMILY_SUPPORT,
+    perSeason,
     podiumBonus: 0,
-    endSeason: ECONOMY.FAMILY_SUPPORT_SEASONS,
+    endSeason: Math.max(1, seasons),
     satisfaction: 100,
     targetPosition: 20,
   };
@@ -59,14 +65,18 @@ export function sponsorTierFor(reputation: number, category: CategoryDefinition,
   return Math.min(3, byResult + famous) as 1 | 2 | 3;
 }
 
-/** Monta uma proposta de patrocínio. A semente define o nome e uma variação de ±10% no valor. */
+/**
+ * Monta uma proposta de patrocínio. A semente define o nome e uma variação de ±10% no valor; o
+ * carisma de nascença do piloto (Fase 2) sobe ou desce o valor (ver `sponsorValueFactor`).
+ */
 export function buildSponsor(career: CareerState, tier: 1 | 2 | 3, seed: number): Sponsor {
   const rng = createRng(seed);
   const category = getCategory(career.categoryId);
   const taken = new Set(career.sponsors.map((s) => s.name));
   const pool = (NAMES[tier] ?? []).filter((n) => !taken.has(n));
   const name = pool[Math.floor(rng.next() * pool.length)] ?? `Patrocinador ${career.season}-${tier}`;
-  const perSeason = Math.round((category.economy.sponsorBase * (SPONSOR_RULES.TIER_SHARE[tier] ?? 0.2) * (0.9 + rng.next() * 0.2)) / 100) * 100;
+  const perSeason =
+    Math.round((category.economy.sponsorBase * (SPONSOR_RULES.TIER_SHARE[tier] ?? 0.2) * (0.9 + rng.next() * 0.2) * sponsorValueFactor(career)) / 100) * 100;
   return {
     id: `sponsor-${hashSeed(seed, name).toString(16)}`,
     name,
@@ -83,11 +93,12 @@ export function buildSponsor(career: CareerState, tier: 1 | 2 | 3, seed: number)
 /**
  * Satisfação após uma etapa: compara a posição no campeonato com a esperada
  * (1,2 ponto por posição, de −3 a +5) e soma a exposição da corrida (vitória +6,
- * pódio +4) ou o desgaste (acidente por erro próprio ou punição: −2).
+ * pódio +4) ou o desgaste (acidente por erro próprio ou punição: −2). `charisma` é o que o
+ * carisma de nascença soma ou tira (ver `sponsorSatisfactionBonus`).
  */
-export function satisfactionAfterRound(sponsor: Sponsor, championshipPosition: number, entry: RaceEntryResult | null): number {
+export function satisfactionAfterRound(sponsor: Sponsor, championshipPosition: number, entry: RaceEntryResult | null, charisma = 0): number {
   if (sponsor.tier === 0) return sponsor.satisfaction;
-  let delta = Math.max(-3, Math.min(5, (sponsor.targetPosition - championshipPosition) * 1.2));
+  let delta = Math.max(-3, Math.min(5, (sponsor.targetPosition - championshipPosition) * 1.2)) + charisma;
   if (entry?.status === 'finished' && entry.position === 1) delta += 6;
   else if (entry?.status === 'finished' && entry.position <= 3) delta += 4;
   if (entry && (entry.dnfReason === 'crash' || entry.penaltySeconds > 0)) delta -= 2;

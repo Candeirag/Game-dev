@@ -10,6 +10,7 @@ import { DEV_AREAS } from '@/domain/schemas';
 import { FAMILY } from '@/data/family';
 import { netWorth, post } from '../career/economy';
 import { getPlayer } from '../career/selectors';
+import { relocate } from '../birth/move';
 import { setKartFunding, startChildCareer } from '../dynasty/family';
 
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
@@ -165,6 +166,8 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
         ),
       };
     }
+    case 'relocate':
+      return relocate(career);
   }
 }
 

@@ -33,3 +33,4 @@ export { overallRating, driverPaceRating, carRating, conditionEffects } from './
 export { rankTeams, teamStrength, buildCategoryField } from './world/generation';
 export { createRng, hashSeed, randomSeed, textHash, textHash01 } from './rng';
 export { recordSeasonTrend, seasonTrendPoint } from './career/trend';
+export * from './birth';
