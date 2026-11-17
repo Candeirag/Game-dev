@@ -23,15 +23,22 @@ function sourceFiles(dir = join(__dirname, '..', 'src')): string[] {
   });
 }
 
-/** Sistema de arquivos em memória, com falhas programáveis para simular o aplicativo fechado no meio de uma gravação. */
+/** Sistema de arquivos em memória, com falhas programáveis para simular falta de espaço e o aplicativo fechado no meio de uma gravação. */
 function fakeFiles() {
   const data = new Map<string, string>();
   let failRenames = false;
+  /** Espaço total do "aparelho", em caracteres (null = sem limite). */
+  let capacity: number | null = null;
   const files: DeviceFiles = {
     async read(name) {
       return data.get(name) ?? null;
     },
     async write(name, text) {
+      if (capacity !== null) {
+        let used = text.length;
+        for (const [other, content] of data) if (other !== name) used += content.length;
+        if (used > capacity) throw new Error('sem espaço');
+      }
       data.set(name, text);
     },
     async rename(from, to) {
@@ -48,7 +55,18 @@ function fakeFiles() {
       return [...data.keys()];
     },
   };
-  return { files, data, breakRenames: (value: boolean) => (failRenames = value) };
+  return {
+    files,
+    data,
+    breakRenames: (value: boolean) => {
+      failRenames = value;
+    },
+    /** Limita o espaço a `factor` vezes o que está ocupado agora (null tira o limite). */
+    limitSpace: (factor: number | null) => {
+      const used = [...data.values()].reduce((sum, content) => sum + content.length, 0);
+      capacity = factor === null ? null : Math.floor(used * factor);
+    },
+  };
 }
 
 const NOW = '2026-11-15T12:00:00.000Z';
@@ -85,20 +103,64 @@ describe('saves em arquivos do aparelho', () => {
     expect((await listSaves(storage)).find((slot) => slot.slot === 'auto')?.status).toBe('ok');
   });
 
-  it('não perde o save se o aplicativo fecha no meio da gravação', async () => {
+  it('sem espaço para tudo, nada é escrito: gravar várias chaves é tudo ou nada', async () => {
+    const { files, data, limitSpace } = fakeFiles();
+    const storage = new DeviceFileStorage(files);
+    await storage.setMany({ auto: { versao: 1 }, 'auto.backup': { versao: 0 } });
+    // Cabe o temporário da primeira chave, não o da segunda.
+    limitSpace(1.6);
+    await expect(storage.setMany({ auto: { versao: 2 }, 'auto.backup': { versao: 1 } })).rejects.toThrow('sem espaço');
+    limitSpace(null);
+    expect(await storage.get('auto')).toEqual({ versao: 1 });
+    expect(await storage.get('auto.backup')).toEqual({ versao: 0 });
+    expect([...data.keys()].sort()).toEqual(['auto.backup.json', 'auto.json']);
+  });
+
+  it('com o armazenamento quase cheio, o save abre mão da cópia de segurança e o progresso é gravado', async () => {
+    const { files, limitSpace } = fakeFiles();
+    const storage = new DeviceFileStorage(files);
+    const career = newCareer();
+    await saveCareer(storage, 'auto', career, NOW);
+    // Cabem o save atual e um novo ao lado dele, mas não a cópia de segurança junto.
+    limitSpace(2.5);
+    await saveCareer(storage, 'auto', { ...career, reputation: career.reputation + 1 }, NOW);
+    expect((await loadCareer(storage, 'auto')).career.reputation).toBe(career.reputation + 1);
+    expect(await storage.keys()).toEqual(['auto']);
+    // Sem espaço nem para o save novo, a gravação falha e o que estava no slot continua lá.
+    limitSpace(1.2);
+    await expect(saveCareer(storage, 'auto', { ...career, reputation: career.reputation + 2 }, NOW)).rejects.toThrow('sem espaço');
+    limitSpace(null);
+    expect((await loadCareer(storage, 'auto')).career.reputation).toBe(career.reputation + 1);
+    expect(await storage.keys()).toEqual(['auto']);
+  });
+
+  it('aplicativo fechado depois da confirmação: a gravação é concluída na abertura seguinte', async () => {
     const { files, data, breakRenames } = fakeFiles();
     const storage = new DeviceFileStorage(files);
-    await storage.setMany({ auto: { versao: 1 } });
-    // A gravação seguinte escreve o temporário, mas a troca de nome não acontece.
+    await storage.setMany({ auto: { versao: 1 }, 'auto.backup': { versao: 0 } });
     breakRenames(true);
-    await expect(storage.setMany({ auto: { versao: 2 } })).rejects.toThrow();
+    await expect(storage.setMany({ auto: { versao: 2 }, 'auto.backup': { versao: 1 } })).rejects.toThrow();
     breakRenames(false);
-    // O temporário ficou inteiro: é a versão mais nova e é ela que volta.
+    // Outra abertura do aplicativo: as duas chaves aparecem com os valores novos, nunca uma de cada.
+    const reopened = new DeviceFileStorage(files);
+    expect(await reopened.get('auto')).toEqual({ versao: 2 });
+    expect(await reopened.get('auto.backup')).toEqual({ versao: 1 });
+    expect([...data.keys()].sort()).toEqual(['auto.backup.json', 'auto.json']);
+    // Na mesma sessão a troca também termina na operação seguinte.
     expect(await storage.get('auto')).toEqual({ versao: 2 });
-    expect(await storage.keys()).toEqual(['auto']);
-    // Um temporário cortado é ignorado: vale o arquivo anterior.
-    data.set('auto.json.tmp', '{"versao":');
-    expect(await storage.get('auto')).toEqual({ versao: 1 });
+  });
+
+  it('aplicativo fechado antes da confirmação: os temporários são descartados e vale o que estava', async () => {
+    const { files, data } = fakeFiles();
+    await new DeviceFileStorage(files).setMany({ auto: { versao: 1 } });
+    // Sobrou um temporário inteiro e outro cortado, sem arquivo de confirmação.
+    data.set('auto.json.tmp', '{"versao":2}');
+    data.set('slot1.json.tmp', '{"versao":');
+    const reopened = new DeviceFileStorage(files);
+    expect(await reopened.get('auto')).toEqual({ versao: 1 });
+    expect(await reopened.get('slot1')).toBeUndefined();
+    expect(await reopened.keys()).toEqual(['auto']);
+    expect([...data.keys()]).toEqual(['auto.json']);
   });
 
   it('um valor que não vira JSON não deixa nada escrito', async () => {
