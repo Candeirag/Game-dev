@@ -83,11 +83,14 @@
   background-size: 28px 28px;
 }
 
-/* Camada fina sobre a pista: fundo translúcido, desfoque leve e sombra. A pista continua aparecendo. */
+/*
+ * Camada fina sobre a pista: fundo translúcido e sombra; a pista continua aparecendo por trás.
+ * Sem desfoque de fundo de propósito: sobre a pista em movimento ele seria refeito a cada quadro,
+ * em cada camada, e pesaria nos celulares mais simples.
+ */
 @utility overlay {
   background-color: color-mix(in srgb, var(--color-ink-950) 90%, transparent);
   box-shadow: var(--shadow-overlay);
-  backdrop-filter: blur(6px);
 }
 
 /*

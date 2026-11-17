@@ -74,7 +74,10 @@ export function RaceControlBar({
               aria-pressed={mode === m}
               className={cx(
                 'chamfer-br min-h-11 min-w-0 px-1 text-sm font-semibold leading-tight transition-colors [--chamfer:8px]',
-                mode === m ? 'bg-apex-500/20 text-ink-100 shadow-ring-accent' : 'bg-ink-800 text-ink-300 shadow-ring hover:text-ink-100',
+                // O ritmo escolhido tem contorno vermelho e também uma barra na base (forma, não só cor).
+                mode === m
+                  ? 'bg-apex-500/20 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-400),inset_0_-4px_0_0_var(--color-apex-400)]'
+                  : 'bg-ink-800 text-ink-300 shadow-ring hover:text-ink-100',
               )}
             >
               {RACE_MODE_LABELS[m]}

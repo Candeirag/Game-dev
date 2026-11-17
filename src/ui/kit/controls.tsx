@@ -35,7 +35,10 @@ export function Switch({
           checked={checked}
           disabled={disabled}
           onChange={(event) => onChange(event.target.checked)}
-          className="peer absolute inset-0 cursor-[inherit] appearance-none bg-none shadow-none"
+          // A caixa nativa cobre a área de toque inteira, invisível (o desenho é o trilho ao lado). O
+          // estilo vai na linha porque a regra geral de "desativado" pinta fundo e contorno.
+          className="peer absolute inset-0 m-0 h-full w-full cursor-[inherit] appearance-none"
+          style={{ opacity: 0, background: 'none', boxShadow: 'none' }}
         />
         <span
           aria-hidden
