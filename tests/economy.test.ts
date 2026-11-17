@@ -102,7 +102,10 @@ const closed: CareerState = { ...playSeason(botTraining(newCareer(42))), sideJob
 const familyOnly = closed.sponsors.filter((s) => s.tier === 0);
 const offseason = closed.offseason!;
 /** O mesmo fechamento, como se o piloto tivesse terminado em outra posição. */
-const finishing = (position: number, career: CareerState = closed): CareerState => ({ ...career, offseason: { ...career.offseason!, playerPosition: position } });
+const finishing = (position: number, career: CareerState = closed): CareerState => ({
+  ...career,
+  offseason: { ...career.offseason!, playerPosition: position },
+});
 /** Uma proposta de transferência de uma equipe do meio do grid, para os testes das portas. */
 const midfieldOffer = (career: CareerState): Offer => {
   const category = getCategory(career.categoryId);
@@ -333,11 +336,19 @@ describe('investidor: porcentagem para sempre', () => {
     expect(canAcceptOffer(eligible, offer)).toBe(false);
     expect(doorFor(eligible, offer)).toBe('investor');
     const signed = signInvestor(eligible, offer.id);
-    expect(signed.investor).toMatchObject({ share: INVESTOR.SHARE_TOP3, invested: offer.seatCost, seats: 1, received: 0, funded: { season: 1, offerId: offer.id } });
+    expect(signed.investor).toMatchObject({
+      share: INVESTOR.SHARE_TOP3,
+      invested: offer.seatCost,
+      seats: 1,
+      received: 0,
+      funded: { season: 1, offerId: offer.id },
+    });
     expect(signed.finance.cash).toBe(offer.seatCost);
     expect(canAcceptOffer(signed, offer)).toBe(true);
     // O dinheiro não pode ir para outra vaga, nem há um segundo aporte no mesmo ano.
-    expect(() => startNextSeason(signed, pickBestOffer(signed) === offer.id ? 'offer-s1-fallback' : pickBestOffer(signed))).toThrow('só vale para a vaga que ele pagou');
+    expect(() => startNextSeason(signed, pickBestOffer(signed) === offer.id ? 'offer-s1-fallback' : pickBestOffer(signed))).toThrow(
+      'só vale para a vaga que ele pagou',
+    );
     expect(canSignInvestor(signed, offer.id)).toBe(false);
     const next = startNextSeason(signed, offer.id);
     expect(next.investor).toMatchObject({ share: INVESTOR.SHARE_TOP3, funded: null });
@@ -355,7 +366,11 @@ describe('investidor: porcentagem para sempre', () => {
     }
     // Anos depois, com salário de piloto profissional: a fatia sai de cada parcela e de cada bônus.
     const share = career.investor!.share;
-    const pro: CareerState = { ...career, sponsors: [], contract: { ...career.contract, salary: 1_000_000, seatCost: 0, bonuses: { win: 50_000, podium: 20_000, point: 0, title: 0 } } };
+    const pro: CareerState = {
+      ...career,
+      sponsors: [],
+      contract: { ...career.contract, salary: 1_000_000, seatCost: 0, bonuses: { win: 50_000, podium: 20_000, point: 0, title: 0 } },
+    };
     const round = settleRound(pro, 1, entry(1));
     const earnings = Math.round(1_000_000 / pro.calendar.length) + 50_000;
     expect(round.finance.seasonTotals.investor).toBe(-Math.round(earnings * share));
@@ -395,18 +410,30 @@ describe('investidor: porcentagem para sempre', () => {
     const clean = closeSeasonFinance({ ...season, finance: { ...emptyFinance(0), seasonTotals: { salary: 100_000 } } }).report.taxableIncome;
     const withAporte = closeSeasonFinance({
       ...season,
-      finance: { ...emptyFinance(0), seasonTotals: { salary: 100_000, investor: 500_000 }, transactions: [{ season: season.season, round: 1, key: 'investor', amount: 500_000, label: 'Aporte' }] },
+      finance: {
+        ...emptyFinance(0),
+        seasonTotals: { salary: 100_000, investor: 500_000 },
+        transactions: [{ season: season.season, round: 1, key: 'investor', amount: 500_000, label: 'Aporte' }],
+      },
     }).report.taxableIncome;
     expect(withAporte).toBe(clean);
     const withCut = closeSeasonFinance({
       ...season,
-      finance: { ...emptyFinance(0), seasonTotals: { salary: 100_000, investor: -20_000 }, transactions: [{ season: season.season, round: 1, key: 'investor', amount: -20_000, label: 'Parte' }] },
+      finance: {
+        ...emptyFinance(0),
+        seasonTotals: { salary: 100_000, investor: -20_000 },
+        transactions: [{ season: season.season, round: 1, key: 'investor', amount: -20_000, label: 'Parte' }],
+      },
     }).report.taxableIncome;
     expect(withCut).toBe(clean - 20_000);
   });
 
   it('quem deixa as pistas deixa de dever ganhos de piloto', () => {
-    expect(convertToExecutive({ ...closed, investor: investorOf(), sideJob: 'instructor' })).toMatchObject({ investor: null, sideJob: 'none', crowdfund: null });
+    expect(convertToExecutive({ ...closed, investor: investorOf(), sideJob: 'instructor' })).toMatchObject({
+      investor: null,
+      sideJob: 'none',
+      crowdfund: null,
+    });
   });
 });
 
@@ -432,7 +459,10 @@ describe('último recurso: nunca uma parede sem porta', () => {
 
   it('o aporte de último recurso cobre a vaga e o que faltar para fechar o ano: a porta abre', () => {
     const fallback = stuck.offseason!.offers.filter((o) => o.kind === 'fallback');
-    const career: CareerState = { ...stuck, offseason: { ...stuck.offseason!, offers: withLastResortOffer({ ...stuck, offseason: { ...stuck.offseason!, offers: fallback } }, fallback) } };
+    const career: CareerState = {
+      ...stuck,
+      offseason: { ...stuck.offseason!, offers: withLastResortOffer({ ...stuck, offseason: { ...stuck.offseason!, offers: fallback } }, fallback) },
+    };
     const offer = career.offseason!.offers[0]!;
     expect(canAcceptOffer(career, offer)).toBe(false);
     expect(investorAmount(career, offer)).toBeGreaterThan(offer.seatCost);
@@ -500,9 +530,11 @@ describe('academia: paga a vaga, cobra exclusividade e resultado', () => {
     expect(investorTerms(joined).available).toBe(false);
     expect(canLaunchCrowdfund(joined)).toBe(false);
     // O convite por evento entra pela mesma regra.
-    const viaEvent = applyEffects({ ...national, sponsors: [sponsorOf(1, { id: 'a' }), sponsorOf(1, { id: 'b', perSeason: 12_000 })] }, [
-      { type: 'joinAcademy', academy: joined.academy! },
-    ], 1);
+    const viaEvent = applyEffects(
+      { ...national, sponsors: [sponsorOf(1, { id: 'a' }), sponsorOf(1, { id: 'b', perSeason: 12_000 })] },
+      [{ type: 'joinAcademy', academy: joined.academy! }],
+      1,
+    );
     expect(viaEvent.sponsors.map((s) => s.id)).toEqual(['b']);
   });
 });
@@ -690,7 +722,14 @@ describe('save v7: migração 6 → 7', () => {
   it('um save da versão 6 ganha o polo do seu campeonato e nenhum vínculo novo', () => {
     const { hub: _hub, investor: _investor, crowdfund: _crowdfund, sideJob: _sideJob, noDoorSeasons: _noDoor, ...v6 } = closed;
     const migrated = migrateStep({ ...v6, schemaVersion: 6, categoryId: 'f3' }, 6);
-    expect(migrated).toMatchObject({ schemaVersion: 7, hub: { id: 'inglaterra', arrivedSeason: 0 }, investor: null, crowdfund: null, sideJob: 'none', noDoorSeasons: 0 });
+    expect(migrated).toMatchObject({
+      schemaVersion: 7,
+      hub: { id: 'inglaterra', arrivedSeason: 0 },
+      investor: null,
+      crowdfund: null,
+      sideJob: 'none',
+      noDoorSeasons: 0,
+    });
     expect(migrateStep({ ...v6, schemaVersion: 6 }, 6).hub).toEqual({ id: 'sao-paulo', arrivedSeason: 0 });
     expect(Object.keys(MIGRATIONS).map(Number)).toContain(6);
   });
@@ -699,7 +738,10 @@ describe('save v7: migração 6 → 7', () => {
     const once = migrateStep({ ...closed, schemaVersion: 6 }, 6);
     expect(migrateStep({ ...once, schemaVersion: 6 }, 6)).toEqual(once);
     // O que já estava no save é preservado.
-    expect(migrateStep({ ...closed, schemaVersion: 6, investor: investorOf(), sideJob: 'mechanic' }, 6)).toMatchObject({ sideJob: 'mechanic', investor: { share: 0.2 } });
+    expect(migrateStep({ ...closed, schemaVersion: 6, investor: investorOf(), sideJob: 'mechanic' }, 6)).toMatchObject({
+      sideJob: 'mechanic',
+      investor: { share: 0.2 },
+    });
   });
 
   it('a carreira com as regras novas continua íntegra ao longo dos anos', () => {

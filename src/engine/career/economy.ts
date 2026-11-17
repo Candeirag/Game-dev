@@ -218,7 +218,19 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
   // aporte do investidor e a vaquinha não são renda: não pagam imposto.
   const taxable = Math.max(
     0,
-    (t.salary ?? 0) + (t.bonus ?? 0) + (t.sponsors ?? 0) + (t.academy ?? 0) + (t.seat ?? 0) + (t.dividends ?? 0) + (t.rent ?? 0) + (t.business ?? 0) + (t.job ?? 0) + (t.travel ?? 0) + (t.equipment ?? 0) + (t.housing ?? 0) - investorPaid,
+    (t.salary ?? 0) +
+      (t.bonus ?? 0) +
+      (t.sponsors ?? 0) +
+      (t.academy ?? 0) +
+      (t.seat ?? 0) +
+      (t.dividends ?? 0) +
+      (t.rent ?? 0) +
+      (t.business ?? 0) +
+      (t.job ?? 0) +
+      (t.travel ?? 0) +
+      (t.equipment ?? 0) +
+      (t.housing ?? 0) -
+      investorPaid,
   );
   // Residência fiscal em Mônaco (cobertura de uso próprio): 25% a menos de imposto de renda.
   const residence = f.properties.some((p) => p.catalogId === 'cobertura-monaco' && p.use === 'personal') ? 0.75 : 1;

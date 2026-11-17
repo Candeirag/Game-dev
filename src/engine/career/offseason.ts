@@ -177,7 +177,9 @@ export function closeSeason(career: CareerState): CareerState {
       notes.push(
         `${crowdfund.town} esperava ver você entre os ${crowdTarget} primeiros depois da vaquinha. O ${me.position}º lugar decepcionou a torcida: a moral e a reputação sentiram.`,
       );
-      drivers = drivers.map((d) => (d.isPlayer ? { ...d, condition: { ...d.condition, morale: clamp(d.condition.morale + CROWDFUND.MISS_MORALE, 0, 100) } } : d));
+      drivers = drivers.map((d) =>
+        d.isPlayer ? { ...d, condition: { ...d.condition, morale: clamp(d.condition.morale + CROWDFUND.MISS_MORALE, 0, 100) } } : d,
+      );
     } else {
       notes.push(`${crowdfund.town} comemora: você terminou em ${me.position}º e honrou a vaquinha (a cidade esperava até o ${crowdTarget}º).`);
     }
@@ -225,8 +227,7 @@ export function closeSeason(career: CareerState): CareerState {
   const closedState: CareerState = { ...base, inbox: pushMessages(base.inbox, messages), offseason: { ...offseason, offers } };
   if (lastResortActive(base))
     notes.push('Um investidor de último recurso apareceu: ele banca uma vaga em troca de uma fatia grande dos seus ganhos. Veja em Caminhos.');
-  else if (!hasOpenDoor(closedState))
-    notes.push('Nenhuma porta se abriu neste ano: sobrou a vaga de aluguel. Em Caminhos você vê o que falta para cada uma.');
+  else if (!hasOpenDoor(closedState)) notes.push('Nenhuma porta se abriu neste ano: sobrou a vaga de aluguel. Em Caminhos você vê o que falta para cada uma.');
   return checkMortality(touchLineage(closedState));
 }
 
@@ -491,7 +492,9 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
 
   const sponsors = renewSponsors(career.sponsors, career.season, getCategory(career.categoryId), next, offseason.playerPosition);
   for (const s of sponsors.broken)
-    news.push(`${s.name} rompeu o patrocínio: a meta era terminar entre os ${s.targetPosition} primeiros. Você deixa de receber ${money(career, s.perSeason)} por temporada.`);
+    news.push(
+      `${s.name} rompeu o patrocínio: a meta era terminar entre os ${s.targetPosition} primeiros. Você deixa de receber ${money(career, s.perSeason)} por temporada.`,
+    );
   for (const s of sponsors.renewed) news.push(`${s.name} renovou o patrocínio por ${money(career, s.perSeason)} por temporada.`);
   for (const s of sponsors.left) news.push(s.tier === 0 ? 'O apoio financeiro da família chegou ao fim.' : `${s.name} não renovou o patrocínio.`);
 

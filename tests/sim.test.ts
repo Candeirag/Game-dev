@@ -363,7 +363,14 @@ describe('portas nos agregados (Fase 3)', () => {
 
   it('conta as vagas por porta, o investidor, a academia, o trabalho e os rompimentos', () => {
     expect(doors.used).toEqual({ own: 1, academy: 1, crowdfund: 0, investor: 1, none: 2 });
-    expect(doors).toMatchObject({ investorCareers: 1, investorAverageShare: 0.25, investorMaxShare: 0.25, academyCareers: 1, sideJobSeasons: 1, sponsorsBrokenPerCareer: 1 });
+    expect(doors).toMatchObject({
+      investorCareers: 1,
+      investorAverageShare: 0.25,
+      investorMaxShare: 0.25,
+      academyCareers: 1,
+      sideJobSeasons: 1,
+      sponsorsBrokenPerCareer: 1,
+    });
   });
 
   it('mede o resultado do ano pela posição final no kart e a entrada na Fórmula Júnior por porta', () => {
@@ -373,7 +380,10 @@ describe('portas nos agregados (Fase 3)', () => {
       [0, 0],
       [3, -7_000],
     ]);
-    expect(doors.juniorEntry[0]).toMatchObject({ label: 'Todas as carreiras', stats: { careers: 1, share: 0.5, averageSeason: 3, own: 0, academy: 1, investor: 0 } });
+    expect(doors.juniorEntry[0]).toMatchObject({
+      label: 'Todas as carreiras',
+      stats: { careers: 1, share: 0.5, averageSeason: 3, own: 0, academy: 1, investor: 0 },
+    });
   });
 });
 

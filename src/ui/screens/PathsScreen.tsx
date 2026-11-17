@@ -109,7 +109,12 @@ function NextSeatPanel({ seat }: { seat: NextSeat }) {
         </Chip>
       }
     >
-      <ProgressBar value={have} max={Math.max(1, need)} tone={seat.missing === 0 ? 'good' : 'attention'} label={`Você cobre ${formatMoneyFull(have)} de ${formatMoneyFull(need)}`} />
+      <ProgressBar
+        value={have}
+        max={Math.max(1, need)}
+        tone={seat.missing === 0 ? 'good' : 'attention'}
+        label={`Você cobre ${formatMoneyFull(have)} de ${formatMoneyFull(need)}`}
+      />
       <dl className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 text-sm">
         <dt className="text-ink-300">Vaga mais barata {categoryRef(seat.categoryId, 'de')}</dt>
         <dd className="text-right text-ink-100">{formatMoneyFull(seat.seatCost)}</dd>

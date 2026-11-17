@@ -198,7 +198,13 @@ export function renewSponsors(
  * Vale um patrocinador do porte que ele atrairia lá, se o contrato ainda fizesse sentido (posição
  * dentro da meta do porte) e houver cota livre ou um patrocinador menor para trocar.
  */
-export function expectedSponsorship(career: CareerState, kept: readonly Sponsor[], category: CategoryDefinition, equivalentPosition: number, reputation: number): number {
+export function expectedSponsorship(
+  career: CareerState,
+  kept: readonly Sponsor[],
+  category: CategoryDefinition,
+  equivalentPosition: number,
+  reputation: number,
+): number {
   const tier = sponsorTierFor(reputation, category, equivalentPosition, careerTitles(career));
   if (equivalentPosition > (SPONSOR_RULES.TIER_TARGET[tier] ?? 0)) return 0;
   const commercial = [...commercialSponsors(kept)].sort((a, b) => a.perSeason - b.perSeason);

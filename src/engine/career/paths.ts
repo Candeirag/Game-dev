@@ -182,7 +182,10 @@ function crowdfundRequirements(career: CareerState): PathRequirement[] {
     },
     {
       label: 'Intervalo',
-      detail: wait > 0 ? `A cidade já ajudou há pouco: dá para pedir de novo em ${wait} ${wait === 1 ? 'temporada' : 'temporadas'}` : 'A cidade ainda não foi chamada',
+      detail:
+        wait > 0
+          ? `A cidade já ajudou há pouco: dá para pedir de novo em ${wait} ${wait === 1 ? 'temporada' : 'temporadas'}`
+          : 'A cidade ainda não foi chamada',
       met: wait <= 0,
       progress: wait <= 0 ? 1 : clamp01(1 - wait / CROWDFUND.COOLDOWN_SEASONS),
     },
@@ -320,7 +323,7 @@ function sportingMet(career: CareerState, offer: Offer): boolean {
 
 export function canSignInvestor(career: CareerState, offerId: string): boolean {
   const offer = career.offseason?.offers.find((o) => o.id === offerId);
-  if (!offer || offer.status !== 'open' || offer.kind === 'fallback' || offer.kind === 'continue') return false;
+  if (offer?.status !== 'open' || offer.kind === 'fallback' || offer.kind === 'continue') return false;
   if (career.investor?.funded?.season === career.season) return false;
   return investorTerms(career).available && sportingMet(career, offer) && investorAmount(career, offer) > 0;
 }
@@ -544,7 +547,12 @@ export function pathsReport(career: CareerState): PathsReport {
   const own: Door = {
     id: 'own',
     title: 'Dinheiro próprio, patrocínio e bolsa',
-    status: ownOpen ? 'open' : statusOf(ownRequirements.filter((r) => r.label !== 'Bolsa'), false),
+    status: ownOpen
+      ? 'open'
+      : statusOf(
+          ownRequirements.filter((r) => r.label !== 'Bolsa'),
+          false,
+        ),
     summary: 'O caminho sem dono: você paga a vaga com o que juntou, com os patrocinadores e com a bolsa de quem termina entre os três primeiros.',
     price: 'Nada além do seu dinheiro. Patrocinador cobra a meta: quem não a vê cumprida rompe no fim do ano.',
     requirements: ownRequirements,

@@ -531,7 +531,13 @@ describe('migração da versão 6 para a 7 (economia e polos)', () => {
   it.each(files)('%s: abre na versão atual, sem investidor, vaquinha nem trabalho paralelo, e sem ano de idioma a cumprir', (name) => {
     const career = importCareer(readFileSync(`tests/fixtures/v6/${name}`, 'utf8'));
     expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
-    expect(career).toMatchObject({ hub: { id: hubs[career.categoryId], arrivedSeason: 0 }, investor: null, crowdfund: null, sideJob: 'none', noDoorSeasons: 0 });
+    expect(career).toMatchObject({
+      hub: { id: hubs[career.categoryId], arrivedSeason: 0 },
+      investor: null,
+      crowdfund: null,
+      sideJob: 'none',
+      noDoorSeasons: 0,
+    });
     expect(validateCareerIntegrity(career)).toEqual([]);
   });
 });

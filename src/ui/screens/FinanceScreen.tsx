@@ -76,9 +76,10 @@ export function FinanceScreen() {
         {career.investor && (
           <Card tone="attention" title="Investidor">
             <p className="text-sm text-ink-200">
-              {career.investor.name} leva <b className="font-display text-base font-semibold text-ink-100">{Math.round(career.investor.share * 100)}%</b> dos seus
-              ganhos (salário, bônus e o que sobra dos patrocínios depois de pagar a vaga), para sempre. Já pôs {formatMoneyFull(career.investor.invested)} na sua
-              carreira ({career.investor.seats === 1 ? 'uma vaga' : `${career.investor.seats} vagas`}) e recebeu {formatMoneyFull(career.investor.received)}.
+              {career.investor.name} leva <b className="font-display text-base font-semibold text-ink-100">{Math.round(career.investor.share * 100)}%</b> dos
+              seus ganhos (salário, bônus e o que sobra dos patrocínios depois de pagar a vaga), para sempre. Já pôs {formatMoneyFull(career.investor.invested)}{' '}
+              na sua carreira ({career.investor.seats === 1 ? 'uma vaga' : `${career.investor.seats} vagas`}) e recebeu{' '}
+              {formatMoneyFull(career.investor.received)}.
             </p>
           </Card>
         )}

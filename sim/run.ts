@@ -166,13 +166,7 @@ function seatMarket(career: CareerState): { made: number; acceptable: number; ca
   return { made: offers.length, acceptable: 0, cause: onlyMoney ? 'money' : 'requirements' };
 }
 
-function sampleSeason(
-  career: CareerState,
-  index: number,
-  seat: SeatOrigin,
-  noSeatCause: NoSeatCause | null,
-  door: BotDoor | 'initial',
-): SeasonSample {
+function sampleSeason(career: CareerState, index: number, seat: SeatOrigin, noSeatCause: NoSeatCause | null, door: BotDoor | 'initial'): SeasonSample {
   const offseason = career.offseason;
   if (!offseason) throw new Error('Temporada sem fechamento.');
   const player = engine.getPlayer(career);
