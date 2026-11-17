@@ -512,7 +512,7 @@ function Fact({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
-/** Com a tela em pé não há barra superior com o botão de avançar: ele aparece dentro do painel principal. */
+/** Com a tela em pé não há a doca do botão de avançar (canto inferior direito): ele aparece dentro do painel principal. */
 function AdvanceInPlace() {
   const { career } = useCareerView();
   const { wide } = useChrome();
