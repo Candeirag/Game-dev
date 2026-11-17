@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LEDGER_KEYS } from '@/domain/schemas';
 import { LEDGER_LABELS } from '@/domain/labels';
-import { ECONOMY, commercialSponsors, expectedRoundResult, maxSponsors, netWorth, ownedTeamValue, stocksValue } from '@/engine';
+import { ECONOMY, SPONSOR_RULES, commercialSponsors, expectedRoundResult, maxSponsors, netWorth, ownedTeamValue, stocksValue } from '@/engine';
 import { Card, cx, Delta, Meter, PageHeader, Pill, Stat, TableWrap, Tabs } from '@/ui/kit';
 import { TrendLine, cashSeries } from '../components/TrendLine';
 import { formatMoney, formatMoneyFull } from '../format';
