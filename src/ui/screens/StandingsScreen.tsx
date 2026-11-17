@@ -8,8 +8,8 @@ type View = 'drivers' | 'teams';
 type DriverRow = ReturnType<typeof useCareerView>['driverStandings'][number];
 
 /** Células da tabela: mais baixas que as do resto do jogo, para o campeonato caber na tela deitada. */
-const th = 'px-1.5 py-1.5 text-left text-2xs font-medium text-ink-400';
-const td = 'px-1.5 py-[3px] text-sm';
+const th = 'px-2 py-2 text-left text-2xs font-medium text-ink-400';
+const td = 'px-2 py-[3px] text-sm';
 
 /** Resultado de uma etapa na grade: vitória e pódio em verde, abandono em âmbar, o resto neutro. */
 function resultCellTone(position: number, dnf: boolean): string {
@@ -49,7 +49,7 @@ export function StandingsScreen() {
         <p className="mb-3 border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-ink-400">Nenhuma etapa disputada ainda. A ordem abaixo é provisória.</p>
       )}
       {career.adjustments.length > 0 && (
-        <ul className="mb-3 space-y-0.5 border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-gold-400">
+        <ul className="mb-3 space-y-1 border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-gold-400">
           {career.adjustments.map((a, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: a lista só cresce no fim e os ajustes não têm id
             <li key={i}>
@@ -91,7 +91,7 @@ export function StandingsScreen() {
                     const isMine = s.teamId === (player.teamId ?? career.management?.teamId);
                     return (
                       <tr key={s.teamId} className={cx('border-t border-ink-800', isMine && 'bg-apex-500/10')}>
-                        <td className={cx(td, 'w-9 font-display text-base font-bold')}>{s.position}</td>
+                        <td className={'w-9 px-2 py-2 font-display text-base font-bold'}>{s.position}</td>
                         <td className={td}>
                           <span className="flex items-center gap-2">
                             <TeamSwatch team={team} />
@@ -103,7 +103,7 @@ export function StandingsScreen() {
                           {team ? `${Math.round(team.car.engine)} / ${Math.round(team.car.chassis)} / ${Math.round(team.car.reliability)}` : '-'}
                         </td>
                         <td className={cx(td, 'text-center')}>{s.wins || ''}</td>
-                        <td className={cx(td, 'text-right font-display text-base font-bold')}>{s.points}</td>
+                        <td className={'px-2 py-2 text-right font-display text-base font-bold'}>{s.points}</td>
                       </tr>
                     );
                   })}
@@ -156,7 +156,7 @@ function DriversTable({ rows, leaderPoints, compact = false }: { rows: DriverRow
                 const isMe = s.driverId === player.id || (career.management !== null && s.teamId === career.management.teamId);
                 return (
                   <tr key={s.driverId} className={cx('border-t border-ink-800', isMe && 'bg-apex-500/10')}>
-                    <td className={cx(td, 'w-9 font-display text-base font-bold')}>{s.position}</td>
+                    <td className={'w-9 px-2 py-2 font-display text-base font-bold'}>{s.position}</td>
                     <td className={td}>
                       <span className="flex items-center gap-2">
                         <TeamSwatch team={team} />
@@ -170,7 +170,7 @@ function DriversTable({ rows, leaderPoints, compact = false }: { rows: DriverRow
                       rounds.map((r, i) => {
                         const res = s.results[i];
                         return (
-                          <td key={r} className="hidden px-0.5 py-0.5 text-center xl:table-cell">
+                          <td key={r} className="hidden px-1 py-1 text-center xl:table-cell">
                             {res ? (
                               <span
                                 className={cx(
@@ -182,14 +182,14 @@ function DriversTable({ rows, leaderPoints, compact = false }: { rows: DriverRow
                                 {res.status === 'dnf' ? 'AB' : res.position}
                               </span>
                             ) : (
-                              <span className="text-ink-700">·</span>
+                              <span className="text-ink-400">·</span>
                             )}
                           </td>
                         );
                       })}
                     <td className={cx(td, 'text-center')}>{s.wins || ''}</td>
                     <td className={cx(td, 'hidden text-center sm:table-cell')}>{s.podiums || ''}</td>
-                    <td className={cx(td, 'text-right font-display text-base font-bold')}>{s.points}</td>
+                    <td className={'px-2 py-2 text-right font-display text-base font-bold'}>{s.points}</td>
                     <td className={cx(td, 'hidden text-right text-ink-400 sm:table-cell')}>{s.position === 1 ? '' : `-${leaderPoints - s.points}`}</td>
                   </tr>
                 );

@@ -105,7 +105,7 @@ export function CalendarScreen() {
               }
             >
               {held.record && (
-                <div className="flex items-center justify-between gap-3 border-t border-ink-700 pt-2.5 text-xs text-ink-400">
+                <div className="flex items-center justify-between gap-3 border-t border-ink-700 pt-2 text-xs text-ink-400">
                   <span className="min-w-0">
                     Vencedor: <b className="font-semibold text-ink-200">{winner ? fullName(winner) : '-'}</b>
                   </span>
@@ -143,7 +143,7 @@ function EventDetail({
   const { category } = useCareerView();
   const track = getTrack(trackId);
   return (
-    <Card title={`Etapa ${round} de ${total}`} action={status} bodyClassName="space-y-2.5 p-3">
+    <Card title={`Etapa ${round} de ${total}`} action={status} bodyClassName="space-y-2 p-3">
       {/* O traçado tem largura fixa e não encolhe: o texto fica na coluna ao lado, sem cruzar o desenho. */}
       <div className="flex items-center gap-3">
         <CircuitMap track={track} style={category.vehicle} className="h-20 w-28 shrink-0 lg:h-28 lg:w-40" />

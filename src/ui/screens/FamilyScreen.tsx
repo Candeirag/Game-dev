@@ -21,7 +21,7 @@ const TABS: { value: FamilyTab; label: string }[] = [
 ];
 
 /** Linhas compactas das tabelas de leitura. */
-const cell = 'px-2 py-1.5 text-sm';
+const cell = 'px-2 py-2 text-sm';
 
 const stagePill = (stage: Child['stage']) => (
   <Pill tone={stage === 'racing' ? 'good' : stage === 'other' ? 'neutral' : 'warn'}>{CHILD_STAGE_LABELS[stage]}</Pill>
@@ -68,7 +68,7 @@ function ChildCard({ child }: { child: Child }) {
               Avaliação dos treinadores: <b className="text-ink-100">{childScoutReport(child) ?? 'ainda não avaliado'}</b>
             </div>
           )}
-          <ul className="space-y-0.5 text-xs leading-snug text-ink-400">
+          <ul className="space-y-1 text-xs leading-snug text-ink-400">
             {child.traits.map((t) => (
               <li key={t}>
                 <b className="text-ink-200">{getTrait(t).name}</b>: {getTrait(t).description}
@@ -172,7 +172,7 @@ function ChildrenTab({ items, cost }: { items: Child[]; cost: number }) {
                 aria-pressed={child.id === selected.id}
                 onClick={() => setSelectedId(child.id)}
                 className={cx(
-                  'flex min-h-12 w-full items-center justify-between gap-2 px-4 py-1.5 text-left transition-colors focus-visible:outline-offset-[-2px]',
+                  'flex min-h-12 w-full items-center justify-between gap-2 px-4 py-2 text-left transition-colors focus-visible:outline-offset-[-2px]',
                   child.id === selected.id ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-800',
                 )}
               >

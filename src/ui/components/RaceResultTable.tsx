@@ -39,7 +39,7 @@ export function RaceResultTable({ result, names, colors }: { result: RaceResult;
                 <PositionBadge position={e.position} dnf={e.status === 'dnf'} />
               </td>
               <td className={td}>
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <TeamSwatch team={colorOf(e.teamId)} />
                   <span className={cx(e.driverId === player.id && 'font-semibold')}>{nameOf(e.driverId)}</span>
                   {e.driverId === player.id && <YouMark />}

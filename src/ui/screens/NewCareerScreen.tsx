@@ -80,7 +80,7 @@ export function NewCareerScreen() {
     <div className="min-h-dvh">
       {/* Faixa fixa: o resumo do piloto e o botão de começar ficam à vista enquanto o formulário rola. */}
       <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-900 pt-[env(safe-area-inset-top)]">
-        <div className={cx('mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 py-1.5', safeX)}>
+        <div className={cx('mx-auto flex min-h-14 max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 py-2', safeX)}>
           <button
             type="button"
             aria-label="Voltar"
@@ -136,7 +136,7 @@ export function NewCareerScreen() {
       <div className={cx('mx-auto grid max-w-6xl items-start gap-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4', safeX, wide && 'grid-cols-2')}>
         <div className="space-y-4">
           <Card title="1 · Identidade" bodyClassName="p-3">
-            <div className="grid grid-cols-10 gap-x-3 gap-y-2.5">
+            <div className="grid grid-cols-10 gap-x-3 gap-y-2">
               <label className="col-span-5 space-y-1">
                 <span className={fieldLabel}>Nome</span>
                 <input className={field} value={firstName} maxLength={20} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex.: Ana" />
@@ -157,7 +157,7 @@ export function NewCareerScreen() {
               </label>
               <div className="col-span-6 space-y-1">
                 {/* A dica fica fora das opções: o texto do campo fechado cabe inteiro. */}
-                <div className="flex items-baseline gap-1.5 text-2xs">
+                <div className="flex items-baseline gap-2 text-2xs">
                   <label htmlFor="new-career-age" className="font-medium text-ink-400">
                     Idade
                   </label>
@@ -211,7 +211,7 @@ export function NewCareerScreen() {
             <p className="mb-2 text-xs text-ink-400">
               Distribua {PLAYER_BONUS_POINTS} pontos, no máximo {PLAYER_BONUS_MAX_PER_ATTRIBUTE} por atributo. A experiência só cresce competindo.
             </p>
-            <div className="grid gap-1">
+            <div className="grid gap-2">
               {TRAINABLE_ATTRIBUTES.map((key) => (
                 <div key={key} className="flex items-center gap-2">
                   <div className="w-[7.5rem] shrink-0 text-sm leading-tight">{ATTRIBUTE_LABELS[key]}</div>
@@ -219,7 +219,7 @@ export function NewCareerScreen() {
                     <RatingBar value={attributes[key]} previous={preset.attributes[key]} />
                   </div>
                   <div className="w-7 shrink-0 text-right font-display text-lg font-semibold leading-none">{attributes[key]}</div>
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex shrink-0 gap-2">
                     <button
                       type="button"
                       aria-label={`Remover ponto de ${ATTRIBUTE_LABELS[key]}`}
@@ -287,7 +287,7 @@ function HeaderStat({ label, value, muted = false }: { label: string; value: str
   return (
     <div className="leading-none">
       <div className="text-2xs font-medium text-ink-400">{label}</div>
-      <div className={cx('mt-0.5 font-display text-2xl font-bold leading-none', muted ? 'text-ink-400' : 'text-ink-100')}>{value}</div>
+      <div className={cx('mt-1 font-display text-2xl font-bold leading-none', muted ? 'text-ink-400' : 'text-ink-100')}>{value}</div>
     </div>
   );
 }

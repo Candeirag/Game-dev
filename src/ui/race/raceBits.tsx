@@ -62,7 +62,7 @@ export function HeaderButton({
       disabled={disabled}
       aria-label={label}
       title={title ?? label}
-      className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 px-2 text-xs font-semibold text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-100"
+      className="flex min-h-11 min-w-11 items-center justify-center gap-2 px-2 text-xs font-semibold text-ink-200 transition-colors hover:bg-ink-800 hover:text-ink-100"
     >
       <Icon size={18} strokeWidth={1.75} aria-hidden />
       <span className={always ? 'max-sm:hidden' : 'hidden xl:inline'}>{label}</span>

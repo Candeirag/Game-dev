@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { feedback, feedbackOnce } from '../feedback/feedback';
 import { ArrowRight, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FIRST_FORMULA_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
@@ -106,7 +107,7 @@ function LadderTab() {
           do veículo) e mora numa faixa só dele, de altura fixa e com corte: nunca encosta nos textos
           do degrau, em nenhum tamanho de tela.
         */}
-        <ol className="grid grid-cols-2 gap-1.5 [--u:3.2px] sm:grid-cols-4 md:grid-cols-[1fr_1fr_1.25fr_1fr_1fr_1fr_1fr] md:max-[839px]:[--u:2.8px] lg:gap-2 lg:[--u:4.2px]">
+        <ol className="grid grid-cols-2 gap-2 [--u:3.2px] sm:grid-cols-4 md:grid-cols-[1fr_1fr_1.25fr_1fr_1fr_1fr_1fr] md:max-[839px]:[--u:2.8px] lg:gap-2 lg:[--u:4.2px]">
           {CATEGORIES.map((c) => {
             const state = c.tier < category.tier ? 'done' : c.tier === category.tier ? 'current' : 'ahead';
             const seasons = career.history.filter((h) => h.categoryId === c.id).length + (c.id === category.id ? 1 : 0);
@@ -148,7 +149,7 @@ function LadderTab() {
                   />
                 </div>
                 <div className="text-2xs leading-tight text-ink-300">{vehicle.name}</div>
-                <div className="mt-0.5 text-2xs leading-tight text-ink-400">
+                <div className="mt-1 text-2xs leading-tight text-ink-400">
                   {seasons > 0 ? (
                     counted(seasons, 'temporada', 'temporadas')
                   ) : c.economy.seatCost[0] > 0 ? (
@@ -228,7 +229,7 @@ function LicenseTab() {
         {history.length > 0 ? (
           <ul className="divide-y divide-ink-800 text-sm text-ink-300">
             {history.map((h) => (
-              <li key={h.season} className="flex items-baseline justify-between gap-3 px-4 py-1.5">
+              <li key={h.season} className="flex items-baseline justify-between gap-3 px-4 py-2">
                 <span>
                   Temporada {h.season} · {getCategory(h.categoryId).shortName} · {h.position}º
                 </span>
@@ -247,13 +248,18 @@ function LicenseTab() {
 /* ---------------- Fim de temporada: propostas e fechamento ---------------- */
 
 function OffersTab({ offseason }: { offseason: Offseason }) {
-  const { career, drivers } = useCareerView();
+  const { career, drivers, player } = useCareerView();
   const [chosen, setChosen] = useState<string | null>(null);
   useReveal(OFFER_ID, chosen);
   const offers = offseason.offers;
   // Sem escolha do jogador, abre a primeira proposta que ele pode assinar.
   const selected = offers.find((o) => o.id === chosen) ?? offers.find((o) => o.status !== 'withdrawn' && canAcceptOffer(career, o)) ?? offers[0];
   const champion = drivers[offseason.championDriverId];
+  // Título do jogador: comemora uma vez, quando o fechamento da temporada aparece.
+  const wonTitle = offseason.championDriverId === player.id;
+  useEffect(() => {
+    if (wonTitle) feedbackOnce(`titulo-${career.id}-${career.season}`, 'title');
+  }, [wonTitle, career.id, career.season]);
 
   return (
     <>
@@ -307,7 +313,7 @@ function OffersTab({ offseason }: { offseason: Offseason }) {
           <ul className="mt-3 space-y-1 text-sm text-gold-400">
             {offseason.notes.map((note) => (
               <li key={note} className="flex items-start gap-2">
-                <TriangleAlert size={14} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden />
+                <TriangleAlert size={14} strokeWidth={2} className="mt-1 shrink-0" aria-hidden />
                 {note}
               </li>
             ))}
@@ -337,7 +343,7 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
       onClick={onSelect}
       aria-pressed={selected}
       className={cx(
-        'flex min-h-12 w-full flex-col justify-center gap-0.5 px-3 py-1.5 text-left transition-colors',
+        'flex min-h-12 w-full flex-col justify-center gap-1 px-3 py-2 text-left transition-colors',
         selected ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
         withdrawn && 'opacity-50',
       )}
@@ -405,7 +411,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
         </span>
       }
       action={
-        <span className="flex shrink-0 flex-wrap justify-end gap-1.5 py-1">
+        <span className="flex shrink-0 flex-wrap justify-end gap-2 py-1">
           <Pill tone={kindTone(offer)}>{OFFER_KIND_LABELS[offer.kind]}</Pill>
           {offer.scholarship > 0 && <Pill tone="good">Bolsa de {Math.round(offer.scholarship * 100)}%</Pill>}
           {withdrawn && <Pill tone="bad">Retirada</Pill>}
@@ -416,9 +422,9 @@ function OfferDetail({ offer }: { offer: Offer }) {
       <div className="mb-2 text-xs text-ink-400">
         {category.name} · {rank}ª força do grid
       </div>
-      <div className="grid gap-x-5 gap-y-3 sm:grid-cols-2">
+      <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
         <div>
-          <dl className="space-y-0.5 text-sm">
+          <dl className="space-y-1 text-sm">
             <Term label="Papel">
               <b>{ROLE_LABELS[offer.role]}</b>
             </Term>
@@ -433,7 +439,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
           </dl>
         </div>
 
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           {courted && (
             <Meter
               label="Interesse da equipe"
@@ -446,7 +452,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
             />
           )}
           {requirements.length > 0 && (
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {requirements.map((r) => (
                 <Check key={r.key} met={r.met}>
                   <b>{r.label}:</b> {r.detail}
@@ -459,10 +465,14 @@ function OfferDetail({ offer }: { offer: Offer }) {
           )}
           {fee > 0 && <p className="text-xs text-gold-400">Aceitar esta proposta rompe o contrato vigente: multa de {formatMoney(fee)}.</p>}
           <div className="mt-auto flex flex-wrap gap-2">
-            {/* Na tela deitada, este botão sobe para a barra superior. */}
+            {/* Na tela deitada, este botão vai para o canto inferior direito. */}
             <ScreenAction
               disabled={!acceptable}
-              onClick={() => startNextSeason(offer.id)}
+              onClick={() => {
+                // Contrato assinado: a tela muda para a temporada nova no mesmo instante.
+                feedback('contractSigned');
+                startNextSeason(offer.id);
+              }}
               title={`${offer.teamName} · ${category.shortName}`}
               className="text-base"
             >
@@ -479,7 +489,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
 
       {negotiating && negotiable && (
         <div className="mt-3 border-t border-ink-700 pt-3">
-          <div className="grid gap-1.5 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {DEMANDS.filter((d) => d.available(offer)).map((d) => (
               <Button key={d.id} onClick={() => negotiateOffer(offer.id, d.id)} className="justify-start text-left text-xs">
                 {d.label}
@@ -577,7 +587,14 @@ function Retirement() {
             </Button>
           </>
         ) : (
-          <Button variant="ghost" onClick={() => setConfirming(true)}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // Decisão sem volta: o alerta acompanha o pedido de confirmação que aparece na tela.
+              feedback('riskyDecision');
+              setConfirming(true);
+            }}
+          >
             Pendurar o capacete
           </Button>
         )}

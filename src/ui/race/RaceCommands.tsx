@@ -73,7 +73,7 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
       <div className="mt-3 text-xs font-semibold text-ink-300">
         {redFlagRestart ? 'Trocar pneus na relargada (sem custo)' : `Entrar nos boxes no fim da volta ${nextLap} com`}
       </div>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
+      <div className="mt-2 flex flex-wrap gap-2">
         {compounds.map((c) => (
           <button
             key={c}
@@ -86,7 +86,7 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
             }}
             aria-pressed={pitRequest === c}
             className={cx(
-              'flex min-h-11 items-center gap-1.5 px-2.5 text-xs font-semibold',
+              'flex min-h-11 items-center gap-2 px-2 text-xs font-semibold',
               pitRequest === c ? 'bg-apex-500/15 text-ink-100 shadow-ring-accent' : 'text-ink-200 shadow-ring hover:bg-ink-800',
             )}
           >

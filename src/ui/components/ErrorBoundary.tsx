@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="chamfer-br min-h-11 bg-apex-500 px-5 font-display text-lg font-semibold uppercase tracking-wide text-white hover:bg-apex-600"
+            className="chamfer-br min-h-11 bg-apex-500 px-4 font-display text-lg font-semibold uppercase tracking-wide text-white hover:bg-apex-600"
           >
             Recarregar o jogo
           </button>

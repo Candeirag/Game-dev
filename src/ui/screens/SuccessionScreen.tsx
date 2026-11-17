@@ -97,7 +97,7 @@ export function SuccessionScreen() {
                       : `Os ${siblings} irmãos recebem a parte deles e saem do seu acompanhamento.`}
                   </p>
                 )}
-                <div className="mt-2.5 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <Button variant="primary" disabled={!heir.canDrive} onClick={() => resolve(heir.id, 'driver')}>
                     Continuar nas pistas
                   </Button>

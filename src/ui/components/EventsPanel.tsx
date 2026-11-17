@@ -19,7 +19,7 @@ export function EventsPanel() {
           <div className="chamfer flex items-start justify-between gap-3 bg-ink-800 py-3 pl-4 pr-2 text-sm">
             <div>
               <div className="font-display text-base font-semibold uppercase tracking-wide text-ink-100">{lastOutcome.title}</div>
-              <div className="mt-0.5 text-ink-200">{lastOutcome.text}</div>
+              <div className="mt-1 text-ink-200">{lastOutcome.text}</div>
             </div>
             <button
               type="button"
@@ -40,7 +40,7 @@ export function EventsPanel() {
           action={<Tag tone="attention">{EVENT_CATEGORY_LABELS[event.category]}</Tag>}
         >
           <h3 className="font-display text-2xl font-bold uppercase leading-tight">{event.title}</h3>
-          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-300">{event.body}</p>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-300">{event.body}</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             {event.choices.map((choice) => (
               <button
@@ -51,7 +51,7 @@ export function EventsPanel() {
               >
                 <span className="text-sm font-semibold text-ink-100">{choice.label}</span>
                 <span className="text-xs leading-snug text-ink-300">{choice.description}</span>
-                {choice.outcomes.length > 1 && <span className="mt-0.5 text-2xs font-semibold text-gold-400">Desfecho incerto</span>}
+                {choice.outcomes.length > 1 && <span className="mt-1 text-2xs font-semibold text-gold-400">Desfecho incerto</span>}
               </button>
             ))}
           </div>

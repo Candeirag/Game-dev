@@ -169,7 +169,7 @@ function Overview({ m }: { m: ManagedTeam }) {
               </tbody>
             </table>
           </div>
-          <p className="border-t border-ink-800 px-4 py-2.5 text-xs text-ink-400">
+          <p className="border-t border-ink-800 px-4 py-2 text-xs text-ink-400">
             Os valores anuais entram em parcelas iguais a cada etapa. O prêmio vem da posição no campeonato anterior.{' '}
             {m.position === 'owner'
               ? 'Se o ano fechar no vermelho, a diferença sai do seu bolso.'
@@ -190,9 +190,9 @@ function Overview({ m }: { m: ManagedTeam }) {
             {m.sponsors.length === 0 ? (
               <p className="text-sm text-ink-400">Nenhum patrocinador. As propostas chegam no fechamento da temporada.</p>
             ) : (
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {m.sponsors.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-2 bg-ink-850 py-0.5 pl-3 pr-1 text-sm">
+                  <li key={s.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-3 pr-1 text-sm">
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-2">
                         <span className="truncate font-semibold">{s.name}</span>
@@ -324,9 +324,9 @@ function Staff({ m }: { m: ManagedTeam }) {
           </div>
           <p className="mt-2 text-xs text-ink-400">{STAFF_ROLE_EFFECTS[role]}</p>
           {selected.market.length > 0 && (
-            <ul className="mt-2 space-y-1.5 border-t border-ink-800 pt-2">
+            <ul className="mt-2 space-y-2 border-t border-ink-800 pt-2">
               {selected.market.map((candidate) => (
-                <li key={candidate.id} className="flex items-center justify-between gap-2 bg-ink-850 py-0.5 pl-3 pr-1 text-sm">
+                <li key={candidate.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-3 pr-1 text-sm">
                   <span className="min-w-0">
                     <span className="block truncate">
                       {candidate.name} · nota <b className="tabular">{candidate.rating}</b>
@@ -442,7 +442,7 @@ function Development({ m }: { m: ManagedTeam }) {
       <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
         <div className="space-y-3">
           <Card title="Ritmo da pesquisa" bodyClassName="!p-3">
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 gap-2">
               {RESEARCH_SPENDS.map((spend) => {
                 const selected = m.development.spend === spend;
                 return (
@@ -452,7 +452,7 @@ function Development({ m }: { m: ManagedTeam }) {
                     aria-pressed={selected}
                     onClick={() => setDevelopment({ spend })}
                     className={cx(
-                      'chamfer-br flex min-h-11 min-w-0 flex-col items-start gap-0.5 px-2 py-2 text-left transition-colors',
+                      'chamfer-br flex min-h-11 min-w-0 flex-col items-start gap-1 px-2 py-2 text-left transition-colors',
                       selected ? 'bg-apex-500/15 shadow-ring-accent' : 'bg-ink-800 shadow-ring hover:bg-ink-700',
                     )}
                   >
@@ -635,7 +635,7 @@ function Drivers({ m }: { m: ManagedTeam }) {
           </table>
         </TableWrap>
       </div>
-      <p className="border-t border-ink-800 px-4 py-2.5 text-xs text-ink-400">
+      <p className="border-t border-ink-800 px-4 py-2 text-xs text-ink-400">
         A dupla da próxima temporada é escolhida no fechamento do ano, na tela Carreira. No fim de semana, você define o programa de treino e a abordagem de
         classificação dos dois pilotos. O simulador da equipe acelera a evolução deles.
       </p>

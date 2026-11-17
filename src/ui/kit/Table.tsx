@@ -25,10 +25,9 @@ export function TeamSwatch({ team, className }: { team: Pick<Team, 'color'> | un
 
 /** Posição de chegada: pódio em verde, abandono em âmbar com a sigla "AB". */
 export function PositionBadge({ position, dnf }: { position: number; dnf?: boolean }) {
-  if (dnf)
-    return <span className="inline-grid h-7 min-w-9 place-items-center bg-gold-400/15 px-1.5 font-display text-base font-semibold text-gold-400">AB</span>;
+  if (dnf) return <span className="inline-grid h-7 min-w-9 place-items-center bg-gold-400/15 px-2 font-display text-base font-semibold text-gold-400">AB</span>;
   const tone = position <= 3 ? 'bg-go-400/15 text-go-400' : position <= 10 ? 'bg-ink-700 text-ink-100' : 'bg-ink-800 text-ink-300';
-  return <span className={cx('inline-grid h-7 min-w-9 place-items-center px-1.5 font-display text-lg font-bold leading-none', tone)}>{position}</span>;
+  return <span className={cx('inline-grid h-7 min-w-9 place-items-center px-2 font-display text-lg font-bold leading-none', tone)}>{position}</span>;
 }
 
 export interface TowerRow {

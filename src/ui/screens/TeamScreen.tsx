@@ -80,7 +80,7 @@ export function TeamScreen() {
           <Card title={`Garagem · ${vehicle.name}`} bodyClassName="p-3">
             <ul className="space-y-2">
               {lineup.map((d) => (
-                <li key={d.id} className="flex items-center gap-3 bg-ink-850 px-2 py-1.5">
+                <li key={d.id} className="flex items-center gap-3 bg-ink-850 px-2 py-2">
                   <div className="grid w-[min(42%,160px)] shrink-0 place-items-center" style={{ minHeight: SPRITE_HEIGHT }}>
                     <CarSprite
                       categoryId={category.id}
@@ -137,7 +137,7 @@ export function TeamScreen() {
       {tab === 'contract' && (
         <div className={cx('grid items-start gap-4', career.academy ? 'md:grid-cols-3' : 'md:grid-cols-2')}>
           <Card title="Seu contrato" bodyClassName="p-3">
-            <dl className="space-y-1.5 text-sm">
+            <dl className="space-y-2 text-sm">
               <Term label="Papel">
                 <span className="font-semibold">{ROLE_LABELS[career.contract.role]}</span>
               </Term>
@@ -202,7 +202,7 @@ export function TeamScreen() {
                       <div className="font-semibold leading-tight">
                         {fullName(d)} {d.isPlayer && <span className="text-xs font-normal text-apex-400">(você)</span>}
                       </div>
-                      <div className="mt-0.5 text-xs text-ink-400">
+                      <div className="mt-1 text-xs text-ink-400">
                         <span className="font-semibold text-ink-200">{ROLE_LABELS[d.role ?? 'second']}</span> · {d.age} anos · geral{' '}
                         {formatRating(overallRating(d.attributes))}
                         {d.injury ? ` · lesionado (${counted(d.injury.roundsRemaining, 'etapa', 'etapas')})` : ''}
@@ -219,7 +219,7 @@ export function TeamScreen() {
               <li className="flex items-center justify-between gap-3 py-2">
                 <div className="min-w-0">
                   <div className="font-semibold leading-tight">{reserve ? fullName(reserve) : 'Sem reserva'}</div>
-                  <div className="mt-0.5 text-xs text-ink-400">
+                  <div className="mt-1 text-xs text-ink-400">
                     <span className="font-semibold text-ink-200">{ROLE_LABELS.reserve}</span>
                     {reserve ? ` · ${reserve.age} anos · geral ${formatRating(overallRating(reserve.attributes))}` : ''}
                   </div>

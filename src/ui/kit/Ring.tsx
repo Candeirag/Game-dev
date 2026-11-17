@@ -65,7 +65,7 @@ export function Ring({
           {value}
         </span>
         {label && (
-          <span className="mt-0.5 font-medium text-ink-400" style={{ fontSize: `calc(${Math.max(11, size * 0.15)}px * var(--text-scale))` }}>
+          <span className="mt-1 font-medium text-ink-400" style={{ fontSize: `calc(${Math.max(11, size * 0.15)}px * var(--text-scale))` }}>
             {label}
           </span>
         )}

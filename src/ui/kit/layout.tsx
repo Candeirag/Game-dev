@@ -87,7 +87,7 @@ export function ChoiceCard({
         </span>
       </span>
       <span className="text-sm leading-snug text-ink-300">{description}</span>
-      {meta && <span className="text-xs text-ink-400">{meta}</span>}
+      {meta && <span className="text-xs text-ink-300">{meta}</span>}
     </button>
   );
 }
@@ -106,7 +106,7 @@ export function Check({ met, children }: { met: boolean; children: ReactNode }) 
   const Icon = met ? CheckIcon : X;
   return (
     <li className="flex items-start gap-2 text-sm">
-      <span aria-hidden className={cx('mt-0.5 grid h-4 w-4 shrink-0 place-items-center', met ? 'bg-go-400/20 text-go-400' : 'bg-gold-400/20 text-gold-400')}>
+      <span aria-hidden className={cx('mt-1 grid h-4 w-4 shrink-0 place-items-center', met ? 'bg-go-400/20 text-go-400' : 'bg-gold-400/20 text-gold-400')}>
         <Icon size={12} strokeWidth={3} />
       </span>
       <span className={met ? 'text-ink-300' : 'text-ink-100'}>{children}</span>

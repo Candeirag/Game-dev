@@ -33,11 +33,11 @@ export function TutorialCard({ compact = true }: { compact?: boolean }) {
     >
       <ol className={cx('grid gap-y-2', !compact && 'gap-x-6 lg:grid-cols-2')}>
         {steps.map((step, index) => (
-          <li key={step.id} className="flex items-start gap-2.5 text-sm">
+          <li key={step.id} className="flex items-start gap-2 text-sm">
             <span
               aria-hidden
               className={cx(
-                'mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-xs font-bold leading-none',
+                'mt-1 grid h-5 w-5 shrink-0 place-items-center text-xs font-bold leading-none',
                 step.done ? 'bg-go-400/20 text-go-400' : step === next ? 'bg-apex-500 text-white' : 'bg-ink-800 text-ink-400',
               )}
             >
@@ -160,7 +160,7 @@ export function HelpScreen() {
               aria-controls="help-panel"
               onClick={() => open(section.id)}
               className={cx(
-                'flex min-h-11 shrink-0 items-center gap-2.5 px-3 text-left text-sm font-semibold transition-colors',
+                'flex min-h-11 shrink-0 items-center gap-2 px-3 text-left text-sm font-semibold transition-colors',
                 selected
                   ? 'bg-ink-700 text-ink-100 shadow-[inset_0_-3px_0_0_var(--color-apex-500)] md:shadow-[inset_3px_0_0_0_var(--color-apex-500)]'
                   : 'text-ink-400 hover:text-ink-100',
@@ -175,7 +175,7 @@ export function HelpScreen() {
       <div id="help-panel" role="tabpanel" aria-labelledby={`help-tab-${current}`} className="mt-3 min-w-0 md:col-start-2 md:row-start-2 md:mt-0">
         {topic ? (
           <Card title={topic.title}>
-            <ul className="max-w-3xl list-disc space-y-2 pl-5 text-sm leading-snug text-ink-300">
+            <ul className="max-w-3xl list-disc space-y-2 pl-4 text-sm leading-snug text-ink-300">
               {topic.items.map((item) => (
                 <li key={item}>{item}</li>
               ))}

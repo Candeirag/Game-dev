@@ -76,7 +76,7 @@ export function MainMenuScreen() {
       {/* As margens respeitam as áreas seguras: deitado, o recorte da câmera fica num dos lados. */}
       <div
         className={cx(
-          'relative mx-auto grid min-h-dvh w-full max-w-6xl gap-x-8 gap-y-5',
+          'relative mx-auto grid min-h-dvh w-full max-w-6xl gap-x-8 gap-y-4',
           'pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]',
           wide
             ? 'grid-cols-[minmax(0,5fr)_minmax(0,6fr)] items-center pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]'
@@ -84,7 +84,7 @@ export function MainMenuScreen() {
         )}
       >
         <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <span
               aria-hidden
               className="chamfer grid h-7 w-7 shrink-0 place-items-center bg-apex-500 font-display text-lg font-bold italic leading-none text-white [--chamfer:6px]"
@@ -101,7 +101,7 @@ export function MainMenuScreen() {
             <br />
             Dynasty
           </h1>
-          <p className="mt-2.5 max-w-md text-sm leading-snug text-ink-300 lg:mt-4 lg:text-base">
+          <p className="mt-2 max-w-md text-sm leading-snug text-ink-300 lg:mt-4 lg:text-base">
             {capitalize(categoryRef(FIRST_CATEGORY_ID, 'de'))} {categoryRef(TOP_CATEGORY_ID, 'a')}: sete categorias, contratos, patrocinadores, finanças,
             rivalidades e corridas decididas volta a volta.
           </p>
@@ -123,7 +123,7 @@ export function MainMenuScreen() {
                 )}
                 <span className="min-w-0">
                   <span className="block font-display text-xl font-semibold uppercase leading-none tracking-wide">Continuar</span>
-                  <span className="mt-0.5 block truncate text-xs font-medium text-white">{autoDetail}</span>
+                  <span className="mt-1 block truncate text-xs font-medium text-white">{autoDetail}</span>
                 </span>
               </Button>
             )}

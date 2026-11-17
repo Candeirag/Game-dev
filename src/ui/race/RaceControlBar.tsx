@@ -53,16 +53,17 @@ export function RaceControlBar({
       aria-label="Comandos da corrida"
       className="enter-up fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-40 border-t border-ink-700 bg-ink-900/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.45)] backdrop-blur"
     >
-      <div className="mx-auto grid max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 py-2 pl-3 pr-[calc(0.75rem+env(safe-area-inset-right))] md:flex md:gap-3 lg:pl-6 lg:pr-[calc(1.5rem+env(safe-area-inset-right))]">
+      <div className="mx-auto grid max-w-[1500px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 py-2 pl-3 pr-[calc(0.75rem+env(safe-area-inset-right))] md:flex md:gap-3 lg:pl-6 lg:pr-[calc(1.5rem+env(safe-area-inset-right))]">
         <div className="min-w-[3.75rem] shrink-0 leading-none md:flex md:items-baseline md:gap-2" aria-live="off">
           <div className="font-display text-2xl font-bold tabular">{position}</div>
-          <div className="mt-0.5 whitespace-nowrap text-2xs font-semibold text-ink-300 tabular md:mt-0 md:text-sm">{lap}</div>
+          {/* Deitado, a volta já está na barra superior: aqui ela só aparece quando sobra largura, para os botões de ritmo caberem mesmo com o texto grande. */}
+          <div className="mt-1 whitespace-nowrap text-2xs font-semibold text-ink-300 tabular md:sr-only md:mt-0 md:text-sm xl:not-sr-only">{lap}</div>
         </div>
 
         <div
           role="group"
           aria-label="Ritmo de pilotagem"
-          className="order-last col-span-3 grid grid-cols-3 gap-1.5 md:order-none md:ml-1 md:min-w-0 md:max-w-[23rem] md:flex-1"
+          className="order-last col-span-3 grid grid-cols-3 gap-2 md:order-none md:ml-1 md:min-w-0 md:max-w-[28rem] md:flex-1"
         >
           {RACE_MODES.map((m) => (
             <button
@@ -72,7 +73,7 @@ export function RaceControlBar({
               disabled={modeDisabled}
               aria-pressed={mode === m}
               className={cx(
-                'chamfer-br min-h-11 px-1 text-sm font-semibold transition-colors [--chamfer:8px]',
+                'chamfer-br min-h-11 min-w-0 px-1 text-sm font-semibold leading-tight transition-colors [--chamfer:8px]',
                 mode === m ? 'bg-apex-500/20 text-ink-100 shadow-ring-accent' : 'bg-ink-800 text-ink-300 shadow-ring hover:text-ink-100',
               )}
             >
@@ -89,7 +90,7 @@ export function RaceControlBar({
           onClick={onToggle}
           disabled={toggleDisabled}
           className={cx(
-            'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-1.5 px-2 text-sm font-bold transition-colors [--chamfer:8px] md:ml-auto md:min-w-28',
+            'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-2 px-2 text-sm font-bold transition-colors [--chamfer:8px] md:ml-auto md:min-w-28',
             playing ? 'bg-ink-800 text-ink-100 shadow-ring hover:bg-ink-700' : 'bg-apex-500 text-white hover:bg-apex-600',
           )}
         >

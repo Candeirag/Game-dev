@@ -1,6 +1,7 @@
 import { FastForward, Pause, Play, SkipForward, Video } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { feedbackOnce } from '../feedback/feedback';
 import { createPortal } from 'react-dom';
 import type { RaceResult } from '@/domain/schemas';
 import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/domain/labels';
@@ -34,6 +35,12 @@ export function RaceResultPanel({ race, result, extra }: { race: RaceSimState; r
   // Fora do carro (dirigente, ou piloto que não disputou a etapa), o destaque é o resultado da equipe.
   const teamId = career.management?.teamId ?? player.teamId;
   const team = mine ? [] : result.entries.filter((e) => e.teamId === teamId);
+  // Vitória ou pódio do jogador: som e vibração junto com a entrada do resultado, uma vez por corrida.
+  const celebration = mine?.status === 'finished' ? (mine.position === 1 ? 'victory' : mine.position <= 3 ? 'podium' : null) : null;
+  const raceKey = `resultado-${career.id}-${career.season}-${race.trackId}-${career.rounds.length}`;
+  useEffect(() => {
+    if (celebration) feedbackOnce(raceKey, celebration);
+  }, [celebration, raceKey]);
   return (
     <div className="space-y-4">
       <Card
@@ -136,7 +143,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
   // Cabeçalho: volta, clima e os comandos de avanço. No formato largo ele ocupa a barra superior do jogo.
   const header = (
     <div className={cx('flex min-w-0 flex-1 items-center gap-x-3', !topSlot && 'flex-wrap py-1')}>
-      <div className="flex shrink-0 items-baseline gap-1.5 leading-none">
+      <div className="flex shrink-0 items-baseline gap-2 leading-none">
         <span className="text-2xs font-medium text-ink-400">Volta</span>
         <span className="font-display text-2xl font-bold leading-none">
           {race.currentLap}
@@ -153,7 +160,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
           </span>
         )}
       </span>
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {!me && (
           <HeaderButton
             icon={playing ? Pause : Play}
@@ -251,13 +258,13 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                 const isMe = car.driverId === player.id;
                 return (
                   <tr key={car.driverId} className={cx('border-t border-ink-700', isMe && 'bg-apex-500/15', car.status === 'dnf' && 'text-ink-300')}>
-                    <td className="w-14 px-3 py-1.5">
+                    <td className="w-14 px-3 py-2">
                       <span className="flex items-center gap-1">
                         <span className="font-display text-base font-bold leading-none">{car.status === 'dnf' ? 'AB' : i + 1}</span>
                         {car.status === 'running' && race.currentLap > 0 && <Delta value={car.grid - (i + 1)} signless threshold={0.5} className="text-2xs" />}
                       </span>
                     </td>
-                    <td className="px-3 py-1.5 text-sm">
+                    <td className="px-3 py-2 text-sm">
                       <span className="flex items-center gap-2">
                         <TeamSwatch team={teams[car.teamId]} />
                         <span className={cx('truncate', isMe && 'font-semibold')}>{nameOf(car.driverId)}</span>
@@ -275,13 +282,13 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                         )}
                       </span>
                     </td>
-                    <td className="px-3 py-1.5 text-right text-sm text-ink-300">
+                    <td className="px-3 py-2 text-right text-sm text-ink-300">
                       {car.status === 'dnf' ? '–' : race.currentLap === 0 ? '' : formatGap(gapToLeader(race, car))}
                     </td>
-                    <td className="hidden px-3 py-1.5 text-right text-sm text-ink-400 lg:table-cell">{formatLap(car.lastLap)}</td>
-                    <td className="hidden px-3 py-1.5 text-right text-sm text-ink-400 xl:table-cell">{formatLap(car.bestLap)}</td>
-                    <td className="px-3 py-1.5">
-                      <span className="flex items-center gap-1.5">
+                    <td className="hidden px-3 py-2 text-right text-sm text-ink-400 lg:table-cell">{formatLap(car.lastLap)}</td>
+                    <td className="hidden px-3 py-2 text-right text-sm text-ink-400 xl:table-cell">{formatLap(car.bestLap)}</td>
+                    <td className="px-3 py-2">
+                      <span className="flex items-center gap-2">
                         {rules.pitStops && <TyreBadge compound={car.tyre.compound} />}
                         <span className="h-1.5 flex-1 overflow-hidden bg-ink-800" title={`${Math.round((1 - car.tyre.wear) * 100)}% de pneu`}>
                           <span
@@ -291,7 +298,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                         </span>
                       </span>
                     </td>
-                    {rules.pitStops && <td className="hidden px-3 py-1.5 text-center text-sm text-ink-400 lg:table-cell">{car.pitStops}</td>}
+                    {rules.pitStops && <td className="hidden px-3 py-2 text-center text-sm text-ink-400 lg:table-cell">{car.pitStops}</td>}
                   </tr>
                 );
               })}
@@ -325,7 +332,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                     {fact('Posição', me.status === 'dnf' ? 'AB' : `${myIndex + 1}º`)}
                     {fact(
                       'Pneus',
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-2">
                         {rules.pitStops && <TyreBadge compound={me.tyre.compound} />}
                         {Math.round((1 - me.tyre.wear) * 100)}%
                       </span>,
@@ -375,7 +382,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                     // biome-ignore lint/suspicious/noArrayIndexKey: a chave é a posição do evento na corrida, que não muda
                     key={`${race.events.length - i}`}
                     className={cx(
-                      'flex gap-2 border-t border-ink-700/70 px-3 py-1.5 text-xs first:border-t-0',
+                      'flex gap-2 border-t border-ink-700/70 px-3 py-2 text-xs first:border-t-0',
                       (e.driverId === player.id || e.otherDriverId === player.id) && 'bg-apex-500/10',
                     )}
                   >

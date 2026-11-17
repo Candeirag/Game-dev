@@ -253,7 +253,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   // ocupa a barra superior do jogo, para a pista ficar com toda a altura da tela.
   const header = (
     <div className={cx('flex min-w-0 flex-1 items-center gap-x-3', !topSlot && 'flex-wrap py-1')}>
-      <div className="flex shrink-0 items-baseline gap-1.5 leading-none">
+      <div className="flex shrink-0 items-baseline gap-2 leading-none">
         <span className="text-2xs font-medium text-ink-400">Volta</span>
         <span className="font-display text-2xl font-bold leading-none">
           {leaderLap}
@@ -263,7 +263,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
       <span
         role="status"
         className={cx(
-          'chamfer-br inline-flex shrink-0 items-center gap-1.5 px-2 py-1.5 text-xs font-bold uppercase leading-none tracking-wide [--chamfer:6px]',
+          'chamfer-br inline-flex shrink-0 items-center gap-2 px-2 py-2 text-xs font-bold uppercase leading-none tracking-wide [--chamfer:6px]',
           FLAG_STYLE[flag.tone],
         )}
       >
@@ -271,7 +271,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         {flag.label}
       </span>
       <span className="hidden min-w-0 truncate text-xs text-ink-300 lg:inline">{weatherText}</span>
-      <div className="ml-auto flex shrink-0 items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
         {playback.behindLive && !timeline.finished && <HeaderButton icon={Radio} label="Voltar ao vivo" onClick={playback.goLive} />}
         <HeaderButton
           icon={SkipForward}
@@ -561,7 +561,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         disabled={extra?.disabled}
         title={extra?.title}
         className={cx(
-          'flex h-11 w-14 flex-col items-center justify-center gap-0.5 text-2xs font-semibold leading-none transition-colors',
+          'flex h-11 w-14 flex-col items-center justify-center gap-1 text-2xs font-semibold leading-none transition-colors',
           pressed ? 'bg-apex-500 text-white shadow-overlay' : 'overlay text-ink-100 hover:bg-ink-800',
         )}
       >
@@ -763,10 +763,11 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
             </div>
             <div className="max-h-[26rem] min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {panel === 'tower' ? (
-                <>
+                // O espaço em cima separa o botão de troca das abas (8 px entre alvos de toque).
+                <div className="pt-2">
                   {gapToggle}
                   {tower}
-                </>
+                </div>
               ) : (
                 panelContent(panel)
               )}

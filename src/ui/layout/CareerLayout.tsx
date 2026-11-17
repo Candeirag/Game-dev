@@ -105,7 +105,7 @@ function TopStat({ icon: Icon, label, value, attention = false }: { icon: Lucide
       <Icon size={16} aria-hidden className="text-ink-400" />
       <div className="leading-none">
         <div className="text-2xs font-medium text-ink-400">{label}</div>
-        <div className={cx('mt-0.5 font-display text-lg font-semibold leading-none', attention ? 'text-gold-400' : 'text-ink-100')}>{value}</div>
+        <div className={cx('mt-1 font-display text-lg font-semibold leading-none', attention ? 'text-gold-400' : 'text-ink-100')}>{value}</div>
       </div>
     </div>
   );
@@ -468,7 +468,7 @@ function CareerShell() {
             <div className="truncate font-display text-base font-semibold uppercase leading-none tracking-wide">
               {category.shortName} {career.year}
             </div>
-            <div className="mt-0.5 truncate text-2xs text-ink-400">{stage}</div>
+            <div className="mt-1 truncate text-2xs text-ink-400">{stage}</div>
           </div>
           <span className={cx('shrink-0 font-display text-base font-semibold', career.finance.cash < 0 ? 'text-gold-400' : 'text-ink-100')}>
             {formatMoney(career.finance.cash)}

@@ -39,6 +39,18 @@ export const FEEDBACK = {
 
 export type FeedbackEvent = keyof typeof FEEDBACK;
 
+const done = new Set<string>();
+
+/**
+ * O mesmo, uma vez só por chave enquanto o jogo estiver aberto: reabrir a tela do resultado ou do
+ * fechamento da temporada não comemora de novo.
+ */
+export function feedbackOnce(key: string, event: FeedbackEvent): void {
+  if (done.has(key)) return;
+  done.add(key);
+  feedback(event);
+}
+
 export function feedback(event: FeedbackEvent): void {
   const spec: FeedbackSpec = FEEDBACK[event];
   if (spec.haptic && getSettings().haptics) vibrate(spec.haptic);

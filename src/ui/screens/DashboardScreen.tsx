@@ -113,7 +113,7 @@ export function DashboardScreen() {
               <NumberPlate number={carNumbers[player.id]} color={team.color} />
               <span className="min-w-0 truncate text-sm font-semibold">{player.lastName}</span>
             </div>
-            <div className="mt-1.5 text-xs leading-tight text-ink-400">
+            <div className="mt-2 text-xs leading-tight text-ink-400">
               {driverRank}º do grid · {player.age} anos
             </div>
           </SummaryCard>
@@ -149,10 +149,10 @@ export function DashboardScreen() {
             }
           >
             <div className="flex gap-2">
-              <span aria-hidden className="mt-0.5 h-4 w-1 shrink-0" style={{ backgroundColor: team.color }} />
+              <span aria-hidden className="mt-1 h-4 w-1 shrink-0" style={{ backgroundColor: team.color }} />
               <span className="line-clamp-2 min-w-0 text-sm font-semibold leading-tight">{team.name}</span>
             </div>
-            <div className="mt-1.5 truncate text-xs leading-tight text-ink-400">{teammate ? `Com ${teammate.lastName}` : 'Sem companheiro'}</div>
+            <div className="mt-2 truncate text-xs leading-tight text-ink-400">{teammate ? `Com ${teammate.lastName}` : 'Sem companheiro'}</div>
           </SummaryCard>
 
           <SummaryCard
@@ -169,11 +169,11 @@ export function DashboardScreen() {
             }
           >
             <div className="font-display text-xl font-semibold leading-none">
-              {me?.points ?? 0} <span className="text-sm font-medium text-ink-400">{pluralWord(me?.points ?? 0, 'ponto', 'pontos')}</span>
+              {me?.points ?? 0} <span className="font-sans text-sm font-medium text-ink-400">{pluralWord(me?.points ?? 0, 'ponto', 'pontos')}</span>
             </div>
             <div
               className={cx(
-                'mt-1.5 text-xs leading-tight',
+                'mt-2 text-xs leading-tight',
                 targetTone === 'good' ? 'text-go-400' : targetTone === 'attention' ? 'text-gold-400' : 'text-ink-400',
               )}
             >
@@ -194,7 +194,7 @@ export function DashboardScreen() {
           title="Classificação"
           flush
           action={
-            <Link to="/standings" className="-my-1 flex min-h-11 items-center gap-0.5 text-xs font-semibold text-ink-300 hover:text-ink-100">
+            <Link to="/standings" className="-my-1 flex min-h-11 items-center gap-1 text-xs font-semibold text-ink-300 hover:text-ink-100">
               Tabela completa <ChevronRight size={14} aria-hidden />
             </Link>
           }
@@ -227,7 +227,7 @@ export function DashboardScreen() {
                   />
                 )}
               </ol>
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-ink-700 px-4 py-2.5 text-xs text-ink-400">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-ink-700 px-4 py-2 text-xs text-ink-400">
                 <span>
                   {leader && me
                     ? leader.driverId === me.driverId
@@ -253,7 +253,7 @@ export function DashboardScreen() {
         </Panel>
 
         <Panel title="Condição e treino" action={player.injury ? <Tag tone="attention">Lesionado</Tag> : undefined}>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <Gauge label="Fase" value={player.condition.form} />
             <Gauge label="Confiança" value={player.condition.confidence} />
             <Gauge label="Moral" value={player.condition.morale} />
@@ -309,7 +309,7 @@ function SummaryCard({ to, title, ring, children }: { to: string; title: string;
       <Panel
         title={title}
         className="h-full transition-colors group-hover:bg-ink-500"
-        bodyClassName="flex items-center gap-2.5 !p-2.5 lg:gap-3 lg:!p-3"
+        bodyClassName="flex items-center gap-2 !p-2.5 lg:gap-3 lg:!p-3"
         action={<ChevronRight size={16} aria-hidden className="text-ink-400 transition-colors group-hover:text-ink-100" />}
       >
         {ring}
@@ -375,7 +375,7 @@ function TutorialStrip() {
         <span className="min-w-0 flex-1 basis-56 text-sm text-ink-300">
           <b className="font-semibold text-ink-100">{step.title}.</b> {step.text}
         </span>
-        <span className="flex gap-1">
+        <span className="flex gap-2">
           <button
             type="button"
             onClick={() => navigate(step.route)}
@@ -437,18 +437,25 @@ function NextEventPanel() {
         {/* O traçado ocupa o lado direito, sobre uma grade de prancheta. */}
         <div aria-hidden className="gridlines absolute inset-y-0 right-0 w-[58%] [mask-image:linear-gradient(to_right,transparent,black_35%)]" />
         <div aria-hidden className="stripes absolute -right-8 top-0 h-full w-24 -skew-x-12 opacity-70" />
-        <CircuitMap track={track} style={category.vehicle} className="pointer-events-none absolute right-3 top-3 h-[calc(100%-5.25rem)] w-[44%]" />
+        <CircuitMap
+          track={track}
+          style={category.vehicle}
+          className="pointer-events-none absolute right-3 top-3 h-[calc(100%-1.25rem-4rem*var(--text-scale))] w-[44%]"
+        />
 
         <div className="relative flex min-h-0 flex-1 flex-col p-4 pr-[48%]">
-          <div className="flex items-center gap-2 whitespace-nowrap text-xs font-semibold text-ink-300">
-            <span className="h-3 w-1 shrink-0 bg-apex-500" aria-hidden />
-            {inProgress ? 'Em andamento' : 'Próxima etapa'}
-            <span className="font-normal text-ink-400">
+          {/* Com o texto grande, a contagem da etapa desce para a linha de baixo em vez de invadir o mapa. */}
+          <div className="flex flex-wrap items-center gap-x-2 text-xs font-semibold text-ink-300">
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <span className="h-3 w-1 shrink-0 bg-apex-500" aria-hidden />
+              {inProgress ? 'Em andamento' : 'Próxima etapa'}
+            </span>
+            <span className="whitespace-nowrap font-normal text-ink-400">
               {event.round} de {career.calendar.length}
             </span>
           </div>
           <h2 className="mt-2 font-display text-[clamp(1.6rem,3.1vw,2.75rem)] font-bold uppercase leading-[0.95] tracking-wide">{track.name}</h2>
-          <div className="mt-1.5 text-sm text-ink-300">
+          <div className="mt-2 text-sm text-ink-300">
             {trackLocation(track)} · {formatDate(event.date).replace(/ \d{4}$/, '')}
           </div>
           <p className="mt-3 hidden max-w-md text-sm leading-snug text-ink-400 xl:block">{track.description}</p>
@@ -457,7 +464,7 @@ function NextEventPanel() {
             <span className="text-xs text-ink-400">previsão para a corrida</span>
           </div>
           {!availability.available && (
-            <Tag tone="attention" className="mt-3 !items-start whitespace-normal py-1.5 leading-snug">
+            <Tag tone="attention" className="mt-3 !items-start whitespace-normal py-2 leading-snug">
               {availability.reason === 'ban'
                 ? 'Você está suspenso desta etapa por pontos de punição.'
                 : `Lesionado (${player.injury?.description}): fora por ${counted(player.injury?.roundsRemaining ?? 0, 'etapa', 'etapas')}.`}{' '}
@@ -482,7 +489,7 @@ function NextEventPanel() {
 
 function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="px-1 py-1.5">
+    <div className="px-1 py-2">
       <dt className="text-2xs font-medium text-ink-400">{label}</dt>
       <dd className="truncate font-display text-base font-semibold leading-tight first-letter:uppercase">{value}</dd>
     </div>
@@ -504,7 +511,7 @@ function AdvanceInPlace() {
         else navigate(action.to);
       }}
       className={cx(
-        'chamfer-br mt-4 flex min-h-11 w-fit items-center gap-1.5 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide [--chamfer:10px]',
+        'chamfer-br mt-4 flex min-h-11 w-fit items-center gap-2 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide [--chamfer:10px]',
         action.tone === 'attention' ? 'bg-gold-400 text-ink-950' : 'bg-apex-500 text-white',
       )}
     >

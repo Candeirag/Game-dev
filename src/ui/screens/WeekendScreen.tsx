@@ -120,13 +120,13 @@ export function WeekendScreen() {
       {/* Com a corrida na tela, o cabeçalho e as etapas do fim de semana dão lugar à pista. */}
       {!liveRace && (
         <PageHeader eyebrow={`${trackLocation(track)} · ${raceLaps(track, category)} voltas`} title={track.name}>
-          <ol className="flex flex-wrap items-center gap-1.5" aria-label="Sessões do fim de semana">
+          <ol className="flex flex-wrap items-center gap-2" aria-label="Sessões do fim de semana">
             {STEPS.map((step, i) => (
               <li
                 key={step.key}
                 aria-current={i === activeIndex ? 'step' : undefined}
                 className={cx(
-                  'chamfer-br flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold leading-none [--chamfer:6px]',
+                  'chamfer-br flex items-center gap-2 px-2 py-2 text-xs font-semibold leading-none [--chamfer:6px]',
                   i === activeIndex ? 'bg-apex-500 text-white' : i < activeIndex ? 'bg-ink-800 text-ink-200' : 'bg-ink-850 text-ink-400',
                 )}
               >
@@ -373,7 +373,7 @@ function PreRacePhase() {
                         </span>
                       </td>
                       <td className={cx(td, 'hidden text-xs tabular text-ink-400 xl:table-cell')}>
-                        <span className="flex flex-wrap items-center gap-x-1.5">
+                        <span className="flex flex-wrap items-center gap-x-2">
                           {e.attempts.map((t, n) =>
                             t === null ? (
                               // biome-ignore lint/suspicious/noArrayIndexKey: as tentativas não mudam de ordem
@@ -448,7 +448,7 @@ function PreRacePhase() {
               )}
               {forecast && forecast.kind === 'stable' && rules.changingWeather && <span>Sem mudança prevista.</span>}
             </div>
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-400">
+            <ul className="mt-3 list-disc space-y-1 pl-4 text-sm text-ink-400">
               <li>O ritmo de pilotagem pode ser trocado a cada volta.</li>
               {rules.fuel && <li>O combustível é contado: atacar o tempo todo acaba com o tanque antes do fim.</li>}
               {rules.safetyCar && (

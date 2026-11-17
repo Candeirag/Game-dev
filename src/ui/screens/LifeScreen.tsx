@@ -198,7 +198,7 @@ function Row({
             <span className="font-display text-lg font-semibold uppercase leading-none tracking-wide">{title}</span>
             {tag}
           </div>
-          <div className="mt-0.5 text-xs leading-snug text-ink-300">{summary}</div>
+          <div className="mt-1 text-xs leading-snug text-ink-300">{summary}</div>
         </div>
         <div className={cx('shrink-0 text-right font-display text-xl font-semibold leading-none', attention ? 'text-gold-400' : 'text-ink-100')}>{value}</div>
         <ChevronRight size={18} aria-hidden className="shrink-0 text-ink-400 transition-colors group-hover:text-ink-100" />

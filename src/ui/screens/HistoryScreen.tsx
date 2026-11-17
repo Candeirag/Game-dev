@@ -119,7 +119,7 @@ export function HistoryScreen() {
         </div>
         {all.length > 0 && (
           <div className="min-w-0">
-            <div className="flex flex-wrap items-end gap-0.5" role="group" aria-label="Sequência de resultados">
+            <div className="flex flex-wrap items-end gap-1" role="group" aria-label="Sequência de resultados">
               {all.map((r) => (
                 <span
                   key={`${r.season}-${r.record.round}`}
@@ -128,7 +128,7 @@ export function HistoryScreen() {
                 />
               ))}
             </div>
-            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs leading-tight text-ink-400">
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-2xs leading-tight text-ink-400">
               {SEQUENCE.map((s) => (
                 <span key={s.key} className="inline-flex items-end gap-1">
                   <span aria-hidden className={cx('w-1.5', s.color)} />
@@ -147,7 +147,7 @@ export function HistoryScreen() {
       >
         {current.summary && (
           <div className="border-b border-ink-700 p-3">
-            <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
               <Stat
                 label="Campeão"
                 value={<span className="block pt-1 text-lg leading-[1.1]">{current.summary.driverNames[current.summary.championDriverId] ?? '-'}</span>}
@@ -160,7 +160,7 @@ export function HistoryScreen() {
               <Stat label={current.summary.mode === 'executive' ? 'Pontos da equipe' : 'Seus pontos'} value={current.summary.playerPoints} />
               <Stat label="Meta" value={`${current.summary.objectiveTarget}º`} hint={current.summary.objectiveMet ? 'Cumprida' : 'Não cumprida'} />
             </div>
-            <div className="mt-1.5 text-xs text-ink-400">
+            <div className="mt-2 text-xs text-ink-400">
               {current.summary.mode === 'executive' ? 'Temporada como dirigente' : 'Temporada como piloto'} · Equipe: {current.summary.playerTeamName}
               {current.rounds.some((r) => r.race.entries.length < 10)
                 ? ' · Temporada antiga: o arquivo guarda o pódio e os resultados da família em cada etapa.'
@@ -184,7 +184,7 @@ export function HistoryScreen() {
                     onClick={() => setOpen(isShown ? null : record.round)}
                     aria-pressed={isShown}
                     className={cx(
-                      'flex min-h-11 w-full items-center gap-2 px-2.5 py-1 text-left transition-colors',
+                      'flex min-h-11 w-full items-center gap-2 px-2 py-1 text-left transition-colors',
                       isShown ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
                     )}
                   >

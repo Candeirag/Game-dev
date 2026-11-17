@@ -33,7 +33,7 @@ export function TyreBadge({ compound, size = 'sm', withLabel = false }: { compou
       aria-label={`Pneu ${label.toLowerCase()}`}
       title={label}
       className={cx(
-        'inline-grid shrink-0 place-items-center rounded-full bg-ink-950 font-bold leading-none text-ink-100',
+        'inline-grid shrink-0 place-items-center rounded-full bg-ink-950 font-sans font-bold leading-none text-ink-100',
         size === 'md' ? 'h-7 w-7 border-[3px] text-xs' : 'h-5 w-5 border-2 text-2xs',
         RING[compound],
       )}
