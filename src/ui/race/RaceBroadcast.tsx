@@ -398,13 +398,16 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   });
   // Com mouse, clicar na linha destaca o piloto. No toque a linha é só leitura (é baixa demais para um
   // alvo de 44 px): o destaque muda pelas setas do painel Piloto ou tocando no carro.
-  // A torre e, nas categorias com troca de pneus, a legenda das letras dos selos. A lista mostra
-  // sempre linhas inteiras (WholeRows): a linha acima da do jogador, que gruda no pé, não fica cortada.
+  // A torre mostra sempre linhas inteiras (WholeRows): a linha acima da do jogador, que gruda no pé,
+  // não fica cortada. Nas categorias com troca de pneus, a legenda das letras dos selos fica no pé do
+  // painel, à vista sem rolar.
   const tower = (
-    <WholeRows>
-      <Tower label="Ordem da corrida" rows={towerRows} onSelect={finePointer ? setFocusId : undefined} selectedId={focus?.driverId} />
-      {rules.pitStops && <TyreLegend compounds={[...rules.dryCompounds, ...rules.wetCompounds]} className="snap-end border-t border-ink-700 px-2 py-2" />}
-    </WholeRows>
+    <>
+      <WholeRows>
+        <Tower label="Ordem da corrida" rows={towerRows} onSelect={finePointer ? setFocusId : undefined} selectedId={focus?.driverId} />
+      </WholeRows>
+      {rules.pitStops && <TyreLegend compounds={[...rules.dryCompounds, ...rules.wetCompounds]} className="shrink-0 border-t border-ink-700 px-2 py-1" />}
+    </>
   );
   // Um toque troca a diferença mostrada: para o líder ou para o carro da frente.
   const gapToggle = (
@@ -413,7 +416,8 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
       onClick={() => setGapMode(gapMode === 'leader' ? 'interval' : 'leader')}
       className="flex min-h-11 w-full shrink-0 items-center justify-between gap-2 border-b border-ink-700 bg-ink-800 px-2 text-left text-xs text-ink-200 transition-colors hover:text-ink-100"
     >
-      <span className="min-w-0 truncate">
+      {/* Sem reticências: o modo é a informação. Com o texto grande, a frase quebra em duas linhas. */}
+      <span className="min-w-0 py-1 leading-tight">
         Diferença para <b className="font-semibold text-ink-100">{gapMode === 'leader' ? 'o líder' : 'o carro da frente'}</b>
       </span>
       <span className="flex shrink-0 items-center gap-1 font-semibold text-ink-100">

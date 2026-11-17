@@ -39,6 +39,7 @@ import {
   type TowerRow,
   TyreBadge,
   TyreLegend,
+  WholeRows,
 } from '@/ui/kit';
 import { formatInterval, formatMoneyAs } from '../format';
 
@@ -327,10 +328,17 @@ export default function CatalogScreen() {
         </Section>
 
         <Section title="Torre de classificação">
-          <div className="max-w-xs bg-ink-900 shadow-frame">
-            <Tower label="Exemplo de torre" rows={TOWER} />
+          {/* Com WholeRows, a torre mostra só linhas inteiras e assenta no começo de uma linha ao parar de rolar. */}
+          <div className="flex h-[7.5rem] max-w-xs flex-col bg-ink-900 shadow-frame">
+            <WholeRows>
+              <Tower label="Exemplo de torre" rows={TOWER} />
+              <TyreLegend compounds={['medium', 'soft', 'hard', 'intermediate', 'wet']} className="border-t border-ink-700 px-2 py-2" />
+            </WholeRows>
           </div>
-          <p className="text-xs text-ink-400">Faixa vermelha e nome em vermelho: o jogador. Moldura clara: os dois pilotos da disputa em foco.</p>
+          <p className="text-xs text-ink-400">
+            Faixa vermelha e nome em vermelho: o jogador. Moldura clara: os dois pilotos da disputa em foco. A lista (WholeRows) mostra só linhas inteiras: role
+            para ver as outras.
+          </p>
         </Section>
 
         <Section title="Tabela">

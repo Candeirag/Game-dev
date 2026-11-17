@@ -101,8 +101,8 @@ export function Tower({
           row.battle && !battleBelow && 'border-b-2',
         );
         return (
-          // Cada linha é um ponto de parada da rolagem (ver WholeRows); a do jogador gruda no alto ou no pé da lista.
-          <li key={row.id} data-row title={row.title} className={cx(row.mine ? 'sticky bottom-0 top-0 z-10 bg-ink-900' : 'snap-start')}>
+          // `data-row`: a lista assenta no começo de uma linha (ver WholeRows); a do jogador gruda no alto ou no pé.
+          <li key={row.id} data-row title={row.title} className={cx(row.mine && 'sticky bottom-0 top-0 z-10 bg-ink-900')}>
             {onSelect ? (
               <button
                 type="button"
