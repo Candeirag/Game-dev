@@ -66,26 +66,19 @@ export function WholeRows({ children, className }: { children: ReactNode; classN
     const list = scroller.current;
     if (!list) return;
     let timer = 0;
-    let settling = false;
+    // Sem trava: depois do assentamento a lista já está numa divisa e `settle` não faz nada; se o
+    // jogador interromper a animação rolando de novo, a próxima parada assenta de onde ele deixou.
     const settle = () => {
       const height = rowHeight.current;
       if (height <= 0) return;
       const max = list.scrollHeight - list.clientHeight;
       const target = Math.min(max, Math.round(list.scrollTop / height) * height);
       if (Math.abs(target - list.scrollTop) < 0.5) return;
-      settling = true;
       list.scrollTo({ top: target, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     };
     const onScroll = () => {
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        // A própria rolagem de assentamento não dispara outra.
-        if (settling) {
-          settling = false;
-          return;
-        }
-        settle();
-      }, SETTLE_MS);
+      timer = window.setTimeout(settle, SETTLE_MS);
     };
     list.addEventListener('scroll', onScroll, { passive: true });
     return () => {

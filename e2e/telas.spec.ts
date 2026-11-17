@@ -320,13 +320,16 @@ test.describe('torre da corrida em 844×390', () => {
     await barra.getByRole('button', { name: '8×' }).click();
     await barra.getByRole('button', { name: 'Largar' }).click();
     const torre = page.locator('[data-whole-rows]');
-    // Várias leituras durante a corrida, com ultrapassagens acontecendo: a lista fica no alto.
-    const leituras: number[] = [];
-    for (let i = 0; i < 6; i++) {
-      await page.waitForTimeout(1000);
-      leituras.push(await torre.evaluate((list) => list.scrollTop));
-    }
-    expect(leituras).toEqual([0, 0, 0, 0, 0, 0]);
+    const leituras = async () => {
+      const valores: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        await page.waitForTimeout(800);
+        valores.push(await torre.evaluate((list) => Math.round(list.scrollTop)));
+      }
+      return valores;
+    };
+    // No alto, com ultrapassagens acontecendo: a lista fica parada.
+    expect(await leituras()).toEqual([0, 0, 0, 0, 0]);
     // A primeira linha é a do jogador (grudada no alto) e a segunda aparece inteira, sem nada por cima.
     const linhas = await torre.evaluate((list) => {
       const rows = [...list.querySelectorAll<HTMLElement>('[data-row]')].map((row) => row.getBoundingClientRect());
@@ -334,6 +337,16 @@ test.describe('torre da corrida em 844×390', () => {
     });
     expect(linhas.segunda?.top ?? 0).toBeGreaterThanOrEqual((linhas.primeira?.bottom ?? 0) - 0.5);
     await expect(torre.locator('[data-row]').first()).toContainText('(você)');
+    // Rolada uma linha para baixo (onde a âncora de rolagem do navegador agiria): também fica parada.
+    const linha = await torre.evaluate((list) => {
+      const altura = list.querySelector<HTMLElement>('[data-row]')?.getBoundingClientRect().height ?? 0;
+      list.scrollTop = altura;
+      list.dispatchEvent(new Event('scroll'));
+      return Math.round(altura);
+    });
+    expect(linha).toBeGreaterThan(0);
+    await page.waitForTimeout(600);
+    expect(await leituras()).toEqual([linha, linha, linha, linha, linha]);
     expect(erros).toEqual([]);
   });
 });

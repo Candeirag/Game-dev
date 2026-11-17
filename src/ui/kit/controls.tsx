@@ -86,7 +86,7 @@ export function Segmented<T extends string>({
             aria-checked={selected}
             onClick={() => onChange(option.value)}
             className={cx(
-              'chamfer-br flex min-h-11 min-w-24 flex-1 items-center justify-center gap-1 whitespace-nowrap px-4 text-sm font-semibold transition-colors',
+              'chamfer-br flex min-h-11 min-w-24 flex-[1_0_auto] items-center justify-center gap-1 whitespace-nowrap px-4 text-sm font-semibold transition-colors',
               selected ? 'bg-apex-500/15 text-ink-100 shadow-ring-accent' : 'bg-ink-800 text-ink-200 shadow-ring hover:bg-ink-700',
             )}
           >

@@ -90,6 +90,8 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
           {me.damage > 0.05 && !redFlagRestart ? ', com reparo do carro' : ''}.
         </p>
       )}
+      {/* Logo abaixo dos botões: com o engenheiro ligado eles ficam desativados, e o interruptor que os libera fica à vista. */}
+      {bare && <div className="mt-2">{engineer}</div>}
       <p className="mt-3 text-sm text-ink-300">
         {nextStop ? (
           <>
@@ -102,7 +104,6 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
           <span className="text-gold-400"> Você ainda precisa usar um segundo composto (30s de punição se não usar).</span>
         )}
       </p>
-      {bare && <div className="mt-2">{engineer}</div>}
       {nextStop && !autoEngineer && (
         <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2 text-xs text-ink-300">
           <input

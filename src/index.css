@@ -6,6 +6,8 @@
 @layer base {
   html {
     color-scheme: dark;
+    /* Ao levar o foco (ou rolar até uma âncora), o navegador deixa o elemento acima da barra do passo principal. */
+    scroll-padding-bottom: calc(var(--action-bar-h, 0px) + 0.5rem);
     background: var(--color-ink-950);
     /* O texto segue o tamanho escolhido no aparelho; o navegador não o reajusta por conta própria. */
     -webkit-text-size-adjust: 100%;
