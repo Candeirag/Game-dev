@@ -21,8 +21,8 @@ import { buildCircuit, type CircuitStyle } from '@/engine';
 import { CarSprite } from '../components/CarSprite';
 import { CircuitMap } from '../components/CircuitMap';
 import { RaceBroadcast } from '../race/RaceBroadcast';
-import { Button, Card, ChoiceCard, EmptyState, PageHeader, Pill, Stat, TableWrap, TeamSwatch, WeatherBadge, cx, td, th } from '../components/ui';
-import { describeOvertaking, describeTyreWear, formatDate, formatLap, trackCredit, trackLocation } from '../format';
+import { Button, Card, ChoiceCard, cx, EmptyState, PageHeader, Pill, Stat, TableWrap, td, TeamSwatch, th, WeatherBadge, YouMark } from '@/ui/kit';
+import { describeOvertaking, describeTyreWear, formatDate, formatInterval, formatLap, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { ScreenAction } from '../layout/ScreenAction';
 import { counted, pluralWord } from '@/domain/text';
@@ -132,7 +132,7 @@ export function WeekendScreen() {
               >
                 {i < activeIndex && <Check size={12} strokeWidth={3} className="text-go-400" aria-label="Concluída" />}
                 {step.label}
-                <span className="font-normal opacity-80">{WEATHER_LABELS[event.weather[step.key].condition]}</span>
+                <span className="font-normal">{WEATHER_LABELS[event.weather[step.key].condition]}</span>
               </li>
             ))}
           </ol>
@@ -269,10 +269,11 @@ function QualifyingPhase() {
                       <span className="flex items-center gap-2">
                         <TeamSwatch team={teams[e.teamId]} />
                         {drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}
+                        {e.driverId === player.id && <YouMark />}
                       </span>
                     </td>
                     <td className={cx(td, 'text-right tabular')}>{formatLap(e.bestLap)}</td>
-                    <td className={cx(td, 'text-right tabular text-ink-400')}>{i === 0 ? '' : `+${(e.bestLap - best).toFixed(3)}`}</td>
+                    <td className={cx(td, 'text-right tabular text-ink-400')}>{i === 0 ? '' : formatInterval(e.bestLap - best)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -365,6 +366,7 @@ function PreRacePhase() {
                             />
                             <span className="w-6 shrink-0 text-right text-xs text-ink-400">{carNumbers[e.driverId]}</span>
                             <span className="whitespace-nowrap">{drivers[e.driverId] ? fullName(drivers[e.driverId]!) : e.driverId}</span>
+                            {e.driverId === player.id && <YouMark />}
                           </span>
                           {e.eliminatedIn && <Pill>{e.eliminatedIn}</Pill>}
                           {e.gridPenalty > 0 && <Pill tone="warn">−{e.gridPenalty} pos.</Pill>}
@@ -411,7 +413,7 @@ function PreRacePhase() {
                     title={o.label}
                     description={
                       options.length > 1
-                        ? `Perda estimada: ${o.estimatedLoss.toFixed(1)}s${i === 0 ? ' (a mais rápida no papel)' : ` (+${(o.estimatedLoss - (options[0]?.estimatedLoss ?? 0)).toFixed(1)}s)`}`
+                        ? `Perda estimada: ${o.estimatedLoss.toFixed(3)} s${i === 0 ? ' (a mais rápida no papel)' : ` (${formatInterval(o.estimatedLoss - (options[0]?.estimatedLoss ?? 0))})`}`
                         : 'Reaja às condições da pista durante a corrida.'
                     }
                   />
@@ -425,7 +427,7 @@ function PreRacePhase() {
               <p className="mt-2 text-xs text-ink-400">
                 Sentido {circuitDirection(getTrack(event.trackId), category.vehicle)} · a seta vermelha marca a largada · {VEHICLES[category.id].name} na pista.
               </p>
-              {trackCredit(event.trackId) && <p className="mt-1 text-[11px] text-ink-500">Traçado: {trackCredit(event.trackId)}</p>}
+              {trackCredit(event.trackId) && <p className="mt-1 text-2xs text-ink-400">Traçado: {trackCredit(event.trackId)}</p>}
             </div>
           </Card>
           <Card title="Antes da largada">

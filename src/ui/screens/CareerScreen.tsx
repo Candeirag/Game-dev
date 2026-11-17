@@ -23,7 +23,7 @@ import {
 import { useGameStore } from '@/store/gameStore';
 import { VEHICLES } from '@/data/vehicles';
 import { CarSprite } from '../components/CarSprite';
-import { Button, Card, Check, EmptyState, Meter, PageHeader, Pill, Stat, Tabs, TeamSwatch, cx } from '../components/ui';
+import { Button, Card, Check, cx, EmptyState, Meter, PageHeader, Pill, Stat, Tabs, TeamSwatch } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
@@ -117,13 +117,16 @@ function LadderTab() {
                 aria-current={state === 'current' ? 'step' : undefined}
                 className={cx(
                   'flex min-w-0 flex-col border-t-[3px] p-2',
-                  state === 'current' ? 'border-apex-500 bg-apex-500/10' : state === 'done' ? 'border-ink-400 bg-ink-850' : 'border-ink-700 bg-ink-850/50',
+                  state === 'current' ? 'border-apex-400 bg-apex-500/10' : state === 'done' ? 'border-ink-400 bg-ink-850' : 'border-ink-500 bg-ink-850/50',
                 )}
               >
-                <div className="text-[10px] font-semibold uppercase leading-tight tracking-wider text-ink-400">Degrau {c.tier}</div>
+                <div className="text-2xs font-semibold uppercase leading-tight tracking-wider text-ink-300">
+                  Degrau {c.tier}
+                  {state === 'current' ? ' · você está aqui' : state === 'done' ? ' · já correu' : ''}
+                </div>
                 <div
                   className={cx(
-                    'font-display text-[15px] font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] md:max-[839px]:text-[13px] lg:min-h-0 lg:text-lg lg:leading-[1.1]',
+                    'font-display text-base font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] md:max-[839px]:text-xs lg:min-h-0 lg:text-lg lg:leading-[1.1]',
                     state === 'ahead' ? 'text-ink-300' : 'text-ink-100',
                   )}
                 >
@@ -144,8 +147,8 @@ function LadderTab() {
                     style={{ width: `calc(var(--u) * ${vehicle.length})` }}
                   />
                 </div>
-                <div className="text-[11px] leading-tight text-ink-300">{vehicle.name}</div>
-                <div className="mt-0.5 text-[11px] leading-tight text-ink-400">
+                <div className="text-2xs leading-tight text-ink-300">{vehicle.name}</div>
+                <div className="mt-0.5 text-2xs leading-tight text-ink-400">
                   {seasons > 0 ? (
                     counted(seasons, 'temporada', 'temporadas')
                   ) : c.economy.seatCost[0] > 0 ? (
@@ -335,7 +338,7 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
       aria-pressed={selected}
       className={cx(
         'flex min-h-12 w-full flex-col justify-center gap-0.5 px-3 py-1.5 text-left transition-colors',
-        selected ? 'bg-ink-700 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
+        selected ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
         withdrawn && 'opacity-50',
       )}
     >
@@ -508,7 +511,7 @@ function MarketCard() {
           return (
             <div key={group.id} className="min-w-0">
               <div className="mb-2 flex min-h-5 items-center gap-2">
-                <span className="font-display text-sm font-semibold uppercase tracking-wider text-ink-300">{group.shortName}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-ink-300">{group.shortName}</span>
                 {group.id === career.categoryId && <Pill>Atual</Pill>}
               </div>
               <ul className="space-y-2">

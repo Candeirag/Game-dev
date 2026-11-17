@@ -6,8 +6,7 @@ import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
 import { computeCareerStats, fullName, getReserve, overallRating, rankTeams } from '@/engine';
 import { VEHICLES } from '@/data/vehicles';
 import { CarSprite } from '../components/CarSprite';
-import { Card, Meter, PageHeader, Stat, Tabs, TeamSwatch, cx } from '../components/ui';
-import { NumberPlate } from '../kit/bits';
+import { Card, cx, Meter, NumberPlate, PageHeader, Stat, Tabs, TeamSwatch } from '@/ui/kit';
 import { formatMoney, formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
@@ -36,7 +35,7 @@ function Term({ label, children }: { label: string; children: ReactNode }) {
 function Figure({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="w-11 text-right">
-      <dt className="text-[11px] font-medium text-ink-400">{label}</dt>
+      <dt className="text-2xs font-medium text-ink-400">{label}</dt>
       <dd className="font-display text-lg font-semibold leading-tight">{value}</dd>
     </div>
   );

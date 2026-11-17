@@ -9,10 +9,9 @@ import { Building2, ChartLine, ChevronRight, CreditCard, Handshake, Heart, Users
 import { LIFESTYLE_LABELS } from '@/domain/labels';
 import { counted } from '@/domain/text';
 import { lifeSummary, ownedTeamValue } from '@/engine';
-import { PageHeader, Stat, cx } from '../components/ui';
+import { cx, PageHeader, Panel, Stat, Tag } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
-import { Panel, Tag } from '../kit/Panel';
 
 export function LifeScreen() {
   const { career, player } = useCareerView();
@@ -202,7 +201,7 @@ function Row({
           <div className="mt-0.5 text-xs leading-snug text-ink-300">{summary}</div>
         </div>
         <div className={cx('shrink-0 text-right font-display text-xl font-semibold leading-none', attention ? 'text-gold-400' : 'text-ink-100')}>{value}</div>
-        <ChevronRight size={18} aria-hidden className="shrink-0 text-ink-500 transition-colors group-hover:text-ink-100" />
+        <ChevronRight size={18} aria-hidden className="shrink-0 text-ink-400 transition-colors group-hover:text-ink-100" />
       </Link>
     </li>
   );

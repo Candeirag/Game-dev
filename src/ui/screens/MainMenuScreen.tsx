@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { FileUp, LoaderCircle, Play, Plus } from 'lucide-react';
+import { FileUp, LoaderCircle, Play, Plus, Settings } from 'lucide-react';
 import { CATEGORY_NAMES, FIRST_CATEGORY_ID, TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { capitalize } from '@/domain/text';
 import type { SaveSlotId, SlotInfo } from '@/persistence/saveService';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, cx } from '../components/ui';
+import { Button, Card, cx } from '@/ui/kit';
 import { formatDateTime } from '../format';
 import { StorageWarning } from '../components/SaveNotices';
 import { WIDE_QUERY, useMediaQuery } from '../layout/chrome';
@@ -91,7 +91,7 @@ export function MainMenuScreen() {
             >
               A
             </span>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-apex-400">Carreira e gestão no automobilismo</span>
+            <span className="text-2xs font-semibold uppercase tracking-[0.2em] text-apex-400">Carreira e gestão no automobilismo</span>
           </div>
           {/* O tamanho acompanha a altura e a largura da tela: o nome cabe em três linhas no celular deitado, e "Motorsport" cabe numa linha mesmo com a fonte reserva, que é mais larga. */}
           <h1 className="mt-2 font-display text-[clamp(2rem,min(12vh,11.5vw),4.5rem)] font-bold uppercase leading-[0.9] tracking-tight [overflow-wrap:anywhere]">
@@ -123,7 +123,7 @@ export function MainMenuScreen() {
                 )}
                 <span className="min-w-0">
                   <span className="block font-display text-xl font-semibold uppercase leading-none tracking-wide">Continuar</span>
-                  <span className="mt-0.5 block truncate text-xs font-medium text-white/85">{autoDetail}</span>
+                  <span className="mt-0.5 block truncate text-xs font-medium text-white">{autoDetail}</span>
                 </span>
               </Button>
             )}
@@ -148,7 +148,7 @@ export function MainMenuScreen() {
               ))}
               {slots.length === 0 && <li className="px-4 py-3 text-sm text-ink-400">Verificando saves…</li>}
             </ul>
-            <div className="border-t border-ink-700 p-2">
+            <div className="flex gap-2 border-t border-ink-700 p-2">
               <input
                 ref={fileInput}
                 type="file"
@@ -156,9 +156,13 @@ export function MainMenuScreen() {
                 className="hidden"
                 onChange={(e) => e.target.files?.[0] && void onImport(e.target.files[0])}
               />
-              <Button className="w-full" disabled={opening !== null} aria-busy={opening === 'file'} onClick={() => fileInput.current?.click()}>
+              <Button className="min-w-0 flex-1" disabled={opening !== null} aria-busy={opening === 'file'} onClick={() => fileInput.current?.click()}>
                 {opening === 'file' ? <LoaderCircle size={16} aria-hidden className="animate-spin" /> : <FileUp size={16} aria-hidden />}
                 {opening === 'file' ? 'Abrindo o save…' : 'Importar save (.json)'}
+              </Button>
+              <Button onClick={() => navigate('/ajustes')}>
+                <Settings size={16} aria-hidden />
+                Ajustes
               </Button>
             </div>
           </Card>
@@ -183,7 +187,7 @@ function SlotRow({ slot, busy, disabled, onLoad }: { slot: SlotInfo; busy: boole
             {summary.teamName}
           </div>
         )}
-        {slot.status === 'empty' && <div className="text-xs text-ink-500">Vazio</div>}
+        {slot.status === 'empty' && <div className="text-xs text-ink-400">Vazio</div>}
         {slot.status === 'corrupted' && <div className="truncate text-xs text-gold-400">Danificado: tentaremos a cópia de segurança</div>}
         {slot.status === 'newer' && <div className="truncate text-xs text-gold-400">De uma versão mais nova do jogo: atualize para abrir</div>}
       </div>

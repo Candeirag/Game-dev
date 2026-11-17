@@ -4,7 +4,7 @@
  * Uma aba por assunto, guardada no endereço (`?tab=`), e cada aba em duas ou três colunas
  * para caber na tela deitada (844×390).
  */
-import { Minus, Plus } from 'lucide-react';
+import { Check, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEV_AREAS, FACILITY_KEYS, RESEARCH_SPENDS, STAFF_ROLES, type DevArea, type ManagedTeam, type StaffRole } from '@/domain/schemas';
@@ -27,7 +27,7 @@ import {
   windTunnelAllowance,
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, EmptyState, Meter, PageHeader, Pill, RatingBar, Stat, TableWrap, Tabs, cx, td, th } from '../components/ui';
+import { Button, Card, Chip, cx, EmptyState, Meter, PageHeader, Pill, RatingBar, Stat, TableWrap, Tabs, td, th } from '@/ui/kit';
 import { currencySymbol, formatMoney } from '../format';
 import { useCareer } from '../hooks/useCareer';
 import { amongTheFirst, counted } from '@/domain/text';
@@ -78,10 +78,17 @@ export function ManagementScreen() {
         eyebrow={
           <>
             {category.shortName} · {m.position === 'owner' ? 'Você é o dono' : 'Chefe de equipe contratado'} · Campeonato de equipes:{' '}
-            <b className={cx('tabular', position !== null && position <= m.boardTarget ? 'text-go-400' : 'text-gold-400')}>
-              {position !== null ? `${position}º` : '-'}
-            </b>{' '}
-            (meta: {m.boardTarget}º)
+            <b className="tabular text-ink-100">{position !== null ? `${position}º` : '-'}</b> (meta: {m.boardTarget}º){' '}
+            {position !== null &&
+              (position <= m.boardTarget ? (
+                <Chip tone="good" size="sm" icon={<Check size={12} strokeWidth={3} aria-hidden />}>
+                  Dentro da meta
+                </Chip>
+              ) : (
+                <Chip tone="attention" size="sm">
+                  Abaixo da meta
+                </Chip>
+              ))}
           </>
         }
         title={team.name}
@@ -155,7 +162,7 @@ function Overview({ m }: { m: ManagedTeam }) {
                 {extra.map((key) => (
                   <tr key={key} className="border-t border-ink-800">
                     <td className={cx(td, tight)}>{TEAM_LEDGER_LABELS[key] ?? key}</td>
-                    <td className={cx(td, tight, 'text-right text-ink-500')}>-</td>
+                    <td className={cx(td, tight, 'text-right text-ink-400')}>-</td>
                     <td className={cx(td, tight, 'whitespace-nowrap text-right tabular text-ink-300')}>{formatMoney(m.ledger[key] ?? 0, { sign: true })}</td>
                   </tr>
                 ))}
@@ -218,7 +225,7 @@ function Overview({ m }: { m: ManagedTeam }) {
                     step={10000}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="mt-1 block min-h-11 w-32 border border-ink-700 bg-ink-850 px-3 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none"
+                    className="mt-1 block min-h-11 w-32 border border-ink-500 bg-ink-850 px-3 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none"
                   />
                 </label>
                 <Button disabled={value <= 0 || value > career.finance.cash} onClick={() => ownerTransfer(value)}>
@@ -278,10 +285,10 @@ function Staff({ m }: { m: ManagedTeam }) {
                     )}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] leading-tight text-ink-400">{STAFF_ROLE_LABELS[r]}</span>
+                      <span className="block text-2xs leading-tight text-ink-400">{STAFF_ROLE_LABELS[r]}</span>
                       <span className={cx('block truncate text-sm font-semibold', !info.current && !info.self && 'text-gold-400')}>{info.name}</span>
                     </span>
-                    {info.market.length > 0 && <span className="shrink-0 text-[11px] text-ink-400">{info.market.length} no mercado</span>}
+                    {info.market.length > 0 && <span className="shrink-0 text-2xs text-ink-400">{info.market.length} no mercado</span>}
                     <span className="w-7 shrink-0 text-right font-display text-xl font-bold leading-none">{Math.round(info.rating)}</span>
                   </button>
                 </li>
@@ -446,13 +453,11 @@ function Development({ m }: { m: ManagedTeam }) {
                     onClick={() => setDevelopment({ spend })}
                     className={cx(
                       'chamfer-br flex min-h-11 min-w-0 flex-col items-start gap-0.5 px-2 py-2 text-left transition-colors',
-                      selected
-                        ? 'bg-apex-500/15 shadow-[inset_0_0_0_1px_var(--color-apex-500)]'
-                        : 'bg-ink-800 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-700',
+                      selected ? 'bg-apex-500/15 shadow-ring-accent' : 'bg-ink-800 shadow-ring hover:bg-ink-700',
                     )}
                   >
                     <span className="text-sm font-semibold text-ink-100">{RESEARCH_SPEND_LABELS[spend]}</span>
-                    <span className="whitespace-nowrap text-[11px] leading-tight text-ink-300">
+                    <span className="whitespace-nowrap text-2xs leading-tight text-ink-300">
                       pesquisa {number(MANAGEMENT.SPEND[spend].points)}×
                       <br />
                       custo {number(MANAGEMENT.SPEND[spend].cost)}×

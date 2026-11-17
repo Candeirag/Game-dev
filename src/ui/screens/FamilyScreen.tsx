@@ -8,7 +8,7 @@ import { getCategory } from '@/data/categories';
 import { FAMILY, PARTNER_BACKGROUND_INFO, getTrait } from '@/data/family';
 import { childScoutReport, childSummary, familyAnnualCost, fullName, mortalityRisk, overallRating, partnerMoraleEffect } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, EmptyState, Meter, PageHeader, Pill, Stat, TableWrap, Tabs, cx, td, th } from '../components/ui';
+import { Button, Card, cx, EmptyState, Meter, PageHeader, Pill, Stat, TableWrap, Tabs, td, th } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { LifeBackLink } from './life/LifeBackLink';
@@ -31,7 +31,7 @@ function SupportPicker({ value, onChange, label }: { value: SupportLevel; onChan
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
       <span className="text-ink-300">{label}</span>
-      <div className="inline-flex bg-ink-900 shadow-[inset_0_0_0_1px_var(--color-ink-700)]">
+      <div className="inline-flex bg-ink-900 shadow-frame">
         {SUPPORT_LEVELS.map((level) => (
           <button
             key={level}

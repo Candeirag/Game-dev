@@ -3,8 +3,9 @@
  *
  * - A tela de corrida avisa quando a barra fixa de comandos está aberta: a moldura esconde a
  *   navegação inferior do celular em pé e reserva o espaço no fim da página.
- * - As telas sabem se a moldura está no formato largo (trilho lateral e barra superior com o
- *   botão de avançar) ou no formato em pé, em que o botão de avançar fica dentro da própria tela.
+ * - As telas sabem se a moldura está no formato largo (trilho lateral, barra superior e o botão
+ *   de avançar no canto inferior direito) ou no formato em pé, em que o botão de avançar fica
+ *   dentro da própria tela.
  */
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { CareerState } from '@/domain/schemas';
@@ -20,8 +21,9 @@ export interface Chrome {
    */
   topSlot: HTMLElement | null;
   /**
-   * Encaixe do botão principal (só no formato largo): a tela põe ali o passo que faz a carreira
-   * avançar (disputar o treino, largar, concluir a etapa), no lugar do atalho padrão.
+   * Encaixe do botão principal (só no formato largo, no canto inferior direito): a tela põe ali o
+   * passo que faz a carreira avançar (disputar o treino, largar, concluir a etapa), no lugar do
+   * atalho padrão.
    */
   actionSlot: HTMLElement | null;
 }
@@ -67,7 +69,7 @@ export interface PrimaryAction {
 }
 
 /**
- * O próximo passo da carreira: é o que o botão principal da barra superior faz.
+ * O próximo passo da carreira: é o que o botão principal (no canto inferior direito) faz.
  * Não decide nada do jogo; só aponta para a tela em que o jogador avança.
  */
 export function primaryAction(career: CareerState): PrimaryAction | null {

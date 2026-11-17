@@ -5,9 +5,8 @@ import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
 import { computeCareerStats, fullName, overallRating } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { Card, Meter, PageHeader, Pill, RatingBar, Stat, Tabs, cx } from '../components/ui';
-import { Ring } from '../kit/Ring';
-import { formatRating, signed } from '../format';
+import { Card, cx, Delta, Meter, PageHeader, Pill, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
+import { formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
 
@@ -19,16 +18,6 @@ const TABS: { value: DriverTab; label: string }[] = [
 ];
 
 /** Variação de um atributo na temporada: ganho em verde, perda em âmbar. Nada quando não mudou. */
-function Delta({ value, suffix, className = 'text-xs' }: { value: number; suffix?: string; className?: string }) {
-  if (Math.abs(value) < 0.05) return null;
-  return (
-    <span className={cx(className, value > 0 ? 'text-go-400' : 'text-gold-400')}>
-      {signed(value)}
-      {suffix}
-    </span>
-  );
-}
-
 export function DriverScreen() {
   const { career, player, team } = useCareerView();
   const stats = useMemo(() => computeCareerStats(career, player.id), [career, player.id]);
@@ -77,8 +66,8 @@ export function DriverScreen() {
                         <span className="block min-w-0 flex-1">
                           <RatingBar value={value} previous={start[key]} />
                         </span>
-                        <span className="h-3 w-7 shrink-0 text-right">
-                          <Delta value={value - start[key]} className="block text-[11px] leading-3" />
+                        <span className="flex h-3 w-11 shrink-0 justify-end">
+                          <Delta value={value - start[key]} className="text-2xs leading-3" />
                         </span>
                       </span>
                       <span className="mt-1 block text-xs font-normal text-ink-400 md:hidden">{ATTRIBUTE_DESCRIPTIONS[key]}</span>
@@ -89,7 +78,7 @@ export function DriverScreen() {
             </ul>
           </Card>
 
-          <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" />} bodyClassName="p-3">
+          <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" className="text-xs" />} bodyClassName="p-3">
             <div className="flex items-center gap-4">
               <Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} tone="accent" size={76} />
               <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
@@ -100,7 +89,7 @@ export function DriverScreen() {
             <div className="mt-3 border-t border-ink-700 pt-3 text-xs text-ink-400 md:min-h-[6.25rem]">
               {selected && (
                 <div className="hidden md:block">
-                  <h3 className="font-display text-sm font-semibold uppercase tracking-[0.06em] text-ink-200">{ATTRIBUTE_LABELS[selected]}</h3>
+                  <h3 className="font-display text-base font-semibold uppercase tracking-[0.06em] text-ink-200">{ATTRIBUTE_LABELS[selected]}</h3>
                   <p className="mt-1 text-ink-300">{ATTRIBUTE_DESCRIPTIONS[selected]}</p>
                 </div>
               )}

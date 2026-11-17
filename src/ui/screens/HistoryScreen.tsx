@@ -6,26 +6,29 @@ import { getCategory } from '@/data/categories';
 import { getTrack } from '@/data/tracks';
 import { computeCareerStats, driverRoundResults, fullName } from '@/engine';
 import { RaceResultTable } from '../components/RaceResultTable';
-import { Card, EmptyState, PageHeader, PositionBadge, Stat, Tabs, WeatherBadge, cx } from '../components/ui';
+import { Card, cx, EmptyState, PageHeader, PositionBadge, Stat, Tabs, WeatherBadge } from '@/ui/kit';
 import { formatDate } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { useReveal } from './useReveal';
 
-/** Cor de cada corrida na sequência da carreira: pódio em verde, abandono em âmbar, o resto neutro. */
+/**
+ * Cada corrida na sequência da carreira é uma barrinha. O resultado aparece na altura e na forma,
+ * não só na cor: pódio alto e verde; até 10º médio; depois do 10º baixo; abandono vazado, em âmbar.
+ */
 const SEQUENCE = [
-  { key: 'podium', label: 'Pódio', color: 'bg-go-400' },
-  { key: 'top10', label: 'Até 10º', color: 'bg-ink-300' },
-  { key: 'other', label: 'Depois do 10º', color: 'bg-ink-600' },
-  { key: 'dnf', label: 'Abandono', color: 'bg-gold-400' },
+  { key: 'podium', label: 'Pódio', color: 'h-4 bg-go-400' },
+  { key: 'top10', label: 'Até 10º', color: 'h-3 bg-ink-300' },
+  { key: 'other', label: 'Depois do 10º', color: 'h-1.5 bg-ink-500' },
+  { key: 'dnf', label: 'Abandono', color: 'h-4 border border-gold-400' },
 ] as const;
 
 function sequenceColor(position: number, dnf: boolean): string {
   const key = dnf ? 'dnf' : position <= 3 ? 'podium' : position <= 10 ? 'top10' : 'other';
-  return SEQUENCE.find((s) => s.key === key)?.color ?? 'bg-ink-600';
+  return SEQUENCE.find((s) => s.key === key)?.color ?? 'h-1.5 bg-ink-500';
 }
 
 const RESULT_ID = 'resultado-da-etapa';
-const STEP_BUTTON = 'grid h-11 w-11 place-items-center text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100 disabled:opacity-40';
+const STEP_BUTTON = 'grid h-11 w-11 place-items-center text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100';
 
 /**
  * Histórico: o resumo da carreira numa faixa, as etapas da temporada escolhida numa grade compacta
@@ -93,7 +96,7 @@ export function HistoryScreen() {
             <select
               value={selected}
               onChange={(e) => pickSeason(e.target.value)}
-              className="min-h-11 border border-ink-700 bg-ink-800 px-3 text-sm font-semibold text-ink-100 focus:border-apex-500 focus:outline-none"
+              className="min-h-11 border border-ink-500 bg-ink-800 px-3 text-sm font-semibold text-ink-100 focus:border-apex-500 focus:outline-none"
             >
               {[...seasons].reverse().map((s) => (
                 <option key={s.season} value={String(s.season)}>
@@ -116,19 +119,19 @@ export function HistoryScreen() {
         </div>
         {all.length > 0 && (
           <div className="min-w-0">
-            <div className="flex flex-wrap gap-0.5" role="group" aria-label="Sequência de resultados">
+            <div className="flex flex-wrap items-end gap-0.5" role="group" aria-label="Sequência de resultados">
               {all.map((r) => (
                 <span
                   key={`${r.season}-${r.record.round}`}
                   title={`${r.year} · Etapa ${r.record.round}: ${r.entry.status === 'dnf' ? 'abandono' : `${r.entry.position}º`}`}
-                  className={cx('h-3 w-1.5', sequenceColor(r.entry.position, r.entry.status === 'dnf'))}
+                  className={cx('w-1.5', sequenceColor(r.entry.position, r.entry.status === 'dnf'))}
                 />
               ))}
             </div>
-            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] leading-tight text-ink-400">
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-2xs leading-tight text-ink-400">
               {SEQUENCE.map((s) => (
-                <span key={s.key} className="inline-flex items-center gap-1">
-                  <span aria-hidden className={cx('h-2 w-2', s.color)} />
+                <span key={s.key} className="inline-flex items-end gap-1">
+                  <span aria-hidden className={cx('w-1.5', s.color)} />
                   {s.label}
                 </span>
               ))}
@@ -182,15 +185,15 @@ export function HistoryScreen() {
                     aria-pressed={isShown}
                     className={cx(
                       'flex min-h-11 w-full items-center gap-2 px-2.5 py-1 text-left transition-colors',
-                      isShown ? 'bg-ink-700 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
+                      isShown ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
                     )}
                   >
-                    <span className="w-5 shrink-0 font-display text-lg font-bold leading-none text-ink-500">{String(record.round).padStart(2, '0')}</span>
+                    <span className="w-5 shrink-0 font-display text-lg font-bold leading-none text-ink-400">{String(record.round).padStart(2, '0')}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-display text-sm font-semibold uppercase leading-tight text-ink-100 lg:text-base lg:leading-tight">
+                      <span className="block truncate font-display text-base font-semibold uppercase leading-tight text-ink-100">
                         {getTrack(record.trackId).name}
                       </span>
-                      <span className="block truncate text-[11px] leading-tight text-ink-400">
+                      <span className="block truncate text-2xs leading-tight text-ink-400">
                         {mine ? `Largada ${mine.grid}º · ${mine.status === 'dnf' ? 'abandono' : `${mine.points} pts`}` : 'Não disputou'}
                       </span>
                     </span>

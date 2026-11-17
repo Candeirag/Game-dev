@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { fullName } from '@/engine';
-import { Card, PageHeader, TableWrap, Tabs, TeamSwatch, cx } from '../components/ui';
+import { Card, cx, PageHeader, TableWrap, Tabs, TeamSwatch, YouMark } from '@/ui/kit';
 import { useCareerView } from '../hooks/useCareer';
 import { useMediaQuery } from '../layout/chrome';
 
@@ -8,7 +8,7 @@ type View = 'drivers' | 'teams';
 type DriverRow = ReturnType<typeof useCareerView>['driverStandings'][number];
 
 /** Células da tabela: mais baixas que as do resto do jogo, para o campeonato caber na tela deitada. */
-const th = 'px-1.5 py-1.5 text-left text-[11px] font-medium text-ink-400';
+const th = 'px-1.5 py-1.5 text-left text-2xs font-medium text-ink-400';
 const td = 'px-1.5 py-[3px] text-sm';
 
 /** Resultado de uma etapa na grade: vitória e pódio em verde, abandono em âmbar, o resto neutro. */
@@ -161,6 +161,7 @@ function DriversTable({ rows, leaderPoints, compact = false }: { rows: DriverRow
                       <span className="flex items-center gap-2">
                         <TeamSwatch team={team} />
                         <span className={cx('whitespace-nowrap', isMe && 'font-semibold')}>{d ? fullName(d) : s.driverId}</span>
+                        {isMe && <YouMark label={s.driverId === player.id ? 'Você' : 'Sua equipe'} />}
                         {compact && <span className="hidden min-w-0 truncate text-xs text-ink-400 lg:inline">{team?.name ?? ''}</span>}
                       </span>
                     </td>
@@ -173,7 +174,7 @@ function DriversTable({ rows, leaderPoints, compact = false }: { rows: DriverRow
                             {res ? (
                               <span
                                 className={cx(
-                                  'inline-flex h-6 w-7 items-center justify-center font-display text-sm font-semibold leading-none',
+                                  'inline-flex h-6 w-7 items-center justify-center text-xs font-semibold leading-none',
                                   resultCellTone(res.position, res.status === 'dnf'),
                                 )}
                                 title={`Etapa ${r}: ${res.status === 'dnf' ? 'abandono' : `${res.position}º`} · ${res.points} pts`}

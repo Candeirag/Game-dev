@@ -7,14 +7,14 @@ import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/doma
 import { conditionFor, finalizeRace, fullName, gapToLeader, isRaceFinished, type RaceSimState } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { RaceResultTable } from './RaceResultTable';
-import { Card, TeamSwatch, cx, th } from './ui';
-import { formatGap, formatLap } from '../format';
+import { Card, cx, Delta, TeamSwatch, th, TyreBadge, YouMark } from '@/ui/kit';
+import { formatGap, formatInterval, formatLap } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { ScreenAction } from '../layout/ScreenAction';
 import { useChrome } from '../layout/chrome';
 import { PitStrategyCard, TeamOrderDialog } from '../race/RaceCommands';
 import { RaceControlBar } from '../race/RaceControlBar';
-import { CompoundDot, EVENT_TONE, GridDelta, HeaderButton, Mark } from '../race/raceBits';
+import { EVENT_TONE, HeaderButton, Mark } from '../race/raceBits';
 import { counted } from '@/domain/text';
 
 /** Duração de cada volta na reprodução, por velocidade. */
@@ -137,10 +137,10 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
   const header = (
     <div className={cx('flex min-w-0 flex-1 items-center gap-x-3', !topSlot && 'flex-wrap py-1')}>
       <div className="flex shrink-0 items-baseline gap-1.5 leading-none">
-        <span className="text-[11px] font-medium text-ink-400">Volta</span>
+        <span className="text-2xs font-medium text-ink-400">Volta</span>
         <span className="font-display text-2xl font-bold leading-none">
           {race.currentLap}
-          <span className="text-ink-500">/{race.totalLaps}</span>
+          <span className="text-ink-400">/{race.totalLaps}</span>
         </span>
       </div>
       <span className="min-w-0 truncate text-xs text-ink-300">
@@ -186,7 +186,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
   const panel: TimingPanel = tabs.some((t) => t.id === side) ? side : 'car';
   const fact = (label: string, value: ReactNode) => (
     <div className="min-w-0">
-      <dt className="text-[10px] font-medium text-ink-400">{label}</dt>
+      <dt className="text-2xs font-medium text-ink-400">{label}</dt>
       <dd className="truncate font-display text-lg font-semibold leading-tight">{value}</dd>
     </div>
   );
@@ -196,11 +196,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
       className="flex flex-col gap-2"
       style={wide ? { height: 'calc(100dvh - 8.75rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))', minHeight: '13.5rem' } : undefined}
     >
-      {topSlot ? (
-        createPortal(header, topSlot)
-      ) : (
-        <div className="chamfer flex min-h-12 items-center bg-ink-900 px-3 shadow-[inset_0_0_0_1px_var(--color-ink-700)]">{header}</div>
-      )}
+      {topSlot ? createPortal(header, topSlot) : <div className="chamfer flex min-h-12 items-center bg-ink-900 px-3 shadow-frame">{header}</div>}
 
       {me && (
         <RaceControlBar
@@ -237,7 +233,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
       )}
 
       <div className={cx('min-h-0 flex-1', wide ? 'grid grid-cols-[minmax(0,1fr)_15rem] gap-2 xl:grid-cols-[minmax(0,1fr)_20rem]' : 'flex flex-col gap-3')}>
-        <div className="min-h-0 overflow-auto overscroll-contain bg-ink-900 px-3 shadow-[inset_0_0_0_1px_var(--color-ink-700)]">
+        <div className="min-h-0 overflow-auto overscroll-contain bg-ink-900 px-3 shadow-frame">
           <table className="w-full">
             <thead className="sticky top-0 z-10 bg-ink-900">
               <tr>
@@ -254,17 +250,18 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
               {race.cars.map((car, i) => {
                 const isMe = car.driverId === player.id;
                 return (
-                  <tr key={car.driverId} className={cx('border-t border-ink-700', isMe && 'bg-apex-500/15', car.status === 'dnf' && 'opacity-45')}>
+                  <tr key={car.driverId} className={cx('border-t border-ink-700', isMe && 'bg-apex-500/15', car.status === 'dnf' && 'text-ink-300')}>
                     <td className="w-14 px-3 py-1.5">
                       <span className="flex items-center gap-1">
                         <span className="font-display text-base font-bold leading-none">{car.status === 'dnf' ? 'AB' : i + 1}</span>
-                        {car.status === 'running' && race.currentLap > 0 && <GridDelta gained={car.grid - (i + 1)} />}
+                        {car.status === 'running' && race.currentLap > 0 && <Delta value={car.grid - (i + 1)} signless threshold={0.5} className="text-2xs" />}
                       </span>
                     </td>
                     <td className="px-3 py-1.5 text-sm">
                       <span className="flex items-center gap-2">
                         <TeamSwatch team={teams[car.teamId]} />
-                        <span className={cx('truncate', isMe && 'font-semibold text-apex-400')}>{nameOf(car.driverId)}</span>
+                        <span className={cx('truncate', isMe && 'font-semibold')}>{nameOf(car.driverId)}</span>
+                        {isMe && <YouMark />}
                         {race.fastestLap?.driverId === car.driverId && (
                           <Mark title="Volta mais rápida" tone="strong">
                             VMR
@@ -285,7 +282,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                     <td className="hidden px-3 py-1.5 text-right text-sm text-ink-400 xl:table-cell">{formatLap(car.bestLap)}</td>
                     <td className="px-3 py-1.5">
                       <span className="flex items-center gap-1.5">
-                        {rules.pitStops && <CompoundDot compound={car.tyre.compound} />}
+                        {rules.pitStops && <TyreBadge compound={car.tyre.compound} />}
                         <span className="h-1.5 flex-1 overflow-hidden bg-ink-800" title={`${Math.round((1 - car.tyre.wear) * 100)}% de pneu`}>
                           <span
                             className={cx('block h-full', car.tyre.wear > 0.75 ? 'bg-gold-400' : car.tyre.wear > 0.45 ? 'bg-ink-200' : 'bg-go-400')}
@@ -302,7 +299,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
           </table>
         </div>
 
-        <aside className="flex min-h-0 flex-col bg-ink-900 shadow-[inset_0_0_0_1px_var(--color-ink-700)]">
+        <aside className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
           <div role="tablist" aria-label="Painel da corrida" className="grid shrink-0 auto-cols-fr grid-flow-col border-b border-ink-700 bg-ink-800">
             {tabs.map((t) => (
               <button
@@ -329,20 +326,20 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                     {fact(
                       'Pneus',
                       <span className="flex items-center gap-1.5">
-                        {rules.pitStops && <CompoundDot compound={me.tyre.compound} />}
+                        {rules.pitStops && <TyreBadge compound={me.tyre.compound} />}
                         {Math.round((1 - me.tyre.wear) * 100)}%
                       </span>,
                     )}
                     {fact(
                       'À frente',
                       ahead && running && race.currentLap > 0
-                        ? `+${(me.totalTime - ahead.totalTime).toFixed(2)}s ${drivers[ahead.driverId]?.lastName ?? ''}`
+                        ? `${formatInterval(me.totalTime - ahead.totalTime)} ${drivers[ahead.driverId]?.lastName ?? ''}`
                         : '–',
                     )}
                     {fact(
                       'Atrás',
                       behind && behind.status === 'running' && running && race.currentLap > 0
-                        ? `+${(behind.totalTime - me.totalTime).toFixed(2)}s ${drivers[behind.driverId]?.lastName ?? ''}`
+                        ? `${formatInterval(behind.totalTime - me.totalTime)} ${drivers[behind.driverId]?.lastName ?? ''}`
                         : '–',
                     )}
                   </dl>
@@ -382,7 +379,7 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
                       (e.driverId === player.id || e.otherDriverId === player.id) && 'bg-apex-500/10',
                     )}
                   >
-                    <span className="w-7 shrink-0 text-ink-500">V{e.lap}</span>
+                    <span className="w-7 shrink-0 text-ink-400">V{e.lap}</span>
                     <span className={EVENT_TONE[e.type] ?? 'text-ink-300'}>{e.message}</span>
                   </li>
                 ))}

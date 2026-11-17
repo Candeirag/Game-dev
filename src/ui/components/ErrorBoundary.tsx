@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="chamfer-br min-h-11 bg-apex-500 px-5 font-display text-lg font-semibold uppercase tracking-wide text-white hover:bg-apex-400"
+            className="chamfer-br min-h-11 bg-apex-500 px-5 font-display text-lg font-semibold uppercase tracking-wide text-white hover:bg-apex-600"
           >
             Recarregar o jogo
           </button>
@@ -62,7 +62,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
             <button
               type="button"
               onClick={() => void this.copySave()}
-              className="min-h-11 border border-ink-600 px-4 text-sm font-semibold text-ink-100 hover:border-ink-400"
+              className="min-h-11 border border-ink-500 px-4 text-sm font-semibold text-ink-100 hover:border-ink-300"
             >
               {copied ? 'Save copiado' : 'Copiar o save'}
             </button>

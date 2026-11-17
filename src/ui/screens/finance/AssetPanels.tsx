@@ -21,14 +21,14 @@ import {
   teamStandings,
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, ChoiceCard, Pill, Stat, TableWrap, Tabs, TeamSwatch, cx } from '../../components/ui';
+import { Button, Card, ChoiceCard, cx, Pill, Stat, TableWrap, Tabs, TeamSwatch } from '@/ui/kit';
 import { currencySymbol, formatMoney } from '../../format';
 import { useCareer } from '../../hooks/useCareer';
 
 /** Campo de formulário (texto, número, seleção) com 44 px de altura. */
-const field = 'min-h-11 border border-ink-700 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
+const field = 'min-h-11 border border-ink-500 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
 /** Células das tabelas com botões na linha: o botão já dá a altura, a célula não soma mais. */
-const head = 'px-2 py-1.5 text-left text-[11px] font-medium text-ink-400';
+const head = 'px-2 py-1.5 text-left text-2xs font-medium text-ink-400';
 const cell = 'px-2 py-0.5 text-sm';
 const note = 'text-xs leading-snug text-ink-400';
 

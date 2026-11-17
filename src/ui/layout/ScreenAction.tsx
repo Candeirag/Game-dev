@@ -1,14 +1,33 @@
 /**
  * O passo principal de uma tela (disputar o treino, largar, concluir a etapa).
  *
- * No formato largo o botão vai para a barra superior, sempre à direita, no lugar do atalho
- * padrão da carreira. Na tela em pé ele fica onde a tela o desenhou.
+ * No formato largo (celular deitado, tablet, computador) o botão fica sempre no canto inferior
+ * direito, ao alcance do polegar, no lugar do atalho padrão da carreira (`ActionDock`). Na tela
+ * em pé ele fica onde a tela o desenhou.
  */
 import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { cx } from '../components/ui';
+import { advanceButtonClass, cx } from '@/ui/kit';
 import { useChrome } from './chrome';
+
+/**
+ * Doca do botão principal: presa ao canto inferior direito, dentro das margens de segurança do
+ * aparelho (barra de gestos e recorte da câmera). `raised` a sobe para cima da barra de comandos
+ * da corrida.
+ */
+export function ActionDock({ children, raised = false }: { children: ReactNode; raised?: boolean }) {
+  return (
+    <div
+      className={cx(
+        'pointer-events-none fixed right-[calc(0.75rem+var(--safe-right))] z-30 flex justify-end drop-shadow-[0_6px_14px_rgb(0_0_0/0.55)] *:pointer-events-auto',
+        raised ? 'bottom-[calc(5.25rem+var(--safe-bottom))]' : 'bottom-[calc(0.75rem+var(--safe-bottom))]',
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function ScreenAction({
   children,
@@ -29,17 +48,7 @@ export function ScreenAction({
 }) {
   const { actionSlot } = useChrome();
   const button = (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={cx(
-        'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-1.5 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide transition-colors [--chamfer:10px] disabled:cursor-not-allowed disabled:bg-ink-700 disabled:text-ink-400',
-        tone === 'attention' ? 'bg-gold-400 text-ink-950 hover:brightness-110' : 'bg-apex-500 text-white hover:bg-apex-400',
-        !actionSlot && className,
-      )}
-    >
+    <button type="button" onClick={onClick} disabled={disabled} title={title} className={cx(advanceButtonClass(tone), !actionSlot && className)}>
       {children}
       <ChevronRight size={18} strokeWidth={2.5} aria-hidden />
     </button>

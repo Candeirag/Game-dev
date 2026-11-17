@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { EVENT_CATEGORY_LABELS } from '@/domain/labels';
 import { useGameStore } from '@/store/gameStore';
 import { useCareer } from '../hooks/useCareer';
-import { Panel, Tag } from '../kit/Panel';
+import { Panel, Tag } from '@/ui/kit';
 
 /** Decisões pendentes: cada evento exige uma escolha antes do próximo fim de semana. */
 export function EventsPanel() {
@@ -47,11 +47,11 @@ export function EventsPanel() {
                 key={choice.id}
                 type="button"
                 onClick={() => resolveEvent(event.id, choice.id)}
-                className="chamfer-br flex min-h-11 flex-col items-start gap-1 border border-ink-600 bg-ink-800 p-3 text-left transition-colors hover:border-gold-400 hover:bg-ink-700"
+                className="chamfer-br flex min-h-11 flex-col items-start gap-1 border border-ink-500 bg-ink-800 p-3 text-left transition-colors hover:border-gold-400 hover:bg-ink-700"
               >
                 <span className="text-sm font-semibold text-ink-100">{choice.label}</span>
                 <span className="text-xs leading-snug text-ink-300">{choice.description}</span>
-                {choice.outcomes.length > 1 && <span className="mt-0.5 text-[11px] font-semibold text-gold-400">Desfecho incerto</span>}
+                {choice.outcomes.length > 1 && <span className="mt-0.5 text-2xs font-semibold text-gold-400">Desfecho incerto</span>}
               </button>
             ))}
           </div>

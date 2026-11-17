@@ -5,12 +5,11 @@
 import { isNativeApp } from '@/platform/native';
 import { Link } from 'react-router-dom';
 import { useGameStore } from '@/store/gameStore';
-import { cx } from './ui';
+import { cx } from '@/ui/kit';
 import { formatDateTime } from '../format';
 
 /** Link de ação dos avisos: área de toque de 44 px. */
-const ACTION_LINK =
-  'inline-flex min-h-11 shrink-0 items-center px-3 text-sm font-semibold text-ink-100 shadow-[inset_0_0_0_1px_var(--color-ink-600)] hover:bg-ink-800';
+const ACTION_LINK = 'inline-flex min-h-11 shrink-0 items-center px-3 text-sm font-semibold text-ink-100 shadow-ring hover:bg-ink-800';
 
 /** Lembrete discreto: os saves moram no navegador, que pode apagá-los. */
 export function ExportReminder({ link = true, className }: { link?: boolean; className?: string }) {

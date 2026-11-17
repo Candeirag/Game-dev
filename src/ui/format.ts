@@ -21,6 +21,11 @@ export function formatGap(seconds: number | null): string {
   return `+${seconds.toFixed(3)}`;
 }
 
+/** Diferença de tempo entre dois carros (ou duas voltas), sempre com sinal e três casas: +0.234, −1.050. */
+export function formatInterval(seconds: number): string {
+  return `${seconds < 0 ? '−' : '+'}${Math.abs(seconds).toFixed(3)}`;
+}
+
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
 export function formatDate(iso: string): string {
@@ -70,9 +75,14 @@ export function currencySymbol(): string {
   return CURRENCY_SYMBOL[displayCurrency];
 }
 
-/** Valor na moeda da carreira, abreviado acima de 100 mil (R$ 1,25 mi) e completo abaixo disso. */
+/** Valor na moeda da carreira para cartões e resumos: abreviado acima de 100 mil (R$ 1,25 mi) e completo abaixo disso. */
 export function formatMoney(value: number, options: { compact?: boolean; sign?: boolean; decimals?: number } = {}): string {
   return formatMoneyAs(value, displayCurrency, options);
+}
+
+/** Valor completo, sem abreviar: para detalhes, tabelas e o extrato (R$ 1.250.000). Nos cartões vale `formatMoney`. */
+export function formatMoneyFull(value: number, options: { sign?: boolean; decimals?: number } = {}): string {
+  return formatMoneyAs(value, displayCurrency, { ...options, compact: false });
 }
 
 /** O mesmo, numa moeda dada (a tela de nova carreira ainda não tem carreira aberta). */

@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { LEDGER_KEYS } from '@/domain/schemas';
 import { LEDGER_LABELS } from '@/domain/labels';
 import { ECONOMY, SPONSOR_RULES, commercialSponsors, expectedRoundResult, netWorth, ownedTeamValue, stocksValue } from '@/engine';
-import { Card, Meter, PageHeader, Pill, Stat, TableWrap, Tabs, cx } from '../components/ui';
-import { formatMoney } from '../format';
+import { Card, cx, Delta, Meter, PageHeader, Pill, Stat, TableWrap, Tabs } from '@/ui/kit';
+import { formatMoney, formatMoneyFull } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { CreditPanel, PropertyPanel, SavingsPanel, StakesPanel, StocksPanel } from './finance/AssetPanels';
 import { LifeBackLink } from './life/LifeBackLink';
@@ -26,7 +26,7 @@ const LEDGER_VIEWS: { value: LedgerView; label: string }[] = [
 ];
 
 /** Células compactas das tabelas de leitura (sem botões na linha). */
-const head = 'px-2 py-1.5 text-left text-[11px] font-medium leading-tight text-ink-400';
+const head = 'px-2 py-1.5 text-left text-2xs font-medium leading-tight text-ink-400';
 const cell = 'px-2 py-1.5 text-sm';
 /** Cor de um valor em dinheiro: verde no positivo, âmbar no negativo. */
 const moneyTone = (v: number) => (v < 0 ? 'text-gold-400' : 'text-go-400');
@@ -57,7 +57,8 @@ export function FinanceScreen() {
                   {driving && (
                     <>
                       {' '}
-                      · previsto por etapa <b className={cx('font-display text-base', moneyTone(nextRound))}>{formatMoney(nextRound, { sign: true })}</b>
+                      · previsto por etapa{' '}
+                      <Delta value={nextRound} showZero threshold={0.5} format={(v) => formatMoney(v)} className="font-display text-base" />
                     </>
                   )}
                 </span>
@@ -121,7 +122,7 @@ function SummaryTab() {
         />
         <Stat
           label="Temporada até aqui"
-          value={<span className={balance < 0 ? 'text-gold-400' : ''}>{formatMoney(balance, { sign: true })}</span>}
+          value={<Delta value={balance} showZero threshold={0.5} format={(v) => formatMoney(v)} />}
           hint="Receitas menos despesas"
         />
       </Card>
@@ -208,12 +209,12 @@ function SummaryTab() {
                       {[...f.reports].reverse().map((r) => (
                         <tr key={r.season} className="border-ink-800 border-t">
                           <td className={cell}>{r.year}</td>
-                          <td className={cx(cell, 'whitespace-nowrap text-right')}>{formatMoney(r.taxableIncome)}</td>
-                          <td className={cx(cell, 'whitespace-nowrap text-right', r.tax > 0 ? 'text-gold-400' : 'text-ink-400')}>{formatMoney(-r.tax)}</td>
+                          <td className={cx(cell, 'whitespace-nowrap text-right')}>{formatMoneyFull(r.taxableIncome)}</td>
+                          <td className={cx(cell, 'whitespace-nowrap text-right', r.tax > 0 ? 'text-gold-400' : 'text-ink-400')}>{formatMoneyFull(-r.tax)}</td>
                           <td className={cx(cell, 'whitespace-nowrap text-right', r.investmentReturn === 0 ? 'text-ink-400' : moneyTone(r.investmentReturn))}>
-                            {formatMoney(r.investmentReturn, { sign: true })}
+                            <Delta value={r.investmentReturn} showZero threshold={0.5} format={(v) => formatMoneyFull(v)} className="font-normal" />
                           </td>
-                          <td className={cx(cell, 'whitespace-nowrap text-right font-semibold')}>{formatMoney(r.netWorthEnd)}</td>
+                          <td className={cx(cell, 'whitespace-nowrap text-right font-semibold')}>{formatMoneyFull(r.netWorthEnd)}</td>
                         </tr>
                       ))}
                       {f.reports.length === 0 && (

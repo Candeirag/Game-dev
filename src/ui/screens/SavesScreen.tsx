@@ -6,7 +6,7 @@ import { SAVE_SLOTS, type OriginalCopyInfo, type SaveSlotId } from '@/persistenc
 import { deliverTextFile } from '@/platform/exportFile';
 import { isNativeApp } from '@/platform/native';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, PageHeader, cx } from '../components/ui';
+import { Button, Card, cx, PageHeader } from '@/ui/kit';
 import { ExportReminder } from '../components/SaveNotices';
 import { formatDateTime } from '../format';
 
@@ -112,7 +112,7 @@ export function SavesScreen() {
                       {slot?.status === 'ok' && slot.savedAt && <span className="truncate text-xs text-ink-400">{formatDateTime(slot.savedAt)}</span>}
                     </div>
                     <div className="text-xs text-ink-300">
-                      {empty && <span className="text-ink-500">Vazio</span>}
+                      {empty && <span className="text-ink-400">Vazio</span>}
                       {summary && (
                         <>
                           {summary.playerName} · {summary.categoryName ?? CATEGORY_NAMES[FIRST_CATEGORY_ID].shortName} · {summary.teamName} · {summary.year} ·{' '}
@@ -250,7 +250,7 @@ export function SavesScreen() {
                   if (transfer.mode === 'copy') e.target.select();
                 }}
                 spellCheck={false}
-                className="block w-full border border-ink-700 bg-ink-850 px-3 py-2 font-mono text-xs text-ink-100 transition-colors focus:border-apex-500 focus:outline-none"
+                className="block w-full border border-ink-500 bg-ink-850 px-3 py-2 font-mono text-xs text-ink-100 transition-colors focus:border-apex-500 focus:outline-none"
               />
               <div className="flex flex-wrap gap-2">
                 {transfer.mode === 'paste' && (

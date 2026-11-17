@@ -1,8 +1,9 @@
+import { Check } from 'lucide-react';
 import { TRAINING_FOCUSES, TRAINING_INTENSITIES } from '@/domain/schemas';
 import { TRAINING_FOCUS_DESCRIPTIONS, TRAINING_FOCUS_LABELS, TRAINING_INTENSITY_DESCRIPTIONS, TRAINING_INTENSITY_LABELS } from '@/domain/labels';
 import { ECONOMY } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { cx } from './ui';
+import { cx } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 
@@ -12,9 +13,11 @@ export function TrainingFocusPicker() {
   const setTrainingIntensity = useGameStore((s) => s.setTrainingIntensity);
   const option = (active: boolean) =>
     cx(
-      'min-h-11 border px-3 py-2 text-left text-sm font-semibold leading-tight transition-colors',
-      active ? 'border-apex-500 bg-apex-500/15 text-ink-100' : 'border-ink-700 text-ink-300 hover:border-ink-500',
+      'relative min-h-11 border px-2 py-2 pr-6 text-left text-sm font-semibold leading-tight transition-colors',
+      active ? 'border-apex-400 bg-apex-500/15 text-ink-100' : 'border-ink-500 text-ink-200 hover:border-ink-300',
     );
+  // O escolhido tem contorno vermelho e também o visto no canto (não só a cor).
+  const selectedMark = <Check size={14} strokeWidth={3} aria-hidden className="absolute right-1.5 top-1.5 text-apex-400" />;
   return (
     <div className="space-y-4">
       <div>
@@ -29,6 +32,7 @@ export function TrainingFocusPicker() {
               className={option(player.trainingFocus === focus)}
             >
               {TRAINING_FOCUS_LABELS[focus]}
+              {player.trainingFocus === focus && selectedMark}
             </button>
           ))}
         </div>
@@ -46,6 +50,7 @@ export function TrainingFocusPicker() {
               className={option(career.trainingIntensity === intensity)}
             >
               {TRAINING_INTENSITY_LABELS[intensity]}
+              {career.trainingIntensity === intensity && selectedMark}
               <span className="block text-xs font-normal text-ink-400">
                 {formatMoney(category.economy.trainingCost * ECONOMY.TRAINING_COST[intensity])} por etapa
               </span>

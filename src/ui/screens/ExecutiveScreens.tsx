@@ -38,6 +38,7 @@ import {
   Card,
   Check,
   ChoiceCard,
+  cx,
   EmptyState,
   PageHeader,
   Pill,
@@ -45,12 +46,11 @@ import {
   Stat,
   TableWrap,
   Tabs,
-  TeamSwatch,
-  WeatherBadge,
-  cx,
   td,
+  TeamSwatch,
   th,
-} from '../components/ui';
+  WeatherBadge,
+} from '@/ui/kit';
 import { formatDate, formatMoney, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { useChrome } from '../layout/chrome';
@@ -60,11 +60,11 @@ import { TutorialCard } from './HelpScreen';
 import { ExportReminder } from '../components/SaveNotices';
 
 /** Campo de formulário: reto, com 44 px de altura para o toque. */
-const field = 'min-h-11 border border-ink-700 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
+const field = 'min-h-11 border border-ink-500 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
 /** Ação discreta na barra de título de um cartão (a área de toque passa da barra, sem aumentá-la). */
 const headerLink = '-my-1 flex min-h-11 items-center gap-0.5 text-xs font-semibold text-ink-300 transition-colors hover:text-ink-100';
 /** Rótulo pequeno acima de um grupo de opções. */
-const groupLabel = 'text-[11px] font-semibold uppercase tracking-wider text-ink-400';
+const groupLabel = 'text-2xs font-semibold uppercase tracking-wider text-ink-400';
 
 /* ------------------------------------------------------------------ */
 /* Painel                                                              */
@@ -249,7 +249,7 @@ export function ExecutiveDashboardScreen() {
             <li key={msg.id} className="px-4 py-2.5">
               <div className="flex items-center gap-2">
                 <span className="truncate text-sm font-semibold">{msg.title}</span>
-                <span className="ml-auto shrink-0 text-[11px] text-ink-500">{formatDate(msg.date)}</span>
+                <span className="ml-auto shrink-0 text-2xs text-ink-400">{formatDate(msg.date)}</span>
               </div>
               <p className="mt-0.5 text-xs leading-snug text-ink-300">{msg.body}</p>
             </li>
@@ -674,13 +674,7 @@ export function ExecutiveCareerScreen() {
                 const slot = off.lineup.indexOf(c.driverId);
                 const toggle = () => store.setLineup(slot >= 0 ? off.lineup.filter((id) => id !== c.driverId) : [...off.lineup, c.driverId].slice(-2));
                 return (
-                  <li
-                    key={c.driverId}
-                    className={cx(
-                      'flex items-center gap-3 py-1 pl-3 pr-1',
-                      slot >= 0 ? 'bg-apex-500/10 shadow-[inset_0_0_0_1px_var(--color-apex-500)]' : 'bg-ink-850',
-                    )}
-                  >
+                  <li key={c.driverId} className={cx('flex items-center gap-3 py-1 pl-3 pr-1', slot >= 0 ? 'bg-apex-500/10 shadow-ring-accent' : 'bg-ink-850')}>
                     <span className="w-8 shrink-0 text-center font-display text-2xl font-bold leading-none" title="Nota">
                       <span className="sr-only">Nota </span>
                       {Math.floor(c.rating)}
@@ -705,7 +699,7 @@ export function ExecutiveCareerScreen() {
                         {slot === 0 ? '1º piloto' : slot === 1 ? '2º piloto' : 'Escalar'}
                       </Button>
                     ) : (
-                      <span className="flex min-h-11 shrink-0 items-center px-3 text-xs text-ink-500">Não aceita</span>
+                      <span className="flex min-h-11 shrink-0 items-center px-3 text-xs text-ink-400">Não aceita</span>
                     )}
                   </li>
                 );
@@ -829,7 +823,7 @@ export function ExecutiveCareerScreen() {
                 type="color"
                 value={foundColor}
                 onChange={(e) => setFoundColor(e.target.value)}
-                className="mt-1 block h-11 w-14 cursor-pointer border border-ink-700 bg-ink-850"
+                className="mt-1 block h-11 w-14 cursor-pointer border border-ink-500 bg-ink-850"
               />
             </label>
             <Button

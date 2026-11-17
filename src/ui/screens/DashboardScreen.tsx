@@ -32,13 +32,10 @@ import { CarSprite } from '../components/CarSprite';
 import { CircuitMap } from '../components/CircuitMap';
 import { EventsPanel } from '../components/EventsPanel';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { cx } from '../components/ui';
+import { cx, Gauge, NumberPlate, Panel, type RecentResult, ResultChips, Ring, Tag, type Tone, WeatherTag } from '@/ui/kit';
 import { describeOvertaking, describePower, describeTyreWear, formatDate, formatMoney, formatRating, trackCredit, trackLocation } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { scrollToElement } from '../motion';
-import { Panel, Tag, type Tone } from '../kit/Panel';
-import { Ring } from '../kit/Ring';
-import { Gauge, NumberPlate, ResultChips, WeatherTag, type RecentResult } from '../kit/bits';
 import { primaryAction, useChrome, useMediaQuery } from '../layout/chrome';
 
 const MESSAGE_KIND: Record<InboxMessage['category'], string> = {
@@ -290,7 +287,7 @@ export function DashboardScreen() {
               <li key={m.id} className="px-4 py-3">
                 <div className="flex items-baseline gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">{m.title}</span>
-                  <span className="shrink-0 text-[11px] text-ink-400">
+                  <span className="shrink-0 text-2xs text-ink-400">
                     {MESSAGE_KIND[m.category]} · {formatDate(m.date)}
                   </span>
                 </div>
@@ -313,7 +310,7 @@ function SummaryCard({ to, title, ring, children }: { to: string; title: string;
         title={title}
         className="h-full transition-colors group-hover:bg-ink-500"
         bodyClassName="flex items-center gap-2.5 !p-2.5 lg:gap-3 lg:!p-3"
-        action={<ChevronRight size={16} aria-hidden className="text-ink-500 transition-colors group-hover:text-ink-100" />}
+        action={<ChevronRight size={16} aria-hidden className="text-ink-400 transition-colors group-hover:text-ink-100" />}
       >
         {ring}
         <div className="min-w-0 flex-1">{children}</div>
@@ -369,7 +366,7 @@ function TutorialStrip() {
   return (
     <div className="chamfer bg-ink-700 p-px">
       <div className="chamfer flex flex-wrap items-center gap-x-4 gap-y-2 bg-ink-900 py-2 pl-4 pr-2">
-        <span className="font-display text-[15px] font-semibold uppercase leading-none tracking-[0.06em] text-ink-200">
+        <span className="font-display text-base font-semibold uppercase leading-none tracking-[0.06em] text-ink-200">
           Primeiros passos{' '}
           <span className="text-ink-400">
             {done}/{steps.length}
@@ -477,7 +474,7 @@ function NextEventPanel() {
           <Fact label="Desgaste" value={describeTyreWear(track.tyreWear)} />
           <Fact label="Favorece" value={describePower(track.powerSensitivity).replace('favorece o ', '')} />
         </dl>
-        {credit && <span className="pointer-events-none absolute bottom-[3.25rem] right-3 text-[9px] leading-none text-ink-500">Traçado: {credit}</span>}
+        {credit && <span className="pointer-events-none absolute bottom-[3.25rem] right-3 text-2xs leading-none text-ink-400">Traçado: {credit}</span>}
       </div>
     </section>
   );
@@ -486,7 +483,7 @@ function NextEventPanel() {
 function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="px-1 py-1.5">
-      <dt className="text-[10px] font-medium text-ink-400">{label}</dt>
+      <dt className="text-2xs font-medium text-ink-400">{label}</dt>
       <dd className="truncate font-display text-base font-semibold leading-tight first-letter:uppercase">{value}</dd>
     </div>
   );

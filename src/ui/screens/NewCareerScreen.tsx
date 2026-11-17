@@ -17,15 +17,15 @@ import { ROOKIE_TEAM_IDS, TEAMS } from '@/data/teams';
 import { TRAINABLE_ATTRIBUTES, overallRating, validateNewCareerInput, type NewCareerInput } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
-import { Card, ChoiceCard, RatingBar, TeamSwatch, cx } from '../components/ui';
+import { Card, ChoiceCard, cx, RatingBar, TeamSwatch } from '@/ui/kit';
 import { formatRating } from '../format';
-import { ScreenAction } from '../layout/ScreenAction';
+import { ActionDock, ScreenAction } from '../layout/ScreenAction';
 import { WIDE_QUERY, useMediaQuery } from '../layout/chrome';
 
 const field =
-  'min-h-11 w-full border border-ink-700 bg-ink-850 px-3 text-sm text-ink-100 placeholder:text-ink-500 transition-colors focus:border-apex-500 focus:outline-none';
-const fieldLabel = 'block text-[11px] font-medium text-ink-400';
-const stepButton = 'grid h-11 w-11 shrink-0 place-items-center border border-ink-700 text-ink-300 transition-colors hover:border-ink-400 disabled:opacity-30';
+  'min-h-11 w-full border border-ink-500 bg-ink-850 px-3 text-sm text-ink-100 placeholder:text-ink-400 transition-colors focus:border-apex-500 focus:outline-none';
+const fieldLabel = 'block text-2xs font-medium text-ink-400';
+const stepButton = 'grid h-11 w-11 shrink-0 place-items-center border border-ink-500 text-ink-300 transition-colors hover:border-ink-300';
 
 export function NewCareerScreen() {
   const navigate = useNavigate();
@@ -112,9 +112,18 @@ export function NewCareerScreen() {
               <HeaderStat label="Geral" value={formatRating(overallRating(attributes))} />
               <HeaderStat label="Potencial" value={preset.potential} muted />
             </div>
-            <ScreenAction onClick={() => void submit()} disabled={submitting}>
-              {submitting ? 'Criando…' : 'Começar carreira'}
-            </ScreenAction>
+            {/* Deitado, o botão de começar fica no canto inferior direito, perto do polegar. */}
+            {wide ? (
+              <ActionDock>
+                <ScreenAction onClick={() => void submit()} disabled={submitting}>
+                  {submitting ? 'Criando…' : 'Começar carreira'}
+                </ScreenAction>
+              </ActionDock>
+            ) : (
+              <ScreenAction onClick={() => void submit()} disabled={submitting}>
+                {submitting ? 'Criando…' : 'Começar carreira'}
+              </ScreenAction>
+            )}
           </div>
         </div>
         {error && (
@@ -148,11 +157,11 @@ export function NewCareerScreen() {
               </label>
               <div className="col-span-6 space-y-1">
                 {/* A dica fica fora das opções: o texto do campo fechado cabe inteiro. */}
-                <div className="flex items-baseline gap-1.5 text-[11px]">
+                <div className="flex items-baseline gap-1.5 text-2xs">
                   <label htmlFor="new-career-age" className="font-medium text-ink-400">
                     Idade
                   </label>
-                  <span id="new-career-age-hint" className="truncate text-ink-500">
+                  <span id="new-career-age-hint" className="truncate text-ink-400">
                     evolui mais rápido até os 17 anos
                   </span>
                 </div>
@@ -277,7 +286,7 @@ export function NewCareerScreen() {
 function HeaderStat({ label, value, muted = false }: { label: string; value: string | number; muted?: boolean }) {
   return (
     <div className="leading-none">
-      <div className="text-[10px] font-medium text-ink-400">{label}</div>
+      <div className="text-2xs font-medium text-ink-400">{label}</div>
       <div className={cx('mt-0.5 font-display text-2xl font-bold leading-none', muted ? 'text-ink-400' : 'text-ink-100')}>{value}</div>
     </div>
   );
@@ -287,7 +296,7 @@ function HeaderStat({ label, value, muted = false }: { label: string; value: str
 function CarNumber({ label, value }: { label: string; value: number }) {
   return (
     <span className="block">
-      <span className="block whitespace-nowrap text-[11px] font-medium text-ink-400">{label}</span>
+      <span className="block whitespace-nowrap text-2xs font-medium text-ink-400">{label}</span>
       <span className="block font-display text-lg font-semibold leading-tight text-ink-100">{value}</span>
     </span>
   );
