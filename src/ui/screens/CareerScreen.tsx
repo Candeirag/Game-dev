@@ -479,7 +479,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
             </ul>
           )}
           {offer.kind === 'fallback' && (
-            <p className="text-xs text-ink-400">Vaga sem custo e sem exigências: a equipe aposta em você. É a rede de segurança da carreira.</p>
+            <p className="text-xs text-ink-400">Vaga de aluguel, sem exigências: custa dinheiro, mas pode ser paga a crédito. É a rede de segurança da carreira.</p>
           )}
           {fee > 0 && <p className="text-xs text-gold-400">Aceitar esta proposta rompe o contrato vigente: multa de {formatMoney(fee)}.</p>}
           <div className="mt-auto flex flex-wrap gap-2">

@@ -128,7 +128,7 @@ export const OFFER_KIND_LABELS: Record<import('./schemas').Offer['kind'], string
   transfer: 'Transferência',
   promotion: 'Promoção',
   demotion: 'Categoria abaixo',
-  fallback: 'Vaga garantida',
+  fallback: 'Vaga de aluguel',
 };
 
 export const LEDGER_LABELS: Record<import('./schemas').LedgerKey, string> = {
@@ -153,6 +153,13 @@ export const LEDGER_LABELS: Record<import('./schemas').LedgerKey, string> = {
   family: 'Família',
   team: 'Equipe própria',
   inheritance: 'Herança',
+  travel: 'Viagens',
+  housing: 'Aluguel no polo',
+  equipment: 'Equipamento',
+  moving: 'Mudança de polo',
+  job: 'Trabalho paralelo',
+  investor: 'Investidor',
+  crowdfund: 'Vaquinha da cidade',
 };
 
 export const ROLE_LABELS: Record<import('./schemas').DriverRole, string> = {

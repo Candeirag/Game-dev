@@ -12,7 +12,7 @@ import { BIRTH_TRAITS } from '@/data/birth';
 import { CATEGORIES, getCategory } from '@/data/categories';
 import type { PlayerBackground } from '@/data/rules';
 import * as engine from '@/engine';
-import { botTraining, pickBestOffer, playRound, resolvePending, withTalent, type Choices } from './policy';
+import { botOffseason, botTraining, playRound, resolvePending, withTalent, type BotDoor, type Choices } from './policy';
 
 /** Data fixa de criação das carreiras: o relógio não entra na simulação. */
 const CREATED_AT = '2027-01-01T00:00:00.000Z';
@@ -89,6 +89,20 @@ export interface SeasonSample {
   /** Propostas de equipes para o ano seguinte, sem contar a rede de segurança: quantas vieram e quantas o piloto podia aceitar. */
   offersMade: number;
   offers: number;
+  /** Portas (Fase 3): havia alguma aberta no fechamento (uma vaga, fora a de aluguel, por qualquer porta)? */
+  doorOpen: boolean;
+  /** O investidor de último recurso estava valendo neste fechamento. */
+  lastResort: boolean;
+  /** Porta usada para a vaga desta temporada ('initial' na estreia; 'none' = vaga de aluguel). */
+  door: BotDoor | 'initial';
+  /** Resultado do ano: a soma de todos os lançamentos da temporada (receitas menos despesas, impostos e juros incluídos). */
+  yearResult: number;
+  /** Patrocinadores que romperam por meta não cumprida neste fechamento. */
+  sponsorsBroken: number;
+  /** Fatia do investidor ao fim da temporada (0 = sem investidor). */
+  investorShare: number;
+  sideJob: boolean;
+  academy: boolean;
 }
 
 export interface CareerProfile {
@@ -152,7 +166,13 @@ function seatMarket(career: CareerState): { made: number; acceptable: number; ca
   return { made: offers.length, acceptable: 0, cause: onlyMoney ? 'money' : 'requirements' };
 }
 
-function sampleSeason(career: CareerState, index: number, seat: SeatOrigin, noSeatCause: NoSeatCause | null): SeasonSample {
+function sampleSeason(
+  career: CareerState,
+  index: number,
+  seat: SeatOrigin,
+  noSeatCause: NoSeatCause | null,
+  door: BotDoor | 'initial',
+): SeasonSample {
   const offseason = career.offseason;
   if (!offseason) throw new Error('Temporada sem fechamento.');
   const player = engine.getPlayer(career);
@@ -176,6 +196,14 @@ function sampleSeason(career: CareerState, index: number, seat: SeatOrigin, noSe
     noSeatCause: seat === 'fallback' ? noSeatCause : null,
     offersMade: market.made,
     offers: market.acceptable,
+    doorOpen: engine.hasOpenDoor(career),
+    lastResort: engine.lastResortActive(career),
+    door,
+    yearResult: Object.values(career.finance.reports[career.finance.reports.length - 1]?.totals ?? {}).reduce((total, value) => total + value, 0),
+    sponsorsBroken: career.sponsors.filter((s) => engine.missedTarget(s, offseason.playerPosition)).length,
+    investorShare: career.investor?.share ?? 0,
+    sideJob: career.sideJob !== 'none',
+    academy: career.academy !== null,
   };
 }
 
@@ -201,6 +229,7 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
     birth = birthSample(career);
     let seat: SeatOrigin = 'initial';
     let cause: NoSeatCause | null = null;
+    let door: BotDoor | 'initial' = 'initial';
     for (; index <= options.seasons; index++) {
       career = botTraining(career);
       while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, SIM_CHOICES);
@@ -210,14 +239,15 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
       // do ano (que acontece ao concluir a última etapa) e antes de medir o caixa e de escolher a
       // proposta, como faz o jogador.
       if (!career.succession) career = resolvePending(career, SIM_CHOICES.eventChoice);
-      seasons.push(sampleSeason(career, index, seat, cause));
+      seasons.push(sampleSeason(career, index, seat, cause, door));
       // Quem jogou todas as temporadas pedidas completou a carreira, mesmo que a sucessão venha no último fechamento.
       if (index === options.seasons) break;
       if (career.succession) return { seed, profile, birth, seasons, ended: 'succession' };
-      const offerId = pickBestOffer(career);
-      seat = career.offseason?.offers.find((o) => o.id === offerId)?.kind ?? 'fallback';
+      const next = botOffseason(career);
+      seat = career.offseason?.offers.find((o) => o.id === next.offerId)?.kind ?? 'fallback';
       cause = seat === 'fallback' ? seatMarket(career).cause : null;
-      career = engine.startNextSeason(career, offerId);
+      door = next.door;
+      career = engine.startNextSeason(next.career, next.offerId);
     }
     return { seed, profile, birth, seasons, ended: 'completed' };
   } catch (error) {
@@ -323,6 +353,130 @@ export interface SimSummary {
    */
   byBirth: BirthGroupStats[];
   byOrigin: BirthGroupStats[];
+  /** Economia e portas (Fase 3). */
+  doors: DoorStats;
+}
+
+/** Como as carreiras de um grupo pagaram a entrada num degrau. */
+export interface EntryStats {
+  /** Carreiras que chegaram ao degrau. */
+  careers: number;
+  share: number;
+  averageSeason: number;
+  /** Por qual porta: com o que tinham (patrocínio e bolsa), academia, vaquinha ou investidor. */
+  own: number;
+  academy: number;
+  crowdfund: number;
+  investor: number;
+}
+
+export interface DoorStats {
+  /** Temporadas fechadas sem nenhuma porta aberta, e a maior sequência numa mesma carreira. */
+  noDoorSeasons: number;
+  noDoorCareers: number;
+  longestNoDoorStreak: number;
+  /** Fechamentos em que o investidor de último recurso apareceu. */
+  lastResortSeasons: number;
+  /** Vagas conseguidas por cada porta (temporadas). */
+  used: { own: number; academy: number; crowdfund: number; investor: number; none: number };
+  /** Carreiras que terminaram com investidor, e a fatia média e a maior entre elas. */
+  investorCareers: number;
+  investorAverageShare: number;
+  investorMaxShare: number;
+  academyCareers: number;
+  sideJobSeasons: number;
+  /** Patrocinadores que romperam por meta não cumprida, por carreira. */
+  sponsorsBrokenPerCareer: number;
+  /** Quanto o ano rende ou custa pela posição final, no kart (regional e Brasileiro): mediana do resultado do ano. */
+  yearResultByPosition: { label: string; seasons: number; median: number }[];
+  /** O mesmo por degrau: mediana do resultado do ano de quem terminou na metade de cima e na de baixo. */
+  yearResultByTier: { categoryId: CategoryId; seasons: number; topHalf: number; bottomHalf: number }[];
+  /** Entrada na Fórmula Júnior: todas as carreiras e os terços pela nota de nascença. */
+  juniorEntry: { label: string; stats: EntryStats }[];
+}
+
+/** Maior sequência de temporadas seguidas sem porta numa carreira. */
+function longestNoDoorStreak(seasons: readonly SeasonSample[]): number {
+  let best = 0;
+  let run = 0;
+  for (const s of seasons) {
+    run = s.doorOpen || s.lastResort ? 0 : run + 1;
+    best = Math.max(best, run);
+  }
+  return best;
+}
+
+/** Como um grupo de carreiras pagou a primeira temporada num degrau. */
+function entryStats(samples: readonly CareerSample[], categoryId: CategoryId): EntryStats {
+  const firsts = samples.flatMap((c) => c.seasons.find((s) => s.categoryId === categoryId) ?? []);
+  const by = (door: BotDoor) => firsts.filter((s) => s.door === door).length;
+  return {
+    careers: firsts.length,
+    share: samples.length ? firsts.length / samples.length : 0,
+    averageSeason: firsts.length ? firsts.reduce((total, s) => total + s.season, 0) / firsts.length : 0,
+    own: by('own'),
+    academy: by('academy'),
+    crowdfund: by('crowdfund'),
+    investor: by('investor'),
+  };
+}
+
+function doorStats(samples: readonly CareerSample[]): DoorStats {
+  const all = samples.flatMap((c) => c.seasons);
+  // A porta de uma temporada é a que deu a vaga dela; a estreia não conta.
+  const seats = all.filter((s) => s.door !== 'initial');
+  const used = (door: BotDoor) => seats.filter((s) => s.door === door).length;
+  const finalShares = samples.map((c) => c.seasons[c.seasons.length - 1]?.investorShare ?? 0).filter((share) => share > 0);
+  const kart = all.filter((s) => s.tier <= 2);
+  const band = (label: string, from: number, to: number) => {
+    const rows = kart.filter((s) => s.position >= from && s.position <= to);
+    return {
+      label,
+      seasons: rows.length,
+      median: percentile(
+        rows.map((s) => s.yearResult),
+        0.5,
+      ),
+    };
+  };
+  const [low, mid, high] = birthTerciles(samples);
+  return {
+    noDoorSeasons: all.filter((s) => !s.doorOpen && !s.lastResort).length,
+    noDoorCareers: samples.filter((c) => c.seasons.some((s) => !s.doorOpen && !s.lastResort)).length,
+    longestNoDoorStreak: Math.max(0, ...samples.map((c) => longestNoDoorStreak(c.seasons))),
+    lastResortSeasons: all.filter((s) => s.lastResort).length,
+    used: { own: used('own'), academy: used('academy'), crowdfund: used('crowdfund'), investor: used('investor'), none: used('none') },
+    investorCareers: finalShares.length,
+    investorAverageShare: finalShares.length ? finalShares.reduce((total, share) => total + share, 0) / finalShares.length : 0,
+    investorMaxShare: Math.max(0, ...finalShares),
+    academyCareers: samples.filter((c) => c.seasons.some((s) => s.academy)).length,
+    sideJobSeasons: all.filter((s) => s.sideJob).length,
+    sponsorsBrokenPerCareer: samples.length ? all.reduce((total, s) => total + s.sponsorsBroken, 0) / samples.length : 0,
+    yearResultByPosition: [band('1º a 5º', 1, 5), band('6º a 10º', 6, 10), band('11º a 15º', 11, 15), band('16º a 20º', 16, 99)],
+    yearResultByTier: CATEGORIES.flatMap((category) => {
+      const rows = all.filter((s) => s.categoryId === category.id);
+      if (rows.length === 0) return [];
+      const median = (half: readonly SeasonSample[]) =>
+        percentile(
+          half.map((s) => s.yearResult),
+          0.5,
+        );
+      return [
+        {
+          categoryId: category.id,
+          seasons: rows.length,
+          topHalf: median(rows.filter((s) => s.position <= 10)),
+          bottomHalf: median(rows.filter((s) => s.position > 10)),
+        },
+      ];
+    }),
+    juniorEntry: [
+      { label: 'Todas as carreiras', stats: entryStats(samples, 'f4') },
+      { label: 'Nascença alta', stats: entryStats(high, 'f4') },
+      { label: 'Nascença média', stats: entryStats(mid, 'f4') },
+      { label: 'Nascença baixa', stats: entryStats(low, 'f4') },
+    ],
+  };
 }
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
@@ -496,6 +650,7 @@ export function summarize(samples: readonly CareerSample[], options: SimOptions)
         samples.filter((c) => c.birth.traitBalance < 0),
       ),
     ].filter((row): row is BirthGroupStats => row !== null),
+    doors: doorStats(samples),
   };
 }
 

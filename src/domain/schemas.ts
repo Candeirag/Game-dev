@@ -433,6 +433,14 @@ export const LEDGER_KEYS = [
   'family',
   'team',
   'inheritance',
+  // Fase 3 da grande atualização: polos, custos de correr e portas.
+  'travel',
+  'housing',
+  'equipment',
+  'moving',
+  'job',
+  'investor',
+  'crowdfund',
 ] as const;
 export const LedgerKeySchema = z.enum(LEDGER_KEYS);
 export type LedgerKey = z.infer<typeof LedgerKeySchema>;
@@ -578,6 +586,51 @@ export const AcademySchema = z.object({
   strikes: z.number().int().min(0),
 });
 export type Academy = z.infer<typeof AcademySchema>;
+
+/* ---------------- Polos e portas (Fase 3 da grande atualização) ---------------- */
+
+/** Polo: a cidade em que o piloto mora para disputar um campeonato. Os dados ficam em `src/data/hubs.ts`. */
+export const HubIdSchema = z.enum(['sao-paulo', 'italia', 'inglaterra']);
+export type HubId = z.infer<typeof HubIdSchema>;
+
+export const HubStateSchema = z.object({
+  id: HubIdSchema,
+  /** Temporada em que o piloto chegou ao polo (0 = já morava nele antes de o jogo acompanhar os polos). */
+  arrivedSeason: z.number().int().min(0),
+});
+export type HubState = z.infer<typeof HubStateSchema>;
+
+/** Investidor: pagou uma ou mais vagas e leva uma fatia dos ganhos do piloto para sempre. */
+export const InvestorSchema = z.object({
+  name: z.string(),
+  /** Fatia dos ganhos (salário, bônus e patrocínios), de 0 a 1. */
+  share: z.number().min(0).max(1),
+  sinceSeason: z.number().int().min(1),
+  /** Quanto o investidor já pôs na carreira e quanto já recebeu de volta. */
+  invested: z.number().min(0),
+  received: z.number().min(0),
+  /** Vagas que ele pagou. */
+  seats: z.number().int().min(0),
+  /** A vaga que o último aporte pagou: o dinheiro só vale para aquela proposta. */
+  funded: z.object({ season: z.number().int().min(1), offerId: z.string() }).nullable(),
+});
+export type Investor = z.infer<typeof InvestorSchema>;
+
+/** Vaquinha da cidade: o dinheiro entra uma vez e a torcida cobra o resultado da temporada seguinte. */
+export const CrowdfundSchema = z.object({
+  /** Temporada em que a vaquinha foi feita (a cobrança vale para a seguinte). */
+  season: z.number().int().min(1),
+  town: z.string(),
+  amount: z.number().min(0),
+  /** Posição final que a torcida espera na temporada seguinte. */
+  targetPosition: z.number().int().min(1),
+  /** A cobrança já foi feita (cumprida ou não): fica só o registro, para o intervalo até a próxima. */
+  settled: z.boolean(),
+});
+export type Crowdfund = z.infer<typeof CrowdfundSchema>;
+
+export const SideJobSchema = z.enum(['none', 'instructor', 'mechanic']);
+export type SideJob = z.infer<typeof SideJobSchema>;
 
 /* ---------------- Licença ---------------- */
 
@@ -1096,7 +1149,7 @@ export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
  * interior para a capital). Saves antigos ficam com `birth: null`: carreira começada antes dos
  * nascimentos, sem nenhum efeito de nascença.
  */
-export const CAREER_SCHEMA_VERSION = 6;
+export const CAREER_SCHEMA_VERSION = 7;
 
 /* ---------------- Nascimento (Fase 2 da grande atualização) ---------------- */
 
@@ -1253,6 +1306,14 @@ export const CareerStateSchema = z.object({
   tutorial: z.object({ done: z.array(z.string()), dismissed: z.boolean() }),
   /** Nascimento sorteado do personagem que começou a carreira (null em saves anteriores à versão 6). */
   birth: BirthSchema.nullable(),
+  /** Polo em que o piloto mora (Fase 3 da grande atualização). */
+  hub: HubStateSchema,
+  investor: InvestorSchema.nullable(),
+  crowdfund: CrowdfundSchema.nullable(),
+  /** Trabalho paralelo: dá dinheiro por etapa e tira tempo de treino. */
+  sideJob: SideJobSchema,
+  /** Temporadas seguidas fechadas sem nenhuma porta aberta (nenhuma vaga além da de aluguel). */
+  noDoorSeasons: z.number().int().min(0),
 });
 export type CareerState = z.infer<typeof CareerStateSchema>;
 

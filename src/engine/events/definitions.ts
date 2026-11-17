@@ -10,10 +10,11 @@
  * - "guaranteed": acontece sempre que a condição vale.
  * - "random": entra no sorteio da etapa, com o peso indicado.
  */
+import { ACADEMY_DOOR } from '@/config/balance';
 import type { Academy, CareerState, Driver, Effect, EventCategory, EventChoice, PendingEvent, RaceEntryResult, RoundRecord, Team } from '@/domain/schemas';
 import type { CategoryDefinition } from '@/data/categories';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
-import { buildSponsor, commercialSponsors, sponsorTierFor, SPONSOR_RULES } from '../career/sponsors';
+import { buildSponsor, careerTitles, commercialSponsors, maxSponsors, sponsorTierFor, SPONSOR_RULES } from '../career/sponsors';
 import { fullName, teamKey } from '../career/selectors';
 import { hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
@@ -721,17 +722,21 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       const current = commercialSponsors(ctx.career.sponsors);
       // Antes da segunda etapa ainda não há tabela: vale a posição da temporada anterior (ou o meio do grid).
       const lastSeason = ctx.career.history[ctx.career.history.length - 1]?.playerPosition ?? 12;
-      const tier = sponsorTierFor(ctx.career.reputation, ctx.category, ctx.career.rounds.length >= 2 ? ctx.position : lastSeason);
-      // Com as três cotas ocupadas, só interessa um patrocinador maior que o menor atual, que seria substituído.
+      const position = ctx.career.rounds.length >= 2 ? ctx.position : lastSeason;
+      const tier = sponsorTierFor(ctx.career.reputation, ctx.category, position, careerTitles(ctx.career));
+      // Ninguém assina com um piloto que já está fora da meta que o contrato vai cobrar.
+      if (position > (SPONSOR_RULES.TIER_TARGET[tier] ?? 0)) return null;
+      // Com as cotas ocupadas (três; uma só para quem é de academia), só interessa um patrocinador maior que o menor atual, que seria substituído.
+      const slots = maxSponsors(ctx.career);
       const weakest = [...current].sort((a, b) => a.tier - b.tier || a.perSeason - b.perSeason)[0];
-      const replaces = current.length >= SPONSOR_RULES.MAX_SPONSORS ? weakest : undefined;
-      if (current.length >= SPONSOR_RULES.MAX_SPONSORS && (!weakest || weakest.tier >= tier)) return null;
+      const replaces = current.length >= slots ? weakest : undefined;
+      if (current.length >= slots && (!weakest || weakest.tier >= tier)) return null;
       const sponsor = buildSponsor(ctx.career, tier, hashSeed(ctx.seed, 'sponsor'));
       const better = { ...sponsor, perSeason: Math.round((sponsor.perSeason * 1.2) / 100) * 100, targetPosition: Math.max(1, sponsor.targetPosition - 1) };
       const swap: Effect[] = replaces ? [{ type: 'removeSponsor', sponsorId: replaces.id }] : [];
       return {
         title: `Proposta de patrocínio: ${sponsor.name}`,
-        body: `${sponsor.name} oferece ${money(ctx.career, sponsor.perSeason)} por temporada, mais ${money(ctx.career, sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.${replaces ? ` As suas três cotas estão ocupadas: para assinar, você precisa encerrar o contrato com ${replaces.name} (${money(ctx.career, replaces.perSeason)} por temporada).` : ''}`,
+        body: `${sponsor.name} oferece ${money(ctx.career, sponsor.perSeason)} por temporada, mais ${money(ctx.career, sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.${replaces ? ` As suas cotas estão ocupadas: para assinar, você precisa encerrar o contrato com ${replaces.name} (${money(ctx.career, replaces.perSeason)} por temporada).` : ''}`,
         choices: [
           choice(
             'sign',
@@ -856,8 +861,8 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
         f1TeamId: f1TeamId(index),
         name: `Academia ${f1Name}`,
         joinedSeason: ctx.career.season,
-        supportShare: 0.7,
-        targetPosition: 6,
+        supportShare: ACADEMY_DOOR.SUPPORT_SHARE,
+        targetPosition: ACADEMY_DOOR.TARGET_POSITION,
         strikes: 0,
       };
       const success = Math.min(
@@ -866,7 +871,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       );
       return {
         title: `Convite da ${academy.name}`,
-        body: `Olheiros da ${f1Name}, ${categoryRef(TOP_CATEGORY_ID, 'de')}, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem 70% do custo da vaga pago e a atenção das equipes ligadas a ela; em troca, precisa terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
+        body: `Olheiros da ${f1Name}, ${categoryRef(TOP_CATEGORY_ID, 'de')}, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem a vaga paga e a atenção das equipes ligadas a ela; em troca, ela cobra exclusividade (um patrocinador pessoal só, sem investidor e sem vaquinha) e resultado: terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
         choices: [
           choice(
             'accept',

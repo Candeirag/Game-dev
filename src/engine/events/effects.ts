@@ -9,6 +9,7 @@ import type { CareerState, Effect } from '@/domain/schemas';
 import { DEV_AREAS } from '@/domain/schemas';
 import { FAMILY } from '@/data/family';
 import { netWorth, post } from '../career/economy';
+import { enterAcademy } from '../career/paths';
 import { getPlayer } from '../career/selectors';
 import { relocate } from '../birth/move';
 import { setKartFunding, startChildCareer } from '../dynasty/family';
@@ -61,7 +62,8 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
     case 'interest':
       return { ...career, marketInterest: { ...career.marketInterest, [effect.teamKey]: clamp((career.marketInterest[effect.teamKey] ?? 0) + effect.value) } };
     case 'joinAcademy':
-      return { ...career, academy: effect.academy };
+      // A academia cobra exclusividade: um patrocinador pessoal só (os outros saem na hora).
+      return enterAcademy(career, effect.academy);
     case 'leaveAcademy':
       return { ...career, academy: null };
     case 'attribute':

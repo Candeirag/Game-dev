@@ -13,8 +13,10 @@
  * A aposentadoria das pistas e a vida de dirigente ficam em
  * management/executive.ts.
  */
+import { CROWDFUND, HUB_RULES } from '@/config/balance';
 import type { CareerState, Driver, InboxMessage, Offer, RoundRecord, SeasonSummary, Team } from '@/domain/schemas';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
+import { getHub } from '@/data/hubs';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
 import { TEAM_TARGETS, initialTeams } from '@/data/teams';
 import { chooseAiTrainingFocus } from '../ai/decisions';
@@ -30,12 +32,14 @@ import { closeFamilyYear } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality, touchLineage } from '../dynasty/succession';
 import { closeAssetsYear, settleDebts } from '../economy/assets';
-import { closeSeasonFinance, post } from './economy';
+import { closeSeasonFinance, payInvestor, post } from './economy';
+import { economyTrainingFactor, hubAfterSigning, moveCost, moveSummary, needsMove, sideJobAllowed } from './hubs';
+import { crowdfundTarget, hasOpenDoor, lastResortActive, withLastResortOffer } from './paths';
 import { pushMessages } from './inbox';
 import { licensePointsFor } from './license';
 import { promotedRivals, runAiMarket, updateMarketInterest } from './market';
 import { familyDriverIds, fullName, getPlayer, getTeam } from './selectors';
-import { renewSponsors } from './sponsors';
+import { missedTarget, renewSponsors } from './sponsors';
 import { money } from './selectors';
 import { categoryRef } from '@/domain/categoryNames';
 import { counted } from '@/domain/text';
@@ -102,7 +106,14 @@ export function closeSeason(career: CareerState): CareerState {
 
   // Um parceiro que conhece a imprensa ajuda a imagem: +1 de reputação por temporada.
   const mediaBoost = career.family.partner?.background === 'media' ? 1 : 0;
-  const reputationAfter = Math.min(100, reputationAfterSeason(career.reputation, me.position, me.wins, category.tier) + mediaBoost);
+  // Vaquinha da cidade: a torcida cobra o resultado da temporada seguinte à arrecadação.
+  const crowdTarget = crowdfundTarget(career);
+  const crowdMissed = crowdTarget !== null && me.position > crowdTarget;
+  const reputationAfter = clamp(
+    reputationAfterSeason(career.reputation, me.position, me.wins, category.tier) + mediaBoost + (crowdMissed ? CROWDFUND.MISS_REPUTATION : 0),
+    0,
+    100,
+  );
   const licensePointsEarned = licensePointsFor(category.id, me.position);
   const license = {
     ...career.license,
@@ -111,7 +122,12 @@ export function closeSeason(career: CareerState): CareerState {
 
   // Contas do ano: bônus de título, imposto, investimentos e juros.
   let finance = career.finance;
-  if (me.position === 1) finance = post(finance, career.season, lastRound, 'bonus', career.contract.bonuses.title, 'Bônus pelo título');
+  let investor = career.investor;
+  if (me.position === 1) {
+    finance = post(finance, career.season, lastRound, 'bonus', career.contract.bonuses.title, 'Bônus pelo título');
+    // O investidor também tem parte no bônus do título.
+    ({ finance, investor } = payInvestor(finance, investor, career.season, lastRound, career.contract.bonuses.title));
+  }
   // Patrimônio (dividendos, imóveis, empresas, participações, empréstimos) e, depois, o imposto de renda.
   const assets = closeAssetsYear({ ...career, finance });
   const closed = closeSeasonFinance({ ...career, finance: assets.finance });
@@ -147,11 +163,32 @@ export function closeSeason(career: CareerState): CareerState {
     }
   }
 
+  // Patrocinadores: a meta é para valer. Quem não a viu cumprida rompe na virada do ano.
+  for (const sponsor of career.sponsors) {
+    if (missedTarget(sponsor, me.position))
+      notes.push(`${sponsor.name} vai romper o patrocínio: a meta era terminar entre os ${sponsor.targetPosition} primeiros e você ficou em ${me.position}º.`);
+  }
+
+  // Vaquinha: a cidade confere o resultado que esperava.
+  let crowdfund = career.crowdfund;
+  let drivers = career.drivers;
+  if (crowdfund && crowdTarget !== null) {
+    if (crowdMissed) {
+      notes.push(
+        `${crowdfund.town} esperava ver você entre os ${crowdTarget} primeiros depois da vaquinha. O ${me.position}º lugar decepcionou a torcida: a moral e a reputação sentiram.`,
+      );
+      drivers = drivers.map((d) => (d.isPlayer ? { ...d, condition: { ...d.condition, morale: clamp(d.condition.morale + CROWDFUND.MISS_MORALE, 0, 100) } } : d));
+    } else {
+      notes.push(`${crowdfund.town} comemora: você terminou em ${me.position}º e honrou a vaquinha (a cidade esperava até o ${crowdTarget}º).`);
+    }
+    crowdfund = { ...crowdfund, settled: true };
+  }
+
   notes.push(...assets.notes);
   // A família também fecha o ano: temporada dos filhos, aniversários e a relação do casal.
   const family = closeFamilyYear(career);
-  const base: CareerState = { ...career, reputation: reputationAfter, license, finance, academy, family: family.family };
-  const offers = generateOffers(base, reputationAfter, contractStatus, me.position);
+  const base: CareerState = { ...career, reputation: reputationAfter, license, finance, investor, crowdfund, drivers, academy, family: family.family };
+  const generated = generateOffers(base, reputationAfter, contractStatus, me.position);
   const champion = career.drivers.find((d) => d.id === standings[0]?.driverId);
   const message: InboxMessage = {
     id: `s${career.season}-end`,
@@ -164,26 +201,32 @@ export function closeSeason(career: CareerState): CareerState {
   const messages: InboxMessage[] = [message];
   if (family.notes.length > 0)
     messages.push({ id: `s${career.season}-family`, date, category: 'family', title: 'A família neste ano', body: family.notes.join(' ') });
-  const closedState: CareerState = {
-    ...base,
-    inbox: pushMessages(base.inbox, messages),
-    offseason: {
-      playerPosition: me.position,
-      playerPoints: me.points,
-      wins: me.wins,
-      podiums: me.podiums,
-      target: team.driverTarget,
-      objectiveMet: me.position <= team.driverTarget,
-      reputationBefore: career.reputation,
-      reputationAfter,
-      licensePointsEarned,
-      championDriverId: standings[0]?.driverId ?? '',
-      championTeamId: teams[0]?.teamId ?? '',
-      contractStatus,
-      offers,
-      notes,
-    },
+  const offseason = {
+    playerPosition: me.position,
+    playerPoints: me.points,
+    wins: me.wins,
+    podiums: me.podiums,
+    target: team.driverTarget,
+    objectiveMet: me.position <= team.driverTarget,
+    reputationBefore: career.reputation,
+    reputationAfter,
+    licensePointsEarned,
+    championDriverId: standings[0]?.driverId ?? '',
+    championTeamId: teams[0]?.teamId ?? '',
+    contractStatus,
+    offers: generated,
+    notes,
   };
+  // Portas (Fase 3 da grande atualização). Depois de temporadas seguidas sem nenhuma, o investidor
+  // de último recurso aparece e, se preciso, traz uma vaga. A conta das temporadas sem porta só
+  // anda quando o ano seguinte começa (`startNextSeason`), para as condições valerem iguais
+  // durante todo o fechamento.
+  const offers = withLastResortOffer({ ...base, offseason }, generated);
+  const closedState: CareerState = { ...base, inbox: pushMessages(base.inbox, messages), offseason: { ...offseason, offers } };
+  if (lastResortActive(base))
+    notes.push('Um investidor de último recurso apareceu: ele banca uma vaga em troca de uma fatia grande dos seus ganhos. Veja em Caminhos.');
+  else if (!hasOpenDoor(closedState))
+    notes.push('Nenhuma porta se abriu neste ano: sobrou a vaga de aluguel. Em Caminhos você vê o que falta para cada uma.');
   return checkMortality(touchLineage(closedState));
 }
 
@@ -399,6 +442,9 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
   if (!offer) throw new Error('Não há proposta desta equipe.');
   if (!canAcceptOffer(career, offer)) throw new Error('Você não cumpre os requisitos desta proposta.');
   if (career.succession) throw new Error('Escolha o herdeiro antes de continuar.');
+  const funded = career.investor?.funded;
+  if (funded && funded.season === career.season && funded.offerId !== offer.id)
+    throw new Error(`O aporte de ${career.investor?.name ?? 'seu investidor'} só vale para a vaga que ele pagou.`);
 
   const player = getPlayer(career);
   const next = getCategory(offer.categoryId);
@@ -434,7 +480,18 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     );
   }
 
-  const sponsors = renewSponsors(career.sponsors, career.season, getCategory(career.categoryId), next);
+  // Mudança de polo: decisão grande. A mudança é paga na hora; aluguel, idioma e saudade vêm com o ano.
+  const hub = hubAfterSigning(career, next.id, nextSeason);
+  const moving = needsMove(career, next.id);
+  if (moving) {
+    const cost = moveCost(career, next.id);
+    finance = post(finance, career.season, career.calendar.length, 'moving', -cost, `Mudança para ${getHub(hub.id).name}`);
+    news.push(`${moveSummary(getHub(hub.id))}${cost > 0 ? ` A mudança custou ${money(career, cost)}.` : ''}`);
+  }
+
+  const sponsors = renewSponsors(career.sponsors, career.season, getCategory(career.categoryId), next, offseason.playerPosition);
+  for (const s of sponsors.broken)
+    news.push(`${s.name} rompeu o patrocínio: a meta era terminar entre os ${s.targetPosition} primeiros. Você deixa de receber ${money(career, s.perSeason)} por temporada.`);
   for (const s of sponsors.renewed) news.push(`${s.name} renovou o patrocínio por ${money(career, s.perSeason)} por temporada.`);
   for (const s of sponsors.left) news.push(s.tier === 0 ? 'O apoio financeiro da família chegou ao fim.' : `${s.name} não renovou o patrocínio.`);
 
@@ -470,8 +527,14 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     news.push(...market.news);
   }
   const newPlayer: Driver = { ...player, teamId: offer.teamId, role: contract.role, contractEnd: contract.endSeason };
-  const playerTraining = birthTrainingFactor(career);
-  const drivers = [newPlayer, ...others].map((d) => winter(d, career.seed, career.season, playerTraining));
+  const playerTraining = birthTrainingFactor(career) * economyTrainingFactor(career);
+  // O que pesa na cabeça ao começar o ano: a família longe (para quem mora num polo fora do país) e
+  // a cobrança da torcida (para quem fez a vaquinha).
+  const crowdPressure = career.crowdfund && !career.crowdfund.settled && career.crowdfund.season === career.season ? CROWDFUND.PRESSURE_MORALE : 0;
+  const moraleShift = (getHub(hub.id).foreign ? HUB_RULES.FAMILY_FAR_MORALE : 0) + crowdPressure;
+  const drivers = [newPlayer, ...others]
+    .map((d) => winter(d, career.seed, career.season, playerTraining))
+    .map((d) => (d.isPlayer && moraleShift !== 0 ? { ...d, condition: { ...d.condition, morale: clamp(d.condition.morale + moraleShift, 0, 100) } } : d));
   const playerAfter = drivers.find((d) => d.isPlayer);
   if (!playerAfter) throw new Error('Jogador desapareceu na transição de temporada.');
 
@@ -502,8 +565,16 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     sponsors: sponsors.kept,
     academy,
     license: { ...career.license, penaltyPoints: 0 },
+    hub,
+    investor: career.investor ? { ...career.investor, funded: null } : null,
+    sideJob: sideJobAllowed(next.id) ? career.sideJob : 'none',
+    // Um ano com porta (ou com o investidor de último recurso à mesa) zera a conta; sem nenhuma, ela anda.
+    noDoorSeasons: lastResortActive(career) || hasOpenDoor(career) ? 0 : career.noDoorSeasons + 1,
     relations: {
-      teamTrust: changingTeam ? Math.round(clamp(50 + (offer.interest - 50) * 0.3, 35, 70)) : career.relations.teamTrust,
+      // Idioma novo: no primeiro ano num polo de fora, a equipe começa confiando um pouco menos.
+      teamTrust:
+        (changingTeam ? Math.round(clamp(50 + (offer.interest - 50) * 0.3, 35, 70)) : career.relations.teamTrust) +
+        (moving && getHub(hub.id).foreign ? HUB_RULES.LANGUAGE_TEAM_TRUST : 0),
       teammate: 50,
       rivalries,
     },

@@ -130,8 +130,8 @@ export function formatReport(summary: SimSummary): string {
     `Carreiras interrompidas por sucessão (morte ou acidente): ${summary.interrupted}.`,
     '',
     '"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de',
-    'segurança: a vaga gratuita na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no',
-    'primeiro). O jogo de hoje sempre oferece essa vaga: ninguém fica um ano inteiro sem correr.',
+    'segurança: a vaga de aluguel na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no',
+    'primeiro). O jogo sempre oferece essa vaga: ninguém fica um ano inteiro sem correr. Desde a Fase 3 ela custa dinheiro.',
   );
 
   section('7. Nascimento');
@@ -158,6 +158,52 @@ export function formatReport(summary: SimSummary): string {
     'campeonato da primeira temporada; "degrau mais alto", a média do degrau mais alto alcançado; "monopostos" e "topo", a',
     'parcela das carreiras que chegou ao 4º degrau e ao último; "títulos" e "sem vaga", por carreira. A segunda tabela separa',
     'quem nasceu na capital de quem nasceu no interior e quem nasceu com dois talentos de quem nasceu com dois defeitos.',
+  );
+
+  section('8. Economia e portas');
+  const doors = summary.doors;
+  const entryRow = (label: string, e: (typeof doors.juniorEntry)[number]['stats']) => [
+    label,
+    String(e.careers),
+    percent(e.share),
+    e.careers ? decimal(e.averageSeason) : '-',
+    String(e.own),
+    String(e.academy),
+    String(e.crowdfund),
+    String(e.investor),
+  ];
+  out.push(
+    `Sem nenhuma porta: ${counted(doors.noDoorSeasons, 'temporada', 'temporadas')}, em ${doors.noDoorCareers} de ${careers}. Maior sequência numa carreira: ${counted(doors.longestNoDoorStreak, 'temporada', 'temporadas')} (o limite é 2).`,
+    `Investidor de último recurso: apareceu em ${counted(doors.lastResortSeasons, 'fechamento', 'fechamentos')}.`,
+    `Vagas por porta: ${doors.used.own} com dinheiro próprio, patrocínio e bolsa · ${doors.used.academy} pela academia · ${doors.used.crowdfund} com a vaquinha · ${doors.used.investor} com investidor · ${doors.used.none} de aluguel.`,
+    `Carreiras que terminam com investidor: ${doors.investorCareers} de ${careers} (fatia média de ${percent(doors.investorAverageShare)}; a maior, ${percent(doors.investorMaxShare)}).`,
+    `Carreiras que passaram por uma academia: ${doors.academyCareers} de ${careers}. Temporadas com trabalho paralelo: ${doors.sideJobSeasons}.`,
+    `Patrocinadores que romperam por meta não cumprida: ${decimal(doors.sponsorsBrokenPerCareer, 2)} por carreira.`,
+    '',
+    ...table(
+      ['Posição final no kart', 'Temporadas', 'Resultado do ano (mediana)'],
+      doors.yearResultByPosition.map((b) => [b.label, String(b.seasons), b.seasons ? cash(b.median) : '-']),
+      ['left'],
+    ),
+    '',
+    ...table(
+      ['Resultado do ano por degrau', 'Temporadas', 'Do 1º ao 10º (mediana)', 'Do 11º em diante (mediana)'],
+      doors.yearResultByTier.map((t) => [getCategory(t.categoryId).name, String(t.seasons), cash(t.topHalf), cash(t.bottomHalf)]),
+      ['left'],
+    ),
+    '',
+    ...table(
+      [`Entrada ${categoryRef('f4', 'em')}`, 'Chegaram', 'Das carreiras', 'Temporada média', 'Patrocínio e bolsa', 'Academia', 'Vaquinha', 'Investidor'],
+      doors.juniorEntry.map((row) => entryRow(row.label, row.stats)),
+      ['left'],
+    ),
+    '',
+    '"Porta" é uma vaga, fora a de aluguel, que o piloto consegue aceitar de algum jeito: com o que tem (dinheiro, patrocínio',
+    'e bolsa), pela academia, com a vaquinha da cidade ou com um investidor. Depois de duas temporadas seguidas sem nenhuma,',
+    'o investidor de último recurso aparece (e traz uma vaga, se nenhuma equipe fez proposta). "Resultado do ano" é a soma',
+    'de tudo o que entrou e saiu na temporada (vaga, viagens, equipamento, aluguel, treino, patrocínios, apoio da família,',
+    'impostos e juros; aportes de investidor e vaquinha entram no ano seguinte ao da assinatura): terminar mal tem de custar',
+    'dinheiro. A última tabela mostra como cada grupo pagou a primeira temporada na Fórmula Júnior.',
   );
 
   return `${out.join('\n')}\n`;

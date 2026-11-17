@@ -6,9 +6,11 @@
  * totais da temporada. O restante do patrimônio (ações, imóveis, empresas,
  * participações e empréstimos) fica em economy/assets.ts.
  */
-import type { CareerState, Finance, LedgerKey, RaceEntryResult, SeasonFinanceReport, Transaction } from '@/domain/schemas';
+import { HUB_RULES, RUNNING_COSTS, SIDE_JOBS } from '@/config/balance';
+import type { CareerState, CategoryId, Finance, HubId, Investor, LedgerKey, RaceEntryResult, SeasonFinanceReport, Transaction } from '@/domain/schemas';
 import { LIFESTYLE_RULES, initialStockPrices, STOCKS } from '@/data/assets';
 import { getCategory } from '@/data/categories';
+import { getHub } from '@/data/hubs';
 import { createRng, gaussian, hashSeed } from '../rng';
 
 export const ECONOMY = {
@@ -99,24 +101,76 @@ export function post(finance: Finance, season: number, round: number, key: Ledge
   };
 }
 
+/**
+ * Custos de correr uma temporada num campeonato, fora a vaga: viagens, equipamento e, para quem
+ * mora num polo fora do país, o aluguel (Fase 3 da grande atualização). É o que cada etapa lança
+ * em parcelas e o que a equipe considera ao perguntar se o piloto banca o ano.
+ */
+export function seasonRunningCosts(categoryId: CategoryId, hubId: HubId): { travel: number; equipment: number; housing: number; total: number } {
+  const travel = RUNNING_COSTS.TRAVEL_PER_ROUND[categoryId] * getCategory(categoryId).rounds;
+  const equipment = RUNNING_COSTS.EQUIPMENT_PER_SEASON[categoryId];
+  const housing = HUB_RULES.RENT_PER_SEASON[hubId];
+  return { travel, equipment, housing, total: travel + equipment + housing };
+}
+
+/** Patrocínio que conta como ganho para o investidor: o que sobra depois de pagar a vaga. */
+export function investorSponsorBase(sponsorship: number, netSeat: number): number {
+  return Math.max(0, sponsorship - netSeat);
+}
+
+/**
+ * A parte do investidor: a fatia dele sobre um ganho do piloto (salário, bônus ou sobra de patrocínio). O
+ * lançamento sai do caixa na mesma hora e fica somado em `received`, para a tela de finanças
+ * mostrar quanto ele já levou.
+ */
+export function payInvestor(
+  finance: Finance,
+  investor: Investor | null,
+  season: number,
+  round: number,
+  earnings: number,
+): { finance: Finance; investor: Investor | null } {
+  const cut = investor ? Math.round(Math.max(0, earnings) * investor.share) : 0;
+  if (!investor || cut === 0) return { finance, investor };
+  return {
+    finance: post(finance, season, round, 'investor', -cut, `Parte de ${investor.name} (${Math.round(investor.share * 100)}% dos ganhos)`),
+    investor: { ...investor, received: investor.received + cut },
+  };
+}
+
 /** Lançamentos de uma etapa: parcelas anuais divididas pelo número de etapas, mais bônus e contas. */
-export function settleRound(career: CareerState, round: number, entry: RaceEntryResult | null): Finance {
+export function settleRound(career: CareerState, round: number, entry: RaceEntryResult | null): { finance: Finance; investor: Investor | null } {
   const category = getCategory(career.categoryId);
   const { contract, season } = career;
   const share = 1 / career.calendar.length;
   let f = career.finance;
+  // Ganhos da etapa sobre os quais o investidor tem parte: salário, bônus e o que sobra dos
+  // patrocínios comerciais depois de pagar a parcela da vaga (o apoio da família não entra).
+  let earnings = 0;
+  let sponsorship = 0;
+  const earn = (key: LedgerKey, amount: number, label: string) => {
+    f = post(f, season, round, key, amount, label);
+    earnings += Math.round(amount);
+  };
 
-  f = post(f, season, round, 'salary', contract.salary * share, 'Salário');
+  earn('salary', contract.salary * share, 'Salário');
   for (const sponsor of career.sponsors) {
     f = post(f, season, round, 'sponsors', sponsor.perSeason * share, sponsor.name);
-    if (entry && entry.status === 'finished' && entry.position <= 3)
-      f = post(f, season, round, 'bonus', sponsor.podiumBonus, `Bônus de pódio: ${sponsor.name}`);
+    if (sponsor.tier > 0) sponsorship += sponsor.perSeason * share;
+    if (entry && entry.status === 'finished' && entry.position <= 3) earn('bonus', sponsor.podiumBonus, `Bônus de pódio: ${sponsor.name}`);
   }
   if (entry && entry.status === 'finished') {
-    if (entry.position === 1) f = post(f, season, round, 'bonus', contract.bonuses.win, 'Bônus por vitória');
-    else if (entry.position <= 3) f = post(f, season, round, 'bonus', contract.bonuses.podium, 'Bônus por pódio');
+    if (entry.position === 1) earn('bonus', contract.bonuses.win, 'Bônus por vitória');
+    else if (entry.position <= 3) earn('bonus', contract.bonuses.podium, 'Bônus por pódio');
   }
-  if (entry) f = post(f, season, round, 'bonus', contract.bonuses.point * entry.points, 'Bônus por pontos');
+  if (entry) earn('bonus', contract.bonuses.point * entry.points, 'Bônus por pontos');
+  const netSeat = contract.seatCost * share * (1 - (career.academy?.supportShare ?? 0));
+  const paid = payInvestor(f, career.investor, season, round, earnings + investorSponsorBase(sponsorship, netSeat));
+  f = paid.finance;
+
+  // Trabalho paralelo: o dinheiro entra a cada etapa (o tempo de treino que ele tira está em `economyTrainingFactor`).
+  const job = career.sideJob === 'none' ? null : SIDE_JOBS[career.sideJob];
+  if (job) f = post(f, season, round, 'job', job.perRound, career.sideJob === 'instructor' ? 'Aulas como instrutor de kart' : 'Trabalho na oficina');
 
   const seat = contract.seatCost * share;
   f = post(f, season, round, 'seat', -seat, 'Parcela da vaga');
@@ -125,8 +179,14 @@ export function settleRound(career: CareerState, round: number, entry: RaceEntry
   // Quem usa o próprio galpão como oficina treina gastando 20% menos.
   const ownWorkshop = f.properties.some((p) => p.catalogId === 'galpao' && p.use === 'personal') ? 0.8 : 1;
   f = post(f, season, round, 'training', -category.economy.trainingCost * ECONOMY.TRAINING_COST[career.trainingIntensity] * ownWorkshop, 'Programa de treino');
-  if (entry && entry.damage > 0) f = post(f, season, round, 'damage', -category.economy.damageBill * Math.min(1, entry.damage), 'Conta de danos');
-  return f;
+  // Correr custa mais que a vaga: a viagem de cada etapa, o equipamento e o aluguel de quem mora num polo fora do país.
+  const running = seasonRunningCosts(category.id, career.hub.id);
+  f = post(f, season, round, 'travel', -RUNNING_COSTS.TRAVEL_PER_ROUND[category.id], 'Viagem da etapa');
+  f = post(f, season, round, 'equipment', -running.equipment * share, 'Equipamento');
+  f = post(f, season, round, 'housing', -running.housing * share, `Aluguel: ${getHub(career.hub.id).name}`);
+  if (entry && entry.damage > 0)
+    f = post(f, season, round, 'damage', -category.economy.damageBill * Math.min(1, entry.damage) * (1 - (job?.damageDiscount ?? 0)), 'Conta de danos');
+  return { finance: f, investor: paid.investor };
 }
 
 export function incomeTax(taxable: number): number {
@@ -151,10 +211,14 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
   const rounds = career.calendar.length;
   let f = career.finance;
   const t = f.seasonTotals;
-  // Renda do trabalho (líquida do custo da vaga) mais a renda do patrimônio: dividendos, aluguéis e lucro das empresas.
+  // O que o investidor levou na temporada (o extrato soma no mesmo lançamento o aporte, que não é renda).
+  const investorPaid = f.transactions.filter((x) => x.season === season && x.key === 'investor' && x.amount < 0).reduce((sum, x) => sum - x.amount, 0);
+  // Renda do trabalho (líquida do custo da vaga, das viagens, do equipamento, do aluguel do polo e da
+  // parte do investidor) mais a renda do patrimônio: dividendos, aluguéis e lucro das empresas. O
+  // aporte do investidor e a vaquinha não são renda: não pagam imposto.
   const taxable = Math.max(
     0,
-    (t.salary ?? 0) + (t.bonus ?? 0) + (t.sponsors ?? 0) + (t.academy ?? 0) + (t.seat ?? 0) + (t.dividends ?? 0) + (t.rent ?? 0) + (t.business ?? 0),
+    (t.salary ?? 0) + (t.bonus ?? 0) + (t.sponsors ?? 0) + (t.academy ?? 0) + (t.seat ?? 0) + (t.dividends ?? 0) + (t.rent ?? 0) + (t.business ?? 0) + (t.job ?? 0) + (t.travel ?? 0) + (t.equipment ?? 0) + (t.housing ?? 0) - investorPaid,
   );
   // Residência fiscal em Mônaco (cobertura de uso próprio): 25% a menos de imposto de renda.
   const residence = f.properties.some((p) => p.catalogId === 'cobertura-monaco' && p.use === 'personal') ? 0.75 : 1;

@@ -31,6 +31,7 @@ import type {
 import { ASSET_RULES } from '@/data/assets';
 import { getCategory } from '@/data/categories';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
+import { CATEGORY_HUB } from '@/data/hubs';
 import { CHILD_FIRST_NAMES, FAMILY, getTrait } from '@/data/family';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
 import { buildCalendar } from '../career/createCareer';
@@ -523,6 +524,12 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     finance: { ...state.finance, seasonTotals: {} },
     sponsors: [],
     academy: category.tier < 7 ? academyFor(heirRacing, nextSeason) : null,
+    // O contrato com o investidor, a vaquinha e o trabalho paralelo eram do piloto que saiu; o herdeiro mora no polo do campeonato dele.
+    hub: { id: CATEGORY_HUB[category.id], arrivedSeason: 0 },
+    investor: null,
+    crowdfund: null,
+    sideJob: 'none',
+    noDoorSeasons: 0,
     license: { history: heirRacing.license, penaltyPoints: 0, banRounds: 0 },
     relations: { teamTrust: 50, teammate: 50, rivalries: {} },
     marketInterest: {},

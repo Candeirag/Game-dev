@@ -8,6 +8,7 @@ import {
   type Driver,
   type DriverAttributes,
 } from '@/domain/schemas';
+import { CATEGORY_HUB } from '@/data/hubs';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { AI_DRIVERS, NEUTRAL_CONDITION, ROOKIE_SEAT_DRIVER } from '@/data/drivers';
 import {
@@ -262,6 +263,11 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     succession: null,
     tutorial: { done: [], dismissed: false },
     birth,
+    hub: { id: CATEGORY_HUB[category.id], arrivedSeason: 1 },
+    investor: null,
+    crowdfund: null,
+    sideJob: 'none',
+    noDoorSeasons: 0,
     inbox: [
       {
         id: 's1-welcome',

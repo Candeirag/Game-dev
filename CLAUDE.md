@@ -106,7 +106,7 @@ os mesmos argumentos e o mesmo código, sai sempre igual.
 - **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
   estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
   (`tests/names.test.ts` trava a lista).
-- **Saves.** Os de `tests/fixtures/` (versões 1 a 6) têm de continuar abrindo e jogáveis. Os
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 7) têm de continuar abrindo e jogáveis. Os
   das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma

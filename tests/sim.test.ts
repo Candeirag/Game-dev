@@ -185,6 +185,14 @@ describe('agregados de carreiras montadas à mão', () => {
     noSeatCause: null,
     offersMade: 2,
     offers: 1,
+    doorOpen: true,
+    lastResort: false,
+    door: number === 1 ? 'initial' : 'own',
+    yearResult: 0,
+    sponsorsBroken: 0,
+    investorShare: 0,
+    sideJob: false,
+    academy: false,
     ...extra,
   });
   const profile = { background: 'natural', age: 16, teamId: 'horizonte' } as const;
@@ -299,16 +307,88 @@ describe('agregados de carreiras montadas à mão', () => {
   });
 });
 
-describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
-  // A semente 7 chega ao fim da sétima temporada com proposta de equipe e sem caixa para bancá-la.
-  const sample = simulateCareer(7, { seasons: 8, talent: 0 });
+describe('portas nos agregados (Fase 3)', () => {
+  const sample = (seed: number, seasons: SeasonSample[]): CareerSample => ({
+    seed,
+    profile: { background: 'natural', age: 16, teamId: 'horizonte' },
+    birth: { score: 50, region: 'capital', traitBalance: 1 },
+    seasons,
+    ended: 'completed',
+  });
+  const base = (number: number, extra: Partial<SeasonSample>): SeasonSample => ({
+    season: number,
+    categoryId: 'kart-regional',
+    tier: 1,
+    age: 15 + number,
+    position: 10,
+    wins: 0,
+    podiums: 0,
+    title: false,
+    cash: 0,
+    netWorth: 0,
+    reputation: 5,
+    overall: 60,
+    roundsMissed: 0,
+    seat: 'renewal',
+    noSeatCause: null,
+    offersMade: 1,
+    offers: 1,
+    doorOpen: true,
+    lastResort: false,
+    door: 'own',
+    yearResult: 0,
+    sponsorsBroken: 0,
+    investorShare: 0,
+    sideJob: false,
+    academy: false,
+    ...extra,
+  });
+  // Duas temporadas sem porta, o último recurso na terceira (não conta como "sem porta") e mais uma sem porta.
+  const stuck = sample(1, [
+    base(1, { door: 'initial', doorOpen: false, position: 18, yearResult: -9_000 }),
+    base(2, { door: 'none', doorOpen: false, position: 19, yearResult: -7_000, sponsorsBroken: 2 }),
+    base(3, { door: 'none', doorOpen: true, lastResort: true, position: 17, yearResult: -5_000 }),
+    base(4, { door: 'investor', doorOpen: false, position: 4, yearResult: 3_000, investorShare: 0.25, sideJob: true }),
+  ]);
+  const climber = sample(2, [
+    base(1, { door: 'initial', position: 2, yearResult: 4_000 }),
+    base(2, { door: 'own', categoryId: 'kart-national', tier: 2, position: 3, yearResult: 6_000 }),
+    base(3, { door: 'academy', categoryId: 'f4', tier: 4, position: 8, academy: true }),
+  ]);
+  const doors = summarize([stuck, climber], { seeds: 2, seasons: 4, firstSeed: 1, talent: 0 }).doors;
 
-  it('a temporada seguinte é disputada pela rede de segurança, com o motivo "dinheiro"', () => {
-    expect(sample.seasons[7]).toMatchObject({ season: 8, seat: 'fallback', noSeatCause: 'money' });
-    // Havia proposta de equipe, e nenhuma que ele pudesse aceitar.
-    expect(sample.seasons[6]?.offersMade).toBeGreaterThan(0);
-    expect(sample.seasons[6]?.offers).toBe(0);
-    expect(summarize([sample], { seeds: 1, seasons: 8, firstSeed: 7, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
+  it('conta as temporadas sem porta e a maior sequência, sem contar o ano do último recurso', () => {
+    expect(doors).toMatchObject({ noDoorSeasons: 3, noDoorCareers: 1, longestNoDoorStreak: 2, lastResortSeasons: 1 });
+  });
+
+  it('conta as vagas por porta, o investidor, a academia, o trabalho e os rompimentos', () => {
+    expect(doors.used).toEqual({ own: 1, academy: 1, crowdfund: 0, investor: 1, none: 2 });
+    expect(doors).toMatchObject({ investorCareers: 1, investorAverageShare: 0.25, investorMaxShare: 0.25, academyCareers: 1, sideJobSeasons: 1, sponsorsBrokenPerCareer: 1 });
+  });
+
+  it('mede o resultado do ano pela posição final no kart e a entrada na Fórmula Júnior por porta', () => {
+    expect(doors.yearResultByPosition.map((b) => [b.seasons, b.median])).toEqual([
+      [3, 4_000],
+      [0, 0],
+      [0, 0],
+      [3, -7_000],
+    ]);
+    expect(doors.juniorEntry[0]).toMatchObject({ label: 'Todas as carreiras', stats: { careers: 1, share: 0.5, averageSeason: 3, own: 0, academy: 1, investor: 0 } });
+  });
+});
+
+describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
+  // A semente 11 chega ao fim da segunda temporada em 20º, com proposta de equipe e sem caixa para
+  // bancá-la, e nenhuma porta se abre: nem academia, nem vaquinha, nem investidor.
+  const sample = simulateCareer(11, { seasons: 3, talent: 0 });
+
+  it('a temporada seguinte é disputada pela vaga de aluguel, com o motivo "dinheiro"', () => {
+    expect(sample.seasons[2]).toMatchObject({ season: 3, seat: 'fallback', noSeatCause: 'money', door: 'none' });
+    // Havia proposta de equipe, e nenhuma que ele pudesse aceitar por porta nenhuma.
+    expect(sample.seasons[1]?.offersMade).toBeGreaterThan(0);
+    expect(sample.seasons[1]?.offers).toBe(0);
+    expect(sample.seasons[1]?.doorOpen).toBe(false);
+    expect(summarize([sample], { seeds: 1, seasons: 3, firstSeed: 11, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
   });
 });
 
@@ -324,6 +404,7 @@ describe('relatório', () => {
       '5. TÍTULOS POR CARREIRA',
       '6. TEMPORADAS PARADAS, SEM VAGA',
       '7. NASCIMENTO',
+      '8. ECONOMIA E PORTAS',
     ]) {
       expect(report).toContain(title);
     }

@@ -4,9 +4,15 @@
  * Um patrocinador paga um valor anual (em parcelas por etapa) e espera uma
  * posição no campeonato. A satisfação sobe e desce com os resultados; quando
  * cai demais, ele pressiona (evento) e, no limite, vai embora.
+ *
+ * Desde a Fase 3 da grande atualização eles vêm em escada (`SPONSOR_LADDER`): o comércio do
+ * bairro no kart regional, as empresas regionais no Brasileiro e na Fórmula Júnior, e as marcas
+ * grandes só para quem tem título e visibilidade. E a meta é para valer: o patrocinador que não
+ * vê o piloto na posição combinada ao fim da temporada rompe o contrato (`renewSponsors`).
  */
+import { ACADEMY_DOOR, SPONSOR_LADDER } from '@/config/balance';
 import type { CareerState, RaceEntryResult, Sponsor } from '@/domain/schemas';
-import { getCategory, type CategoryDefinition } from '@/data/categories';
+import { categoryByTier, getCategory, type CategoryDefinition } from '@/data/categories';
 import { createRng, hashSeed } from '../rng';
 import { sponsorValueFactor } from '../birth/effects';
 import { ECONOMY } from './economy';
@@ -53,16 +59,44 @@ export function familySupport(perSeason: number = ECONOMY.FAMILY_SUPPORT, season
 
 export const commercialSponsors = (sponsors: readonly Sponsor[]) => sponsors.filter((s) => s.tier > 0);
 
+/** Quantos patrocinadores pessoais o piloto pode ter: a academia cobra exclusividade. */
+export function maxSponsors(career: CareerState): number {
+  return career.academy ? ACADEMY_DOOR.MAX_PERSONAL_SPONSORS : SPONSOR_RULES.MAX_SPONSORS;
+}
+
+/** Títulos de piloto na carreira do personagem atual (temporadas arquivadas). */
+export function careerTitles(career: CareerState): number {
+  const since = career.dynasty.lineage[career.dynasty.lineage.length - 1]?.fromSeason ?? 1;
+  return career.history.filter((h) => h.mode === 'driver' && h.season >= since && h.playerPosition === 1).length;
+}
+
+/**
+ * Valor de referência de um patrocínio de certo porte num campeonato. Cada porte acompanha o
+ * preço dos campeonatos só até um degrau (`VALUE_CEILING_TIER`): a padaria do bairro não paga
+ * valor de fórmula porque o piloto subiu.
+ */
+export function sponsorBaseFor(tier: number, category: CategoryDefinition): number {
+  const ceiling = SPONSOR_LADDER.VALUE_CEILING_TIER[tier] ?? 7;
+  if (category.tier <= ceiling) return category.economy.sponsorBase;
+  return (categoryByTier(ceiling) ?? category).economy.sponsorBase;
+}
+
 /**
  * Porte do patrocinador que um piloto atrai. Vem dos resultados: entre os
  * três primeiros do campeonato, grande; entre os oito, médio; abaixo disso,
  * pequeno. Uma reputação bem acima do mínimo da categoria (15 pontos ou mais)
  * sobe um porte, porque um nome conhecido vende mesmo em fase ruim.
+ *
+ * A escada limita o resultado: cada campeonato tem um porte máximo, e a marca grande (porte 3)
+ * só aparece para quem já foi campeão e tem a reputação mínima (`titles` é o número de títulos
+ * na carreira).
  */
-export function sponsorTierFor(reputation: number, category: CategoryDefinition, championshipPosition: number): 1 | 2 | 3 {
+export function sponsorTierFor(reputation: number, category: CategoryDefinition, championshipPosition: number, titles = 0): 1 | 2 | 3 {
   const byResult = championshipPosition <= 3 ? 3 : championshipPosition <= 8 ? 2 : 1;
   const famous = reputation - category.requirements.minReputation >= 15 ? 1 : 0;
-  return Math.min(3, byResult + famous) as 1 | 2 | 3;
+  const bigBrand = titles > 0 && reputation >= SPONSOR_LADDER.BIG_BRAND_MIN_REPUTATION;
+  const ceiling = Math.min(SPONSOR_LADDER.MAX_TIER[category.id], bigBrand ? 3 : 2);
+  return Math.max(1, Math.min(ceiling, byResult + famous)) as 1 | 2 | 3;
 }
 
 /**
@@ -76,7 +110,7 @@ export function buildSponsor(career: CareerState, tier: 1 | 2 | 3, seed: number)
   const pool = (NAMES[tier] ?? []).filter((n) => !taken.has(n));
   const name = pool[Math.floor(rng.next() * pool.length)] ?? `Patrocinador ${career.season}-${tier}`;
   const perSeason =
-    Math.round((category.economy.sponsorBase * (SPONSOR_RULES.TIER_SHARE[tier] ?? 0.2) * (0.9 + rng.next() * 0.2) * sponsorValueFactor(career)) / 100) * 100;
+    Math.round((sponsorBaseFor(tier, category) * (SPONSOR_RULES.TIER_SHARE[tier] ?? 0.2) * (0.9 + rng.next() * 0.2) * sponsorValueFactor(career)) / 100) * 100;
   return {
     id: `sponsor-${hashSeed(seed, name).toString(16)}`,
     name,
@@ -109,12 +143,20 @@ export function satisfactionAfterRound(sponsor: Sponsor, championshipPosition: n
 /** Valor anual de um patrocinador em outra categoria, mantendo o seu porte e a sua generosidade relativa. */
 function rebase(sponsor: Sponsor, from: CategoryDefinition, to: CategoryDefinition): Sponsor {
   if (sponsor.tier === 0 || from.id === to.id) return sponsor;
-  const perSeason = Math.round((sponsor.perSeason * (to.economy.sponsorBase / from.economy.sponsorBase)) / 100) * 100;
-  return { ...sponsor, perSeason, podiumBonus: Math.round(perSeason * SPONSOR_RULES.PODIUM_BONUS_SHARE) };
+  const perSeason = Math.round((sponsor.perSeason * (sponsorBaseFor(sponsor.tier, to) / sponsorBaseFor(sponsor.tier, from))) / 100) * 100;
+  // Estreante no degrau de cima: o patrocinador que sobe junto afrouxa a meta do primeiro ano.
+  const targetPosition =
+    to.tier > from.tier
+      ? Math.max(sponsor.targetPosition, Math.min(SPONSOR_LADDER.MAX_TARGET, sponsor.targetPosition + SPONSOR_LADDER.PROMOTION_TARGET_RELIEF))
+      : sponsor.targetPosition;
+  return { ...sponsor, perSeason, podiumBonus: Math.round(perSeason * SPONSOR_RULES.PODIUM_BONUS_SHARE), targetPosition };
 }
 
 /**
  * Patrocinadores na virada de temporada.
+ * - Meta não cumprida, contrato rompido: quem esperava o piloto até certa posição e o viu
+ *   terminar abaixo dela vai embora, mesmo com contrato por vencer (`finalPosition` é a posição
+ *   final no campeonato; sem ela, ninguém rompe).
  * - Contratos que vencem são renovados por mais um ano se o patrocinador
  *   estiver satisfeito; os demais vão embora.
  * - Quando o piloto muda de categoria, os patrocinadores que ficam ajustam o
@@ -126,20 +168,48 @@ export function renewSponsors(
   season: number,
   current: CategoryDefinition,
   next: CategoryDefinition,
-): { kept: Sponsor[]; left: Sponsor[]; renewed: Sponsor[] } {
+  finalPosition: number | null = null,
+): { kept: Sponsor[]; left: Sponsor[]; renewed: Sponsor[]; broken: Sponsor[] } {
   const kept: Sponsor[] = [];
   const left: Sponsor[] = [];
   const renewed: Sponsor[] = [];
+  const broken: Sponsor[] = [];
   for (const s of sponsors) {
-    if (s.endSeason > season) {
+    if (missedTarget(s, finalPosition)) {
+      broken.push(s);
+    } else if (s.endSeason > season) {
       kept.push(rebase(s, current, next));
     } else if (s.tier > 0 && s.satisfaction >= SPONSOR_RULES.RENEW_THRESHOLD) {
-      const renewedSponsor = { ...rebase(s, current, next), endSeason: season + 1 };
+      // Contrato novo, meta do porte de novo (o desconto de estreante só volta se o piloto subir outra vez).
+      const fresh = { ...s, targetPosition: SPONSOR_RULES.TIER_TARGET[s.tier] ?? s.targetPosition };
+      const renewedSponsor = { ...rebase(fresh, current, next), endSeason: season + 1 };
       kept.push(renewedSponsor);
       renewed.push(renewedSponsor);
     } else {
       left.push(s);
     }
   }
-  return { kept, left, renewed };
+  return { kept, left, renewed, broken };
+}
+
+/**
+ * Patrocínio que o resultado do piloto deve atrair no campeonato de cima, além dos patrocinadores
+ * que ele já leva (`kept`). `equivalentPosition` é a posição final traduzida para o degrau novo.
+ * Vale um patrocinador do porte que ele atrairia lá, se o contrato ainda fizesse sentido (posição
+ * dentro da meta do porte) e houver cota livre ou um patrocinador menor para trocar.
+ */
+export function expectedSponsorship(career: CareerState, kept: readonly Sponsor[], category: CategoryDefinition, equivalentPosition: number, reputation: number): number {
+  const tier = sponsorTierFor(reputation, category, equivalentPosition, careerTitles(career));
+  if (equivalentPosition > (SPONSOR_RULES.TIER_TARGET[tier] ?? 0)) return 0;
+  const commercial = [...commercialSponsors(kept)].sort((a, b) => a.perSeason - b.perSeason);
+  const weakest = commercial[0];
+  const full = commercial.length >= maxSponsors(career);
+  if (full && (!weakest || weakest.tier >= tier)) return 0;
+  const value = sponsorBaseFor(tier, category) * (SPONSOR_RULES.TIER_SHARE[tier] ?? 0) * sponsorValueFactor(career);
+  return Math.max(0, Math.round((value - (full && weakest ? weakest.perSeason : 0)) * SPONSOR_LADDER.EXPECTED_ON_PROMOTION));
+}
+
+/** O patrocinador comercial viu o piloto terminar o campeonato abaixo da posição combinada? */
+export function missedTarget(sponsor: Sponsor, finalPosition: number | null): boolean {
+  return sponsor.tier > 0 && finalPosition !== null && finalPosition > sponsor.targetPosition;
 }
