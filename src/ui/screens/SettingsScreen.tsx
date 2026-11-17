@@ -5,7 +5,7 @@
 import { ArrowLeft, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { hapticsAvailable } from '@/platform/haptics';
-import { Button, Card, Chip, Delta, PageHeader, Segmented, Slider, Switch, TyreBadge } from '@/ui/kit';
+import { Button, Card, Chip, Delta, PageHeader, Segmented, Slider, Switch, TyreLegend } from '@/ui/kit';
 import { playSound } from '../feedback/audio';
 import { feedback } from '../feedback/feedback';
 import { TEXT_SIZES, TEXT_SIZE_LABELS, systemPrefersReducedMotion, updateSettings } from '../settings/settings';
@@ -37,13 +37,7 @@ export function SettingsPanel() {
             <Chip tone="attention">Abaixo da meta</Chip>
             <Delta value={2} signless suffix=" posições" className="text-xs" />
             <Delta value={-1} signless suffix=" posição" className="text-xs" />
-            <span className="flex items-center gap-1">
-              <TyreBadge compound="soft" />
-              <TyreBadge compound="medium" />
-              <TyreBadge compound="hard" />
-              <TyreBadge compound="intermediate" />
-              <TyreBadge compound="wet" />
-            </span>
+            <TyreLegend compounds={['soft', 'medium', 'hard', 'intermediate', 'wet']} />
           </div>
         </div>
       </Card>

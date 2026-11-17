@@ -6,7 +6,7 @@
 import { TYRES, conditionFor, fullName, type RaceSimState } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { feedback } from '../feedback/feedback';
-import { Button, Card, cx, TyreBadge } from '@/ui/kit';
+import { Button, Card, cx, TyreBadge, tyreName } from '@/ui/kit';
 import { useCareerView } from '../hooks/useCareer';
 
 export function TeamOrderDialog({ race }: { race: RaceSimState }) {
@@ -61,7 +61,7 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
       <p className="text-sm text-ink-300">
         {nextStop ? (
           <>
-            Próxima parada planejada: <b className="text-ink-100">volta {nextStop.lap}</b>, pneu {TYRES[nextStop.compound].label.toLowerCase()}.
+            Próxima parada planejada: <b className="text-ink-100">volta {nextStop.lap}</b>, pneu {tyreName(nextStop.compound)}.
           </>
         ) : (
           'Nenhuma parada planejada.'
@@ -97,7 +97,7 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
       </div>
       {pitRequest && (
         <p className="mt-2 text-xs font-semibold text-ink-100">
-          {redFlagRestart ? 'Troca confirmada para a relargada' : `Parada confirmada para a volta ${nextLap}`}: pneu {TYRES[pitRequest].label.toLowerCase()}
+          {redFlagRestart ? 'Troca confirmada para a relargada' : `Parada confirmada para a volta ${nextLap}`}: pneu {tyreName(pitRequest)}
           {me.damage > 0.05 && !redFlagRestart ? ', com reparo do carro' : ''}.
         </p>
       )}

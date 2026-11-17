@@ -8,7 +8,7 @@ import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/doma
 import { conditionFor, finalizeRace, fullName, gapToLeader, isRaceFinished, type RaceSimState } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { RaceResultTable } from './RaceResultTable';
-import { Card, cx, Delta, TeamSwatch, th, TyreBadge, YouMark } from '@/ui/kit';
+import { Card, cx, Delta, TeamSwatch, th, TyreBadge, TyreLegend, YouMark } from '@/ui/kit';
 import { formatGap, formatInterval, formatLap } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { ScreenAction } from '../layout/ScreenAction';
@@ -304,6 +304,8 @@ export function RaceView({ onBroadcastView }: { onBroadcastView?: () => void }) 
               })}
             </tbody>
           </table>
+          {/* As letras dos selos, com o nome de cada composto. */}
+          {rules.pitStops && <TyreLegend compounds={[...rules.dryCompounds, ...rules.wetCompounds]} className="border-t border-ink-700 py-2" />}
         </div>
 
         <aside className="flex min-h-0 flex-col bg-ink-900 shadow-frame">

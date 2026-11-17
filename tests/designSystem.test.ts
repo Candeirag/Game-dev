@@ -14,7 +14,7 @@ import { HAPTIC_PATTERNS } from '@/platform/haptics';
 import { FEEDBACK } from '@/ui/feedback/feedback';
 import { SOUNDS, SOUND_IDS, soundDuration, volumeToGain } from '@/ui/feedback/sounds';
 import { formatGap, formatInterval, formatLap, formatMoneyAs } from '@/ui/format';
-import { TYRE_LETTERS } from '@/ui/kit/TyreBadge';
+import { TYRE_LETTERS, tyreName } from '@/ui/kit/TyreBadge';
 import { DEFAULT_SETTINGS, MAX_TEXT_SCALE, SYSTEM_SCALE_RANGE, TEXT_SIZES, TEXT_SIZE_SCALE, parseSettings, textScale } from '@/ui/settings/settings';
 
 /** Usos do passo de 12 px (p-3, gap-3…) que sobraram nas telas antigas. Só diminui. */
@@ -132,21 +132,21 @@ describe('tokens', () => {
 });
 
 describe('fontes', () => {
-  it('Barlow Condensed e Inter estão embutidas, com as licenças OFL ao lado; a Saira só entra pela flag de desenvolvimento', () => {
+  it('só Barlow Condensed e Inter, embutidas, com as licenças OFL ao lado', () => {
     const fonts = readdirSync(join(ROOT, 'src', 'assets', 'fonts'));
-    for (const license of ['OFL-BarlowCondensed.txt', 'OFL-Inter.txt', 'OFL-SairaCondensed.txt']) {
+    for (const license of ['OFL-BarlowCondensed.txt', 'OFL-Inter.txt']) {
       expect(fonts).toContain(license);
       expect(readFileSync(join(ROOT, 'src', 'assets', 'fonts', license), 'utf8')).toContain('SIL Open Font License');
     }
+    // Nenhum arquivo de fonte além das duas famílias do jogo (a Saira do comparativo saiu).
+    expect(fonts.filter((name) => /\.(woff2?|ttf|otf)$/.test(name) && !/^(barlow-condensed|inter)-/.test(name))).toEqual([]);
+    expect(fonts.filter((name) => name.startsWith('OFL-')).sort()).toEqual(['OFL-BarlowCondensed.txt', 'OFL-Inter.txt']);
     const css = readFileSync(join(UI, 'fonts.css'), 'utf8');
     const families = [...new Set([...css.matchAll(/font-family:\s*"([^"]+)"/g)].map((m) => m[1]))].sort();
     // Só as duas famílias do jogo; nenhuma terceira fonte decorativa.
     expect(families).toEqual(['Barlow Condensed', 'Inter']);
-    // A Saira fica num arquivo à parte, que só o servidor de desenvolvimento carrega, com a flag ligada.
-    expect(readFileSync(join(ROOT, 'src', 'main.tsx'), 'utf8')).toMatch(
-      /import\.meta\.env\.DEV && isFeatureEnabled\('sairaTitles'\)\) await import\('\.\/ui\/saira\.css'\)/,
-    );
-    expect(uiSources.filter((file) => /saira\.css/.test(readFileSync(file, 'utf8')))).toEqual([]);
+    expect(tokens).toMatch(/--font-display:\s*"Barlow Condensed"/);
+    expect(tokens).toMatch(/--font-sans:\s*"Inter"/);
   });
 
   it('a fonte condensada só aparece em texto de 16 px ou mais; texto pequeno é sempre em Inter', () => {
@@ -203,7 +203,10 @@ describe('estados e ícones', () => {
     expect([...iconLibraries]).toEqual(['lucide-react']);
   });
 
-  it('cada composto de pneu tem uma letra só dele', () => {
+  it('cada composto de pneu tem uma letra só dele, a das transmissões, e o nome em português junto', () => {
+    expect(TYRE_LETTERS).toEqual({ soft: 'S', medium: 'M', hard: 'H', intermediate: 'I', wet: 'W', kart: 'K' });
+    expect(tyreName('soft')).toBe('macio (S)');
+    expect(tyreName('wet', { capitalized: true })).toBe('Chuva (W)');
     const letters = TYRE_COMPOUNDS.map((compound) => TYRE_LETTERS[compound]);
     for (const letter of letters) expect(letter).toMatch(/^[A-Z]$/);
     expect(new Set(letters).size).toBe(TYRE_COMPOUNDS.length);
