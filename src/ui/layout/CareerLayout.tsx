@@ -121,7 +121,6 @@ function AdvanceButton({ action, className }: { action: PrimaryAction; className
     <button
       type="button"
       onClick={go}
-      data-haptic="medium"
       className={cx(
         'chamfer-br flex min-h-11 shrink-0 items-center gap-1.5 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide transition-colors [--chamfer:10px]',
         action.tone === 'attention' ? 'bg-gold-400 text-ink-950 hover:brightness-110' : 'bg-apex-500 text-white hover:bg-apex-400',
@@ -273,9 +272,9 @@ function CareerShell() {
       >
         <LogOut size={16} aria-hidden /> Menu principal
       </button>
-      {/* Só existe no aplicativo: no navegador o aparelho não vibra. */}
+      {/* Ajustes do aplicativo. A vibração só existe nele: no navegador o aparelho não vibra. */}
       {hapticsAvailable() && (
-        <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 px-1 text-sm text-ink-200">
+        <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-3 border-t border-ink-700 px-1 pt-2 text-sm text-ink-200">
           <input
             type="checkbox"
             checked={haptics}
@@ -285,7 +284,10 @@ function CareerShell() {
             }}
             className="h-5 w-5 shrink-0 accent-apex-500"
           />
-          Vibração ao toque
+          <span>
+            <span className="block text-[11px] font-medium text-ink-400">Ajustes</span>
+            Vibração
+          </span>
         </label>
       )}
     </>

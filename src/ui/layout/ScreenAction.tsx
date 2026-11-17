@@ -34,8 +34,6 @@ export function ScreenAction({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      // No aplicativo, o passo que avança a carreira vibra um pouco mais forte que os outros toques.
-      data-haptic="medium"
       className={cx(
         'chamfer-br flex min-h-11 shrink-0 items-center justify-center gap-1.5 pl-4 pr-3 font-display text-lg font-semibold uppercase leading-none tracking-wide transition-colors [--chamfer:10px] disabled:cursor-not-allowed disabled:bg-ink-700 disabled:text-ink-400',
         tone === 'attention' ? 'bg-gold-400 text-ink-950 hover:brightness-110' : 'bg-apex-500 text-white hover:bg-apex-400',

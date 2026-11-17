@@ -1,7 +1,9 @@
 /**
  * Preparação para aplicativo: saves em arquivos do aparelho, migração do armazenamento antigo,
- * anotações com cópia no aparelho e vibração que não atrapalha fora do aplicativo.
+ * anotações com cópia no aparelho e o interruptor da vibração.
  */
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DeviceFileStorage, migrateStorage, type DeviceFiles } from '@/persistence/deviceStorage';
@@ -9,9 +11,17 @@ import { readPreference, resetPreferenceMirror, restorePreferences, writePrefere
 import { loadCareer, listSaves, saveCareer } from '@/persistence/saveService';
 import { IndexedDbStorage, MemoryStorage, probeStorage } from '@/persistence/storage';
 import { deliverTextFile } from '@/platform/exportFile';
-import { hapticsAvailable, installTapFeedback, tap } from '@/platform/haptics';
+import { hapticsAvailable, hapticsEnabled, setHapticsEnabled } from '@/platform/haptics';
 import { isNativeApp } from '@/platform/native';
 import { newCareer } from './helpers';
+
+/** Todos os arquivos de código do jogo. */
+function sourceFiles(dir = join(__dirname, '..', 'src')): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? sourceFiles(path) : /\.(ts|tsx)$/.test(name) ? [path] : [];
+  });
+}
 
 /** Sistema de arquivos em memória, com falhas programáveis para simular o aplicativo fechado no meio de uma gravação. */
 function fakeFiles() {
@@ -197,12 +207,29 @@ describe('fora do aplicativo', () => {
     expect(hapticsAvailable()).toBe(false);
   });
 
-  it('a vibração não faz nada e não lança erro', () => {
-    expect(() => tap()).not.toThrow();
-    expect(() => tap('medium')).not.toThrow();
-    // Sem aplicativo, nenhum ouvinte é instalado (e nem é preciso haver documento).
-    const uninstall = installTapFeedback();
-    expect(() => uninstall()).not.toThrow();
+  it('o interruptor da vibração fica guardado nas anotações e começa ligado', async () => {
+    resetPreferenceMirror();
+    expect(hapticsEnabled()).toBe(true);
+    const saved = new Map<string, string>();
+    await restorePreferences({
+      all: async () => ({}),
+      set: async (key, value) => void saved.set(key, value),
+      remove: async (key) => void saved.delete(key),
+    });
+    setHapticsEnabled(false);
+    expect(hapticsEnabled()).toBe(false);
+    await Promise.resolve();
+    expect(saved.get('haptics')).toBe('off');
+    setHapticsEnabled(true);
+    expect(hapticsEnabled()).toBe(true);
+    await Promise.resolve();
+    expect(saved.has('haptics')).toBe(false);
+    resetPreferenceMirror();
+  });
+
+  it('nenhuma tela chama a vibração: o plugin só pode aparecer no módulo único', () => {
+    const outside = sourceFiles().filter((file) => !file.endsWith(join('platform', 'haptics.ts')) && /@capacitor\/haptics/.test(readFileSync(file, 'utf8')));
+    expect(outside).toEqual([]);
   });
 
   it('exportar segue pelo caminho do navegador (download), não pelo compartilhamento do aparelho', async () => {

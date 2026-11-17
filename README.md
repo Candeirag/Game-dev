@@ -112,7 +112,7 @@ O jogo vira aplicativo com o [Capacitor](https://capacitorjs.com): o build de pr
 
 Para testar num aparelho: rode `npm run app:android` ou `npm run app:ios`, conecte o aparelho (ou escolha um emulador) e use o botão de executar do Android Studio ou do Xcode. Antes de publicar é preciso trocar o identificador provisório (`appId` em `capacitor.config.ts`, e nos projetos nativos), assinar o aplicativo e substituir o ícone e a abertura; a lista das imagens que faltam está em [ASSETS.md](ASSETS.md).
 
-No aplicativo o jogo ganha três coisas que o navegador não tem: saves em arquivos do aparelho (com migração automática do que uma versão anterior tiver deixado no armazenamento do navegador embutido), exportação pela folha de compartilhamento e vibração leve ao toque (pode ser desligada em "Mais").
+No aplicativo o jogo ganha coisas que o navegador não tem: saves em arquivos do aparelho (com migração automática do que uma versão anterior tiver deixado no armazenamento do navegador embutido), exportação pela folha de compartilhamento e o interruptor de vibração, em "Mais" (os padrões de vibração por evento entram na Fase 1; por enquanto o aparelho não vibra).
 
 ## Estrutura do projeto
 
