@@ -39,3 +39,14 @@ patrimônio, reputação, posição, pontos, classificações, resultado da últ
 corrida e totais do ano ficaram idênticos. O arquivo foi regravado com o
 código da `main` (`ffc04a9`) mais essa mudança do resumo, e depois disso a
 troca dos nomes das categorias e o save na versão 4 não o alteraram.
+
+## Fase 2 (17/11/2026): nascimento
+
+A regra mudou de propósito: toda carreira nova nasce com um sorteio (aptidões que mexem nos
+atributos e no potencial, traços que mudam a corrida, dinheiro da família), então a carreira A
+mudou inteira e o arquivo foi regravado. Para continuar passando do kart regional à Fórmula
+Júnior, a carreira A usa agora o quarto sorteio da mesma semente (`birthAttempt: 3`). A carreira C
+(save de Fórmula Elite da Fase 2, sem nascimento) deu os mesmos resultados, pontos, finanças e
+reputação nos 10 pontos de conferência; só o hash mudou, porque o estado ganhou o campo
+`birth: null`.
+

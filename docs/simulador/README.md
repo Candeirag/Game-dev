@@ -9,6 +9,10 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
 | `fase-0.txt` | `npm run sim -- --seeds 50 --seasons 15` (linha de base) |
 | `fase-0-talento-4.txt` | o mesmo, com `--talent 4` (um bom jogador) |
 | `fase-0-talento-8.txt` | o mesmo, com `--talent 8` (um jogador excelente) |
+| `fase-1.txt` | `npm run sim -- --seeds 50 --seasons 15` (idêntico ao da Fase 0: só interface) |
+| `fase-2.txt` | o mesmo, com o nascimento sorteado (seção 7 nova: nascença baixa, média e alta; capital e interior; dois talentos e dois defeitos) |
+| `fase-2-talento-4.txt` | o mesmo, com `--talent 4` |
+| `fase-2-talento-8.txt` | o mesmo, com `--talent 8` |
 
 ## Como usar numa fase
 
@@ -41,4 +45,7 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
   uma equipe de entrada, os 50 pilotos da linha de base continuam os mesmos.
 - Se uma carreira quebrar, o comando para com código 1 e diz a semente e a temporada.
 - Cada semente tem um piloto diferente (perfil, idade de 14 a 17 anos e equipe de estreia), sempre
-  o mesmo para a mesma semente.
+  o mesmo para a mesma semente. Desde a Fase 2, cada piloto tem também o nascimento da semente (o
+  primeiro sorteio, sem refazer); quem nasce no interior começa na equipe menor do regional.
+- A seção 7 (Fase 2) separa as carreiras pela nota de nascença, a média das cinco aptidões, em três
+  grupos do mesmo tamanho. É ali que se confere que nascer melhor rende carreira melhor.

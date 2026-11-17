@@ -106,7 +106,7 @@ os mesmos argumentos e o mesmo código, sai sempre igual.
 - **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
   estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
   (`tests/names.test.ts` trava a lista).
-- **Saves.** Os de `tests/fixtures/` (versões 1 a 5) têm de continuar abrindo e jogáveis. Os
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 6) têm de continuar abrindo e jogáveis. Os
   das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
@@ -122,6 +122,9 @@ Ao lado: `src/config` (configuração de balanceamento e feature flags) e `sim/`
 simulador, que só usam a API pública do motor).
 
 - Regra de jogo só no motor. Componentes React e a store não decidem nada do jogo.
+- Nascimento (Fase 2): sorteio, efeitos, revelação dos traços e mudança em `src/engine/birth`;
+  números em `balance.ts` (`BIRTH`, `TRAIT_EFFECTS`…), textos em `src/data/birth.ts`. Vale só para
+  o personagem que o sorteou (`activeBirth`); saves antigos têm `birth: null`.
 - Toda aleatoriedade vem de `src/engine/rng.ts`, com semente (regra 4).
 - Dinheiro só por `src/domain/money.ts` (motor: `money(career, valor)`; interface:
   `formatMoney`). Plurais por `src/domain/text.ts`. Nome de categoria em frase só por
