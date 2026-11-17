@@ -464,8 +464,8 @@ describe('migração da versão 3 para a 4', () => {
       data = migrateStep(data, data.schemaVersion as number);
       seen.push(data.schemaVersion);
     }
-    expect(seen).toEqual([1, 2, 3, 4]);
-    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3]);
+    expect(seen).toEqual([1, 2, 3, 4, 5]);
+    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4]);
     expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
   });
 });

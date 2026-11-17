@@ -51,7 +51,9 @@ function withoutSentences(value: unknown): unknown {
 
 export function checkpoint(label: string, career: CareerState): Checkpoint {
   // O número da versão do save fica fora do hash: mudar o formato do arquivo não é mudar o jogo.
-  const { schemaVersion: _schemaVersion, ...state } = career;
+  // O retrato das temporadas (`seasonTrend`, save v5) também: é um registro para os gráficos da
+  // interface, que nenhuma regra lê; quem o confere é tests/trend.test.ts.
+  const { schemaVersion: _schemaVersion, seasonTrend: _seasonTrend, ...state } = career;
   const player = getPlayer(career);
   const me = driverStandings(career).find((s) => s.driverId === player.id);
   const last = career.rounds[career.rounds.length - 1];

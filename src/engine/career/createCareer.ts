@@ -181,6 +181,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     eventLog: [],
     offseason: null,
     history: [],
+    seasonTrend: [],
     family: emptyFamily(),
     dynasty: {
       generation: 1,

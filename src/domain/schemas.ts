@@ -1088,8 +1088,28 @@ export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
  * Versão do formato do save. Sobe a cada mudança no que é gravado, sempre junto com uma migração
  * em src/persistence/migrations.ts e um save novo em tests/fixtures (o passo a passo está lá).
  * Versão 4 (Fase 0): nomes próprios das categorias e das equipes nos textos gravados.
+ * Versão 5 (Fase 1): retrato de cada temporada fechada (`seasonTrend`), para os gráficos pequenos
+ * de evolução dos atributos e do caixa. É só registro: nenhuma regra do jogo o lê.
  */
-export const CAREER_SCHEMA_VERSION = 4;
+export const CAREER_SCHEMA_VERSION = 5;
+
+/**
+ * Retrato do fim de uma temporada, para os gráficos de tendência da interface. Guarda o que os
+ * outros registros não guardam: os atributos do piloto e o caixa naquele momento.
+ */
+export const SeasonTrendPointSchema = z.object({
+  season: z.number().int().min(1),
+  year: z.number().int(),
+  /** De quem é o retrato: muda a cada geração da dinastia. */
+  driverId: z.string(),
+  /** Atributos e nota geral do piloto no fim da temporada; null nas temporadas como dirigente. */
+  attributes: DriverAttributesSchema.nullable(),
+  overall: z.number().nullable(),
+  /** Dinheiro em conta e patrimônio líquido no fechamento do ano. */
+  cash: z.number(),
+  netWorth: z.number(),
+});
+export type SeasonTrendPoint = z.infer<typeof SeasonTrendPointSchema>;
 
 export const CareerStateSchema = z.object({
   schemaVersion: z.literal(CAREER_SCHEMA_VERSION),
@@ -1138,6 +1158,8 @@ export const CareerStateSchema = z.object({
   eventLog: z.array(EventLogEntrySchema),
   offseason: OffseasonSchema.nullable(),
   history: z.array(SeasonSummarySchema),
+  /** Um retrato por temporada fechada, da mais antiga para a mais recente (só para os gráficos). */
+  seasonTrend: z.array(SeasonTrendPointSchema),
   inbox: z.array(InboxMessageSchema),
   family: FamilySchema,
   dynasty: DynastySchema,

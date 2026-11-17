@@ -56,6 +56,7 @@ import { childSummary, closeFamilyYear, emptyFamily } from './family';
 import { beginSeasonFamily } from './familyEvents';
 import { categoryRef } from '@/domain/categoryNames';
 import { money } from '../career/selectors';
+import { recordSeasonTrend } from '../career/trend';
 
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
 
@@ -531,6 +532,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     executiveLog: [],
     management: null,
     history: trimHistory([...state.history, summary], familyDriverIds(state)),
+    seasonTrend: recordSeasonTrend(state),
     family,
     dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(player.id, fullName(player), player.age, nextYear)] },
   };

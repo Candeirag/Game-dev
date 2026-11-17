@@ -78,6 +78,7 @@ import {
 import { money } from '../career/selectors';
 import { categoryRef } from '@/domain/categoryNames';
 import { amongTheFirst, counted } from '@/domain/text';
+import { recordSeasonTrend } from '../career/trend';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const round1 = (v: number) => Math.round(v * 10) / 10;
@@ -997,6 +998,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     executiveOffseason: null,
     management: null,
     history: trimHistory([...career.history, off.summary], familyDriverIds(career)),
+    seasonTrend: recordSeasonTrend(career),
   };
 
   // Gestão: continua (com a virada de ano), começa em outra equipe ou não existe.

@@ -20,8 +20,12 @@
  * categorias e de duas equipes substituem os de marcas reais em tudo o que o
  * save traz escrito. A estrutura não muda. Ver migrateV3.ts.
  *
+ * Versão 4 → 5 (Fase 1 da grande atualização): entra `seasonTrend`, o retrato
+ * de cada temporada fechada, para os gráficos de tendência da interface. Um
+ * save antigo começa com a lista vazia. Ver migrateV4.ts.
+ *
  * Como acrescentar a próxima versão (a migração é encadeada: um save da
- * versão 1 passa por 1 → 2 → 3 → 4 → … até a atual):
+ * versão 1 passa por 1 → 2 → 3 → 4 → 5 → … até a atual):
  * 1. suba CAREER_SCHEMA_VERSION em src/domain/schemas.ts e ajuste o schema;
  * 2. escreva `migrateVN` (N = a versão de origem) num arquivo próprio,
  *    `migrateVN.ts`, só com dados: recebe o save da versão N e devolve o da
@@ -50,6 +54,7 @@ import { familySupport } from '@/engine/career/sponsors';
 import { overallRating } from '@/engine/simulation/performance';
 import { generateReserve, rankTeams } from '@/engine/world/generation';
 import { migrateV3 } from './migrateV3';
+import { migrateV4 } from './migrateV4';
 
 type Loose = Record<string, unknown>;
 type Migration = (data: Loose) => Loose;
@@ -255,7 +260,7 @@ function migrateV2(data: Loose): Loose {
 }
 
 /** Chave: versão de origem. Cada função leva o save exatamente um degrau adiante. */
-export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1, 2: migrateV2, 3: migrateV3 };
+export const MIGRATIONS: Readonly<Record<number, Migration>> = { 1: migrateV1, 2: migrateV2, 3: migrateV3, 4: migrateV4 };
 
 /** Um único degrau da cadeia: da versão `from` para a `from + 1`. Serve para testar cada migração isolada. */
 export function migrateStep(data: Loose, from: number): Loose {

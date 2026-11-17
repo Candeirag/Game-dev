@@ -32,3 +32,4 @@ export { TYRES, RACE } from './simulation/constants';
 export { overallRating, driverPaceRating, carRating, conditionEffects } from './simulation/performance';
 export { rankTeams, teamStrength, buildCategoryField } from './world/generation';
 export { createRng, hashSeed, randomSeed, textHash, textHash01 } from './rng';
+export { recordSeasonTrend, seasonTrendPoint } from './career/trend';
