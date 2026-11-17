@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { feedback, feedbackOnce } from '../feedback/feedback';
-import { ArrowRight, TriangleAlert } from 'lucide-react';
+import { ArrowRight, Check as CheckIcon, MapPin, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FIRST_FORMULA_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import type { Offer, Offseason } from '@/domain/schemas';
@@ -121,13 +121,20 @@ function LadderTab() {
                   state === 'current' ? 'border-apex-400 bg-apex-500/10' : state === 'done' ? 'border-ink-400 bg-ink-850' : 'border-ink-500 bg-ink-850/50',
                 )}
               >
-                <div className="text-2xs font-semibold uppercase leading-tight tracking-wider text-ink-300">
+                {/* O estado do degrau vai num ícone além da cor (e por extenso para leitores de tela):
+                    alfinete no atual, visto nos já percorridos. Numa linha só, para a escada caber. */}
+                <div
+                  className="flex items-center gap-1 text-2xs font-semibold uppercase leading-tight tracking-wider text-ink-300"
+                  title={state === 'current' ? 'Você está aqui' : state === 'done' ? 'Já correu' : undefined}
+                >
                   Degrau {c.tier}
-                  {state === 'current' ? ' · você está aqui' : state === 'done' ? ' · já correu' : ''}
+                  {state === 'current' && <MapPin size={12} strokeWidth={2.5} aria-hidden className="shrink-0 text-apex-400" />}
+                  {state === 'done' && <CheckIcon size={12} strokeWidth={3} aria-hidden className="shrink-0 text-ink-200" />}
+                  {state !== 'ahead' && <span className="sr-only">{state === 'current' ? '(você está aqui)' : '(já correu)'}</span>}
                 </div>
                 <div
                   className={cx(
-                    'font-display text-base font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] md:max-[839px]:text-xs lg:min-h-0 lg:text-lg lg:leading-[1.1]',
+                    'font-display text-base font-bold uppercase leading-[1.1] [overflow-wrap:anywhere] md:min-h-[2.2em] lg:min-h-0 lg:text-lg lg:leading-[1.1]',
                     state === 'ahead' ? 'text-ink-300' : 'text-ink-100',
                   )}
                 >
@@ -267,7 +274,11 @@ function OffersTab({ offseason }: { offseason: Offseason }) {
         <EmptyState title="Nenhuma proposta">Nenhuma equipe fez proposta para {career.year + 1}.</EmptyState>
       ) : (
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <Card title={`Propostas para ${career.year + 1}`} padded={false} bodyClassName="md:max-h-[max(13.5rem,calc(100dvh-10rem))] md:overflow-y-auto">
+          <Card
+            title={`Propostas para ${career.year + 1}`}
+            padded={false}
+            bodyClassName="md:max-h-[max(13.5rem,calc(100dvh-10rem-var(--action-bar-h,0px)))] md:overflow-y-auto"
+          >
             <ul>
               {offers.map((offer) => (
                 <li key={offer.id} className="border-t border-ink-800 first:border-t-0">
@@ -465,7 +476,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
           )}
           {fee > 0 && <p className="text-xs text-gold-400">Aceitar esta proposta rompe o contrato vigente: multa de {formatMoney(fee)}.</p>}
           <div className="mt-auto flex flex-wrap gap-2">
-            {/* Na tela deitada, este botão vai para o canto inferior direito. */}
+            {/* Na tela deitada, este botão vai para a barra fixa do pé da tela. */}
             <ScreenAction
               disabled={!acceptable}
               onClick={() => {

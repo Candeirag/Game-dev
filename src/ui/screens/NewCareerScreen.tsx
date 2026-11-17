@@ -19,7 +19,7 @@ import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
 import { Card, ChoiceCard, cx, RatingBar, TeamSwatch } from '@/ui/kit';
 import { formatRating } from '../format';
-import { ActionDock, ScreenAction } from '../layout/ScreenAction';
+import { ActionBar, ScreenAction } from '../layout/ScreenAction';
 import { WIDE_QUERY, useMediaQuery } from '../layout/chrome';
 
 const field =
@@ -112,13 +112,13 @@ export function NewCareerScreen() {
               <HeaderStat label="Geral" value={formatRating(overallRating(attributes))} />
               <HeaderStat label="Potencial" value={preset.potential} muted />
             </div>
-            {/* Deitado, o botão de começar fica no canto inferior direito, perto do polegar. */}
+            {/* Deitado, o botão de começar vai para a barra fixa do pé da tela, perto do polegar. */}
             {wide ? (
-              <ActionDock>
+              <ActionBar info={problems[0]}>
                 <ScreenAction onClick={() => void submit()} disabled={submitting}>
                   {submitting ? 'Criando…' : 'Começar carreira'}
                 </ScreenAction>
-              </ActionDock>
+              </ActionBar>
             ) : (
               <ScreenAction onClick={() => void submit()} disabled={submitting}>
                 {submitting ? 'Criando…' : 'Começar carreira'}
@@ -133,7 +133,14 @@ export function NewCareerScreen() {
         )}
       </header>
 
-      <div className={cx('mx-auto grid max-w-6xl items-start gap-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4', safeX, wide && 'grid-cols-2')}>
+      {/* Deitado, o formulário termina acima da barra do passo principal (56 px mais a barra de gestos). */}
+      <div
+        className={cx(
+          'mx-auto grid max-w-6xl items-start gap-4 pt-4',
+          safeX,
+          wide ? 'grid-cols-2 pb-[calc(1.5rem+3.5rem+env(safe-area-inset-bottom))]' : 'pb-[max(1.5rem,env(safe-area-inset-bottom))]',
+        )}
+      >
         <div className="space-y-4">
           <Card title="1 · Identidade" bodyClassName="p-3">
             <div className="grid grid-cols-10 gap-x-3 gap-y-2">

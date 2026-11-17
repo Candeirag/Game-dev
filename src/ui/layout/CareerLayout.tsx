@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   CalendarDays,
@@ -34,7 +34,7 @@ import { formatDate, formatDateTime, formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { scrollToElement, usePresence } from '../motion';
 import { SuccessionScreen } from '../screens/SuccessionScreen';
-import { ActionDock } from './ScreenAction';
+import { ACTION_BAR_HEIGHT, ActionBar } from './ScreenAction';
 import { ChromeContext, WIDE_QUERY, primaryAction, useMediaQuery, type PrimaryAction } from './chrome';
 
 interface NavItem {
@@ -182,7 +182,16 @@ function CareerShell() {
   const [raceBar, setRaceBar] = useState(false);
   const [topSlot, setTopSlot] = useState<HTMLElement | null>(null);
   const [actionSlot, setActionSlot] = useState<HTMLElement | null>(null);
-  const chrome = useMemo(() => ({ setRaceBar, wide, topSlot: wide ? topSlot : null, actionSlot: wide ? actionSlot : null }), [wide, topSlot, actionSlot]);
+  // Quantos passos de tela estão no encaixe da barra (normalmente zero ou um).
+  const [screenActions, setScreenActions] = useState(0);
+  const registerAction = useCallback(() => {
+    setScreenActions((n) => n + 1);
+    return () => setScreenActions((n) => n - 1);
+  }, []);
+  const chrome = useMemo(
+    () => ({ setRaceBar, wide, topSlot: wide ? topSlot : null, actionSlot: wide ? actionSlot : null, registerAction }),
+    [wide, topSlot, actionSlot, registerAction],
+  );
   const [moreOpen, setMoreOpen] = useState(false);
   // O "Mais" entra e sai com transição; fica montado só enquanto aparece.
   const more = usePresence(moreOpen);
@@ -220,6 +229,15 @@ function CareerShell() {
   const action = primaryAction(career);
   // Na própria tela de destino o botão não precisa aparecer (a não ser quando rola até as decisões).
   const showAction = action !== null && (action.anchor !== undefined || location.pathname !== action.to);
+  // A barra do passo principal (formato largo): aparece quando há o que fazer, fora da corrida (lá o
+  // rodapé é da barra de comandos). A página reserva o espaço dela no fim: o conteúdo termina acima.
+  const actionBar = wide && !raceBar && (showAction || screenActions > 0);
+  useEffect(() => {
+    document.documentElement.style.setProperty('--action-bar-h', actionBar ? `calc(${ACTION_BAR_HEIGHT} + env(safe-area-inset-bottom))` : '0px');
+    return () => {
+      document.documentElement.style.removeProperty('--action-bar-h');
+    };
+  }, [actionBar]);
   const badge = (to: string) => (
     <>
       {to === '/dashboard' && pending > 0 && (
@@ -281,13 +299,14 @@ function CareerShell() {
       {/* Aviso passageiro (save importado, erro ao salvar): flutua no canto, sem empurrar a tela. */}
       {notice && (
         <div
+          data-transient
           role="status"
           className={cx(
             'enter fixed z-30 flex max-w-[min(24rem,calc(100vw-1.5rem))] items-center gap-2 bg-ink-800 py-1 pl-4 pr-1 text-sm text-ink-100 shadow-[inset_3px_0_0_0_var(--color-gold-400),var(--shadow-pop)]',
             wide
               ? cx(
                   'left-[calc(var(--rail-w,0px)+0.75rem)]',
-                  raceBar ? 'bottom-[calc(5.25rem+var(--safe-bottom))]' : 'bottom-[calc(0.75rem+var(--safe-bottom))]',
+                  raceBar ? 'bottom-[calc(5.25rem+var(--safe-bottom))]' : 'bottom-[calc(0.75rem+max(var(--action-bar-h,0px),var(--safe-bottom)))]',
                 )
               : cx('right-[calc(0.75rem+var(--safe-right))]', raceBar ? 'bottom-[calc(9rem+var(--safe-bottom))]' : 'bottom-[calc(5rem+var(--safe-bottom))]'),
           )}
@@ -310,8 +329,8 @@ function CareerShell() {
           wide
             ? raceBar
               ? 'pb-[calc(4.75rem+env(safe-area-inset-bottom))]'
-              : // O fim da página fica livre da doca do botão principal.
-                'pb-[calc(5rem+env(safe-area-inset-bottom))]'
+              : // O conteúdo termina acima da barra do passo principal (ou da margem da barra de gestos).
+                'pb-[calc(1.5rem+max(var(--action-bar-h,0px),env(safe-area-inset-bottom)))]'
             : raceBar
               ? 'pb-[calc(8.5rem+env(safe-area-inset-bottom))]'
               : 'pb-[calc(5.5rem+env(safe-area-inset-bottom))]',
@@ -431,7 +450,8 @@ function CareerShell() {
                   </div>
                   <div className="mt-1 truncate text-xs text-ink-400">
                     {stage}
-                    <span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span>
+                    {/* Com a barra do passo principal à vista, a pista da próxima etapa vai nela. */}
+                    {!actionBar && <span className="hidden xl:inline">{stageLong !== stage ? ` · ${stageLong}` : ''}</span>}
                   </div>
                 </div>
                 <TopStat icon={Wallet} label="Caixa" value={formatMoney(career.finance.cash)} attention={career.finance.cash < 0} />
@@ -441,12 +461,13 @@ function CareerShell() {
               </div>
             </header>
             {content}
-            {/* O botão que faz a carreira avançar fica no canto inferior direito, perto do polegar. O passo
-                da própria tela (disputar o treino, largar) toma o lugar do atalho padrão. */}
-            <ActionDock raised={raceBar}>
+            {/* A barra do passo principal, fixa no pé da tela: o botão que faz a carreira avançar fica à
+                direita, perto do polegar. O passo da própria tela (disputar o treino, largar) toma o
+                lugar do atalho padrão. O encaixe existe sempre; a barra só aparece quando há passo. */}
+            <ActionBar visible={actionBar} info={stageLong !== stage ? stageLong : undefined}>
               <div ref={setActionSlot} className="peer/action contents" />
               <div className="contents peer-[:not(:empty)]/action:hidden">{showAction && action && <AdvanceButton action={action} />}</div>
-            </ActionDock>
+            </ActionBar>
           </div>
         </div>
       </ChromeContext.Provider>

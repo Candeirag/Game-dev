@@ -96,7 +96,7 @@ export function ExecutiveDashboardScreen() {
       </PageHeader>
 
       {tutorialActive(career) && <TutorialCard />}
-      {/* O botão de avançar (canto inferior direito) rola até aqui quando há decisões pendentes. */}
+      {/* O botão de avançar (na barra do pé da tela) rola até aqui quando há decisões pendentes. */}
       <div id="decisoes" className="scroll-mt-16 empty:hidden">
         <EventsPanel />
       </div>
@@ -111,7 +111,7 @@ export function ExecutiveDashboardScreen() {
                   : ''}
                 Decida o rumo da próxima temporada: pilotos, patrocinadores, propostas de cargo e equipes à venda.
               </p>
-              {/* No formato largo, o botão de avançar (canto inferior direito) já leva à tela Carreira. */}
+              {/* No formato largo, o botão de avançar (na barra do pé da tela) já leva à tela Carreira. */}
               {!wide && (
                 <Button variant="primary" className="mt-3" onClick={() => navigate('/career')}>
                   Decidir a próxima temporada
