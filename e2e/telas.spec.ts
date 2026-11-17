@@ -22,6 +22,11 @@ for (const formato of TELAS) {
       await conferirTela(page, 'menu', formato.nome);
       await page.getByRole('button', { name: 'Nova carreira' }).click();
       await conferirTela(page, 'nova-carreira', formato.nome);
+      // Ajustes também abre pelo menu, sem carreira carregada.
+      await page.getByRole('button', { name: 'Voltar' }).click();
+      await page.getByRole('button', { name: 'Ajustes' }).click();
+      await expect(page.getByRole('heading', { name: 'Ajustes', level: 1 })).toBeVisible();
+      await conferirTela(page, 'ajustes-menu', formato.nome);
       expect(erros).toEqual([]);
     });
 
@@ -91,6 +96,7 @@ for (const formato of TELAS) {
         ['Classificação', 'classificacao', ['Equipes']],
         ['Histórico', 'historico', []],
         ['Saves', 'saves', []],
+        ['Ajustes', 'ajustes', []],
         ['Como jogar', 'como-jogar', ['Fim de semana', 'Dinheiro']],
       ] as const) {
         await irPara(page, nome);
@@ -218,3 +224,82 @@ for (const formato of TELAS) {
     });
   });
 }
+
+/** As telas principais do critério de aceite da Fase 1, na tela deitada. */
+const PRINCIPAIS = ['Fim de semana', 'Piloto', 'Equipe', 'Carreira', 'Saves', 'Ajustes'] as const;
+
+test.describe('ajustes de acessibilidade em 844×390', () => {
+  test.use({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+
+  test('texto muito grande: as telas principais continuam cabendo, legíveis e tocáveis', async ({ page }) => {
+    const erros = vigiarErros(page);
+    await abrirSave(page, SAVES.formula);
+    await irPara(page, 'Ajustes');
+    await page.getByRole('radio', { name: 'Muito grande' }).click();
+    await expect(page.locator('html')).toHaveCSS('--text-scale-user', '1.3');
+    await conferirTela(page, 'texto-grande-ajustes', 'deitado');
+    await irPara(page, 'Painel');
+    await conferirTela(page, 'texto-grande-painel', 'deitado');
+    for (const nome of PRINCIPAIS.filter((n) => n !== 'Ajustes')) {
+      await irPara(page, nome);
+      await conferirTela(page, `texto-grande-${nome.toLowerCase().replaceAll(' ', '-')}`, 'deitado');
+    }
+    // O ajuste fica guardado no aparelho: vale depois de recarregar, já no menu.
+    await page.reload();
+    await expect(page.locator('html')).toHaveCSS('--text-scale-user', '1.3');
+    expect(erros).toEqual([]);
+  });
+
+  test('texto muito grande na corrida: a torre e os comandos cabem', async ({ page }) => {
+    const erros = vigiarErros(page);
+    await abrirSave(page, SAVES.naLargada);
+    await irPara(page, 'Ajustes');
+    await page.getByRole('radio', { name: 'Muito grande' }).click();
+    await irPara(page, 'Fim de semana');
+    await page.getByRole('button', { name: 'Ir para a largada' }).click();
+    await page.getByRole('region', { name: 'Comandos da corrida' }).getByRole('button', { name: 'Largar' }).click();
+    await page.waitForTimeout(3000);
+    await conferirTela(page, 'texto-grande-corrida', 'deitado');
+    expect(erros).toEqual([]);
+  });
+
+  test('modo para daltônicos: a paleta troca, o contraste se mantém e o ajuste fica guardado', async ({ page }) => {
+    const erros = vigiarErros(page);
+    await abrirSave(page, SAVES.formula);
+    await irPara(page, 'Ajustes');
+    const verde = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-go-400').trim());
+    await page.getByRole('switch', { name: /Modo para daltônicos/ }).check();
+    await expect(page.locator('html')).toHaveAttribute('data-vision', 'daltonico');
+    const azul = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--color-go-400').trim());
+    expect(azul).not.toBe(verde);
+    await conferirTela(page, 'daltonico-ajustes', 'deitado');
+    await irPara(page, 'Painel');
+    await conferirTela(page, 'daltonico-painel', 'deitado');
+    await irPara(page, 'Carreira');
+    await conferirTela(page, 'daltonico-carreira', 'deitado');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-vision', 'daltonico');
+    expect(erros).toEqual([]);
+  });
+
+  test('os volumes e os interruptores ficam guardados no aparelho', async ({ page }) => {
+    await page.goto('/#/ajustes');
+    await page.getByRole('slider', { name: 'Efeitos' }).fill('30');
+    await page.getByRole('slider', { name: 'Música' }).fill('0');
+    await page.getByRole('switch', { name: /Menos movimento/ }).check();
+    await page.reload();
+    await expect(page.getByRole('slider', { name: 'Efeitos' })).toHaveValue('30');
+    await expect(page.getByRole('slider', { name: 'Música' })).toHaveValue('0');
+    await expect(page.getByRole('switch', { name: /Menos movimento/ })).toBeChecked();
+    // No navegador o aparelho não vibra: o interruptor aparece desativado, com a explicação.
+    await expect(page.getByRole('switch', { name: /Vibração/ })).toBeDisabled();
+    await expect(page.getByRole('main')).toContainText('Só existe no aplicativo instalado');
+  });
+
+  test('o catálogo de componentes não existe no build de produção', async ({ page }) => {
+    await page.goto('/#/dev/catalogo');
+    // A rota não é registrada: o jogo volta para o menu inicial.
+    await expect(page.getByRole('button', { name: 'Nova carreira' })).toBeVisible();
+    await expect(page).toHaveURL(/#\/$/);
+  });
+});

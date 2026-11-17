@@ -1,7 +1,7 @@
 /** Apoio aos testes no navegador: tamanhos de tela, abertura de saves e a verificação visual. */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
-import { medirContraste } from './contraste';
+import { descrever, medirContraste, reprovadas } from './contraste';
 
 /**
  * Formatos conferidos. O aplicativo é feito para a tela deitada (844×390) e escala para tablet
@@ -216,11 +216,109 @@ export async function alvosPequenos(page: Page): Promise<string[]> {
 }
 
 /**
- * Tira o print da tela inteira e confere sobreposição de imagem com texto, transbordo lateral e,
- * nos formatos de toque, o tamanho das áreas de toque.
+ * Números fora da largura fixa: todo texto com algarismo tem de usar `tabular-nums` (tempos,
+ * diferenças, dinheiro, posições e atributos não podem dançar quando mudam).
+ */
+export async function numerosSemLarguraFixa(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? '';
+      const parent = node.parentElement;
+      if (!/\d/.test(text) || !parent || parent.closest('svg, script, style, option, .sr-only')) continue;
+      if (!parent.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      if (!getComputedStyle(parent).fontVariantNumeric.includes('tabular-nums')) found.add(`"${text.slice(0, 40)}"`);
+    }
+    return [...found];
+  });
+}
+
+/**
+ * Texto pequeno em fonte condensada: a fonte de título (Barlow Condensed, ou a Saira do
+ * comparativo) só vale a partir de 16 px, na escala de texto em vigor; abaixo disso é Inter.
+ */
+export async function condensadaPequena(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const scale = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale-user') || '1') || 1;
+    const system = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--text-scale-system') || '1') || 1;
+    const minimum = 16 * scale * system - 0.5;
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent?.trim() ?? '';
+      const parent = node.parentElement;
+      if (!text || !parent || parent.closest('svg, script, style, option, .sr-only')) continue;
+      if (!parent.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      const style = getComputedStyle(parent);
+      const family = style.fontFamily.split(',')[0]?.replace(/["']/g, '').trim() ?? '';
+      if (/Condensed/i.test(family) && Number.parseFloat(style.fontSize) < minimum) found.add(`"${text.slice(0, 40)}" (${style.fontSize})`);
+    }
+    return [...found];
+  });
+}
+
+/**
+ * Alvos de toque colados: vizinhos precisam de uns 8 px entre si. Ficam de fora os que formam
+ * um controle só, encostados de propósito e cada um com 44 px ou mais (abas, navegação, grupos
+ * de botões como as velocidades da corrida) e as linhas de uma lista, uma embaixo da outra.
+ */
+export async function alvosColados(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const GAP = 7.5;
+    const targets = [...document.querySelectorAll('button, a[href], input, select, textarea, summary')].filter((element) => {
+      if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) || element.closest('.sr-only, [inert]')) return false;
+      if (element instanceof HTMLInputElement && (element.type === 'file' || element.type === 'hidden')) return false;
+      const box = element.getBoundingClientRect();
+      return box.width > 0 && box.height > 0;
+    });
+    const group = (element: Element) => element.closest('[role="tablist"], [role="group"], [role="radiogroup"], [role="toolbar"], nav, ul, ol, table');
+    // Barras fixas e grudadas passam por cima do conteúdo ao rolar: não são vizinhas dele.
+    const floating = (element: Element): boolean => {
+      for (let node: Element | null = element; node && node !== document.body; node = node.parentElement) {
+        const position = getComputedStyle(node).position;
+        if (position === 'fixed' || position === 'sticky') return true;
+      }
+      return false;
+    };
+    const name = (element: Element) => (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 30);
+    const found = new Set<string>();
+    for (let i = 0; i < targets.length; i++) {
+      for (let j = i + 1; j < targets.length; j++) {
+        const a = targets[i];
+        const b = targets[j];
+        if (!a || !b || a.contains(b) || b.contains(a)) continue;
+        if (floating(a) !== floating(b)) continue;
+        // Partes de um mesmo controle (abas, navegação, lista) encostam de propósito.
+        const shared = group(a);
+        if (shared && shared === group(b)) continue;
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        const overlapX = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+        const overlapY = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+        const gapX = Math.max(ra.left, rb.left) - Math.min(ra.right, rb.right);
+        const gapY = Math.max(ra.top, rb.top) - Math.min(ra.bottom, rb.bottom);
+        const side = overlapY > 4 && gapX >= -0.5 && gapX < GAP;
+        const stacked = overlapX > 4 && gapY >= -0.5 && gapY < GAP;
+        if (side || stacked) found.add(`"${name(a)}" e "${name(b)}" (${Math.round(side ? gapX : gapY)} px)`);
+      }
+    }
+    return [...found];
+  });
+}
+
+/**
+ * Tira o print da tela inteira e confere: sobreposição de imagem com texto, transbordo lateral,
+ * contraste (texto, ícones e contornos), algarismos de largura fixa, fonte condensada só em texto
+ * grande e, nos formatos de toque, o tamanho das áreas de toque e o espaço entre elas.
  */
 export async function conferirTela(page: Page, tela: string, formato: string): Promise<void> {
   await page.waitForTimeout(250);
+  // Espera as entradas em curso terminarem (medir uma cor no meio de um esmaecer daria um valor errado).
+  await page.evaluate(async () => {
+    const running = document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY);
+    await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+  });
   // Nome de arquivo sem acentos nem espaços.
   const arquivo = tela
     .normalize('NFD')
@@ -237,9 +335,17 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   const achados = await sobreposicoes(page);
   const toque = TELAS.find((item) => item.nome === formato)?.toque ?? true;
   const pequenos = toque ? await alvosPequenos(page) : [];
+  const medidas = reprovadas(await medirContraste(page));
+  const soltos = await numerosSemLarguraFixa(page);
+  const condensadas = await condensadaPequena(page);
+  const colados = toque ? await alvosColados(page) : [];
   if (process.env.LEVANTAR) {
     for (const a of achados) console.log(`ACHADO ${formato} | ${tela} | ${a.imagem} × "${a.texto}" (${a.area})`);
     for (const alvo of pequenos) console.log(`ACHADO ${formato} | ${tela} | toque pequeno: ${alvo}`);
+    for (const par of colados) console.log(`ACHADO ${formato} | ${tela} | alvos colados: ${par}`);
+    for (const m of medidas) console.log(`ACHADO ${formato} | ${tela} | contraste: ${descrever(m)}`);
+    for (const n of soltos) console.log(`ACHADO ${formato} | ${tela} | número sem largura fixa: ${n}`);
+    for (const c of condensadas) console.log(`ACHADO ${formato} | ${tela} | condensada pequena: ${c}`);
     const sobra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (sobra > 0) console.log(`ACHADO ${formato} | ${tela} | transbordo de ${sobra} px`);
     return;
@@ -248,4 +354,8 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   const transbordo = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(transbordo, `${tela} (${formato}): a página passa ${transbordo} px da largura da tela`).toBeLessThanOrEqual(0);
   expect(pequenos, `${tela} (${formato}): áreas de toque menores que 44 px\n  ${pequenos.join('\n  ')}`).toEqual([]);
+  expect(colados, `${tela} (${formato}): alvos de toque com menos de 8 px entre si\n  ${colados.join('\n  ')}`).toEqual([]);
+  expect(medidas.map(descrever), `${tela} (${formato}): contraste abaixo do mínimo`).toEqual([]);
+  expect(soltos, `${tela} (${formato}): números sem algarismos de largura fixa`).toEqual([]);
+  expect(condensadas, `${tela} (${formato}): texto pequeno em fonte condensada`).toEqual([]);
 }

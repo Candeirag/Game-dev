@@ -45,7 +45,10 @@ export function descrever(m: Medida): string {
 }
 
 export async function medirContraste(page: Page): Promise<Medida[]> {
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    // Entradas em curso terminam antes da medida: no meio de um esmaecer, a cor ainda não é a final.
+    const running = document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Number.POSITIVE_INFINITY);
+    await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
     type Rgba = [number, number, number, number];
     /** O ponto mais claro do cenário da pista (zebras e faixas brancas), para as camadas sobre ela. */
     const PISTA_CLARA: Rgba = [232, 232, 232, 1];
