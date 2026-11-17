@@ -15,7 +15,11 @@
  *  6. Evolução: treino (foco, intensidade, moral, academia).
  *  7. Mercado: interesse das equipes.
  *  8. Eventos: decisões pendentes geradas pelo que aconteceu.
- *  9. Mensagens.
+ *  9. Mensagens; depois, as revelações dos talentos e defeitos ocultos do nascimento.
+ *
+ * O nascimento (Fase 2) entra em quatro pontos: as viagens de quem mora no interior (1), o
+ * carisma na satisfação dos patrocinadores (5), o ritmo de aprendizado e a estrutura de treino (6)
+ * e o evento da mudança para São Paulo (8).
  */
 import type { CareerState, Driver, InboxMessage, RoundRecord } from '@/domain/schemas';
 import { ATTRIBUTE_LABELS, DNF_LABELS, TRAINING_FOCUS_LABELS } from '@/domain/labels';
@@ -29,7 +33,11 @@ import { INTENSITY_GAIN, developAfterRound, type AttributeDelta } from './develo
 import { LIFESTYLE_RULES } from '@/data/assets';
 import { partnerMoraleEffect } from '../dynasty/family';
 import { hasPersonalProperty, settleAssetsRound } from '../economy/assets';
-import { settleRound } from './economy';
+import { post, settleRound } from './economy';
+import { BIRTH } from '@/config/balance';
+import { birthTrainingFactor, interiorWeighs, sponsorSatisfactionBonus } from '../birth/effects';
+import { moveEventFor } from '../birth/move';
+import { revealTraits } from '../birth/reveal';
 import { pushMessages } from './inbox';
 import { updateMarketInterest } from './market';
 import { fullName, getPlayer, getTeam, getTeammate } from './selectors';
@@ -88,6 +96,9 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   career = { ...career, finance: settleRound(career, round, entry) };
   // Patrimônio e família: cotações, aluguéis, parcelas de empréstimos e custos com os filhos.
   career = { ...career, finance: settleAssetsRound(career, round) };
+  // Quem nasceu no interior e ainda não se mudou paga as viagens até os kartódromos.
+  if (interiorWeighs(career))
+    career = { ...career, finance: post(career.finance, season, round, 'family', -BIRTH.INTERIOR_TRAVEL_PER_ROUND, 'Viagens do interior') };
   if (cashBefore >= 0 && career.finance.cash < 0) {
     msg(
       'debt',
@@ -203,9 +214,10 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
 
   /* 5. Patrocinadores */
   const position = me?.position ?? standings.length;
+  const charisma = sponsorSatisfactionBonus(career);
   const kept = [];
   for (const sponsor of career.sponsors) {
-    const satisfaction = satisfactionAfterRound(sponsor, position, entry);
+    const satisfaction = satisfactionAfterRound(sponsor, position, entry, charisma);
     if (sponsor.tier > 0 && satisfaction < SPONSOR_RULES.LEAVE_THRESHOLD) {
       msg(
         `sponsor-left-${sponsor.id}`,
@@ -220,7 +232,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   career = { ...career, sponsors: kept };
 
   /* 6. Evolução */
-  const multiplier = INTENSITY_GAIN[career.trainingIntensity] * (career.academy ? 1.1 : 1);
+  const multiplier = INTENSITY_GAIN[career.trainingIntensity] * (career.academy ? 1.1 : 1) * birthTrainingFactor(career);
   const developed = developAfterRound(career.drivers, career.seed, season, round, multiplier);
   career = { ...career, drivers: developed.drivers };
 
@@ -273,9 +285,13 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
     );
   }
   career = { ...career, inbox: pushMessages(career.inbox, messages) };
+  // Nascimento: os traços ocultos que esta etapa mostrou.
+  career = revealTraits(career, record);
 
   /* 8. Eventos */
   const events = generateEvents(career, record, round);
   if (events.length > 0) career = { ...career, pendingEvents: [...career.pendingEvents, ...events] };
+  const move = moveEventFor(career, round);
+  if (move) career = { ...career, pendingEvents: [...career.pendingEvents, move] };
   return career;
 }

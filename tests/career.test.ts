@@ -3,6 +3,7 @@ import { CareerStateSchema, type Driver } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import {
   applyAging,
+  birthAttributeBonus,
   computeCareerStats,
   createCareer,
   developDriver,
@@ -37,7 +38,8 @@ describe('criação de carreira', () => {
     expect(p.teamId).toBe('cerrado');
     expect(p.role).toBe('second');
     expect(c.drivers.find((d) => d.id === 'teixeira')).toMatchObject({ teamId: 'cerrado', role: 'reserve' });
-    expect(p.attributes.pace).toBe(70 + 4);
+    // Perfil "talento natural" (70), 4 pontos livres e o que o reflexo de nascença soma ou tira.
+    expect(p.attributes.pace).toBe(70 + 4 + (birthAttributeBonus(c.birth!.aptitudes).pace ?? 0));
   });
 
   it('começa com contrato, caixa, apoio da família e licença vazia', () => {

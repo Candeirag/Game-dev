@@ -82,3 +82,31 @@ export function readLastExport(): string | null {
 export function writeLastExport(at: string): void {
   writePreference(LAST_EXPORT, at);
 }
+
+const BIRTH_DRAFT = 'birthDraft';
+
+/**
+ * Rascunho do nascimento de uma carreira que ainda não começou: a semente e o sorteio em que o
+ * jogador está. Fica guardado até a carreira ser criada, para que recarregar a página não dê um
+ * sorteio novo de graça (os sorteios refeitos são limitados).
+ */
+export interface BirthDraft {
+  seed: number;
+  attempt: number;
+}
+
+export function readBirthDraft(): BirthDraft | null {
+  try {
+    const raw = JSON.parse(readPreference(BIRTH_DRAFT) ?? 'null') as Partial<BirthDraft> | null;
+    if (!raw || typeof raw !== 'object') return null;
+    const { seed, attempt } = raw;
+    if (!Number.isInteger(seed) || !Number.isInteger(attempt) || (seed as number) < 0 || (seed as number) > 0xffffffff || (attempt as number) < 0) return null;
+    return { seed: seed as number, attempt: attempt as number };
+  } catch {
+    return null;
+  }
+}
+
+export function writeBirthDraft(draft: BirthDraft | null): void {
+  writePreference(BIRTH_DRAFT, draft ? JSON.stringify(draft) : null);
+}

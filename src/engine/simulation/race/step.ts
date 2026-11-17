@@ -41,7 +41,17 @@ import {
   type ConditionEffects,
 } from '../performance';
 import { bestCompoundFor, buildStrategyOptions, chooseAiStrategy, clonePlan, decidePit } from './strategy';
-import type { GridSlot, Neutralization, PlayerRaceInput, RaceCar, RaceContext, RaceSimState, TeamOrderRecord } from './types';
+import {
+  neutralRaceProfile,
+  type DriverRaceProfile,
+  type GridSlot,
+  type Neutralization,
+  type PlayerRaceInput,
+  type RaceCar,
+  type RaceContext,
+  type RaceSimState,
+  type TeamOrderRecord,
+} from './types';
 import { buildWetnessProfile, conditionFor } from './weatherProfile';
 
 /** Tempo extra fixo da volta de largada (saída parada), igual para todos. */
@@ -140,6 +150,8 @@ interface LapWork {
   team: Team;
   mode: RaceMode;
   cond: ConditionEffects;
+  /** Modificadores próprios do piloto (nascimento); neutros para quem não tem. */
+  profile: DriverRaceProfile;
   /** Tempo de volta em pista livre, sem parada (base das disputas). */
   paceLap: number;
   newTotal: number;
@@ -166,6 +178,9 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
   const weather: SessionWeather = { condition: conditionFor(wetness), wetness, trackTemp: state.weather.trackTemp };
   const neutral = state.neutralization.type;
   const standingStart = lap === 1 || state.restart === 'standing';
+  const lastLap = lap === state.totalLaps;
+  const neutralProfile = neutralRaceProfile();
+  const profileOf = (driverId: string) => ctx.profiles?.[driverId] ?? neutralProfile;
   const reference = referenceLapTime(track, category) * (1 + SIM.WET_LAP_PENALTY * wetness);
   const events: RaceEvent[] = [];
   const incidents: Incident[] = [];
@@ -225,6 +240,7 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     const isPlayer = car.driverId === state.playerDriverId;
     const automatic = !isPlayer || input.auto === true;
     const cond = conditionEffects(driver.condition, driver.injury);
+    const profile = profileOf(car.driverId);
     const ahead = running[index - 1];
     const behind = running[index + 1];
 
@@ -297,7 +313,9 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         tyreCond.pace +
         tyreCliffPenalty(car.tyre.compound, car.tyre.wear) +
         (rules.fuel ? fuelPenalty(car.fuel, state.totalLaps) : 0) +
-        damagePenalty(car.damage);
+        damagePenalty(car.damage) +
+        profile.pace +
+        profile.wetPace * wetness;
       lapTime = expectedLapTime({
         attributes: a,
         car: team.car,
@@ -309,15 +327,15 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         lapTimeFactor: category.lapTimeFactor,
         carFactor: category.carFactor,
       });
-      lapTime *= 1 + noise * lapNoiseSigma(a, weather, progress) * cond.noise;
+      lapTime *= 1 + noise * lapNoiseSigma(a, weather, progress, profile.fatigue) * cond.noise;
     } else {
       lapTime = reference * (neutral === 'vsc' ? RACE.VSC_LAP_FACTOR : RACE.SC_CATCHUP_FACTOR);
     }
 
     if (standingStart) {
       // Largada: experiência e concentração reduzem a dispersão da reação.
-      const spread = SIM.START_REACTION_SPREAD * (1 - (a.experience + a.focus) / 200);
-      lapTime += START_LAP_EXTRA + Math.max(startReaction, RACE.JUMP_START_THRESHOLD) * spread;
+      const spread = SIM.START_REACTION_SPREAD * (1 - (a.experience + a.focus) / 200) * profile.startSpread;
+      lapTime += START_LAP_EXTRA + Math.max(startReaction, RACE.JUMP_START_THRESHOLD) * spread + profile.startGain;
       if (startReaction < RACE.JUMP_START_THRESHOLD) {
         car = { ...car, penaltySeconds: car.penaltySeconds + RACE.JUMP_START_PENALTY };
         events.push({
@@ -341,7 +359,17 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       retired = 'mechanical';
       incidents.push('mechanical');
       events.push({ lap, type: 'dnf', driverId: car.driverId, message: `${who} abandona com problema mecânico.` });
-    } else if (neutral === 'none' && errorRoll < errorProbability(a, weather, progress) * fx.error * cond.error * tyreCond.error) {
+    } else if (
+      neutral === 'none' &&
+      errorRoll <
+        errorProbability(a, weather, progress, profile.fatigue) *
+          fx.error *
+          cond.error *
+          tyreCond.error *
+          profile.error *
+          Math.max(0, 1 + profile.wetError * wetness) *
+          (lastLap ? profile.lastLapError : 1)
+    ) {
       const severity = wetness >= 0.5 ? SIM.ERROR_SEVERITY_WET : SIM.ERROR_SEVERITY_DRY;
       car = { ...car, errors: car.errors + 1 };
       if (severityRoll < severity.minor) {
@@ -369,7 +397,7 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       } else {
         retired = 'crash';
         incidents.push('crash');
-        const injured = injuryRoll < injuryChance(ctx);
+        const injured = injuryRoll < injuryChance(ctx) * profile.injury;
         car = { ...car, injured, damageTotal: car.damageTotal + 1 };
         events.push({
           lap,
@@ -420,7 +448,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     } else if (!retired) {
       // Desgaste e idade do pneu (só para quem não trocou nesta volta).
       const wearScale = neutral === 'none' ? fx.tyreWear : 0.3;
-      const wear = tyreWearPerLap(a, track, weather, wearScale * TYRES[car.tyre.compound].wear * tyreCond.wear, car.modifiers.tyreWearFactor);
+      const wear = tyreWearPerLap(
+        a,
+        track,
+        weather,
+        wearScale * TYRES[car.tyre.compound].wear * tyreCond.wear * profile.tyreWear,
+        car.modifiers.tyreWearFactor,
+      );
       car = { ...car, tyre: { ...car.tyre, wear: Math.min(1, car.tyre.wear + wear), age: car.tyre.age + 1 } };
     }
 
@@ -441,6 +475,7 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       team,
       mode,
       cond,
+      profile,
       paceLap: lapTime,
       newTotal: car.totalTime + lapTime + pitLoss,
       retired,
@@ -539,7 +574,11 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
           attackFx.attack -
           defendFx.defend +
           w.cond.attack -
-          ahead.cond.attack * 0.5;
+          ahead.cond.attack * 0.5 +
+          w.profile.attack +
+          w.profile.duel -
+          ahead.profile.duel +
+          (lastLap ? w.profile.lastLapDuel - ahead.profile.lastLapDuel : 0);
         const attacker = name(w.car.driverId);
         const defender = name(ahead.car.driverId);
 
@@ -563,7 +602,8 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         // Tentativa frustrada: risco de toque. Cresce com a agressividade e com a
         // rivalidade entre os dois; cai com a leitura de corrida do atacante.
         const rivalry = rivalryBetween(ctx, state.playerDriverId, w.car.driverId, ahead.car.driverId);
-        const collisionChance = SIM.COLLISION_ON_FAILED_PASS * attackFx.collision * (1.2 - w.driver.attributes.racecraft / 100) * (1 + rivalry / 100);
+        const collisionChance =
+          SIM.COLLISION_ON_FAILED_PASS * attackFx.collision * (1.2 - w.driver.attributes.racecraft / 100) * (1 + rivalry / 100) * w.profile.collision;
         if (collisionRoll < collisionChance) {
           incidents.push('collision');
           const attackerAtFault = faultRoll < RACE.COLLISION_FAULT_CHANCE;
@@ -571,7 +611,7 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
             const victim = victimRoll < 0.6 ? w : ahead;
             const other = victim === w ? ahead : w;
             victim.retired = 'collision';
-            const injured = injuryRoll < injuryChance(ctx);
+            const injured = injuryRoll < injuryChance(ctx) * victim.profile.injury;
             victim.car = { ...victim.car, injured, damageTotal: victim.car.damageTotal + 1 };
             other.car = { ...other.car, damage: other.car.damage + 0.2, damageTotal: other.car.damageTotal + 0.2 };
             events.push({

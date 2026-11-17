@@ -21,5 +21,7 @@ mesmo envelope que o jogo exporta, com checksum.
 | `v2`  | Fase 2 (carreira completa) | Kart no meio do fim de semana, com eventos pendentes, fechamento de temporada, monoposto no meio do ano. |
 | `v3`  | Fase 3 e reformulação visual | Kart na largada e no fim de temporada, em três momentos do código (`antes-da-usabilidade`, `antes-da-reformulacao`, `atual`); e os três `fase0-*`, gravados com o código de antes dos nomes próprios das categorias (`ffc04a9`): monoposto com academia de nome antigo, topo da escada no fim da temporada e dirigente dono de equipe. |
 | `v4`  | Fase 0 da grande atualização | Kart na largada, monoposto no fim da temporada, dirigente no meio da temporada, dirigente no fechamento com patrimônio (ações, imóvel, empresa, empréstimo) e sucessão em aberto. |
+| `v5`  | Fase 1 da grande atualização | As mesmas situações da `v4`, com o retrato das temporadas (`seasonTrend`). Sem nascimento: abrem com `birth: null`. |
+| `v6`  | Fase 2 da grande atualização | As mesmas situações, agora com nascimento sorteado, e `nascimento-mudanca-pendente`: estreante nascido no interior depois da segunda etapa, com a mudança para São Paulo pendente e o traço de estreia revelado. |
 
-Os arquivos `fase0-*` e os da `v4` estão sem indentação, para pesarem menos. Abrem do mesmo jeito.
+Os arquivos `fase0-*` e os da `v4` em diante estão sem indentação, para pesarem menos. Abrem do mesmo jeito.

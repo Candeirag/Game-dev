@@ -96,6 +96,65 @@ export interface RaceSimState {
   redFlags: number;
 }
 
+/**
+ * Modificadores próprios de um piloto, além dos atributos: hoje, os do nascimento (aptidões de
+ * corpo e mente e talentos e defeitos ocultos). Quem não tem perfil corre com o neutro
+ * (`neutralRaceProfile`), e o perfil nunca acrescenta sorteios: só muda médias e limites.
+ */
+export interface DriverRaceProfile {
+  /** Fração somada ao tempo de volta (negativo = mais rápido). */
+  pace: number;
+  /** Fração somada ao tempo de volta por unidade de umidade da pista. */
+  wetPace: number;
+  /** Multiplicador da chance de erro. */
+  error: number;
+  /** A chance de erro é multiplicada por (1 + wetError × umidade). */
+  wetError: number;
+  /** Multiplicador do cansaço (ruído e erros que crescem com a corrida). */
+  fatigue: number;
+  /** Multiplicador da dispersão da reação na largada. */
+  startSpread: number;
+  /** Segundos somados à volta de largada. */
+  startGain: number;
+  /** Multiplicador do desgaste de pneus. */
+  tyreWear: number;
+  /** Multiplicador da chance de lesão num acidente. */
+  injury: number;
+  /** Multiplicador da chance de toque numa disputa frustrada (como atacante). */
+  collision: number;
+  /** Soma ao logit das disputas quando ataca. */
+  attack: number;
+  /** Soma ao logit das disputas quando ataca e subtrai quando defende. */
+  duel: number;
+  /** O mesmo, só na última volta. */
+  lastLapDuel: number;
+  /** Multiplicador da chance de erro na última volta. */
+  lastLapError: number;
+  /** Fração somada ao tempo da volta de classificação. */
+  qualifying: number;
+}
+
+/** O perfil que não muda nada: o de todo piloto sem nascimento sorteado. */
+export function neutralRaceProfile(): DriverRaceProfile {
+  return {
+    pace: 0,
+    wetPace: 0,
+    error: 1,
+    wetError: 0,
+    fatigue: 1,
+    startSpread: 1,
+    startGain: 0,
+    tyreWear: 1,
+    injury: 1,
+    collision: 1,
+    attack: 0,
+    duel: 0,
+    lastLapDuel: 0,
+    lastLapError: 1,
+    qualifying: 0,
+  };
+}
+
 export interface RaceContext {
   track: Track;
   category: CategoryDefinition;
@@ -103,6 +162,8 @@ export interface RaceContext {
   teams: Readonly<Record<string, Team>>;
   /** Rivalidades do jogador (piloto → 0 a 100): disputas com rivais são mais tensas. */
   rivalries?: Readonly<Record<string, number>>;
+  /** Perfis próprios (piloto → modificadores); quem não aparece corre com o neutro. */
+  profiles?: Readonly<Record<string, DriverRaceProfile>>;
 }
 
 /** Decisões do jogador para a próxima volta. */

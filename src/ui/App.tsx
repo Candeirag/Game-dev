@@ -4,6 +4,7 @@ import { useGameStore } from '@/store/gameStore';
 import { careerCurrency } from '@/engine';
 import { setDisplayCurrency } from './format';
 import { CareerLayout } from './layout/CareerLayout';
+import { BirthScreen } from './screens/BirthScreen';
 import { CalendarScreen } from './screens/CalendarScreen';
 import { CareerScreen } from './screens/CareerScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
@@ -52,7 +53,8 @@ export function App() {
     <HashRouter>
       <Routes>
         <Route path="/" element={<MainMenuScreen />} />
-        <Route path="/new" element={<NewCareerScreen />} />
+        <Route path="/new" element={<BirthScreen />} />
+        <Route path="/new/piloto" element={<NewCareerScreen />} />
         <Route path="/ajustes" element={<MenuSettingsScreen />} />
         {Catalog && (
           <Route

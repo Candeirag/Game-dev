@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CAREER_SCHEMA_VERSION, CareerStateSchema } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
@@ -464,9 +464,37 @@ describe('migração da versão 3 para a 4', () => {
       data = migrateStep(data, data.schemaVersion as number);
       seen.push(data.schemaVersion);
     }
-    expect(seen).toEqual([1, 2, 3, 4, 5]);
-    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4]);
+    expect(seen).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5]);
     expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
+  });
+});
+
+describe('migração da versão 5 para a 6 (nascimento)', () => {
+  const files = readdirSync('tests/fixtures/v5').filter((name) => name.endsWith('.json'));
+
+  it.each(files)('%s: só acrescenta o nascimento vazio e sobe a versão', (name) => {
+    const before = (JSON.parse(readFileSync(`tests/fixtures/v5/${name}`, 'utf8')) as { career: Record<string, unknown> }).career;
+    expect(before.schemaVersion).toBe(5);
+    expect('birth' in before).toBe(false);
+    const after = migrateStep(before, 5);
+    expect(after).toEqual({ ...before, schemaVersion: 6, birth: null });
+    // Rodar de novo sobre o resultado não muda nada.
+    expect(migrateStep({ ...after, schemaVersion: 5 }, 5)).toEqual(after);
+  });
+
+  it.each(files)('%s: abre na versão atual, sem nascimento, e joga igual ao que jogaria antes', (name) => {
+    const career = importCareer(readFileSync(`tests/fixtures/v5/${name}`, 'utf8'));
+    expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
+    expect(career.birth).toBeNull();
+    expect(validateCareerIntegrity(career)).toEqual([]);
+  });
+
+  it('um nascimento já gravado (save da versão 6 relido) passa intacto', () => {
+    const career = newCareer(77);
+    expect(career.birth).not.toBeNull();
+    const raw = { ...(JSON.parse(JSON.stringify(career)) as Record<string, unknown>), schemaVersion: 5 };
+    expect(migrateStep(raw, 5).birth).toEqual(career.birth);
   });
 });
 

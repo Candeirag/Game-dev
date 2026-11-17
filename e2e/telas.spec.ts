@@ -16,13 +16,22 @@ for (const formato of TELAS) {
       hasTouch: formato.toque,
     });
 
-    test('menu inicial e nova carreira', async ({ page }) => {
+    test('menu inicial, nascimento e nova carreira', async ({ page }) => {
       const erros = vigiarErros(page);
       await page.goto('/');
       await conferirTela(page, 'menu', formato.nome);
       await page.getByRole('button', { name: 'Nova carreira' }).click();
+      // Etapa 1: o nascimento sorteado (a ficha termina de se revelar antes do print).
+      await expect(page.getByRole('heading', { name: 'Nascimento', level: 1 })).toBeVisible();
+      await page.waitForTimeout(2500);
+      await conferirTela(page, 'nascimento', formato.nome);
+      // Etapa 2: a criação do piloto, com o nascimento aplicado.
+      await page.getByRole('button', { name: 'Continuar' }).click();
+      await expect(page.getByRole('heading', { name: 'Crie seu piloto', level: 1 })).toBeVisible();
       await conferirTela(page, 'nova-carreira', formato.nome);
       // Ajustes também abre pelo menu, sem carreira carregada.
+      await page.getByRole('button', { name: 'Voltar' }).click();
+      await expect(page.getByRole('heading', { name: 'Nascimento', level: 1 })).toBeVisible();
       await page.getByRole('button', { name: 'Voltar' }).click();
       await page.getByRole('button', { name: 'Ajustes' }).click();
       await expect(page.getByRole('heading', { name: 'Ajustes', level: 1 })).toBeVisible();
@@ -72,6 +81,18 @@ for (const formato of TELAS) {
       expect(erros).toEqual([]);
     });
 
+    test('nascimento na carreira: mudança para São Paulo pendente e ficha com traço revelado', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.nascimento);
+      await conferirTela(page, 'painel-mudanca', formato.nome);
+      await irPara(page, 'Piloto');
+      await page.getByRole('main').getByRole('tab', { name: 'Nascimento', exact: true }).click();
+      await expect(page.getByRole('main')).toContainText('Talentos e defeitos');
+      await expect(page.getByRole('main')).toContainText('Oculto');
+      await conferirTela(page, 'piloto-nascimento-revelado', formato.nome);
+      expect(erros).toEqual([]);
+    });
+
     test('carreira e painel no fim da temporada', async ({ page }) => {
       const erros = vigiarErros(page);
       await abrirSave(page, SAVES.fimDeTemporada);
@@ -88,7 +109,7 @@ for (const formato of TELAS) {
       // Cada tela e, nas que têm abas, cada aba.
       for (const [nome, arquivo, abas] of [
         ['Fim de semana', 'fim-de-semana', []],
-        ['Piloto', 'piloto', ['Condição e treino', 'Números']],
+        ['Piloto', 'piloto', ['Condição e treino', 'Nascimento', 'Números']],
         ['Equipe', 'equipe', ['Contrato', 'Pilotos']],
         ['Carreira', 'carreira', ['Licença', 'Interesse']],
         ['Vida', 'vida', []],

@@ -900,6 +900,8 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('devProgress'), area: DevAreaSchema.nullable(), value: z.number() }),
   z.object({ type: z.literal('staffRating'), role: StaffRoleSchema, value: z.number() }),
   z.object({ type: z.literal('lineupCondition'), stat: z.enum(['morale', 'confidence']), value: z.number() }),
+  // Fase 2 da grande atualização: nascimento. Quem nasceu no interior se muda para a capital.
+  z.object({ type: z.literal('relocate') }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -1090,8 +1092,86 @@ export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
  * Versão 4 (Fase 0): nomes próprios das categorias e das equipes nos textos gravados.
  * Versão 5 (Fase 1): retrato de cada temporada fechada (`seasonTrend`), para os gráficos pequenos
  * de evolução dos atributos e do caixa. É só registro: nenhuma regra do jogo o lê.
+ * Versão 6 (Fase 2): o nascimento sorteado do piloto (`birth`) e o efeito `relocate` (mudança do
+ * interior para a capital). Saves antigos ficam com `birth: null`: carreira começada antes dos
+ * nascimentos, sem nenhum efeito de nascença.
  */
-export const CAREER_SCHEMA_VERSION = 5;
+export const CAREER_SCHEMA_VERSION = 6;
+
+/* ---------------- Nascimento (Fase 2 da grande atualização) ---------------- */
+
+/** Corpo e mente: as cinco aptidões de nascença (0 a 100, em torno de 50). */
+export const APTITUDE_KEYS = ['reflexes', 'physique', 'intelligence', 'composure', 'charisma'] as const;
+export const AptitudeKeySchema = z.enum(APTITUDE_KEYS);
+export type AptitudeKey = z.infer<typeof AptitudeKeySchema>;
+export const AptitudesSchema = z.object({
+  reflexes: RatingSchema,
+  physique: RatingSchema,
+  intelligence: RatingSchema,
+  composure: RatingSchema,
+  charisma: RatingSchema,
+});
+export type Aptitudes = z.infer<typeof AptitudesSchema>;
+
+/** Origem da família. Só a humilde está aberta; as demais são da versão premium, ainda bloqueada. */
+export const BIRTH_ORIGINS = ['humble', 'racer-parent', 'business-parent', 'mechanic-parent', 'abroad'] as const;
+export const BirthOriginSchema = z.enum(BIRTH_ORIGINS);
+export type BirthOrigin = z.infer<typeof BirthOriginSchema>;
+
+/**
+ * Talentos e defeitos ocultos, em pares que se excluem (cada talento tem o seu defeito oposto).
+ * Os ids entram no sorteio: a ordem desta lista não muda.
+ */
+export const TRAIT_IDS = [
+  'rainMaster',
+  'rainFear',
+  'bornStarter',
+  'slowStarter',
+  'tyreSaver',
+  'tyreEater',
+  'quickLearner',
+  'slowLearner',
+  'qualifyingKing',
+  'qualifyingNerves',
+  'ironBody',
+  'fragile',
+  'cleanRacer',
+  'hothead',
+  'bigStage',
+  'debutNerves',
+] as const;
+export const TraitIdSchema = z.enum(TRAIT_IDS);
+export type TraitId = z.infer<typeof TraitIdSchema>;
+
+export const BirthTraitSchema = z.object({
+  id: TraitIdSchema,
+  /** Temporada e etapa em que o jogo revelou o traço; null enquanto ele é um "?" na ficha. */
+  revealedSeason: z.number().int().min(1).nullable(),
+  revealedRound: z.number().int().min(0).nullable(),
+});
+export type BirthTrait = z.infer<typeof BirthTraitSchema>;
+
+/** O nascimento sorteado no começo da carreira. Os valores ficam gravados como saíram do sorteio. */
+export const BirthSchema = z.object({
+  /** De quem é: só vale para este personagem (um herdeiro não herda o nascimento). */
+  driverId: z.string().min(1),
+  origin: BirthOriginSchema,
+  /** Quantas vezes o sorteio foi refeito antes de começar. */
+  rerolls: z.number().int().min(0),
+  hometownId: z.string().min(1),
+  region: z.enum(['capital', 'interior']),
+  /** Profissões da mãe e do pai (ids de src/data/birth.ts). */
+  parents: z.object({ mother: z.string().min(1), father: z.string().min(1) }),
+  /** Economias da família no começo da carreira (o caixa inicial). */
+  savings: z.number().min(0),
+  /** Quanto a família ajuda por temporada e por quantas temporadas. */
+  support: z.object({ perSeason: z.number().min(0), seasons: z.number().int().min(0) }),
+  aptitudes: AptitudesSchema,
+  traits: z.array(BirthTraitSchema),
+  /** Temporada em que quem nasceu no interior se mudou para a capital (null: não se mudou ou nasceu nela). */
+  movedSeason: z.number().int().min(1).nullable(),
+});
+export type Birth = z.infer<typeof BirthSchema>;
 
 /**
  * Retrato do fim de uma temporada, para os gráficos de tendência da interface. Guarda o que os
@@ -1171,6 +1251,8 @@ export const CareerStateSchema = z.object({
   /** Sucessão em aberto: bloqueia o jogo até o herdeiro ser escolhido. */
   succession: SuccessionSchema.nullable(),
   tutorial: z.object({ done: z.array(z.string()), dismissed: z.boolean() }),
+  /** Nascimento sorteado do personagem que começou a carreira (null em saves anteriores à versão 6). */
+  birth: BirthSchema.nullable(),
 });
 export type CareerState = z.infer<typeof CareerStateSchema>;
 

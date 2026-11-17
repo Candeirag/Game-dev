@@ -27,6 +27,16 @@ const NOT_BALANCE = new Set([
   'CHILD_FIRST_NAMES',
   'STAFF_ROLE_EFFECTS',
   'FACILITY_INFO',
+  // Nascimento (Fase 2): cidades, profissões, aptidões, traços e origens. A faixa de renda de cada
+  // profissão é só uma categoria; o dinheiro de cada faixa está em BIRTH, em src/config/balance.ts.
+  'HOMETOWNS',
+  'MOTHER_PROFESSIONS',
+  'FATHER_PROFESSIONS',
+  'APTITUDE_INFO',
+  'APTITUDE_ORDER',
+  'BIRTH_TRAITS',
+  'BIRTH_ORIGIN_INFO',
+  'BIRTH_ORIGIN_ORDER',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',

@@ -24,7 +24,7 @@ import type {
 } from '@/domain/schemas';
 import * as engine from '@/engine';
 import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, PlayerRaceInput, RaceSimState, RaceTimeline, StrategyPlan } from '@/engine';
-import { readLastExport, writeLastExport } from '@/persistence/preferences';
+import { readBirthDraft, readLastExport, writeBirthDraft, writeLastExport, type BirthDraft } from '@/persistence/preferences';
 import { clearRaceResume, loadRaceResume, raceResumeKey, saveRaceResume, type RaceResume } from '@/persistence/raceResume';
 import { reportError } from '@/monitoring/crashReporting';
 import { DeviceFileStorage, migrateStorage } from '@/persistence/deviceStorage';
@@ -99,6 +99,13 @@ export interface GameStore {
   exportOriginalCopy(slot: SaveSlotId, version: number): Promise<string>;
   /** Anota que a carreira acabou de ser exportada. */
   markExported(): void;
+  /** Nascimento da próxima carreira (semente e sorteio), guardado no aparelho até ela começar. */
+  birthDraft: BirthDraft | null;
+  /** Abre (ou retoma) o rascunho do nascimento: uma semente nova, no primeiro sorteio. */
+  beginBirth(): BirthDraft;
+  /** Passa ao sorteio seguinte, se ainda houver sorteios (`allowed` refeitos, conforme a versão do jogo). */
+  rerollBirth(allowed: number): void;
+  /** Cria a carreira com o nascimento do rascunho e o apaga. */
   newCareer(input: NewCareerInput): Promise<void>;
   loadSlot(slot: SaveSlotId): Promise<void>;
   importJson(json: string): Promise<void>;
@@ -286,6 +293,24 @@ export const useGameStore = create<GameStore>((set, get) => {
     notice: null,
     lastOutcome: null,
     lastExportAt: readLastExport(),
+    birthDraft: readBirthDraft(),
+
+    beginBirth() {
+      const current = get().birthDraft;
+      if (current) return current;
+      const draft: BirthDraft = { seed: engine.randomSeed(), attempt: 0 };
+      writeBirthDraft(draft);
+      set({ birthDraft: draft });
+      return draft;
+    },
+
+    rerollBirth(allowed) {
+      const current = get().birthDraft;
+      if (!current || current.attempt >= Math.min(allowed, engine.maxBirthRerolls())) return;
+      const draft = { ...current, attempt: current.attempt + 1 };
+      writeBirthDraft(draft);
+      set({ birthDraft: draft });
+    },
 
     async initStorage() {
       // No aplicativo, os saves ficam em arquivos do aparelho; no navegador, no IndexedDB.
@@ -325,8 +350,10 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     async newCareer(input) {
-      const career = engine.createCareer(input, engine.randomSeed(), now());
-      set({ career, ...RACE_RESET, notice: null, lastOutcome: null });
+      const draft = get().birthDraft;
+      const career = engine.createCareer({ ...input, birthAttempt: draft?.attempt ?? 0 }, draft?.seed ?? engine.randomSeed(), now());
+      writeBirthDraft(null);
+      set({ career, birthDraft: null, ...RACE_RESET, notice: null, lastOutcome: null });
       await autosave(career);
     },
 

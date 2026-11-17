@@ -18,6 +18,7 @@ import { BUSINESSES, PROPERTIES, STOCKS } from '@/data/assets';
 import {
   beginHandover,
   buyProperty,
+  drawBirth,
   buyStock,
   getCategory,
   loanLimit,
@@ -60,6 +61,20 @@ const RECIPES: Readonly<Record<string, () => CareerState>> = {
   'dirigente-fechamento-com-patrimonio': () => executiveSeasonEnd(),
   /** Passagem de comando em aberto: a sucessão espera a escolha do herdeiro. */
   'sucessao-pendente': () => beginHandover(executiveSeasonEnd()),
+  /**
+   * Nascimento (Fase 2): estreante nascido no interior depois da segunda etapa, com a mudança para
+   * São Paulo esperando a decisão e o traço de estreia já revelado.
+   */
+  'nascimento-mudanca-pendente': () => {
+    for (let seed = 1; seed < 500; seed++) {
+      const birth = drawBirth(seed, 0, 'player');
+      if (birth.region !== 'interior' || !birth.traits.some((t) => t.id === 'debutNerves' || t.id === 'bigStage')) continue;
+      let c = newCareer(seed);
+      for (let i = 0; i < 2; i++) c = playRound(c);
+      if (c.pendingEvents.some((e) => e.definitionId === 'birth-move')) return c;
+    }
+    throw new Error('Nenhuma semente com nascimento no interior e traço de estreia.');
+  },
 };
 
 function executiveMidSeason(): CareerState {
@@ -138,6 +153,14 @@ describe('saves de exemplo', () => {
     expect(getCategory(careers['monoposto-fim-de-temporada']!.categoryId).vehicle).toBe('formula');
     expect(careers['dirigente-no-meio-da-temporada']).toMatchObject({ mode: 'executive', rounds: { length: 3 } });
     expect(careers['dirigente-no-meio-da-temporada']?.management).not.toBeNull();
+  });
+
+  it('e o nascimento: interior, mudança pendente e traço revelado', () => {
+    const born = importCareer(readFileSync(`${CURRENT}/nascimento-mudanca-pendente.json`, 'utf8'));
+    expect(born.birth).toMatchObject({ region: 'interior', movedSeason: null });
+    expect(born.pendingEvents.some((e) => e.definitionId === 'birth-move')).toBe(true);
+    expect(born.birth?.traits.some((t) => t.revealedSeason !== null)).toBe(true);
+    expect(born.birth?.traits.some((t) => t.revealedSeason === null)).toBe(true);
   });
 
   it('e também patrimônio pessoal, fechamento de dirigente e sucessão em aberto', () => {

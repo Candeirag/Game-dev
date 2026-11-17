@@ -37,6 +37,7 @@ O build usa caminhos relativos, então a pasta `dist/` funciona em qualquer serv
 - **Sete categorias:** Kart Regional, Nacional e Internacional, Fórmula Júnior, Fórmula Sprint, Fórmula Elite e Grand Prix Mundial, cada uma com as próprias regras de corrida, custos e exigências.
 - **Promoção por mérito:** licença (pontos pela posição final), reputação, experiência, idade, dinheiro e uma equipe interessada.
 - **Contratos:** duração, salário, custo da vaga, bônus, multa rescisória e cláusula de desempenho; propostas no fim do ano, negociação com margem e paciência, renovação e rescisão; mercado de pilotos entre as temporadas.
+- **Nascimento sorteado:** família (cidade, profissão dos pais e quanto podem ajudar), cinco aptidões de corpo e mente ligadas aos atributos e três talentos ou defeitos ocultos, revelados pela pista; quem nasce no interior começa na equipe menor e decide cedo a mudança para São Paulo. As outras origens aparecem com cadeado (versão premium, ainda sem compra).
 - **Piloto:** nove atributos, treino com foco e intensidade, fase, confiança e moral, lesões e recuperação, envelhecimento e declínio.
 - **Corrida:** classificação (eliminatória no Grand Prix Mundial), largada, ultrapassagens e defesa, erros e acidentes, danos, quebras, safety car, safety car virtual, bandeira vermelha, punições, clima que muda durante a prova, compostos de pneu, desgaste, paradas, estratégia e combustível.
 - **Corrida visual:** a corrida acontece num circuito visto de cima, com os carros (pintura de cada equipe, capacete e número de cada piloto) andando no tempo real da simulação: largada com luzes, disputas lado a lado, ultrapassagens, paradas no pit lane, rodadas, abandonos, safety car, bandeira vermelha com relargada e chuva. Há torre de tempos, câmera geral ou acompanhando um carro, pausa e velocidades de 1× a 8×.
@@ -70,7 +71,8 @@ O painel traz uma lista de primeiros passos, e a tela "Como jogar" resume as reg
 
 Dicas:
 
-- No começo, o dinheiro é curto: a família ajuda por cinco anos, e bons resultados atraem patrocinadores maiores. Uma categoria cara sem patrocínio vira dívida.
+- Cada carreira começa com um nascimento sorteado: cidade, profissão dos pais, quanto a família pode ajudar, cinco aptidões de corpo e mente e três talentos ou defeitos ocultos, que a pista revela. Dá para sortear de novo três vezes antes de começar.
+- No começo, o dinheiro é curto: a família ajuda pouco e por poucos anos, e bons resultados atraem patrocinadores maiores. Uma categoria cara sem patrocínio vira dívida.
 - Terminar entre os três primeiros dá bolsa na vaga do degrau de cima.
 - Do kart nacional dá para ir direto para a Fórmula Júnior.
 - Na Fórmula Elite e no Grand Prix Mundial, atacar a corrida inteira acaba com o combustível antes da bandeirada.
@@ -94,7 +96,7 @@ Os testes travam o comportamento do jogo: a simulação com semente fixa é comp
 - **Três slots manuais**, mais exportação e importação de arquivo `.json`.
 - Cada save é validado (estrutura, consistência e checksum) ao ser gravado e ao ser carregado, e a versão anterior do slot fica como cópia de segurança.
 - **Saves das fases anteriores continuam funcionando:** são convertidos ao abrir, mantendo o piloto, os resultados, o dinheiro, o contrato e o histórico, com os sistemas novos no estado inicial. Uma carreira encerrada na Fase 2 pode voltar como dirigente.
-- **O formato do save tem versão** (hoje, a 4). Um save antigo passa por todas as migrações, uma a uma, até a versão atual; um save gravado por uma versão mais nova do jogo não é aberto nem substituído pela cópia de segurança: o jogo pede para atualizar. Quando um save antigo é convertido, o original fica guardado intacto no aparelho (tela Saves, "Cópias de formatos anteriores") e pode ser exportado para a versão que o gravou.
+- **O formato do save tem versão** (hoje, a 6). Um save antigo passa por todas as migrações, uma a uma, até a versão atual; um save gravado por uma versão mais nova do jogo não é aberto nem substituído pela cópia de segurança: o jogo pede para atualizar. Quando um save antigo é convertido, o original fica guardado intacto no aparelho (tela Saves, "Cópias de formatos anteriores") e pode ser exportado para a versão que o gravou.
 - **Corrida interrompida:** a corrida ao vivo não entra no save, mas o navegador guarda os comandos dados a cada volta. Se a página recarrega no meio da prova, o jogo oferece "Continuar de onde parou" ou "Ver resultado"; a corrida é refeita com os mesmos comandos e dá no mesmo.
 - **No aplicativo**, os saves ficam em arquivos do próprio aparelho (não no navegador), entram no backup do sistema e a exportação abre a folha de compartilhamento (salvar em Arquivos, enviar por mensagem ou e-mail).
 - No navegador, os saves moram nele, que pode apagá-los: a tela Saves e o fechamento de cada temporada lembram de exportar o `.json` e mostram a data da última exportação. Se o navegador bloquear a gravação, o jogo segue na memória e avisa que o progresso será perdido ao fechar.

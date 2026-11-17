@@ -25,6 +25,7 @@ import { buildCategoryField, rankTeams, teamStrength } from '../world/generation
 import { canAcceptOffer, contractFromOffer, generateOffers, negotiate, releaseFeeFor, type NegotiationDemand } from './contracts';
 import { buildCalendar } from './createCareer';
 import { applyAging, developDriver } from './development';
+import { birthTrainingFactor } from '../birth/effects';
 import { closeFamilyYear } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality, touchLineage } from '../dynasty/succession';
@@ -339,11 +340,15 @@ export function archiveSeason(career: CareerState): SeasonSummary {
   };
 }
 
-/** Passagem de ano de um piloto: idade, declínio, pré-temporada e condição renovada. */
-export function winter(driver: Driver, careerSeed: number, season: number): Driver {
+/**
+ * Passagem de ano de um piloto: idade, declínio, pré-temporada e condição renovada.
+ * `playerTraining` multiplica a pré-temporada do jogador (o ritmo de aprendizado do nascimento).
+ */
+export function winter(driver: Driver, careerSeed: number, season: number, playerTraining = 1): Driver {
   let d: Driver = { ...driver, age: driver.age + 1 };
   d = applyAging(d, hashSeed(careerSeed, season, 'aging', d.id));
-  if (d.teamId || d.isPlayer) d = developDriver(d, hashSeed(careerSeed, season, 'offseason', d.id), OFFSEASON_TRAINING_CYCLES).driver;
+  if (d.teamId || d.isPlayer)
+    d = developDriver(d, hashSeed(careerSeed, season, 'offseason', d.id), OFFSEASON_TRAINING_CYCLES, d.isPlayer ? playerTraining : 1).driver;
   return {
     ...d,
     trainingFocus: d.isPlayer ? d.trainingFocus : chooseAiTrainingFocus(d.attributes),
@@ -465,7 +470,8 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
     news.push(...market.news);
   }
   const newPlayer: Driver = { ...player, teamId: offer.teamId, role: contract.role, contractEnd: contract.endSeason };
-  const drivers = [newPlayer, ...others].map((d) => winter(d, career.seed, career.season));
+  const playerTraining = birthTrainingFactor(career);
+  const drivers = [newPlayer, ...others].map((d) => winter(d, career.seed, career.season, playerTraining));
   const playerAfter = drivers.find((d) => d.isPlayer);
   if (!playerAfter) throw new Error('Jogador desapareceu na transição de temporada.');
 

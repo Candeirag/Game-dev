@@ -12,6 +12,7 @@ import { formatReport } from '../sim/report';
 import {
   type CareerSample,
   DEFAULT_SIM_OPTIONS,
+  birthTerciles,
   SIM_POPULATION,
   type SeasonSample,
   type SimResult,
@@ -191,6 +192,7 @@ describe('agregados de carreiras montadas à mão', () => {
   const a: CareerSample = {
     seed: 1,
     profile,
+    birth: { score: 60, region: 'capital', traitBalance: 1 },
     ended: 'completed',
     seasons: [
       season(1, 1, { position: 1, title: true }),
@@ -205,6 +207,7 @@ describe('agregados de carreiras montadas à mão', () => {
   const b: CareerSample = {
     seed: 2,
     profile: { ...profile, age: 14 },
+    birth: { score: 40, region: 'interior', traitBalance: -1 },
     ended: 'succession',
     seasons: [
       season(1, 1, { position: 20 }),
@@ -260,6 +263,29 @@ describe('agregados de carreiras montadas à mão', () => {
     expect(summary.cashBySeason[4]).toMatchObject({ season: 5, median: -900, negativeShare: 1 });
   });
 
+  it('nascimento: grupos pela nota de nascença, pela cidade e pelos traços', () => {
+    // Com duas carreiras, o terço de baixo e o de cima ficam vazios; o do meio leva as duas.
+    expect(summary.byBirth.map((g) => g.group)).toEqual(['mid']);
+    const [low, mid, high] = birthTerciles([a, b, { ...a, seed: 3, birth: { ...a.birth, score: 50 } }]);
+    expect([low, mid, high].map((g) => g.map((c) => c.seed))).toEqual([[2], [3], [1]]);
+    expect(summary.byOrigin.find((g) => g.group === 'capital')).toMatchObject({
+      careers: 1,
+      averageScore: 60,
+      debutPosition: 1,
+      averageHighestTier: 4,
+      formulaShare: 1,
+      topShare: 0,
+      titlesPerCareer: 2,
+      noSeatPerCareer: 1,
+    });
+    expect(summary.byOrigin.find((g) => g.group === 'interior')).toMatchObject({ careers: 1, averageScore: 40, debutPosition: 20, averageHighestTier: 3 });
+    expect(summary.byOrigin.find((g) => g.group === 'talents')?.careers).toBe(1);
+    expect(summary.byOrigin.find((g) => g.group === 'defects')?.careers).toBe(1);
+    const text = formatReport(summary);
+    expect(text).toContain('Nascença média');
+    expect(text).toContain('Dois defeitos');
+  });
+
   it('o relatório mostra esses números e acerta o singular', () => {
     const text = formatReport(summary);
     expect(text).toContain('em 1, nenhuma equipe fez proposta; em 1, havia proposta e faltou dinheiro para a vaga; em 0, faltou outro requisito.');
@@ -297,6 +323,7 @@ describe('relatório', () => {
       '4. CARREIRAS QUE CHEGAM AO TOPO',
       '5. TÍTULOS POR CARREIRA',
       '6. TEMPORADAS PARADAS, SEM VAGA',
+      '7. NASCIMENTO',
     ]) {
       expect(report).toContain(title);
     }

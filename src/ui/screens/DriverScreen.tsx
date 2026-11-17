@@ -3,19 +3,21 @@ import { useSearchParams } from 'react-router-dom';
 import { ATTRIBUTE_KEYS, type AttributeKey } from '@/domain/schemas';
 import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
-import { computeCareerStats, fullName, overallRating } from '@/engine';
+import { activeBirth, computeCareerStats, fullName, overallRating } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
-import { Card, cx, Delta, Meter, PageHeader, Pill, PortraitOr, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
+import { Card, cx, Delta, EmptyState, Meter, PageHeader, Pill, PortraitOr, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
+import { BirthAptitudes, BirthFamily, BirthTraits } from '../components/BirthSheet';
 import { portraitUrl } from '../images';
 import { TrendLine, attributeSeries } from '../components/TrendLine';
 import { formatRating } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
 
-type DriverTab = 'attributes' | 'condition' | 'stats';
+type DriverTab = 'attributes' | 'condition' | 'birth' | 'stats';
 const TABS: { value: DriverTab; label: string }[] = [
   { value: 'attributes', label: 'Atributos' },
   { value: 'condition', label: 'Condição e treino' },
+  { value: 'birth', label: 'Nascimento' },
   { value: 'stats', label: 'Números' },
 ];
 
@@ -34,6 +36,7 @@ export function DriverScreen() {
   const overall = overallRating(player.attributes);
   const overallDelta = overall - overallRating(start);
   const nationality = NATIONALITIES.find((n) => n.code === player.nationality)?.name ?? player.nationality;
+  const birth = activeBirth(career);
 
   return (
     <div className="space-y-3">
@@ -139,6 +142,23 @@ export function DriverScreen() {
           </Card>
         </div>
       )}
+
+      {tab === 'birth' &&
+        (birth ? (
+          <div className="grid items-start gap-4 md:grid-cols-2">
+            <div className="space-y-4">
+              <BirthFamily birth={birth} />
+              <BirthTraits birth={birth} />
+            </div>
+            <BirthAptitudes birth={birth} />
+          </div>
+        ) : (
+          <EmptyState title="Sem nascimento sorteado">
+            {career.birth
+              ? 'O nascimento sorteado é do personagem que começou a carreira; quem herdou o lugar não tem.'
+              : 'Esta carreira começou antes dos nascimentos sorteados: o piloto não tem família, aptidões nem talentos ocultos de nascença.'}
+          </EmptyState>
+        ))}
 
       {tab === 'stats' && (
         <Card title="Estatísticas de carreira" bodyClassName="grid grid-cols-3 gap-x-4 gap-y-4 p-4 md:grid-cols-5">

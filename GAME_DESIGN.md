@@ -60,6 +60,53 @@ Do kart nacional é possível ir direto para a Fórmula Júnior, como na vida re
 - **Finanças.** A temporada precisa se pagar (patrocínios, salário e academia cobrem vaga, custo de vida e treino) ou o saldo projetado não pode passar do limite de crédito (30% do custo líquido da vaga).
 - **Proposta de equipe.** Depende do interesse (ver Mercado).
 
+## Nascimento
+
+Cada carreira começa com um nascimento sorteado pela semente, como num jogo de vida. No jogo grátis todos nascem numa família humilde no Brasil; a versão premium (ainda bloqueada, sem compra) poderá escolher a origem e o país, e as outras origens aparecem com cadeado: filho de ex-piloto (contatos e reputação; comparação com o pai), filho de empresário (dinheiro inicial; fama de "filhinho de papai"), filho de mecânico (aprende acerto mais rápido; pouco dinheiro) e nascer em outro país.
+
+O sorteio pode ser refeito três vezes antes de começar (os extras ficam com a versão premium). Recarregar a página não dá sorteio novo: o rascunho fica no aparelho até a carreira começar.
+
+**Família.** A cidade (metade nasce num bairro da periferia de São Paulo, metade numa cidade do interior paulista), as profissões da mãe e do pai e quanto a família pode ajudar. Cada profissão tem uma faixa de renda (1 a 3); a soma das duas define:
+
+| Renda somada | Economias (caixa inicial) | Ajuda por ano | Por quantos anos |
+| ------------ | ------------------------- | ------------- | ---------------- |
+| 2            | € 16 mil (±15%)           | € 16 mil      | 3                |
+| 3            | € 19 mil                  | € 18 mil      | 3                |
+| 4            | € 22 mil                  | € 20 mil      | 4                |
+| 5            | € 25 mil                  | € 22 mil      | 4                |
+| 6            | € 28 mil                  | € 24 mil      | 4                |
+
+Antes do nascimento, todo estreante tinha € 30 mil e € 24 mil por ano durante cinco anos. A família pobre ajuda menos e por menos tempo.
+
+**Interior.** Quem nasce no interior começa na equipe menor do kart regional (a única que aceita um piloto que mora longe), paga € 500 de viagens a cada etapa e treina 10% menos (menos estrutura) enquanto correr no Brasil. Depois da segunda etapa vem a **Mudança para São Paulo**: mudar com a família (€ 8 mil, −5 de moral), morar com os tios (€ 3 mil, −12 de moral) ou ficar mais um ano (a pergunta volta na temporada seguinte).
+
+**Corpo e mente** (0 a 100, em torno de 50; dois terços dos pilotos ficam entre 35 e 65):
+
+| Aptidão      | Ficha inicial (por ponto acima ou abaixo de 50) | Ao longo da carreira                                                                                   |
+| ------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Reflexo      | Velocidade +0,12; ultrapassagem +0,06           | Reação na largada (dispersão até 30% menor)                                                            |
+| Físico       | Concentração +0,08; chuva +0,08                 | Cansaço até 40% menor nas provas longas (nada no kart, inteiro a partir de 60 minutos); ritmo na chuva |
+| Inteligência | Leitura de corrida +0,12; gestão de pneus +0,08 | -                                                                                                      |
+| Frieza       | Consistência +0,10; defesa +0,08                | Disputas de posição; na última volta, disputa mais firme e até 35% menos erros                         |
+| Carisma      | -                                               | Propostas de patrocínio até 20% maiores (ou menores) e satisfação dos patrocinadores                   |
+
+A média de reflexo, físico, inteligência e frieza soma 0,1 ponto de potencial por ponto acima de 50.
+
+**Talentos e defeitos ocultos.** Dezesseis no catálogo, em oito pares opostos. Cada piloto nasce com três: um talento, um defeito e um terceiro qualquer (nunca os dois de um par). Ficam como "?" na ficha e já agem desde a primeira corrida; a pista revela cada um, com uma mensagem, e o par tem o mesmo tipo de gatilho, para o jogador não saber qual dos dois tem até acontecer.
+
+| Talento              | Defeito                | Revelado                                                           | Efeito                                                          |
+| -------------------- | ---------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------- |
+| Gênio na chuva       | Medo de chuva          | na primeira corrida com pista molhada                              | ±0,15% de tempo de volta com a pista encharcada; erros          |
+| Largador nato        | Largada sonolenta      | na primeira largada com 2 posições ganhas (ou perdidas) na volta 1 | reação e 0,25 s na volta de largada                             |
+| Poupador de pneus    | Gastador de pneus      | na primeira corrida completa numa pista de alto desgaste           | desgaste −12% (ou +14%)                                         |
+| Aprende rápido       | Aprende devagar        | no balanço da primeira temporada                                   | treino +20% (ou −15%)                                           |
+| Rei da classificação | Trava na classificação | na primeira classificação à frente (ou atrás) do companheiro       | ±0,1% na volta lançada                                          |
+| Corpo de ferro       | Frágil                 | na primeira batida                                                 | chance de lesão ×0,5 (ou ×1,8)                                  |
+| Piloto limpo         | Esquentado             | no primeiro toque                                                  | toques nas disputas ×0,7 (ou ×1,4, com ataque mais forte)       |
+| Brilha nas estreias  | Nervoso em estreias    | na estreia                                                         | ritmo e erros na primeira corrida numa categoria ou equipe nova |
+
+Na Fase 4, os mesmos traços entram nas chances dos lances decisivos. O herdeiro de uma dinastia e as carreiras de saves anteriores não têm nascimento sorteado.
+
 ## Piloto
 
 ### Atributos (0 a 100)
@@ -287,14 +334,14 @@ Entre as temporadas: os três melhores da IA sobem de categoria (no Grand Prix M
 
 Os valores deste documento estão em euros, a moeda de referência do balanceamento. No jogo, o símbolo segue o país do piloto: brasileiros veem R$ e os demais, €, com os mesmos números (não há conversão).
 
-| Receitas                                           | Despesas                                                |
-| -------------------------------------------------- | ------------------------------------------------------- |
-| Salário (parcelas por etapa)                       | Custo da vaga (parcelas por etapa)                      |
-| Patrocínios e bônus de pódio                       | Custo de vida e estrutura                               |
-| Bônus de contrato (vitória, pódio, pontos, título) | Treino (pela intensidade)                               |
-| Apoio da academia (70% da vaga)                    | Conta de danos (categorias de base)                     |
-| Apoio da família (€ 24 mil por ano, 5 anos)        | Impostos, juros, multas, taxas de eventos               |
-| Dividendos, aluguéis, lucro de empresas            | Formação e carreira dos filhos, parcelas de empréstimos |
+| Receitas                                                             | Despesas                                                |
+| -------------------------------------------------------------------- | ------------------------------------------------------- |
+| Salário (parcelas por etapa)                                         | Custo da vaga (parcelas por etapa)                      |
+| Patrocínios e bônus de pódio                                         | Custo de vida e estrutura                               |
+| Bônus de contrato (vitória, pódio, pontos, título)                   | Treino (pela intensidade)                               |
+| Apoio da academia (70% da vaga)                                      | Conta de danos (categorias de base)                     |
+| Apoio da família (do nascimento: € 16 a 24 mil por ano, 3 ou 4 anos) | Impostos, juros, multas, taxas de eventos               |
+| Dividendos, aluguéis, lucro de empresas                              | Formação e carreira dos filhos, parcelas de empréstimos |
 
 - **Patrocinadores.** Três cotas. O porte de quem procura o piloto vem dos resultados (entre os três primeiros: grande; entre os oito: médio) e da fama. Pagam 20%, 36% ou 60% do valor de referência da categoria e esperam top 15, top 10 ou top 5. A satisfação sobe e desce a cada etapa; abaixo de 35 há pressão (evento), e só renovam com 60 ou mais. Ao mudar de categoria, o valor acompanha a nova vitrine.
 - **Impostos.** Progressivo sobre a renda da temporada (salário, bônus e patrocínios menos o custo da vaga, mais dividendos, aluguéis e lucro das empresas): isento até € 40 mil, 15% até 300 mil, 27,5% até 3 milhões, 37% acima.
@@ -484,6 +531,18 @@ O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, de
 
 "Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de segurança (ninguém fica um ano sem correr: essa vaga sempre existe). O motivo quase sempre é dinheiro: das 104 temporadas sem vaga do robô mediano, em 94 havia proposta de equipe e faltou caixa para bancar a vaga; em 10 nenhuma equipe fez proposta. Com talento 4 e 8, todas as temporadas sem vaga são por dinheiro. O robô mediano chega ao kart nacional, em média, na sexta temporada (5,4 temporadas no kart regional antes de subir): é o retrato do jogo de hoje com um jogador que não aproveita nenhuma decisão, e o ponto de partida para as próximas fases.
 
+### Fase 2: nascimento
+
+Com o nascimento, as 50 carreiras da linha de base nascem diferentes (aptidões, traços e família) e mais pobres. Os relatórios completos estão em `docs/simulador/fase-2*.txt`; a seção 7 de cada um compara as carreiras pela nota de nascença.
+
+| Robô                  | Chegam ao Grand Prix Mundial | Títulos por carreira | Temporadas sem vaga por carreira | Chegada ao kart nacional |
+| --------------------- | ---------------------------- | -------------------- | -------------------------------- | ------------------------ |
+| Mediano (talento 0)   | 10% (Fase 1: 4%)             | 0,48 (0,34)          | 2,70 (2,08)                      | aos 21,5 anos (20,9)     |
+| Bom (talento 4)       | 40% (26%)                    | 0,74 (0,54)          | 1,80 (1,48)                      | -                        |
+| Excelente (talento 8) | 70% (62%)                    | 1,14 (0,80)          | 1,10 (0,86)                      | -                        |
+
+Mais carreiras chegam ao topo porque os nascimentos espalham os pilotos: a média das aptidões continua 50, mas os bem-nascidos vão mais longe do que os mal-nascidos ficam para trás. As temporadas sem vaga sobem porque a família ajuda menos e por menos tempo. Com o robô mediano, a nascença alta chega em média ao degrau 5,4 (19% ao topo, 1,6 temporada sem vaga) e a baixa ao 4,5 (0% ao topo, 3,9 sem vaga); com 200 sementes, 5,35 contra 4,45.
+
 ## Limitações conhecidas e próximos passos
 
 - Só uma categoria é simulada por vez: a do jogador ou a da equipe que ele dirige. As outras existem como equipes, propostas e participações.
@@ -502,4 +561,5 @@ O mesmo comando simula quatro vidas de 70 temporadas (piloto até os 36 anos, de
 - Não há mudanças no meio da temporada (troca de equipe, demissão imediata, contratação de pilotos).
 - Corridas sprint, pontuação pela metade e retardatários não são simulados.
 - Áudio, retratos, garagens, paddock e conquistas ficam para uma fase futura.
+- Só a origem humilde está aberta; as origens da versão premium têm só os textos (vantagens e custos) e o cadeado. Herdeiros não têm nascimento sorteado.
 - O plano de escala (centenas de pilotos, várias categorias simuladas ao mesmo tempo, saves em partes) está em `docs/PLANO_ARQUITETURA_FASE3.md` e não foi executado.

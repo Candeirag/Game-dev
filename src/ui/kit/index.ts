@@ -20,3 +20,5 @@ export { Segmented, Slider, Switch } from './controls';
 export { Portrait, PortraitOr } from './Portrait';
 export { Ring } from './Ring';
 export { NumberPlate, ResultChips, WeatherBadge, WeatherTag, YouMark, type RecentResult } from './bits';
+export { REVEAL_STEP_MS, RevealItem, useRevealSequence, type RevealSequence } from './Reveal';
+export { LockedCard, SecretCard } from './Secret';

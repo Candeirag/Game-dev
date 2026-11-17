@@ -17,12 +17,15 @@ import { QUALIFYING_ATTEMPTS } from '@/data/rules';
 import { createRng, gaussian, hashSeed, type Rng } from '../rng';
 import { QUALIFYING_APPROACH_EFFECTS, SIM } from './constants';
 import { conditionEffects, errorProbability, expectedLapTime, lapNoiseSigma } from './performance';
+import type { DriverRaceProfile } from './race/types';
 
 export interface QualifyingParticipant {
   driver: Driver;
   team: Team;
   approach: QualifyingApproach;
   modifiers: WeekendModifiers;
+  /** Modificadores próprios do piloto (nascimento); ausente = neutro. */
+  profile?: DriverRaceProfile;
 }
 
 export type QualifyingCategory = Pick<CategoryDefinition, 'lapTimeFactor' | 'carFactor' | 'qualifyingFormat'>;
@@ -52,13 +55,23 @@ function attemptLap(
     weather,
     setupScore: p.modifiers.setupScore,
     tyreWear: 0,
-    paceModifier: effects.pace + cond.pace - p.modifiers.qualifyingBonus - SIM.TRACK_EVOLUTION_PER_ATTEMPT * evolutionStep,
+    paceModifier:
+      effects.pace +
+      cond.pace -
+      p.modifiers.qualifyingBonus -
+      SIM.TRACK_EVOLUTION_PER_ATTEMPT * evolutionStep +
+      (p.profile ? p.profile.qualifying + p.profile.wetPace * weather.wetness : 0),
     lapTimeFactor: category.lapTimeFactor,
     carFactor: category.carFactor,
   });
   const sigma = lapNoiseSigma(p.driver.attributes, weather, 0) * SIM.QUALIFYING_NOISE_FACTOR * cond.noise;
   const lapTime = expected * (1 + gaussian(rng) * sigma);
-  const pError = errorProbability(p.driver.attributes, weather, 0) * QUALIFYING_ERROR_MULTIPLIER * effects.error * cond.error;
+  const pError =
+    errorProbability(p.driver.attributes, weather, 0) *
+    QUALIFYING_ERROR_MULTIPLIER *
+    effects.error *
+    cond.error *
+    (p.profile ? Math.max(0, 1 + p.profile.wetError * weather.wetness) : 1);
   return rng.next() < pError ? null : round3(lapTime);
 }
 

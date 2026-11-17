@@ -73,7 +73,10 @@ describe('economia', () => {
     const f = settleRound(c, 1, entry(12));
     const share = 1 / c.calendar.length;
     expect(f.seasonTotals.seat).toBe(-Math.round(c.contract.seatCost * share));
-    expect(f.seasonTotals.sponsors).toBe(Math.round(ECONOMY.FAMILY_SUPPORT * share));
+    // O apoio da família vem do nascimento: o valor por temporada que o sorteio deu.
+    const family = c.sponsors.find((s) => s.id === 'family')!;
+    expect(family.perSeason).toBe(c.birth!.support.perSeason);
+    expect(f.seasonTotals.sponsors).toBe(Math.round(family.perSeason * share));
     expect(f.seasonTotals.living).toBeLessThan(0);
     expect(f.seasonTotals.training).toBeLessThan(0);
     expect(f.seasonTotals.damage).toBeUndefined();
@@ -155,7 +158,7 @@ describe('condição, lesões e suspensão', () => {
     };
     expect(playerAvailability(injured)).toEqual({ available: false, reason: 'injury', canRest: false });
     const weekend = startWeekend(injured);
-    const reserve = getReserve(injured, 'cerrado')!;
+    const reserve = getReserve(injured, getPlayer(injured).teamId!)!;
     expect(weekend.weekend!.playerParticipates).toBe(false);
     expect(weekend.weekend!.entrants.map((e) => e.driverId)).toContain(reserve.id);
     expect(weekend.weekend!.entrants.map((e) => e.driverId)).not.toContain('player');
