@@ -1,6 +1,7 @@
 /** Apoio aos testes no navegador: tamanhos de tela, abertura de saves e a verificação visual. */
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
+import { medirContraste } from './contraste';
 
 /**
  * Formatos conferidos. O aplicativo é feito para a tela deitada (844×390) e escala para tablet
@@ -226,6 +227,13 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-');
   await page.screenshot({ path: `test-results/telas/${formato}/${arquivo}.png`, fullPage: true });
+  // AUDITORIA=<nome>: só levanta as medidas de contraste de cada tela (test-results/auditoria/<nome>), sem reprovar.
+  if (process.env.AUDITORIA) {
+    const pasta = `test-results/auditoria/${process.env.AUDITORIA}/${formato}`;
+    mkdirSync(pasta, { recursive: true });
+    writeFileSync(`${pasta}/${arquivo}.json`, JSON.stringify(await medirContraste(page)));
+    return;
+  }
   const achados = await sobreposicoes(page);
   const toque = TELAS.find((item) => item.nome === formato)?.toque ?? true;
   const pequenos = toque ? await alvosPequenos(page) : [];
