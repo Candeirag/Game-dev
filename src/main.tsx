@@ -2,7 +2,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initCrashReporting } from './monitoring/crashReporting';
 import { prepareApp } from './platform/boot';
-import { isFeatureEnabled } from './config/featureFlags';
 import { initSettings } from './ui/settings/settings';
 import './index.css';
 
@@ -23,8 +22,6 @@ async function start(container: HTMLElement): Promise<void> {
   }
   // Tamanho do texto, modo para daltônicos e "menos movimento" valem antes do primeiro desenho.
   initSettings();
-  // Comparativo de títulos (só em desenvolvimento): a Saira Condensed no lugar da Barlow.
-  if (import.meta.env.DEV && isFeatureEnabled('sairaTitles')) await import('./ui/saira.css');
   const [{ App }, { ErrorBoundary }] = await Promise.all([import('./ui/App'), import('./ui/components/ErrorBoundary')]);
   createRoot(container).render(
     <StrictMode>

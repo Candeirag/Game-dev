@@ -27,7 +27,7 @@
   /* Inter: texto, tabelas, cronômetro e todo texto pequeno. */
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   /* Barlow Condensed: títulos, nomes e números grandes, sempre a partir de 16 px (text-base). */
-  --font-display: var(--font-title, "Barlow Condensed"), "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* ---------- Cores ---------- */

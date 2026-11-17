@@ -7,15 +7,14 @@ coluna "Hoje"; nenhuma tela fica com um espaço vazio.
 
 ## O que já existe
 
-| Imagem                                 | Arquivo                                         | Tamanho           | Uso                                                                   |
-| -------------------------------------- | ----------------------------------------------- | ----------------- | --------------------------------------------------------------------- |
-| Kart regional, nacional, internacional | `src/assets/race/vehicles/kart-*.webp`          | 256 px de largura | Corrida, grid, garagem, escada da carreira.                           |
-| Fórmula 4, 3, 2 e 1                    | `src/assets/race/vehicles/f1.webp` a `f4.webp`  | 320 px de largura | Os mesmos lugares.                                                    |
-| Safety car                             | `src/assets/race/vehicles/safety-car.webp`      | 256×126           | Corrida.                                                              |
-| Arquibancada e árvore                  | `src/assets/race/scenery/*.webp`                | 400×74 e 128×129  | Cenário da pista.                                                     |
-| Traçados das pistas                    | `src/data/circuitLayouts.ts` e `kartLayouts.ts` | vetorial          | Desenhados pelo jogo, sem arquivo de imagem.                          |
-| Fontes Barlow Condensed e Inter        | `src/assets/fonts/*.woff2`                      |                   | Títulos, números e texto (licença OFL).                               |
-| Fonte Saira Condensed                  | `src/assets/fonts/saira-condensed-*.woff2`      |                   | Só no comparativo de títulos (flag de desenvolvimento `sairaTitles`). |
+| Imagem                                 | Arquivo                                         | Tamanho           | Uso                                          |
+| -------------------------------------- | ----------------------------------------------- | ----------------- | -------------------------------------------- |
+| Kart regional, nacional, internacional | `src/assets/race/vehicles/kart-*.webp`          | 256 px de largura | Corrida, grid, garagem, escada da carreira.  |
+| Fórmula 4, 3, 2 e 1                    | `src/assets/race/vehicles/f1.webp` a `f4.webp`  | 320 px de largura | Os mesmos lugares.                           |
+| Safety car                             | `src/assets/race/vehicles/safety-car.webp`      | 256×126           | Corrida.                                     |
+| Arquibancada e árvore                  | `src/assets/race/scenery/*.webp`                | 400×74 e 128×129  | Cenário da pista.                            |
+| Traçados das pistas                    | `src/data/circuitLayouts.ts` e `kartLayouts.ts` | vetorial          | Desenhados pelo jogo, sem arquivo de imagem. |
+| Fontes Barlow Condensed e Inter        | `src/assets/fonts/*.woff2`                      |                   | Títulos, números e texto (licença OFL).      |
 
 Os carros são pintados pelo jogo com a cor de cada equipe e o número de cada piloto; por isso as
 imagens são em tons neutros, vistas de cima, com fundo transparente.

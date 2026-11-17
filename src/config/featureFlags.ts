@@ -23,11 +23,6 @@ export const FEATURE_FLAGS = {
   ads: false,
   /** Conquistas das lojas (Game Center, no iPhone; Play Jogos, no Android). */
   storeAchievements: false,
-  /**
-   * Comparativo da Fase 1: títulos em Saira Condensed no lugar da Barlow Condensed. Só para o
-   * dono escolher (`VITE_FEATURE_FLAGS=sairaTitles npm run dev`); o padrão é a Barlow.
-   */
-  sairaTitles: false,
 } as const satisfies Readonly<Record<string, boolean>>;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;

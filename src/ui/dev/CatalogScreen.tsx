@@ -2,15 +2,14 @@
  * Catálogo do sistema de design: os tokens e os componentes base numa tela só, para conferir o
  * visual de uma vez. Só existe no servidor de desenvolvimento (`npm run dev`, `#/dev/catalogo`):
  * a rota não é registrada no build de produção e este arquivo não entra no pacote.
- *
- * Com `VITE_FEATURE_FLAGS=sairaTitles npm run dev`, os títulos aparecem em Saira Condensed.
+
  */
 import { ArrowLeft, Flag, Play, Trash2, Trophy } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { isFeatureEnabled } from '@/config/featureFlags';
 import { TYRE_COMPOUNDS } from '@/domain/schemas';
 import {
+  advanceButtonClass,
   Button,
   Card,
   Check,
@@ -34,12 +33,12 @@ import {
   Stat,
   Switch,
   Tabs,
-  Tower,
-  TyreBadge,
-  advanceButtonClass,
   td,
   th,
+  Tower,
   type TowerRow,
+  TyreBadge,
+  TyreLegend,
 } from '@/ui/kit';
 import { formatInterval, formatMoneyAs } from '../format';
 
@@ -151,10 +150,7 @@ export default function CatalogScreen() {
         <ArrowLeft size={18} aria-hidden />
         Menu principal
       </Link>
-      <PageHeader
-        title="Catálogo"
-        eyebrow={`Sistema de design "muro dos boxes" · títulos em ${isFeatureEnabled('sairaTitles') ? 'Saira Condensed (comparativo)' : 'Barlow Condensed (padrão)'}`}
-      />
+      <PageHeader title="Catálogo" eyebrow='Sistema de design "muro dos boxes" · títulos em Barlow Condensed, texto em Inter' />
       <div className="grid items-start gap-4 md:grid-cols-2">
         <Section title="Cores" wide>
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-11">
@@ -292,7 +288,10 @@ export default function CatalogScreen() {
               <TyreBadge key={compound} compound={compound} size="md" withLabel />
             ))}
           </div>
-          <p className="text-xs text-ink-400">Cada composto tem a cor do anel e uma letra só dele.</p>
+          <TyreLegend compounds={TYRE_COMPOUNDS} />
+          <p className="text-xs text-ink-400">
+            Cada composto tem a cor do anel e a letra das transmissões (S, M, H, I, W); o nome em português vai no texto de apoio e na legenda.
+          </p>
         </Section>
 
         <Section title="Barras e medidores">
