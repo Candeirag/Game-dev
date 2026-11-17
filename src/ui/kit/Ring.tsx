@@ -3,14 +3,13 @@
  * mede o valor (nota de 0 a 100, posição dentro do grid); sem ela, o anel só emoldura o número.
  */
 import type { ReactNode } from 'react';
-import { cx } from '../components/ui';
-import type { Tone } from './Panel';
+import { cx, type Tone } from './cx';
 
 const ARC: Record<Tone, string> = {
   neutral: 'stroke-ink-200',
   good: 'stroke-go-400',
   attention: 'stroke-gold-400',
-  accent: 'stroke-apex-500',
+  accent: 'stroke-apex-400',
 };
 
 export function Ring({
@@ -62,11 +61,11 @@ export function Ring({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-        <span className="font-display font-bold text-ink-100" style={{ fontSize: size * 0.4 }}>
+        <span className="font-display font-bold text-ink-100" style={{ fontSize: `calc(${size * 0.4}px * var(--text-scale))` }}>
           {value}
         </span>
         {label && (
-          <span className="mt-0.5 font-medium text-ink-400" style={{ fontSize: Math.max(9, size * 0.15) }}>
+          <span className="mt-0.5 font-medium text-ink-400" style={{ fontSize: `calc(${Math.max(11, size * 0.15)}px * var(--text-scale))` }}>
             {label}
           </span>
         )}
