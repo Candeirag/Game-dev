@@ -8,6 +8,7 @@
  * e uma diferença entre duas versões do código é sempre efeito do código.
  */
 import type { CareerState, CategoryId, Offer } from '@/domain/schemas';
+import { BIRTH_TRAITS } from '@/data/birth';
 import { CATEGORIES, getCategory } from '@/data/categories';
 import type { PlayerBackground } from '@/data/rules';
 import * as engine from '@/engine';
@@ -41,6 +42,10 @@ export const SIM_CHOICES: Choices = { program: 'setup', approach: 'balanced', mo
  * equipe de entrada ao jogo, estas listas NÃO acompanham sozinhas: os 50 pilotos da linha de base
  * continuam os mesmos, e os relatórios de fases diferentes continuam comparáveis. Mexer aqui é
  * trocar a linha de base (regrave `docs/simulador/` e diga no PR).
+ *
+ * Desde a Fase 2, cada carreira tem também o seu nascimento sorteado (o primeiro sorteio da
+ * semente, sem refazer). Quem nasce no interior começa na equipe menor do kart regional, seja qual
+ * for a equipe que a população sorteou para a semente.
  */
 export const SIM_POPULATION = {
   backgrounds: ['natural', 'technical', 'fighter'],
@@ -92,9 +97,19 @@ export interface CareerProfile {
   teamId: string;
 }
 
+/** O nascimento sorteado da carreira (Fase 2), resumido para comparar começos fortes e fracos. */
+export interface BirthSample {
+  /** Nota de nascença: a média das cinco aptidões de corpo e mente (50 é o piloto comum). */
+  score: number;
+  region: 'capital' | 'interior';
+  /** Talentos menos defeitos: com três traços, +1 (dois talentos) ou −1 (dois defeitos). */
+  traitBalance: number;
+}
+
 export interface CareerSample {
   seed: number;
   profile: CareerProfile;
+  birth: BirthSample;
   seasons: SeasonSample[];
   /** 'completed' = jogou todas as temporadas pedidas; 'succession' = a carreira passou a um herdeiro antes disso. */
   ended: 'completed' | 'succession';
@@ -164,20 +179,33 @@ function sampleSeason(career: CareerState, index: number, seat: SeatOrigin, noSe
   };
 }
 
+function birthSample(career: CareerState): BirthSample {
+  const birth = career.birth;
+  if (!birth) throw new Error('Carreira do simulador sem nascimento.');
+  const traits = birth.traits.map((t) => BIRTH_TRAITS[t.id].kind);
+  return {
+    score: engine.birthScore(birth.aptitudes),
+    region: birth.region,
+    traitBalance: traits.filter((k) => k === 'talent').length - traits.filter((k) => k === 'defect').length,
+  };
+}
+
 /** Joga uma carreira com o robô e devolve uma linha por temporada disputada. */
 export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons' | 'talent'>): CareerSample {
   const profile = profileForSeed(seed);
   const seasons: SeasonSample[] = [];
   let index = 1;
+  let birth: BirthSample | null = null;
   try {
     let career = createSimCareer(seed, options.talent);
+    birth = birthSample(career);
     let seat: SeatOrigin = 'initial';
     let cause: NoSeatCause | null = null;
     for (; index <= options.seasons; index++) {
       career = botTraining(career);
       while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, SIM_CHOICES);
       // Um acidente fatal no meio do ano encerra a amostra sem contar a temporada incompleta.
-      if (!career.offseason) return { seed, profile, seasons, ended: 'succession' };
+      if (!career.offseason) return { seed, profile, birth, seasons, ended: 'succession' };
       // As decisões que a última etapa deixou pendentes são resolvidas aqui, depois do fechamento
       // do ano (que acontece ao concluir a última etapa) e antes de medir o caixa e de escolher a
       // proposta, como faz o jogador.
@@ -185,13 +213,13 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
       seasons.push(sampleSeason(career, index, seat, cause));
       // Quem jogou todas as temporadas pedidas completou a carreira, mesmo que a sucessão venha no último fechamento.
       if (index === options.seasons) break;
-      if (career.succession) return { seed, profile, seasons, ended: 'succession' };
+      if (career.succession) return { seed, profile, birth, seasons, ended: 'succession' };
       const offerId = pickBestOffer(career);
       seat = career.offseason?.offers.find((o) => o.id === offerId)?.kind ?? 'fallback';
       cause = seat === 'fallback' ? seatMarket(career).cause : null;
       career = engine.startNextSeason(career, offerId);
     }
-    return { seed, profile, seasons, ended: 'completed' };
+    return { seed, profile, birth, seasons, ended: 'completed' };
   } catch (error) {
     // Uma carreira que quebra tem de dizer qual foi: é com a semente que se reproduz o defeito.
     throw new Error(`A carreira da semente ${seed} falhou na temporada ${index}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
@@ -241,6 +269,28 @@ export interface ArrivalStats {
   averageSeason: number;
 }
 
+/**
+ * Desempenho de um grupo de carreiras separadas pelo nascimento: quanto a nota de nascença, a
+ * cidade ou os traços ocultos mudam a carreira do mesmo robô.
+ */
+export interface BirthGroupStats {
+  group: 'low' | 'mid' | 'high' | 'capital' | 'interior' | 'talents' | 'defects';
+  careers: number;
+  averageScore: number;
+  minScore: number;
+  maxScore: number;
+  /** Posição média no campeonato da temporada de estreia. */
+  debutPosition: number;
+  /** Degrau mais alto alcançado, em média. */
+  averageHighestTier: number;
+  /** Parcela das carreiras que chegaram aos monopostos (4º degrau ou mais). */
+  formulaShare: number;
+  /** Parcela das carreiras que chegaram ao topo. */
+  topShare: number;
+  titlesPerCareer: number;
+  noSeatPerCareer: number;
+}
+
 export interface SimSummary {
   options: SimOptions;
   careers: number;
@@ -266,6 +316,13 @@ export interface SimSummary {
   roundsMissedPerSeason: number;
   /** Carreiras que passaram a um herdeiro (morte ou acidente) antes de completar as temporadas pedidas. */
   interrupted: number;
+  /**
+   * Nascimento (Fase 2): as carreiras em três grupos do mesmo tamanho pela nota de nascença
+   * (baixa, média e alta), e depois por cidade (capital e interior) e pelos traços (dois talentos e
+   * dois defeitos).
+   */
+  byBirth: BirthGroupStats[];
+  byOrigin: BirthGroupStats[];
 }
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
@@ -286,6 +343,34 @@ function longestStay(seasons: readonly SeasonSample[]): number {
     best = Math.max(best, run);
   });
   return best;
+}
+
+function birthGroup(group: BirthGroupStats['group'], samples: readonly CareerSample[]): BirthGroupStats | null {
+  if (samples.length === 0) return null;
+  const scores = samples.map((c) => c.birth.score);
+  const highest = samples.map((c) => Math.max(0, ...c.seasons.map((s) => s.tier)));
+  const topTier = Math.max(...CATEGORIES.map((c) => c.tier));
+  const debut = samples.flatMap((c) => c.seasons.filter((s) => s.season === 1).map((s) => s.position));
+  return {
+    group,
+    careers: samples.length,
+    averageScore: mean(scores),
+    minScore: Math.min(...scores),
+    maxScore: Math.max(...scores),
+    debutPosition: mean(debut),
+    averageHighestTier: mean(highest),
+    formulaShare: highest.filter((tier) => tier >= 4).length / samples.length,
+    topShare: highest.filter((tier) => tier >= topTier).length / samples.length,
+    titlesPerCareer: mean(samples.map((c) => c.seasons.filter((s) => s.title).length)),
+    noSeatPerCareer: mean(samples.map((c) => c.seasons.filter((s) => s.seat === 'fallback').length)),
+  };
+}
+
+/** Três grupos do mesmo tamanho (o do meio fica com a sobra) pela nota de nascença; empate pela semente. */
+export function birthTerciles(samples: readonly CareerSample[]): [CareerSample[], CareerSample[], CareerSample[]] {
+  const sorted = [...samples].sort((a, b) => a.birth.score - b.birth.score || a.seed - b.seed);
+  const third = Math.floor(sorted.length / 3);
+  return [sorted.slice(0, third), sorted.slice(third, sorted.length - third), sorted.slice(sorted.length - third)];
 }
 
 export function summarize(samples: readonly CareerSample[], options: SimOptions): SimSummary {
@@ -390,6 +475,27 @@ export function summarize(samples: readonly CareerSample[], options: SimOptions)
     longestStay: mean(samples.map((c) => longestStay(c.seasons))),
     roundsMissedPerSeason: mean(all.map((s) => s.roundsMissed)),
     interrupted: samples.filter((c) => c.ended === 'succession').length,
+    byBirth: (['low', 'mid', 'high'] as const)
+      .map((group, i) => birthGroup(group, birthTerciles(samples)[i] ?? []))
+      .filter((row): row is BirthGroupStats => row !== null),
+    byOrigin: [
+      birthGroup(
+        'capital',
+        samples.filter((c) => c.birth.region === 'capital'),
+      ),
+      birthGroup(
+        'interior',
+        samples.filter((c) => c.birth.region === 'interior'),
+      ),
+      birthGroup(
+        'talents',
+        samples.filter((c) => c.birth.traitBalance > 0),
+      ),
+      birthGroup(
+        'defects',
+        samples.filter((c) => c.birth.traitBalance < 0),
+      ),
+    ].filter((row): row is BirthGroupStats => row !== null),
   };
 }
 

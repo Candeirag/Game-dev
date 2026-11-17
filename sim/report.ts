@@ -7,7 +7,17 @@ import { categoryRef } from '@/domain/categoryNames';
 import { formatMoney } from '@/domain/money';
 import { counted } from '@/domain/text';
 import { CATEGORIES, getCategory } from '@/data/categories';
-import type { SimSummary } from './run';
+import type { BirthGroupStats, SimSummary } from './run';
+
+const GROUP_LABELS: Readonly<Record<BirthGroupStats['group'], string>> = {
+  low: 'Nascença baixa',
+  mid: 'Nascença média',
+  high: 'Nascença alta',
+  capital: 'Capital',
+  interior: 'Interior',
+  talents: 'Dois talentos',
+  defects: 'Dois defeitos',
+};
 
 const decimal = (value: number, digits = 1) => value.toFixed(digits).replace('.', ',');
 const percent = (fraction: number) => `${Math.round(fraction * 100)}%`;
@@ -122,6 +132,32 @@ export function formatReport(summary: SimSummary): string {
     '"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de',
     'segurança: a vaga gratuita na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no',
     'primeiro). O jogo de hoje sempre oferece essa vaga: ninguém fica um ano inteiro sem correr.',
+  );
+
+  section('7. Nascimento');
+  const birthRows = (rows: readonly BirthGroupStats[]) =>
+    rows.map((g) => [
+      GROUP_LABELS[g.group],
+      String(g.careers),
+      `${decimal(g.averageScore)} (${decimal(g.minScore)} a ${decimal(g.maxScore)})`,
+      decimal(g.debutPosition),
+      decimal(g.averageHighestTier, 2),
+      percent(g.formulaShare),
+      percent(g.topShare),
+      decimal(g.titlesPerCareer, 2),
+      decimal(g.noSeatPerCareer, 2),
+    ]);
+  const birthHeaders = ['Grupo', 'Carreiras', 'Nota de nascença', 'Posição na estreia', 'Degrau mais alto', 'Monopostos', 'Topo', 'Títulos', 'Sem vaga'];
+  out.push(
+    ...table(birthHeaders, birthRows(summary.byBirth)),
+    '',
+    ...table(birthHeaders, birthRows(summary.byOrigin)),
+    '',
+    'Nota de nascença: a média das cinco aptidões de corpo e mente (reflexo, físico, inteligência, frieza e carisma; 50 é o',
+    'piloto comum). As carreiras ficam em três grupos do mesmo tamanho pela nota. "Posição na estreia" é a posição média no',
+    'campeonato da primeira temporada; "degrau mais alto", a média do degrau mais alto alcançado; "monopostos" e "topo", a',
+    'parcela das carreiras que chegou ao 4º degrau e ao último; "títulos" e "sem vaga", por carreira. A segunda tabela separa',
+    'quem nasceu na capital de quem nasceu no interior e quem nasceu com dois talentos de quem nasceu com dois defeitos.',
   );
 
   return `${out.join('\n')}\n`;
