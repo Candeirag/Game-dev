@@ -123,7 +123,9 @@ export function DashboardScreen() {
               <span className="min-w-0 truncate text-sm font-semibold">{player.lastName}</span>
             </div>
             <div className="mt-1 text-xs leading-tight text-ink-400">
-              {driverRank}º do grid · {player.age}\u00a0anos
+              {/* Espaço inquebrável entre o número e "anos" (no texto de JSX o escape tem de ir entre chaves). */}
+              {driverRank}º do grid · {player.age}
+              {'\u00a0'}anos
             </div>
           </SummaryCard>
 

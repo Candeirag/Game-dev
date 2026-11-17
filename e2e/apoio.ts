@@ -434,6 +434,23 @@ export async function linhasCortadas(page: Page): Promise<string[]> {
 }
 
 /**
+ * Escapes escritos ao pé da letra na tela ("\\u00a0", "\\n"): no texto de JSX o JavaScript não
+ * interpreta escapes, então um `\\u00a0` fora das chaves aparece para o jogador como está.
+ */
+export async function escapesNaTela(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found = new Set<string>();
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent ?? '';
+      const match = /\\(u[0-9a-fA-F]{4}|u\{[0-9a-fA-F]+\}|x[0-9a-fA-F]{2}|[ntr])/.exec(text);
+      if (match) found.add(`"${text.trim().slice(0, 50)}"`);
+    }
+    return [...found];
+  });
+}
+
+/**
  * Tira o print da tela inteira e confere: sobreposição de imagem com texto, transbordo lateral,
  * contraste (texto, ícones e contornos), algarismos de largura fixa, fonte condensada só em texto
  * grande, linhas inteiras na torre, nada escondido atrás das barras do rodapé e, nos formatos de
@@ -468,6 +485,7 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   const soltos = await numerosSemLarguraFixa(page);
   const condensadas = await condensadaPequena(page);
   const cortadas = await linhasCortadas(page);
+  const escapes = await escapesNaTela(page);
   const escondidos = await escondidoNoRodape(page);
   const colados = toque ? await alvosColados(page) : [];
   if (process.env.LEVANTAR) {
@@ -478,6 +496,7 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
     for (const n of soltos) console.log(`ACHADO ${formato} | ${tela} | número sem largura fixa: ${n}`);
     for (const c of condensadas) console.log(`ACHADO ${formato} | ${tela} | condensada pequena: ${c}`);
     for (const c of cortadas) console.log(`ACHADO ${formato} | ${tela} | linha cortada: ${c}`);
+    for (const e of escapes) console.log(`ACHADO ${formato} | ${tela} | escape literal na tela: ${e}`);
     for (const e of escondidos) console.log(`ACHADO ${formato} | ${tela} | escondido no rodapé: ${e}`);
     const sobra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     if (sobra > 0) console.log(`ACHADO ${formato} | ${tela} | transbordo de ${sobra} px`);
@@ -492,5 +511,6 @@ export async function conferirTela(page: Page, tela: string, formato: string): P
   expect(soltos, `${tela} (${formato}): números sem algarismos de largura fixa`).toEqual([]);
   expect(condensadas, `${tela} (${formato}): texto pequeno em fonte condensada`).toEqual([]);
   expect(cortadas, `${tela} (${formato}): linha cortada na lista`).toEqual([]);
+  expect(escapes, `${tela} (${formato}): escape escrito ao pé da letra no texto (use {'\\u00a0'} no JSX)`).toEqual([]);
   expect(escondidos, `${tela} (${formato}): conteúdo escondido atrás da barra do rodapé (com a página rolada até o fim)`).toEqual([]);
 }
