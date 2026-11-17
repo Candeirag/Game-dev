@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LEDGER_KEYS } from '@/domain/schemas';
 import { LEDGER_LABELS } from '@/domain/labels';
-import { ECONOMY, SPONSOR_RULES, commercialSponsors, expectedRoundResult, netWorth, ownedTeamValue, stocksValue } from '@/engine';
+import { ECONOMY, commercialSponsors, expectedRoundResult, maxSponsors, netWorth, ownedTeamValue, stocksValue } from '@/engine';
 import { Card, cx, Delta, Meter, PageHeader, Pill, Stat, TableWrap, Tabs } from '@/ui/kit';
 import { TrendLine, cashSeries } from '../components/TrendLine';
 import { formatMoney, formatMoneyFull } from '../format';
@@ -73,6 +73,15 @@ export function FinanceScreen() {
       </div>
 
       <div className="space-y-4">
+        {career.investor && (
+          <Card tone="attention" title="Investidor">
+            <p className="text-sm text-ink-200">
+              {career.investor.name} leva <b className="font-display text-base font-semibold text-ink-100">{Math.round(career.investor.share * 100)}%</b> dos seus
+              ganhos (salário, bônus e o que sobra dos patrocínios depois de pagar a vaga), para sempre. Já pôs {formatMoneyFull(career.investor.invested)} na sua
+              carreira ({career.investor.seats === 1 ? 'uma vaga' : `${career.investor.seats} vagas`}) e recebeu {formatMoneyFull(career.investor.received)}.
+            </p>
+          </Card>
+        )}
         {tab === 'summary' && <SummaryTab />}
         {tab === 'sponsors' && driving && <SponsorsTab />}
         {tab === 'invest' && (
@@ -262,7 +271,7 @@ function SponsorsTab() {
       title="Patrocinadores"
       action={
         <span className="text-xs text-ink-400">
-          {sponsors.length} de {SPONSOR_RULES.MAX_SPONSORS} cotas
+          {sponsors.length} de {maxSponsors(career)} cotas
         </span>
       }
       bodyClassName="space-y-3"

@@ -18,6 +18,7 @@ import { LifeScreen } from './screens/LifeScreen';
 import { MainMenuScreen } from './screens/MainMenuScreen';
 import { ManagementScreen } from './screens/ManagementScreen';
 import { NewCareerScreen } from './screens/NewCareerScreen';
+import { PathsScreen } from './screens/PathsScreen';
 import { SavesScreen } from './screens/SavesScreen';
 import { MenuSettingsScreen, SettingsScreen } from './screens/SettingsScreen';
 import { StandingsScreen } from './screens/StandingsScreen';
@@ -72,6 +73,7 @@ export function App() {
           <Route path="/driver" element={<ByMode driver={<DriverScreen />} executive={<Navigate to="/dashboard" replace />} />} />
           <Route path="/team" element={<ByMode driver={<TeamScreen />} executive={<ManagementScreen />} />} />
           <Route path="/career" element={<ByMode driver={<CareerScreen />} executive={<ExecutiveCareerScreen />} />} />
+          <Route path="/paths" element={<ByMode driver={<PathsScreen />} executive={<Navigate to="/dashboard" replace />} />} />
           <Route path="/life" element={<LifeScreen />} />
           <Route path="/finance" element={<FinanceScreen />} />
           <Route path="/family" element={<FamilyScreen />} />

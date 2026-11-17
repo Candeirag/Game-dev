@@ -3,9 +3,10 @@
  * Só leitura: soma e conta o que já está no estado da carreira, com as mesmas contas que o
  * motor faz a cada etapa (aluguel, manutenção, parcelas). Não decide nada.
  */
+import { SIDE_JOBS } from '@/config/balance';
 import type { CareerState } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
-import { ECONOMY, netWorth, stocksValue } from '../career/economy';
+import { ECONOMY, netWorth, seasonRunningCosts, stocksValue } from '../career/economy';
 import { commercialSponsors } from '../career/sponsors';
 import { familyAnnualCost, getPropertyDefinition, loansBalance } from './assets';
 
@@ -33,8 +34,10 @@ export function expectedRoundResult(career: CareerState): number {
     career.contract.salary +
     career.sponsors.reduce((sum, s) => sum + s.perSeason, 0) +
     (career.academy ? career.contract.seatCost * career.academy.supportShare : 0);
-  const costs = career.contract.seatCost + category.economy.living;
-  return (income - costs) / rounds - category.economy.trainingCost * ECONOMY.TRAINING_COST[career.trainingIntensity];
+  // Viagens, equipamento e aluguel do polo entram na conta, e o trabalho paralelo também.
+  const costs = career.contract.seatCost + category.economy.living + seasonRunningCosts(category.id, career.hub.id).total;
+  const job = career.sideJob === 'none' ? 0 : SIDE_JOBS[career.sideJob].perRound;
+  return (income - costs) / rounds + job - category.economy.trainingCost * ECONOMY.TRAINING_COST[career.trainingIntensity];
 }
 
 export function lifeSummary(career: CareerState): LifeSummary {

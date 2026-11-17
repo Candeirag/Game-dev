@@ -125,6 +125,13 @@ simulador, que só usam a API pública do motor).
 - Nascimento (Fase 2): sorteio, efeitos, revelação dos traços e mudança em `src/engine/birth`;
   números em `balance.ts` (`BIRTH`, `TRAIT_EFFECTS`…), textos em `src/data/birth.ts`. Vale só para
   o personagem que o sorteou (`activeBirth`); saves antigos têm `birth: null`.
+- Economia, polos e portas (Fase 3): polos em `src/data/hubs.ts` e `src/engine/career/hubs.ts`;
+  portas (academia, vaquinha, investidor, trabalho paralelo, último recurso) e o retrato da tela
+  Caminhos em `src/engine/career/paths.ts`; custos por etapa em `economy.ts`; escada e rompimento
+  de patrocinadores em `sponsors.ts`. Números em `balance.ts` (`HUB_RULES`, `RUNNING_COSTS`,
+  `SPONSOR_LADDER`, `ACADEMY_DOOR`, `INVESTOR`, `CROWDFUND`, `SIDE_JOBS`); preços das vagas em
+  `src/data/categories.ts`. Regra de ouro: sempre existe uma saída; `tests/economy.test.ts` e a
+  seção 8 do simulador conferem que ninguém fica mais de duas temporadas sem porta.
 - Toda aleatoriedade vem de `src/engine/rng.ts`, com semente (regra 4).
 - Dinheiro só por `src/domain/money.ts` (motor: `money(career, valor)`; interface:
   `formatMoney`). Plurais por `src/domain/text.ts`. Nome de categoria em frase só por

@@ -13,6 +13,9 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
 | `fase-2.txt` | o mesmo, com o nascimento sorteado (seção 7 nova: nascença baixa, média e alta; capital e interior; dois talentos e dois defeitos) |
 | `fase-2-talento-4.txt` | o mesmo, com `--talent 4` |
 | `fase-2-talento-8.txt` | o mesmo, com `--talent 8` |
+| `fase-3.txt` | `npm run sim -- --seeds 50 --seasons 15`, com a economia nova (seção 8 nova: portas, temporadas sem porta, resultado do ano por posição e por degrau, entrada na Fórmula Júnior) |
+| `fase-3-talento-4.txt` | o mesmo, com `--talent 4` |
+| `fase-3-talento-8.txt` | o mesmo, com `--talent 8` |
 
 ## Como usar numa fase
 
@@ -47,5 +50,11 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
 - Cada semente tem um piloto diferente (perfil, idade de 14 a 17 anos e equipe de estreia), sempre
   o mesmo para a mesma semente. Desde a Fase 2, cada piloto tem também o nascimento da semente (o
   primeiro sorteio, sem refazer); quem nasce no interior começa na equipe menor do regional.
+- A seção 8 (Fase 3) mede a economia e as portas. "Porta" é uma vaga, fora a de aluguel, que o
+  piloto consegue aceitar com o que tem, pela academia, com a vaquinha ou com um investidor. A
+  maior sequência de temporadas sem porta numa carreira não pode passar de 2. "Resultado do ano" é
+  a soma dos lançamentos da temporada: nas piores posições do kart tem de ser negativo (terminar
+  mal custa dinheiro). O robô da Fase 3 usa as portas e pega trabalho paralelo quando o caixa não
+  cobre o ano; ele também passou a preferir a vaga que não o deixa devendo.
 - A seção 7 (Fase 2) separa as carreiras pela nota de nascença, a média das cinco aptidões, em três
   grupos do mesmo tamanho. É ali que se confere que nascer melhor rende carreira melhor.
