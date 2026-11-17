@@ -151,8 +151,10 @@ simulador, que só usam a API pública do motor).
   vibração, volumes) ficam em `src/ui/settings` e são guardados no aparelho, fora dos saves.
 - Áreas de toque de no mínimo 44 px, com 8 px entre vizinhas. O aplicativo é pensado para a
   tela deitada (844×390): colunas a partir de `md:`, abas (na URL, `?tab=`) quando a tela fica
-  comprida, e o passo que faz a carreira avançar sempre no canto inferior direito, perto do
-  polegar (`ScreenAction` e `ActionDock`, em `src/ui/layout/ScreenAction.tsx`). Margens de
+  comprida, e o passo que faz a carreira avançar sempre na barra fixa do pé da tela (56 px, o
+  botão à direita, perto do polegar; `ScreenAction` e `ActionBar`, em
+  `src/ui/layout/ScreenAction.tsx`). A página reserva o espaço da barra (`--action-bar-h`):
+  rolando até o fim, o conteúdo termina acima dela (`e2e/telas.spec.ts` confere). Margens de
   segurança do aparelho pelos tokens `--safe-*`.
 - Imagens geradas (carros por categoria, retratos): os originais vão em `assets/higgsfield/` e
   `npm run app:images` os converte para `src/assets/generated/`. Faltando imagem, a tela usa a
