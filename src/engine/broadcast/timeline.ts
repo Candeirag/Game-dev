@@ -21,11 +21,11 @@
  * de apresentação (em que ponto da volta um carro roda ou abandona), fixados
  * por uma função de dispersão do piloto e da volta, sempre iguais.
  */
-import type { DnfReason, RaceEvent, RaceMode, TyreCompound } from '@/domain/schemas';
+import type { DnfReason, MomentRecord, RaceEvent, RaceMode, TyreCompound } from '@/domain/schemas';
 import { referenceLapTime } from '@/data/tracks';
 import { createRng, hashSeed } from '../rng';
 import { RACE } from '../simulation/constants';
-import type { RaceCar, RaceContext, RaceSimState } from '../simulation/race/types';
+import type { RaceCar, RaceContext, RaceSimState, RadioMessage } from '../simulation/race/types';
 import { isRaceFinished } from '../simulation/race/step';
 import { buildCircuit, paceAt, pitBoxAt, sAtTau, tauAt, wrap01, type Circuit } from './circuit';
 
@@ -101,6 +101,16 @@ export interface TimedEvent extends RaceEvent {
   index: number;
 }
 
+/** Lance decisivo já resolvido, no instante em que o desfecho aparece na pista. */
+export interface TimedMoment extends MomentRecord {
+  time: number;
+}
+
+/** Mensagem do engenheiro, no instante em que ele fala (quando o jogador cruza a linha). */
+export interface TimedRadio extends RadioMessage {
+  time: number;
+}
+
 export interface RaceTimeline {
   trackId: string;
   categoryId: string;
@@ -118,6 +128,9 @@ export interface RaceTimeline {
   boxCount: number;
   laps: LapInfo[];
   events: TimedEvent[];
+  /** Lances decisivos do jogador e rádio do engenheiro, em ordem de tempo (Fase 4). */
+  moments: TimedMoment[];
+  radio: TimedRadio[];
   /** Até este instante a posição de todos os carros na pista é conhecida. */
   horizon: number;
   finished: boolean;
@@ -199,6 +212,8 @@ export function createRaceTimeline(race: RaceSimState, ctx: RaceContext): RaceTi
     boxCount: teams.length,
     laps: [],
     events: [],
+    moments: [],
+    radio: [],
     horizon: 0,
     finished: false,
     winnerTime: null,
@@ -459,7 +474,20 @@ export function appendRaceLap(timeline: RaceTimeline, previous: RaceSimState, ne
     return { ...event, time, index: previous.events.length + i };
   });
   const events = [...timeline.events, ...timed].sort((a, b) => a.time - b.time || a.index - b.index);
-  return { ...built, events };
+
+  /* ---------- 5. Lances e rádio do jogador ---------- */
+  const mine = cars[next.playerDriverId];
+  const myLap = mine?.laps.at(-1);
+  const myLapNow = myLap && myLap.lap === lap ? myLap : null;
+  // O desfecho do lance aparece no meio da volta (na largada, logo depois das luzes); se o carro
+  // parou nela, no instante em que parou. O engenheiro fala quando o jogador cruza a linha.
+  const moments: TimedMoment[] = next.moments.slice(previous.moments.length).map((record) => {
+    const fraction = record.kind === 'start' ? 0.25 : 0.5;
+    const time = myLapNow ? myLapNow.t0 + (myLapNow.t1 - myLapNow.t0) * fraction : lapStart + typical * fraction;
+    return { ...record, time: mine?.retired?.lap === lap ? Math.min(time, mine.retired.time) : time };
+  });
+  const radio: TimedRadio[] = next.radio.slice(previous.radio.length).map((message) => ({ ...message, time: myLapNow?.t1 ?? leaderEnd }));
+  return { ...built, events, moments: [...timeline.moments, ...moments], radio: [...timeline.radio, ...radio] };
 }
 
 /** Linha do tempo completa de uma corrida já simulada, a partir dos estados de cada volta. */
@@ -812,6 +840,24 @@ export function eventsUntil(timeline: RaceTimeline, t: number): TimedEvent[] {
     else high = mid;
   }
   return timeline.events.slice(0, low);
+}
+
+/** O lance decisivo mais recente cujo desfecho já apareceu até o instante t, ou null. */
+export function latestMoment(timeline: RaceTimeline, t: number): TimedMoment | null {
+  for (let i = timeline.moments.length - 1; i >= 0; i--) {
+    const moment = timeline.moments[i];
+    if (moment && moment.time <= t) return moment;
+  }
+  return null;
+}
+
+/** A mensagem de rádio mais recente já dita até o instante t, ou null. */
+export function latestRadio(timeline: RaceTimeline, t: number): TimedRadio | null {
+  for (let i = timeline.radio.length - 1; i >= 0; i--) {
+    const message = timeline.radio[i];
+    if (message && message.time <= t) return message;
+  }
+  return null;
 }
 
 /** Uma bandeira vermelha interrompe a corrida exatamente neste instante? Devolve a primeira ainda não atendida. */

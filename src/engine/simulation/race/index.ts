@@ -12,6 +12,7 @@ export {
   decidePit,
   baseWearPerLap,
   compoundLifeLaps,
+  lapsToCliff,
   pitWindow,
   type StrategyOption,
   type PitWindow,

@@ -257,8 +257,8 @@ describe('vibração e som', () => {
         .filter(([, spec]) => spec.haptic === pattern)
         .map(([name]) => name)
         .sort();
-    expect(byHaptic('success')).toEqual(['contractSigned', 'podium', 'title', 'victory']);
-    expect(byHaptic('error')).toEqual(['contact', 'penalty', 'retirement']);
+    expect(byHaptic('success')).toEqual(['contractSigned', 'momentWon', 'podium', 'title', 'victory']);
+    expect(byHaptic('error')).toEqual(['contact', 'momentLost', 'penalty', 'retirement']);
     expect(byHaptic('warning')).toEqual(['riskyDecision']);
     expect(byHaptic('selection')).toEqual(['paceChange', 'tyreChoice']);
   });

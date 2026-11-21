@@ -56,6 +56,14 @@ function stintCost(attributes: DriverAttributes, track: Track, compound: TyreCom
   return cost;
 }
 
+/**
+ * Voltas inteiras que o pneu ainda aguenta antes do penhasco, em pista seca e ritmo equilibrado
+ * (0 se já passou). Serve também ao kart, que não para: diz em que volta o pneu acaba.
+ */
+export function lapsToCliff(tyre: RaceCar['tyre'], attributes: DriverAttributes, track: Track, factor = 1): number {
+  return Math.max(0, Math.floor((tyreCliff(tyre.compound) - tyre.wear) / baseWearPerLap(attributes, track, tyre.compound, factor)));
+}
+
 /** Janela ideal de parada: as últimas voltas antes de o pneu cair do penhasco. */
 export interface PitWindow {
   /** Primeira e última volta da janela (a parada acontece no fim da volta). */
@@ -80,8 +88,7 @@ export function pitWindow(
   factor = 1,
 ): PitWindow | null {
   if (!rules.pitStops) return null;
-  const rate = baseWearPerLap(attributes, track, car.tyre.compound, factor);
-  const lapsLeft = Math.max(0, Math.floor((tyreCliff(car.tyre.compound) - car.tyre.wear) / rate));
+  const lapsLeft = lapsToCliff(car.tyre, attributes, track, factor);
   const to = lap + lapsLeft;
   if (to >= totalLaps) return null;
   return { from: Math.max(lap + 1, to - TYRE_CURVE.PIT_WINDOW_LAPS + 1), to: Math.max(lap + 1, to), lapsLeft };

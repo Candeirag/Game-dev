@@ -27,8 +27,13 @@ export const FEEDBACK = {
   contact: { haptic: 'error', sound: null },
   retirement: { haptic: 'error', sound: null },
   penalty: { haptic: 'error', sound: null },
-  // Alerta: o jogo pede a confirmação de uma decisão arriscada.
+  // Alerta: o jogador confirma uma decisão arriscada (a opção arriscada de um lance decisivo).
   riskyDecision: { haptic: 'warning', sound: null },
+  // Lance decisivo: o desfecho, no instante em que aparece na pista. O toque, a punição e o
+  // abandono que um lance errado causa já vibram pelos eventos acima; `momentLost` é o erro sem
+  // batida (perdeu tempo, rodou).
+  momentWon: { haptic: 'success', sound: null },
+  momentLost: { haptic: 'error', sound: null },
   // Seleção leve: trocar o ritmo, escolher o pneu.
   paceChange: { haptic: 'selection', sound: null },
   tyreChoice: { haptic: 'selection', sound: null },

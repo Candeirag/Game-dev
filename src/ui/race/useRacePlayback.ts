@@ -13,13 +13,22 @@ import { readPreference, writePreference } from '@/persistence/preferences';
 import { useGameStore } from '@/store/gameStore';
 
 /**
- * Duração de uma volta de referência na tela, em 1×. Num kartódromo são 24 s. Num autódromo de
- * traçado real o caminho desenhado é bem mais longo; a volta dura mais (até 40 s) para os carros
- * não cruzarem a tela depressa demais. As velocidades 2×, 4× e 8× dividem esse tempo.
+ * Ritmo da transmissão. A corrida roda sozinha e só para nos lances decisivos, então ela inteira
+ * tem de caber em poucos minutos: em 1×, as voltas somam no máximo RACE_SECONDS na tela (uma
+ * corrida de kart de 22 voltas dá 7,5 s por volta; uma do topo, de 60, dá 2,75 s). Corridas curtas
+ * não esticam além do ritmo natural da pista (24 s por volta num kartódromo; até 40 s num
+ * autódromo de traçado real, que é mais longo no desenho), e nenhuma volta dura menos que
+ * MIN_LAP_SECONDS. As velocidades 2×, 4× e 8× dividem esse tempo.
+ *
+ * Com as luzes de largada e os desfechos dos lances, uma corrida jogada em 1× fica abaixo de
+ * 4 minutos em qualquer pista de qualquer categoria (tests/pacing.test.ts confere a conta).
  */
 export const LAP_SECONDS = 24;
-export function lapSecondsFor(circuitLength: number): number {
-  return Math.min(40, Math.max(LAP_SECONDS, circuitLength / 170));
+export const RACE_SECONDS = 165;
+export const MIN_LAP_SECONDS = 2.4;
+export function lapSecondsFor(circuitLength: number, totalLaps: number): number {
+  const natural = Math.min(40, Math.max(LAP_SECONDS, circuitLength / 170));
+  return Math.max(MIN_LAP_SECONDS, Math.min(natural, RACE_SECONDS / Math.max(1, totalLaps)));
 }
 export const SPEEDS = [1, 2, 4, 8] as const;
 /** Tempo de corrida que a imagem continua rodando depois que o último carro termina (fração da volta). */
@@ -27,6 +36,18 @@ const TAIL = 0.05;
 /** Duração de cada luz de largada e da espera antes de apagarem, em segundos reais (em 1×). */
 const LIGHT_STEP = 0.55;
 const LIGHT_HOLD = 0.75;
+/** Quanto tempo o desfecho de um lance fica na tarja, em segundos reais (ver `RaceBroadcast`). */
+export const MOMENT_RESULT_SECONDS = 4;
+
+/**
+ * Tempo de tela de uma corrida inteira, em segundos reais: as luzes de largada mais todas as voltas
+ * no ritmo da velocidade dada. Não conta o tempo que o jogador leva pensando em cada lance (não há
+ * limite) nem bandeira vermelha. É a conta do critério "uma corrida leva menos de 4 minutos".
+ */
+export function raceScreenSeconds(circuitLength: number, totalLaps: number, speed = 1): number {
+  const lights = (5 * LIGHT_STEP + LIGHT_HOLD) / Math.sqrt(speed);
+  return lights + (totalLaps * (1 + TAIL / totalLaps) * lapSecondsFor(circuitLength, totalLaps)) / speed;
+}
 
 export type PlaybackPhase = 'grid' | 'lights' | 'racing' | 'paused' | 'order' | 'suspended' | 'finished';
 
@@ -124,7 +145,7 @@ export function useRacePlayback(): RacePlayback {
         }
       }
 
-      let target = timeRef.current + dt * (tl.referenceLap / lapSecondsFor(tl.circuitLength)) * speedRef.current;
+      let target = timeRef.current + dt * (tl.referenceLap / lapSecondsFor(tl.circuitLength, tl.totalLaps)) * speedRef.current;
       let waiting = false;
 
       // Bandeira vermelha: a imagem para no instante da bandeira e espera o jogador relargar.

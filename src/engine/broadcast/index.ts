@@ -28,6 +28,8 @@ export {
   createRaceTimeline,
   eventsUntil,
   lapInfoAt,
+  latestMoment,
+  latestRadio,
   safetyCarAt,
   sampleCar,
   standingsAt,
@@ -44,4 +46,6 @@ export {
   type SafetyCarSample,
   type StandingRow,
   type TimedEvent,
+  type TimedMoment,
+  type TimedRadio,
 } from './timeline';

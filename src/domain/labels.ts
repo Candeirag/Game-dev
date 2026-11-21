@@ -231,3 +231,52 @@ export const SUCCESSION_CAUSE_LABELS: Record<import('./schemas').Succession['cau
   accident: 'Acidente fatal',
   handover: 'Passagem de comando',
 };
+
+/* ---------------- Corrida com lances e pneus (Fase 4) ---------------- */
+
+/** Estado do pneu: a palavra que acompanha a porcentagem e a cor na tela. */
+export const TYRE_STATE_LABELS: Record<'new' | 'good' | 'worn' | 'limit' | 'gone', string> = {
+  new: 'Novo',
+  good: 'Bom',
+  worn: 'Gasto',
+  limit: 'No limite',
+  gone: 'Acabado',
+};
+
+export const MOMENT_KIND_LABELS: Record<import('./schemas').MomentKind, string> = {
+  start: 'Largada',
+  attack: 'Ataque',
+  defense: 'Defesa',
+  rain: 'Chuva começando',
+  lastLap: 'Última volta',
+  pit: 'Parada',
+};
+
+/** Estilo do piloto: é ele quem decide os lances quando o jogador simula direto. */
+export const DRIVING_STYLE_LABELS: Record<'cautious' | 'balanced' | 'aggressive', string> = {
+  cautious: 'Cauteloso',
+  balanced: 'Equilibrado',
+  aggressive: 'Agressivo',
+};
+
+export const DRIVING_STYLE_DESCRIPTIONS: Record<'cautious' | 'balanced' | 'aggressive', string> = {
+  cautious: 'Só arrisca com a chance bem a favor.',
+  balanced: 'Arrisca quando a chance compensa.',
+  aggressive: 'Arrisca mesmo com a chance apertada.',
+};
+
+/** O que pesa na chance de uma opção de lance. */
+export const MOMENT_FACTOR_LABELS: Record<'driver' | 'rival' | 'car' | 'crew' | 'tyres' | 'track' | 'weather' | 'form' | 'profile', string> = {
+  driver: 'Piloto',
+  rival: 'Rival',
+  car: 'Motor',
+  crew: 'Equipe de box',
+  tyres: 'Pneus',
+  track: 'Pista',
+  weather: 'Clima',
+  form: 'Confiança',
+  profile: 'Nascença',
+};
+
+/** Risco de uma opção de lance, em palavras (acompanha o ícone e a cor). */
+export const MOMENT_RISK_LABELS: Record<0 | 1 | 2, string> = { 0: 'Seguro', 1: 'Moderado', 2: 'Arriscado' };

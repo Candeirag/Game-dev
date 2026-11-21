@@ -24,7 +24,17 @@ import type {
   TyreCompound,
 } from '@/domain/schemas';
 import * as engine from '@/engine';
-import type { ExecutivePlan, InvestmentProduct, NegotiationDemand, NewCareerInput, PlayerRaceInput, RaceSimState, RaceTimeline, StrategyPlan } from '@/engine';
+import type {
+  ExecutivePlan,
+  InvestmentProduct,
+  MomentChoice,
+  NegotiationDemand,
+  NewCareerInput,
+  PlayerRaceInput,
+  RaceSimState,
+  RaceTimeline,
+  StrategyPlan,
+} from '@/engine';
 import { readBirthDraft, readLastExport, writeBirthDraft, writeLastExport, type BirthDraft } from '@/persistence/preferences';
 import { clearRaceResume, loadRaceResume, raceResumeKey, saveRaceResume, type RaceResume } from '@/persistence/raceResume';
 import { reportError } from '@/monitoring/crashReporting';
@@ -142,8 +152,16 @@ export interface GameStore {
   requestPit(compound: TyreCompound | null): void;
   setSkipPlannedStop(skip: boolean): void;
   setAutoEngineer(auto: boolean): void;
-  /** Avança uma volta. `teamOrder` responde a uma ordem de equipe pendente. */
+  /**
+   * Avança uma volta. `teamOrder` responde a uma ordem de equipe pendente. Com um lance decisivo
+   * pendente, a volta só anda por `answerMoment`.
+   */
   stepRace(teamOrder?: 'obey' | 'ignore'): void;
+  /**
+   * Responde ao lance decisivo pendente e avança a volta. `null` entrega a decisão ao piloto, que
+   * escolhe pelo próprio estilo (é o que "simular até o fim" faz em todos os lances).
+   */
+  answerMoment(choice: MomentChoice | null): void;
   /** Refaz a corrida interrompida com os mesmos comandos; `toEnd` simula também o que faltava. */
   resumeRace(toEnd: boolean): void;
   noteLapShown(lap: number): void;
@@ -284,6 +302,36 @@ export const useGameStore = create<GameStore>((set, get) => {
   }
 
   /** Corrida interrompida da carreira recém-aberta, se o save está na hora da corrida. */
+  /**
+   * Simula a próxima volta com os comandos do jogador. `moment` é a resposta ao lance pendente
+   * (`null` = o piloto decide pelo estilo); fica nos comandos gravados, para a retomada refazer a
+   * mesma corrida.
+   */
+  function advanceLap(teamOrder: 'obey' | 'ignore' | undefined, moment: MomentChoice | null | undefined): void {
+    const { career, liveRace, raceTimeline, raceMode, pitRequest, skipPlannedStop, autoEngineer } = get();
+    if (!career || !liveRace || engine.isRaceFinished(liveRace)) return;
+    // Uma ordem de equipe pendente exige resposta antes da próxima volta.
+    if (liveRace.pendingTeamOrder && !teamOrder) return;
+    const context = engine.buildRaceContext(career);
+    const input: PlayerRaceInput = {
+      mode: raceMode,
+      pit: pitRequest,
+      skipPlannedStop,
+      auto: autoEngineer,
+      ...(teamOrder ? { teamOrder } : {}),
+      ...(moment !== undefined ? { moment } : {}),
+    };
+    const next = engine.stepRaceLap(liveRace, context, input);
+    set({
+      liveRace: next,
+      raceTimeline: raceTimeline && engine.appendRaceLap(raceTimeline, liveRace, next, context),
+      pitRequest: null,
+      skipPlannedStop: false,
+      raceSteps: [...get().raceSteps, input],
+    });
+    rememberRace();
+  }
+
   function pendingResume(career: CareerState): RaceResume | null {
     return career.weekend && career.weekend.qualifying !== null ? loadRaceResume(career) : null;
   }
@@ -537,27 +585,14 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     stepRace(teamOrder) {
-      const { career, liveRace, raceTimeline, raceMode, pitRequest, skipPlannedStop, autoEngineer } = get();
-      if (!career || !liveRace || engine.isRaceFinished(liveRace)) return;
-      // Uma ordem de equipe pendente exige resposta antes da próxima volta.
-      if (liveRace.pendingTeamOrder && !teamOrder) return;
-      const context = engine.buildRaceContext(career);
-      const input: PlayerRaceInput = {
-        mode: raceMode,
-        pit: pitRequest,
-        skipPlannedStop,
-        auto: autoEngineer,
-        ...(teamOrder ? { teamOrder } : {}),
-      };
-      const next = engine.stepRaceLap(liveRace, context, input);
-      set({
-        liveRace: next,
-        raceTimeline: raceTimeline && engine.appendRaceLap(raceTimeline, liveRace, next, context),
-        pitRequest: null,
-        skipPlannedStop: false,
-        raceSteps: [...get().raceSteps, input],
-      });
-      rememberRace();
+      // Um lance decisivo pendente exige resposta (`answerMoment`) antes da próxima volta.
+      if (get().liveRace?.pendingMoment) return;
+      advanceLap(teamOrder, undefined);
+    },
+
+    answerMoment(choice) {
+      if (!get().liveRace?.pendingMoment) return;
+      advanceLap(undefined, choice);
     },
 
     resumeRace(toEnd) {
@@ -579,7 +614,7 @@ export const useGameStore = create<GameStore>((set, get) => {
           if (engine.isRaceFinished(race)) break;
           advance(input);
         }
-        while (toEnd && !engine.isRaceFinished(race)) advance({ mode: raceResume.mode, auto: true, pit: null });
+        while (toEnd && !engine.isRaceFinished(race)) advance({ mode: raceResume.mode, auto: true, pit: null, moment: null });
         set({
           ...RACE_RESET,
           liveRace: race,
@@ -625,7 +660,8 @@ export const useGameStore = create<GameStore>((set, get) => {
       let timeline = get().raceTimeline;
       const steps = [...get().raceSteps];
       while (!engine.isRaceFinished(race)) {
-        const input: PlayerRaceInput = { mode: raceMode, auto: true, pit: null };
+        // Sem resposta a lance: daqui em diante o piloto decide pelo próprio estilo.
+        const input: PlayerRaceInput = { mode: raceMode, auto: true, pit: null, moment: null };
         const next = engine.stepRaceLap(race, context, input);
         timeline = timeline && engine.appendRaceLap(timeline, race, next, context);
         race = next;

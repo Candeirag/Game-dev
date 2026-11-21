@@ -61,7 +61,7 @@ function play(race: ReturnType<typeof fieldRace>, from: number, to: number, spee
   const memory = createSceneMemory();
   const size = vehicleFor(timeline.categoryId);
   const dt = 1 / 60;
-  const rate = (timeline.referenceLap / lapSecondsFor(timeline.circuitLength)) * speed;
+  const rate = (timeline.referenceLap / lapSecondsFor(timeline.circuitLength, timeline.totalLaps)) * speed;
   const restarts = timeline.suspensions.filter((s) => !s.final).map((s) => s.time);
   const stats: FrameStats = { frames: 0, worstJump: 0, pairs: 0, overlapping: 0, widest: 0 };
   let previous = new Map<string, { x: number; y: number }>();
