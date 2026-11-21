@@ -5,14 +5,17 @@
  * sustentam: custos de correr, vaga de aluguel, patrocinadores em escada que rompem quando a meta
  * não é cumprida, academia, vaquinha, investidor (com a fatia para sempre) e trabalho paralelo.
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ACADEMY_DOOR, CROWDFUND, HUB_RULES, INVESTOR, RUNNING_COSTS, SIDE_JOBS, SPONSOR_LADDER } from '@/config/balance';
+import { ACADEMY_DOOR, CROWDFUND, HUB_RULES, INVESTOR, RUNNING_COSTS, SIDE_JOBS, SPONSOR_LADDER, TEAM_CASH_CALL } from '@/config/balance';
 import type { CareerState, Investor, Offer, Sponsor } from '@/domain/schemas';
 import { CATEGORIES, getCategory } from '@/data/categories';
-import { CATEGORY_HUB, HUBS } from '@/data/hubs';
+import { CATEGORY_HUB, HUBS, RENTAL_CATEGORY } from '@/data/hubs';
 import { closeSeasonFinance, emptyFinance, payInvestor, settleRound } from '@/engine/career/economy';
 import { applyEffects } from '@/engine/events/effects';
+import { instantiateEvent } from '@/engine/events/engine';
 import { validateCareerIntegrity } from '@/persistence/integrity';
+import { importCareer } from '@/persistence/saveService';
 import { MIGRATIONS, migrateStep } from '@/persistence/migrations';
 import { runSimulation } from '../sim/run';
 import {
@@ -29,6 +32,7 @@ import {
   doorFor,
   economyTrainingFactor,
   financeProjection,
+  generateOffers,
   getPlayer,
   hasOpenDoor,
   investorAmount,
@@ -40,6 +44,8 @@ import {
   maxSponsors,
   missedTarget,
   moveCost,
+  offerHelp,
+  offerPricing,
   pathsReport,
   rankTeams,
   renewSponsors,
@@ -113,6 +119,26 @@ const midfieldOffer = (career: CareerState): Offer => {
   const team = ranked.find((t, i) => i >= 4 && t.id !== getPlayer(career).teamId)!;
   return { ...buildOffer(career, category, team, ranked.indexOf(team), 'transfer', 60), id: 'offer-teste' };
 };
+/**
+ * O caso relatado pelo dono no teste da Fase 3: piloto que termina a Fórmula Júnior em 6º, com o
+ * contrato vencido, sem patrocinador, sem academia e com o caixa em −R$ 73 mil. É o save de exemplo
+ * do monoposto no fim da temporada, refeito nessas condições, com as propostas geradas de novo.
+ */
+const juniorSixth: CareerState = (() => {
+  const base = importCareer(readFileSync('tests/fixtures/v7/monoposto-fim-de-temporada.json', 'utf8'));
+  const state: CareerState = {
+    ...base,
+    academy: null,
+    investor: null,
+    sponsors: [],
+    finance: emptyFinance(-73_000),
+    contract: { ...base.contract, endSeason: base.season },
+    offseason: { ...base.offseason!, playerPosition: 6, contractStatus: 'expired', offers: [] },
+  };
+  const offers = generateOffers({ ...state, offseason: null }, state.offseason!.reputationAfter, 'expired', 6);
+  return { ...state, offseason: { ...state.offseason!, offers } };
+})();
+
 const withOffer = (career: CareerState, offer: Offer): CareerState => ({
   ...career,
   offseason: { ...career.offseason!, offers: [offer, ...career.offseason!.offers.filter((o) => o.kind === 'fallback')] },
@@ -179,21 +205,23 @@ describe('custos de correr', () => {
     expect(financeProjection(alone, fallback).seasonFlow).toBeLessThan(-fallback.seatCost);
   });
 
-  it('a vaga de aluguel nunca empurra o piloto para uma dívida impagável: quem está quebrado desce até o campeonato que aguenta', () => {
-    // Piloto de Fórmula Júnior sem patrocínio e devendo: a vaga de aluguel no degrau de baixo (kart internacional) não fecha.
-    const broke: CareerState = { ...closed, categoryId: 'f4', finance: emptyFinance(-200_000), sponsors: [] };
-    const rentals = CATEGORIES.filter((category) => category.tier < 4).map((category) => ({
-      category,
-      met: financeProjection(broke, {
-        ...buildOffer(broke, category, rankTeams(broke.teams)[9]!, 9, 'fallback', 40),
-        seatCost: category.economy.seatCost[1] * RUNNING_COSTS.FALLBACK_SEAT_SHARE,
-      }).met,
-    }));
-    expect(rentals.find((r) => r.category.id === 'kart-international')?.met).toBe(false);
-    expect(rentals.find((r) => r.category.id === 'kart-national')?.met).toBe(false);
-    // Jogando de verdade: a vaga de aluguel que o jogo oferece a esse piloto é a do kart regional, em casa.
-    const season = playSeason(botTraining({ ...newCareer(42), finance: emptyFinance(-200_000), sponsors: [] }));
-    expect(season.offseason!.offers.find((o) => o.kind === 'fallback')).toMatchObject({ categoryId: 'kart-regional' });
+  it('quem cai, cai um degrau só: a vaga de aluguel fica sempre na categoria abaixo', () => {
+    expect(RENTAL_CATEGORY).toEqual({
+      'kart-regional': 'kart-regional',
+      'kart-national': 'kart-regional',
+      // A Fórmula Júnior e o kart internacional são alternativas no mesmo degrau: dos dois, a queda é para o Brasileiro.
+      'kart-international': 'kart-national',
+      f4: 'kart-national',
+      f3: 'f4',
+      f2: 'f3',
+      f1: 'f2',
+    });
+    // Nem o piloto mais quebrado é mandado mais para baixo que isso.
+    for (const cash of [50_000, -73_000, -5_000_000]) {
+      const junior = generateOffers({ ...juniorSixth, finance: emptyFinance(cash) }, juniorSixth.reputation, 'expired', 6);
+      expect(junior.filter((o) => o.kind === 'fallback').map((o) => o.categoryId)).toEqual(['kart-national']);
+    }
+    expect(offseason.offers.find((o) => o.kind === 'fallback')).toMatchObject({ categoryId: 'kart-regional' });
   });
 
   it('uma vaga que não custa mais que a de aluguel não é recusada por dinheiro', () => {
@@ -495,6 +523,122 @@ describe('último recurso: nunca uma parede sem porta', () => {
     expect(bottom!.median).toBeLessThan(0);
     expect(bottom!.median).toBeLessThan(top!.median);
   }, 60_000);
+});
+
+describe('caso relatado: 6º na Fórmula Júnior com o caixa negativo', () => {
+  const offers = juniorSixth.offseason!.offers;
+  const real = offers.filter((o) => o.kind !== 'fallback');
+
+  it('reproduz o problema: nenhuma proposta cabe no bolso, e o que barra é sempre o dinheiro', () => {
+    expect(juniorSixth).toMatchObject({ categoryId: 'f4', finance: { cash: -73_000 } });
+    expect(real.length).toBeGreaterThan(3);
+    for (const offer of real) {
+      expect(canAcceptOffer(juniorSixth, offer), offer.teamName).toBe(false);
+      expect(offerHelp(juniorSixth, offer).missing.map((r) => r.key)).toEqual(['finance']);
+    }
+  });
+
+  it('a vaga de aluguel é no Campeonato Brasileiro de Kart, um degrau abaixo, e não no kart regional', () => {
+    const fallback = offers.find((o) => o.kind === 'fallback')!;
+    expect(fallback.categoryId).toBe('kart-national');
+    expect(canAcceptOffer(juniorSixth, fallback)).toBe(true);
+  });
+
+  it('o 6º lugar tem porta: o investidor banca qualquer uma das propostas, até a equipe aceitar', () => {
+    expect(hasOpenDoor(juniorSixth)).toBe(true);
+    for (const offer of real) {
+      expect(doorFor(juniorSixth, offer), offer.teamName).toBe('investor');
+      // O aporte cobre a vaga e o que faltava para fechar o ano.
+      expect(investorAmount(juniorSixth, offer)).toBeGreaterThanOrEqual(offer.seatCost);
+      expect(canAcceptOffer(signInvestor(juniorSixth, offer.id), offer)).toBe(true);
+    }
+  });
+
+  it('a tela Carreira recebe, por proposta, o requisito que falta e a porta dos Caminhos que resolve', () => {
+    const help = offerHelp(juniorSixth, real[0]!);
+    expect(help.door).toBe('investor');
+    expect(help.missing.map((r) => r.label)).toEqual(['Finanças']);
+    expect(help.hint).toMatch(/O investidor abre esta vaga: põe .+ e fica com 15% dos seus ganhos para sempre\. Feche por Caminhos\./);
+    // Sem porta nenhuma (10º lugar, fora do alcance do investidor), a frase diz isso e aponta a vaga de aluguel.
+    const tenth: CareerState = { ...juniorSixth, offseason: { ...juniorSixth.offseason!, playerPosition: 10 } };
+    expect(offerHelp(tenth, real[0]!)).toMatchObject({ door: null });
+    expect(offerHelp(tenth, real[0]!).hint).toContain('nenhuma porta abre esta vaga agora');
+    // Requisito esportivo em falta não se compra: nenhuma porta resolve.
+    const promotion = real.find((o) => o.categoryId === 'f3');
+    if (promotion) {
+      const green: CareerState = { ...juniorSixth, license: { ...juniorSixth.license, history: [] } };
+      const blocked = offerHelp(green, promotion);
+      expect(blocked.door).toBeNull();
+      expect(blocked.missing.some((r) => r.key === 'license')).toBe(true);
+      expect(blocked.hint).toContain('Nenhuma porta compra requisito esportivo');
+    }
+    // Proposta que já pode ser assinada não pede nada.
+    expect(offerHelp(closed, offseason.offers.find((o) => o.kind === 'fallback')!)).toEqual({ missing: [], door: null, hint: '' });
+  });
+});
+
+describe('preço da vaga às claras', () => {
+  it('a proposta com bolsa traz o preço cheio, a bolsa, o desconto da equipe e o valor final', () => {
+    const national = getCategory('kart-national');
+    const ranked = rankTeams(closed.teams);
+    const champion = buildOffer(finishing(1), national, ranked[9]!, 9, 'promotion', 70, 0.6);
+    const pricing = offerPricing(closed, { ...champion, teamId: 'x' });
+    // Equipe fora da lista: vale o preço da melhor (posição 0). O que importa aqui é a conta.
+    expect(pricing.listPrice).toBe(national.economy.seatCost[0]);
+    const exact = offerPricing({ ...closed, categoryId: 'kart-national' }, { ...champion, teamId: ranked[9]!.id });
+    expect(exact.listPrice).toBe(national.economy.seatCost[1]);
+    expect(exact.scholarship).toBe(0.6);
+    expect(exact.teamDiscount).toBeCloseTo(0.2, 5);
+    expect(exact.discount).toBeCloseTo(0.8, 5);
+    expect(champion.seatCost).toBe(national.economy.seatCost[1] * 0.2);
+  });
+
+  it('sem bolsa e sem desconto, o preço é o cheio; a vaga de aluguel não tem desconto', () => {
+    const fallback = offseason.offers.find((o) => o.kind === 'fallback')!;
+    expect(offerPricing(closed, fallback)).toEqual({ listPrice: fallback.seatCost, discount: 0, scholarship: 0, teamDiscount: 0 });
+    const plain = buildOffer(closed, getCategory('kart-regional'), rankTeams(closed.teams)[9]!, 9, 'transfer', 50);
+    expect(offerPricing(closed, plain)).toMatchObject({ listPrice: plain.seatCost, discount: 0 });
+  });
+});
+
+describe('evento "A equipe pede um aporte extra"', () => {
+  const season = playRound(playRound(newCareer(42)));
+  const withCash = (cash: number): CareerState => ({ ...season, pendingEvents: [], eventLog: [], finance: emptyFinance(cash) });
+  const payment = (career: CareerState) => {
+    const event = instantiateEvent(career, 'contract-seat-increase', 3);
+    const pay = event?.choices.find((c) => c.id === 'pay');
+    const effect = pay?.outcomes[0]?.effects.find((e) => e.type === 'cash');
+    return { event, pay, amount: effect && effect.type === 'cash' ? -effect.value : 0, effect };
+  };
+
+  it('pede no máximo uma parte do caixa do piloto', () => {
+    const seat = season.contract.seatCost;
+    // Com folga no caixa, o pedido é a fração da vaga.
+    expect(payment(withCash(1_000_000)).amount).toBe(Math.floor((seat * TEAM_CASH_CALL.SEAT_SHARE) / 100) * 100);
+    // Com pouco caixa, é limitado a 20% dele.
+    const tight = payment(withCash(5_000));
+    expect(tight.amount).toBe(5_000 * TEAM_CASH_CALL.MAX_CASH_SHARE);
+    expect(tight.event?.body).toContain('o seu caixa não aguenta mais que isso');
+  });
+
+  it('a quem não tem caixa, a equipe não pede dinheiro: sobra recusar ou parcelar', () => {
+    for (const cash of [0, -73_000, 1_000]) {
+      const { event, pay } = payment(withCash(cash));
+      expect(pay, `caixa ${cash}`).toBeUndefined();
+      expect(event?.choices.map((c) => c.id)).toEqual(['refuse', 'split']);
+    }
+  });
+
+  it('o pagamento nunca leva o saldo ao negativo, mesmo que o caixa encolha até a decisão', () => {
+    const { effect } = payment(withCash(1_000_000));
+    expect(effect).toMatchObject({ capToCash: true });
+    // O caixa caiu para R$ 300 antes de o jogador decidir: sai só o que há.
+    const poorer = applyEffects(withCash(300), [effect!], 3);
+    expect(poorer.finance.cash).toBe(0);
+    expect(applyEffects(withCash(-500), [effect!], 3).finance.cash).toBe(-500);
+    // Os outros lançamentos de eventos continuam valendo inteiros.
+    expect(applyEffects(withCash(300), [{ type: 'cash', value: -1_000, ledger: 'event', label: 'Multa' }], 3).finance.cash).toBe(-700);
+  });
 });
 
 describe('academia: paga a vaga, cobra exclusividade e resultado', () => {

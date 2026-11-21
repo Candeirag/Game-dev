@@ -8,8 +8,8 @@
  */
 import { RUNNING_COSTS } from '@/config/balance';
 import type { CareerState, Contract, Offer, Team } from '@/domain/schemas';
-import { CATEGORIES, getCategory, type CategoryDefinition } from '@/data/categories';
-import { CATEGORY_HUB } from '@/data/hubs';
+import { getCategory, type CategoryDefinition } from '@/data/categories';
+import { CATEGORY_HUB, RENTAL_CATEGORY } from '@/data/hubs';
 import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
 import { investorSponsorBase, netWorth, seasonRunningCosts } from './economy';
@@ -120,8 +120,9 @@ export function buildOffer(
  * - Outras equipes da categoria, da categoria acima e da categoria abaixo:
  *   propõem conforme o interesse; de cada grupo ficam as três equipes mais
  *   fortes entre as interessadas.
- * - Rede de segurança: a equipe mais fraca do degrau abaixo (ou do primeiro
- *   degrau) sempre aluga uma vaga, para a carreira nunca travar. Ela custa
+ * - Rede de segurança: a equipe mais fraca de um degrau abaixo (nunca mais
+ *   que um; no primeiro degrau, a do próprio) sempre aluga uma vaga, para a
+ *   carreira nunca travar. Ela custa
  *   uma fração da vaga mais barata do campeonato (`FALLBACK_SEAT_SHARE`) e
  *   pode ser paga a crédito: terminar mal custa dinheiro, mas não a carreira.
  */
@@ -177,30 +178,42 @@ export function generateOffers(career: CareerState, reputation: number, contract
   }
   offers.unshift(...own);
 
-  // Rede de segurança: a vaga de aluguel na equipe mais fraca que ainda não fez proposta. Fica no
-  // degrau de baixo se o piloto aguenta pagar o ano a crédito; se não, desce até o campeonato que
-  // ele aguenta (no limite, o kart regional, em casa): ninguém é empurrado para uma dívida que não
-  // tem como pagar.
-  const below = CATEGORIES.filter((c) => c.tier <= Math.max(1, current.tier - 1)).sort((a, b) => b.tier - a.tier);
-  const rental = (category: CategoryDefinition): Offer | null => {
-    const candidates = rankTeams(teamsOfCategory(career, category.id)).reverse();
-    const team = candidates.find((t) => !offers.some((o) => o.teamId === t.id && o.categoryId === category.id));
-    if (!team) return null;
-    return {
-      ...buildOffer(career, category, team, 9, 'fallback', 40),
+  // Rede de segurança: a vaga de aluguel na equipe mais fraca que ainda não fez proposta, sempre um
+  // degrau abaixo do atual e nunca mais que isso (`RENTAL_CATEGORY`): quem cai, cai um degrau.
+  const safetyCategory = getCategory(RENTAL_CATEGORY[current.id]);
+  const candidates = rankTeams(teamsOfCategory(career, safetyCategory.id)).reverse();
+  const safetyTeam = candidates.find((t) => !offers.some((o) => o.teamId === t.id && o.categoryId === safetyCategory.id));
+  if (safetyTeam) {
+    offers.push({
+      ...buildOffer(career, safetyCategory, safetyTeam, 9, 'fallback', 40),
       id: `offer-s${career.season}-fallback`,
-      seatCost: roundTo(category.economy.seatCost[1] * RUNNING_COSTS.FALLBACK_SEAT_SHARE, 500),
+      seatCost: roundTo(safetyCategory.economy.seatCost[1] * RUNNING_COSTS.FALLBACK_SEAT_SHARE, 500),
       salary: 0,
       years: 1,
       role: 'second',
       firstDriverPossible: false,
       clauses: { releaseFee: 0, performanceTarget: null },
-    };
-  };
-  const rentals = below.map(rental).filter((o): o is Offer => o !== null);
-  const safety = rentals.find((o) => financeProjection(career, o, finalPosition).met) ?? rentals[rentals.length - 1];
-  if (safety) offers.push(safety);
+    });
+  }
   return offers;
+}
+
+/**
+ * De onde vem o preço de uma proposta: o preço cheio da vaga naquela equipe (o de tabela, pela
+ * posição dela na ordem de forças), a bolsa de quem terminou entre os três primeiros e o desconto
+ * que a equipe deu por interesse ou na negociação. Serve para a tela mostrar o preço cheio riscado
+ * ao lado do valor final: sem isso, a renovação de quem subiu com bolsa parece um aumento.
+ */
+export function offerPricing(career: CareerState, offer: Offer): { listPrice: number; discount: number; scholarship: number; teamDiscount: number } {
+  const category = getCategory(offer.categoryId);
+  const rank = Math.max(
+    0,
+    rankTeams(teamsOfCategory(career, offer.categoryId)).findIndex((t) => t.id === offer.teamId),
+  );
+  const listPrice = roundTo(lerp(category.economy.seatCost, offer.kind === 'fallback' ? 1 : rank / 9), 500);
+  const discount = listPrice > 0 ? Math.max(0, 1 - offer.seatCost / listPrice) : 0;
+  const scholarship = Math.min(discount, offer.scholarship);
+  return { listPrice, discount, scholarship, teamDiscount: discount - scholarship };
 }
 
 /** Multa a pagar para aceitar esta proposta deixando um contrato vigente. */

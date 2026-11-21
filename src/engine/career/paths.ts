@@ -244,7 +244,7 @@ export function crowdfundTarget(career: CareerState): number | null {
 
 export interface InvestorTerms {
   available: boolean;
-  /** Investidor de último recurso: aparece para qualquer piloto, cobra mais e cobre o que faltar para fechar o ano. */
+  /** Investidor de último recurso: aparece para qualquer piloto, com o resultado que tiver, e cobra mais. */
   lastResort: boolean;
   name: string;
   /** Fatia que este aporte acrescenta e a fatia total depois dele. */
@@ -306,11 +306,16 @@ export function investorTerms(career: CareerState): InvestorTerms {
   return { available: career.mode === 'driver' && requirements.every((r) => r.met), lastResort, name, added, share, requirements };
 }
 
-/** Quanto o investidor poria nesta proposta: a vaga e a mudança de polo; como último recurso, também o que faltar para fechar o ano. */
+/**
+ * Quanto o investidor poria nesta proposta: a vaga e a mudança de polo e, se nem assim a equipe
+ * aceitar o piloto por causa das contas, o que faltar para fechar o ano. Quem ele aceita bancar,
+ * ele banca até a porta abrir: é o que impede um piloto com resultado e sem caixa de ficar só com a
+ * vaga de aluguel.
+ */
 export function investorAmount(career: CareerState, offer: Offer): number {
   const seat = offer.seatCost * (1 - (career.academy?.supportShare ?? 0)) + moveCost(career, offer.categoryId);
-  if (!lastResortActive(career)) return Math.round(seat);
-  const { projected, creditLimit } = financeProjection(career, offer);
+  const { projected, creditLimit, met } = financeProjection(career, offer);
+  if (met) return Math.round(seat);
   return Math.round(Math.max(seat, roundTo(-creditLimit - projected, 500) + 500));
 }
 
@@ -385,6 +390,48 @@ export function doorFor(career: CareerState, offer: Offer): DoorKey | null {
   if (canLaunchCrowdfund(career) && canAcceptOffer(launchCrowdfund(career), offer)) return 'crowdfund';
   if (canSignInvestor(career, offer.id) && canAcceptOffer(signInvestor(career, offer.id), offer)) return 'investor';
   return null;
+}
+
+/** O que falta para aceitar uma proposta e qual porta dos Caminhos resolve, para a tela Carreira. */
+export interface OfferHelp {
+  /** Requisitos em falta (vazio se a proposta já pode ser assinada). */
+  missing: Requirement[];
+  /** A porta que abre esta vaga agora (null: nenhuma, ou não precisa). */
+  door: Exclude<DoorKey, 'own'> | null;
+  /** Uma frase dizendo o que fazer. */
+  hint: string;
+}
+
+export function offerHelp(career: CareerState, offer: Offer): OfferHelp {
+  if (offer.status !== 'open') return { missing: [], door: null, hint: 'A equipe retirou a proposta.' };
+  const missing = offerRequirements(career, offer).filter((r) => !r.met);
+  if (missing.length === 0) return { missing, door: null, hint: '' };
+  const names = missing.map((r) => r.label).join(', ');
+  if (missing.some((r) => r.key !== 'finance'))
+    return {
+      missing,
+      door: null,
+      hint: `Falta ${names}. Nenhuma porta compra requisito esportivo: ele vem com resultado, idade e quilometragem. Em Caminhos você acompanha cada um.`,
+    };
+  const door = doorFor(career, offer);
+  if (door === 'academy') return { missing, door, hint: 'Falta dinheiro. A academia abre esta vaga: ela paga a vaga e cobra exclusividade e resultado. Entre por Caminhos.' };
+  if (door === 'crowdfund') return { missing, door, hint: 'Falta dinheiro. A vaquinha da cidade abre esta vaga, e a torcida passa a cobrar o ano que vem. Faça por Caminhos.' };
+  if (door === 'investor') {
+    const terms = investorTerms(career);
+    return {
+      missing,
+      door,
+      hint: `Falta dinheiro. O investidor abre esta vaga: põe ${money(career, investorAmount(career, offer))} e fica com ${Math.round(terms.share * 100)}% dos seus ganhos para sempre. Feche por Caminhos.`,
+    };
+  }
+  const funded = career.investor?.funded?.season === career.season;
+  return {
+    missing,
+    door: null,
+    hint: funded
+      ? 'Falta dinheiro, e o aporte do investidor deste ano já foi para outra vaga.'
+      : 'Falta dinheiro, e nenhuma porta abre esta vaga agora. Em Caminhos você vê o que falta para a academia, a vaquinha e o investidor; a vaga de aluguel continua à mão.',
+  };
 }
 
 /** Abre a porta indicada para a proposta e devolve a carreira pronta para assinar. */
@@ -611,7 +658,7 @@ export function pathsReport(career: CareerState): PathsReport {
     status: career.investor && !atOffseason ? 'active' : statusOf(terms.requirements, atOffseason),
     summary: terms.lastResort
       ? 'Ele paga a vaga, a mudança e o que faltar para fechar o ano. Se nenhuma equipe fez proposta, traz uma vaga no meio do grid.'
-      : 'Ele paga a vaga de uma proposta (e a mudança de polo, se houver). O dinheiro só vale para aquela vaga.',
+      : 'Ele paga a vaga de uma proposta, a mudança de polo, se houver, e o que faltar para a equipe aceitar você. O dinheiro só vale para aquela vaga.',
     price: `${Math.round(terms.share * 100)}% dos seus ganhos (salário, bônus e o que sobra dos patrocínios depois de pagar a vaga), para sempre. Cada vaga a mais que ele pagar soma ${Math.round(INVESTOR.EXTRA_SEAT_SHARE * 100)} pontos, até ${Math.round(INVESTOR.MAX_SHARE * 100)}%.`,
     requirements: terms.requirements,
   };

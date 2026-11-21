@@ -59,6 +59,22 @@ export const CATEGORY_HUB: Readonly<Record<CategoryId, HubId>> = {
   f1: 'inglaterra',
 };
 
+/**
+ * Onde fica a vaga de aluguel de quem não consegue vaga nenhuma: um degrau abaixo, nunca mais. A
+ * Fórmula Júnior e o kart internacional são alternativas no mesmo degrau da escada, então quem cai
+ * de qualquer um dos dois volta ao Campeonato Brasileiro de Kart (não troca um pelo outro, o que
+ * seria mudar de país para descer). No kart regional, a vaga de aluguel é no próprio regional.
+ */
+export const RENTAL_CATEGORY: Readonly<Record<CategoryId, CategoryId>> = {
+  'kart-regional': 'kart-regional',
+  'kart-national': 'kart-regional',
+  'kart-international': 'kart-national',
+  f4: 'kart-national',
+  f3: 'f4',
+  f2: 'f3',
+  f1: 'f2',
+};
+
 export function getHub(id: HubId): HubDefinition {
   const hub = HUBS.find((h) => h.id === id);
   if (!hub) throw new Error(`Polo desconhecido: ${id}`);

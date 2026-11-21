@@ -77,79 +77,79 @@
   "teams": "trovao:125,vortex:121,serra:82,falcao:80,pampa:46,atlantico:27,cerrado:21,riogrande:4,horizonte:1,garagem:0",
   "lastRace": "monteiro:1:27:finished,lima:2:18:finished,andrade:3:15:finished,bertolini:4:12:finished,mendes:5:10:finished,wagner:6:8:finished,sato:7:6:finished,kowalski:8:4:finished,cardoso:9:2:finished,ferraz:10:1:finished,alves:11:0:finished,player:12:0:finished,schneider:13:0:finished,nogueira:14:0:finished,pires:15:0:finished,moura:16:0:finished,paredes:17:0:finished,rocha:18:0:finished,duarte:19:0:finished,batista:20:0:finished",
   "seasonTotals": "equipment:-1500,event:-720,job:4000,living:-3000,seat:-6500,sponsors:11680,training:-1500,travel:-1500",
-  "hash": "1e82f12d80995d"
+  "hash": "01af93b3ae4f21"
  },
  {
   "label": "A · kart-regional · temporada 1 · etapa 6",
   "category": "kart-regional",
   "season": 1,
   "round": 6,
-  "cash": 22200,
-  "netWorth": 22200,
+  "cash": 22300,
+  "netWorth": 22300,
   "reputation": 10,
   "position": 10,
   "points": 25,
   "standings": "andrade:130,monteiro:117,bertolini:54,lima:51,cardoso:47,sato:43,wagner:38,ferraz:36,nogueira:32,player:25,mendes:11,alves:10,kowalski:10,paredes:4,schneider:1,rocha:1,pires:0,duarte:0,moura:0,batista:0",
   "teams": "trovao:160,vortex:140,falcao:98,serra:90,pampa:48,atlantico:43,cerrado:25,riogrande:5,horizonte:1,garagem:0",
   "lastRace": "monteiro:1:25:finished,andrade:2:19:finished,nogueira:3:16:finished,lima:4:12:finished,sato:5:10:finished,ferraz:6:8:finished,cardoso:7:6:finished,player:8:4:finished,wagner:9:2:finished,schneider:10:1:finished,pires:11:0:finished,duarte:12:0:finished,kowalski:13:0:finished,mendes:14:0:finished,paredes:15:0:finished,alves:16:0:finished,batista:17:0:finished,bertolini:18:0:finished,moura:19:0:finished,rocha:20:0:finished",
-  "seasonTotals": "equipment:-1800,event:-2320,job:4800,living:-3600,seat:-7800,sponsors:14520,training:-1800,travel:-1800",
-  "hash": "0a4750a44b382c"
+  "seasonTotals": "equipment:-1800,event:-2220,job:4800,living:-3600,seat:-7800,sponsors:14520,training:-1800,travel:-1800",
+  "hash": "1fac167e52d90d"
  },
  {
   "label": "A · kart-regional · temporada 1 · etapa 7",
   "category": "kart-regional",
   "season": 1,
   "round": 7,
-  "cash": 23040,
-  "netWorth": 23040,
+  "cash": 23140,
+  "netWorth": 23140,
   "reputation": 10,
   "position": 10,
   "points": 25,
   "standings": "monteiro:143,andrade:142,bertolini:62,ferraz:54,sato:54,lima:53,nogueira:47,cardoso:47,wagner:38,player:25,mendes:15,kowalski:11,alves:10,schneider:7,paredes:4,rocha:1,pires:0,duarte:0,moura:0,batista:0",
   "teams": "trovao:197,vortex:153,serra:116,falcao:100,atlantico:62,pampa:48,cerrado:25,riogrande:11,horizonte:1,garagem:0",
   "lastRace": "monteiro:1:26:finished,ferraz:2:18:finished,nogueira:3:15:finished,andrade:4:12:finished,sato:5:11:finished,bertolini:6:8:finished,schneider:7:6:finished,mendes:8:4:finished,lima:9:2:finished,kowalski:10:1:finished,player:11:0:finished,cardoso:12:0:finished,wagner:13:0:finished,pires:14:0:finished,batista:15:0:finished,moura:16:0:finished,rocha:17:0:finished,duarte:18:0:finished,alves:19:0:dnf,paredes:20:0:dnf",
-  "seasonTotals": "equipment:-2100,event:-2320,job:5600,living:-4200,seat:-9100,sponsors:17360,training:-2100,travel:-2100",
-  "hash": "04171c62531109"
+  "seasonTotals": "equipment:-2100,event:-2220,job:5600,living:-4200,seat:-9100,sponsors:17360,training:-2100,travel:-2100",
+  "hash": "1f260b14cc56e1"
  },
  {
   "label": "A · kart-regional · temporada 1 · etapa 8",
   "category": "kart-regional",
   "season": 1,
   "round": 8,
-  "cash": 23880,
-  "netWorth": 23880,
+  "cash": 23980,
+  "netWorth": 23980,
   "reputation": 10,
   "position": 10,
   "points": 27,
   "standings": "andrade:167,monteiro:158,bertolini:81,ferraz:67,sato:64,lima:57,cardoso:53,nogueira:47,wagner:38,player:27,kowalski:19,mendes:15,alves:10,schneider:7,paredes:4,pires:1,rocha:1,duarte:0,moura:0,batista:0",
   "teams": "trovao:222,vortex:186,serra:148,falcao:110,atlantico:62,pampa:48,cerrado:28,riogrande:11,horizonte:1,garagem:0",
   "lastRace": "andrade:1:25:finished,bertolini:2:19:finished,monteiro:3:15:finished,ferraz:4:13:finished,sato:5:10:finished,kowalski:6:8:finished,cardoso:7:6:finished,lima:8:4:finished,player:9:2:finished,pires:10:1:finished,alves:11:0:finished,wagner:12:0:finished,moura:13:0:finished,schneider:14:0:finished,mendes:15:0:finished,paredes:16:0:finished,batista:17:0:finished,rocha:18:0:finished,duarte:19:0:finished,nogueira:20:0:dnf",
-  "seasonTotals": "equipment:-2400,event:-2320,job:6400,living:-4800,seat:-10400,sponsors:20200,training:-2400,travel:-2400",
-  "hash": "1010d09076fe24"
+  "seasonTotals": "equipment:-2400,event:-2220,job:6400,living:-4800,seat:-10400,sponsors:20200,training:-2400,travel:-2400",
+  "hash": "19b78550a138a2"
  },
  {
   "label": "A · kart-regional · temporada 1 · etapa 9",
   "category": "kart-regional",
   "season": 1,
   "round": 9,
-  "cash": 25056,
-  "netWorth": 25056,
+  "cash": 25156,
+  "netWorth": 25156,
   "reputation": 10,
   "position": 9,
   "points": 42,
   "standings": "andrade:187,monteiro:183,bertolini:93,sato:74,ferraz:67,lima:63,cardoso:61,nogueira:47,player:42,wagner:40,kowalski:19,mendes:16,schneider:11,alves:10,paredes:4,pires:1,rocha:1,duarte:0,moura:0,batista:0",
   "teams": "trovao:257,vortex:206,serra:160,falcao:124,atlantico:63,pampa:50,cerrado:43,riogrande:15,horizonte:1,garagem:0",
   "lastRace": "monteiro:1:25:finished,andrade:2:20:finished,player:3:15:finished,bertolini:4:12:finished,sato:5:10:finished,cardoso:6:8:finished,lima:7:6:finished,schneider:8:4:finished,wagner:9:2:finished,mendes:10:1:finished,paredes:11:0:finished,ferraz:12:0:finished,duarte:13:0:finished,alves:14:0:finished,nogueira:15:0:finished,moura:16:0:finished,kowalski:17:0:finished,rocha:18:0:finished,pires:19:0:finished,batista:20:0:finished",
-  "seasonTotals": "bonus:336,equipment:-2700,event:-2320,job:7200,living:-5400,seat:-11700,sponsors:23040,training:-2700,travel:-2700",
-  "hash": "0fb86226fd4b84"
+  "seasonTotals": "bonus:336,equipment:-2700,event:-2220,job:7200,living:-5400,seat:-11700,sponsors:23040,training:-2700,travel:-2700",
+  "hash": "024eec52af58c4"
  },
  {
   "label": "A · kart-regional · temporada 1 · etapa 10",
   "category": "kart-regional",
   "season": 1,
   "round": 10,
-  "cash": 25896,
-  "netWorth": 25896,
+  "cash": 25996,
+  "netWorth": 25996,
   "reputation": 11,
   "position": 10,
   "points": 42,
@@ -157,15 +157,15 @@
   "teams": "trovao:275,vortex:240,serra:188,falcao:129,atlantico:73,pampa:56,cerrado:43,riogrande:17,horizonte:1,garagem:0",
   "lastRace": "andrade:1:26:finished,monteiro:2:18:finished,bertolini:3:16:finished,ferraz:4:12:finished,nogueira:5:10:finished,kowalski:6:8:finished,wagner:7:6:finished,cardoso:8:4:finished,schneider:9:2:finished,lima:10:1:finished,player:11:0:finished,moura:12:0:finished,mendes:13:0:finished,alves:14:0:finished,paredes:15:0:finished,pires:16:0:finished,sato:17:0:finished,batista:18:0:finished,duarte:19:0:finished,rocha:20:0:finished",
   "seasonTotals": "",
-  "hash": "19d115a46fd9ac"
+  "hash": "0f949a7067cf05"
  },
  {
   "label": "A · virada para a temporada 2 (kart-regional)",
   "category": "kart-regional",
   "season": 2,
   "round": 0,
-  "cash": 25896,
-  "netWorth": 25896,
+  "cash": 25996,
+  "netWorth": 25996,
   "reputation": 11,
   "position": 16,
   "points": 0,
@@ -173,15 +173,15 @@
   "teams": "atlantico:0,cerrado:0,falcao:0,garagem:0,horizonte:0,pampa:0,riogrande:0,serra:0,trovao:0,vortex:0",
   "lastRace": "",
   "seasonTotals": "",
-  "hash": "153780b301e374"
+  "hash": "08a5a0560c2741"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 1",
   "category": "kart-regional",
   "season": 2,
   "round": 1,
-  "cash": 27056,
-  "netWorth": 27056,
+  "cash": 27156,
+  "netWorth": 27156,
   "reputation": 11,
   "position": 6,
   "points": 8,
@@ -189,15 +189,15 @@
   "teams": "trovao:35,falcao:32,serra:19,atlantico:8,vortex:6,cerrado:2,riogrande:1,pampa:0,garagem:0,horizonte:0",
   "lastRace": "lima:1:25:finished,kowalski:2:20:finished,kart-regional-s1-trovao-reserve:3:15:finished,cardoso:4:12:finished,ferraz:5:10:finished,player:6:8:finished,nogueira:7:6:finished,paredes:8:4:finished,kart-regional-s2-rookie-0:9:2:finished,mendes:10:1:finished,sato:11:0:finished,schneider:12:0:finished,kart-regional-s1-vortex-reserve:13:0:finished,kart-regional-s1-serra-reserve:14:0:finished,kart-regional-s1-falcao-reserve:15:0:finished,moura:16:0:finished,pires:17:0:finished,alves:18:0:dnf,wagner:19:0:dnf,rocha:20:0:dnf",
   "seasonTotals": "equipment:-300,job:800,living:-600,seat:-1950,sponsors:3810,training:-300,travel:-300",
-  "hash": "075ffd14a697d9"
+  "hash": "0e50c260a9e4c2"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 2",
   "category": "kart-regional",
   "season": 2,
   "round": 2,
-  "cash": 28216,
-  "netWorth": 28216,
+  "cash": 28316,
+  "netWorth": 28316,
   "reputation": 11,
   "position": 6,
   "points": 18,
@@ -205,15 +205,15 @@
   "teams": "trovao:80,serra:46,falcao:33,atlantico:18,vortex:14,horizonte:6,riogrande:5,cerrado:2,pampa:2,garagem:0",
   "lastRace": "lima:1:27:finished,ferraz:2:18:finished,paredes:3:15:finished,kart-regional-s1-trovao-reserve:4:12:finished,player:5:10:finished,sato:6:8:finished,rocha:7:6:finished,schneider:8:4:finished,wagner:9:2:finished,cardoso:10:1:finished,nogueira:11:0:finished,kart-regional-s2-rookie-0:12:0:finished,alves:13:0:finished,moura:14:0:finished,kart-regional-s1-vortex-reserve:15:0:finished,pires:16:0:finished,kart-regional-s1-serra-reserve:17:0:finished,kart-regional-s1-falcao-reserve:18:0:finished,mendes:19:0:finished,kowalski:20:0:finished",
   "seasonTotals": "equipment:-600,job:1600,living:-1200,seat:-3900,sponsors:7620,training:-600,travel:-600",
-  "hash": "0e4381a9d55384"
+  "hash": "102291a0615b9b"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 3",
   "category": "kart-regional",
   "season": 2,
   "round": 3,
-  "cash": 31304,
-  "netWorth": 31304,
+  "cash": 31404,
+  "netWorth": 31404,
   "reputation": 11,
   "position": 2,
   "points": 37,
@@ -221,15 +221,15 @@
   "teams": "trovao:95,vortex:51,serra:46,falcao:43,atlantico:37,riogrande:17,horizonte:12,cerrado:4,pampa:3,garagem:0",
   "lastRace": "sato:1:25:finished,player:2:19:finished,lima:3:15:finished,nogueira:4:12:finished,cardoso:5:10:finished,schneider:6:8:finished,rocha:7:6:finished,mendes:8:4:finished,pires:9:2:finished,wagner:10:1:finished,kart-regional-s2-rookie-0:11:0:finished,alves:12:0:finished,paredes:13:0:finished,kart-regional-s1-serra-reserve:14:0:finished,kart-regional-s1-trovao-reserve:15:0:finished,kart-regional-s1-falcao-reserve:16:0:finished,ferraz:17:0:finished,kart-regional-s1-vortex-reserve:18:0:finished,kowalski:19:0:dnf,moura:20:0:dnf",
   "seasonTotals": "bonus:1068,equipment:-900,job:2400,living:-1800,seat:-5850,sponsors:12290,training:-900,travel:-900",
-  "hash": "053b26d0a36465"
+  "hash": "16b0b1137791f8"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 4",
   "category": "kart-regional",
   "season": 2,
   "round": 4,
-  "cash": 33324,
-  "netWorth": 33324,
+  "cash": 33424,
+  "netWorth": 33424,
   "reputation": 11,
   "position": 2,
   "points": 49,
@@ -237,15 +237,15 @@
   "teams": "trovao:122,falcao:69,vortex:68,serra:52,atlantico:49,riogrande:27,horizonte:12,pampa:8,cerrado:4,garagem:0",
   "lastRace": "lima:1:27:finished,kowalski:2:18:finished,sato:3:15:finished,player:4:12:finished,schneider:5:10:finished,cardoso:6:8:finished,kart-regional-s1-trovao-reserve:7:6:finished,wagner:8:4:finished,nogueira:9:2:finished,kart-regional-s1-serra-reserve:10:1:finished,ferraz:11:0:finished,rocha:12:0:finished,mendes:13:0:finished,pires:14:0:finished,alves:15:0:finished,kart-regional-s1-falcao-reserve:16:0:finished,moura:17:0:finished,kart-regional-s2-rookie-0:18:0:finished,paredes:19:0:finished,kart-regional-s1-vortex-reserve:20:0:finished",
   "seasonTotals": "bonus:1068,equipment:-1200,job:3200,living:-2400,seat:-7800,sponsors:16960,training:-1200,travel:-1200",
-  "hash": "12766704f9626f"
+  "hash": "0703e5f7eeb2ac"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 5",
   "category": "kart-regional",
   "season": 2,
   "round": 5,
-  "cash": 36412,
-  "netWorth": 36412,
+  "cash": 36512,
+  "netWorth": 36512,
   "reputation": 11,
   "position": 2,
   "points": 76,
@@ -253,15 +253,15 @@
   "teams": "trovao:147,falcao:87,atlantico:76,vortex:75,serra:60,riogrande:29,horizonte:24,pampa:12,cerrado:4,garagem:0",
   "lastRace": "player:1:27:finished,kowalski:2:18:finished,lima:3:15:finished,rocha:4:12:finished,ferraz:5:10:finished,paredes:6:8:finished,nogueira:7:6:finished,wagner:8:4:finished,schneider:9:2:finished,sato:10:1:finished,kart-regional-s1-trovao-reserve:11:0:finished,pires:12:0:finished,cardoso:13:0:finished,mendes:14:0:finished,kart-regional-s1-serra-reserve:15:0:finished,kart-regional-s2-rookie-0:16:0:finished,kart-regional-s1-falcao-reserve:17:0:finished,moura:18:0:finished,kart-regional-s1-vortex-reserve:19:0:finished,alves:20:0:dnf",
   "seasonTotals": "bonus:2136,equipment:-1500,job:4000,living:-3000,seat:-9750,sponsors:21630,training:-1500,travel:-1500",
-  "hash": "1f541a64fefdd0"
+  "hash": "0d4fb4d22a369a"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 6",
   "category": "kart-regional",
   "season": 2,
   "round": 6,
-  "cash": 39500,
-  "netWorth": 39500,
+  "cash": 39600,
+  "netWorth": 39600,
   "reputation": 11,
   "position": 2,
   "points": 103,
@@ -269,15 +269,15 @@
   "teams": "trovao:168,falcao:113,atlantico:103,vortex:79,serra:72,riogrande:41,horizonte:24,pampa:12,cerrado:4,garagem:1",
   "lastRace": "player:1:27:finished,kowalski:2:18:finished,lima:3:15:finished,mendes:4:12:finished,paredes:5:10:finished,cardoso:6:8:finished,ferraz:7:6:finished,sato:8:4:finished,kart-regional-s1-trovao-reserve:9:2:finished,moura:10:1:finished,wagner:11:0:finished,alves:12:0:finished,pires:13:0:finished,schneider:14:0:finished,rocha:15:0:finished,nogueira:16:0:finished,kart-regional-s1-vortex-reserve:17:0:finished,kart-regional-s1-serra-reserve:18:0:finished,kart-regional-s1-falcao-reserve:19:0:finished,kart-regional-s2-rookie-0:20:0:finished",
   "seasonTotals": "bonus:3204,equipment:-1800,job:4800,living:-3600,seat:-11700,sponsors:26300,training:-1800,travel:-1800",
-  "hash": "07d7cb35a23391"
+  "hash": "1bd463ba52dec1"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 7",
   "category": "kart-regional",
   "season": 2,
   "round": 7,
-  "cash": 41200,
-  "netWorth": 41200,
+  "cash": 41300,
+  "netWorth": 41300,
   "reputation": 11,
   "position": 2,
   "points": 113,
@@ -285,15 +285,15 @@
   "teams": "trovao:212,falcao:128,atlantico:113,vortex:79,serra:74,riogrande:48,horizonte:33,pampa:24,cerrado:8,garagem:1",
   "lastRace": "ferraz:1:26:finished,lima:2:18:finished,cardoso:3:15:finished,wagner:4:12:finished,player:5:10:finished,rocha:6:9:finished,mendes:7:6:finished,pires:8:4:finished,kart-regional-s1-trovao-reserve:9:2:finished,schneider:10:1:finished,kowalski:11:0:finished,paredes:12:0:finished,kart-regional-s1-falcao-reserve:13:0:finished,moura:14:0:finished,sato:15:0:finished,kart-regional-s2-rookie-0:16:0:finished,nogueira:17:0:finished,kart-regional-s1-vortex-reserve:18:0:finished,alves:19:0:dnf,kart-regional-s1-serra-reserve:20:0:dnf",
   "seasonTotals": "bonus:3204,damage:-320,equipment:-2100,job:5600,living:-4200,seat:-13650,sponsors:30970,training:-2100,travel:-2100",
-  "hash": "1a7412c61f4b94"
+  "hash": "021a4eaa9214cd"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 8",
   "category": "kart-regional",
   "season": 2,
   "round": 8,
-  "cash": 43220,
-  "netWorth": 43220,
+  "cash": 43320,
+  "netWorth": 43320,
   "reputation": 12,
   "position": 2,
   "points": 123,
@@ -301,15 +301,15 @@
   "teams": "trovao:240,falcao:156,atlantico:123,serra:82,vortex:79,riogrande:72,horizonte:34,pampa:28,cerrado:8,garagem:1",
   "lastRace": "kowalski:1:26:finished,schneider:2:18:finished,lima:3:16:finished,ferraz:4:12:finished,player:5:10:finished,paredes:6:8:finished,mendes:7:6:finished,wagner:8:4:finished,cardoso:9:2:finished,rocha:10:1:finished,nogueira:11:0:finished,kart-regional-s1-trovao-reserve:12:0:finished,sato:13:0:finished,kart-regional-s2-rookie-0:14:0:finished,kart-regional-s1-falcao-reserve:15:0:finished,moura:16:0:finished,kart-regional-s1-serra-reserve:17:0:finished,kart-regional-s1-vortex-reserve:18:0:finished,pires:19:0:finished,alves:20:0:finished",
   "seasonTotals": "bonus:3204,damage:-320,equipment:-2400,job:6400,living:-4800,seat:-15600,sponsors:35640,training:-2400,travel:-2400",
-  "hash": "02ba55d2aad275"
+  "hash": "141a2c344835f7"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 9",
   "category": "kart-regional",
   "season": 2,
   "round": 9,
-  "cash": 46308,
-  "netWorth": 46308,
+  "cash": 46408,
+  "netWorth": 46408,
   "reputation": 12,
   "position": 2,
   "points": 149,
@@ -317,15 +317,15 @@
   "teams": "trovao:260,falcao:181,atlantico:151,serra:92,riogrande:91,vortex:80,horizonte:34,pampa:28,cerrado:8,garagem:1",
   "lastRace": "player:1:26:finished,schneider:2:19:finished,kowalski:3:15:finished,lima:4:12:finished,cardoso:5:10:finished,ferraz:6:8:finished,kart-regional-s1-trovao-reserve:7:6:finished,paredes:8:4:finished,kart-regional-s1-vortex-reserve:9:2:finished,sato:10:1:finished,moura:11:0:finished,mendes:12:0:finished,wagner:13:0:finished,rocha:14:0:finished,nogueira:15:0:finished,kart-regional-s2-rookie-0:16:0:finished,pires:17:0:finished,kart-regional-s1-serra-reserve:18:0:finished,kart-regional-s1-falcao-reserve:19:0:finished,alves:20:0:finished",
   "seasonTotals": "bonus:4272,damage:-320,equipment:-2700,job:7200,living:-5400,seat:-17550,sponsors:40310,training:-2700,travel:-2700",
-  "hash": "1fc1ac3dd658e7"
+  "hash": "1df2e34a24e1af"
  },
  {
   "label": "A · kart-regional · temporada 2 · etapa 10",
   "category": "kart-regional",
   "season": 2,
   "round": 10,
-  "cash": 49396,
-  "netWorth": 49396,
+  "cash": 49496,
+  "netWorth": 49496,
   "reputation": 20,
   "position": 2,
   "points": 175,
@@ -333,15 +333,15 @@
   "teams": "trovao:289,falcao:187,atlantico:178,serra:104,vortex:99,riogrande:99,horizonte:34,pampa:30,cerrado:8,garagem:1",
   "lastRace": "player:1:26:finished,ferraz:2:19:finished,sato:3:15:finished,kart-regional-s1-trovao-reserve:4:12:finished,lima:5:10:finished,mendes:6:8:finished,kowalski:7:6:finished,nogueira:8:4:finished,wagner:9:2:finished,kart-regional-s1-vortex-reserve:10:1:finished,paredes:11:0:finished,alves:12:0:finished,kart-regional-s1-falcao-reserve:13:0:finished,rocha:14:0:finished,moura:15:0:finished,pires:16:0:finished,kart-regional-s2-rookie-0:17:0:finished,kart-regional-s1-serra-reserve:18:0:finished,cardoso:19:0:finished,schneider:20:0:dnf",
   "seasonTotals": "",
-  "hash": "1eaacb3ff53104"
+  "hash": "1ed7b4e08106ce"
  },
  {
   "label": "A · virada para a temporada 3 (kart-national)",
   "category": "kart-national",
   "season": 3,
   "round": 0,
-  "cash": 49396,
-  "netWorth": 49396,
+  "cash": 49496,
+  "netWorth": 49496,
   "reputation": 20,
   "position": 19,
   "points": 0,
@@ -349,15 +349,15 @@
   "teams": "kart-national-aguia-racing:0,kart-national-arara-azul-racing:0,kart-national-corsa-brasil:0,kart-national-ipe-competicoes:0,kart-national-litoral-racing-team:0,kart-national-meridional-kart:0,kart-national-nova-era-kart:0,kart-national-paulista-speed:0,kart-national-sertao-kart:0,kart-national-tupi-motorsport:0",
   "lastRace": "",
   "seasonTotals": "",
-  "hash": "1a1ae4ab9c55ee"
+  "hash": "071e679ed491f7"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 1",
   "category": "kart-national",
   "season": 3,
   "round": 1,
-  "cash": 48806,
-  "netWorth": 48806,
+  "cash": 48906,
+  "netWorth": 48906,
   "reputation": 20,
   "position": 16,
   "points": 0,
@@ -365,15 +365,15 @@
   "teams": "kart-national-aguia-racing:25,kart-national-tupi-motorsport:21,kart-national-corsa-brasil:19,kart-national-ipe-competicoes:15,kart-national-meridional-kart:12,kart-national-sertao-kart:6,kart-national-paulista-speed:4,kart-national-litoral-racing-team:1,kart-national-arara-azul-racing:0,kart-national-nova-era-kart:0",
   "lastRace": "kart-national-s3-0-second:1:25:finished,kart-national-s3-4-first:2:19:finished,kowalski:3:15:finished,lima:4:13:finished,kart-national-s3-1-second:5:10:finished,kart-national-s3-2-first:6:8:finished,sato:7:6:finished,kart-national-s3-7-first:8:4:finished,kart-national-s3-1-first:9:2:finished,ferraz:10:1:finished,kart-national-s3-5-first:11:0:finished,kart-national-s3-6-first:12:0:finished,kart-national-s3-8-first:13:0:finished,kart-national-s3-3-first:14:0:finished,kart-national-s3-0-first:15:0:finished,player:16:0:finished,kart-national-s3-9-second:17:0:finished,kart-national-s3-7-second:18:0:finished,kart-national-s3-9-first:19:0:finished,kart-national-s3-8-second:20:0:finished",
   "seasonTotals": "equipment:-800,job:800,living:-1000,seat:-5500,sponsors:7710,training:-600,travel:-1200",
-  "hash": "17d75da7d8c1d2"
+  "hash": "06320430490b8f"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 2",
   "category": "kart-national",
   "season": 3,
   "round": 2,
-  "cash": 50500,
-  "netWorth": 50500,
+  "cash": 50600,
+  "netWorth": 50600,
   "reputation": 20,
   "position": 6,
   "points": 19,
@@ -381,15 +381,15 @@
   "teams": "kart-national-aguia-racing:63,kart-national-corsa-brasil:38,kart-national-ipe-competicoes:31,kart-national-tupi-motorsport:27,kart-national-sertao-kart:21,kart-national-meridional-kart:21,kart-national-paulista-speed:4,kart-national-litoral-racing-team:1,kart-national-arara-azul-racing:0,kart-national-nova-era-kart:0",
   "lastRace": "kart-national-s3-0-first:1:26:finished,player:2:19:finished,sato:3:15:finished,kart-national-s3-0-second:4:12:finished,kowalski:5:10:finished,kart-national-s3-1-first:6:8:finished,kart-national-s3-3-first:7:6:finished,kart-national-s3-2-first:8:4:finished,lima:9:2:finished,kart-national-s3-1-second:10:1:finished,kart-national-s3-4-first:11:0:finished,kart-national-s3-7-first:12:0:finished,kart-national-s3-5-first:13:0:finished,kart-national-s3-7-second:14:0:finished,kart-national-s3-8-first:15:0:finished,kart-national-s3-9-first:16:0:finished,kart-national-s3-9-second:17:0:finished,kart-national-s3-8-second:18:0:finished,ferraz:19:0:finished,kart-national-s3-6-first:20:0:dnf",
   "seasonTotals": "bonus:2284,equipment:-1600,job:1600,living:-2000,seat:-11000,sponsors:15420,training:-1200,travel:-2400",
-  "hash": "1ac673dd926d81"
+  "hash": "0a1d6f10c80f99"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 3",
   "category": "kart-national",
   "season": 3,
   "round": 3,
-  "cash": 49910,
-  "netWorth": 49910,
+  "cash": 50010,
+  "netWorth": 50010,
   "reputation": 20,
   "position": 6,
   "points": 23,
@@ -397,15 +397,15 @@
   "teams": "kart-national-tupi-motorsport:72,kart-national-aguia-racing:69,kart-national-ipe-competicoes:47,kart-national-corsa-brasil:44,kart-national-meridional-kart:43,kart-national-sertao-kart:21,kart-national-litoral-racing-team:9,kart-national-paulista-speed:4,kart-national-arara-azul-racing:0,kart-national-nova-era-kart:0",
   "lastRace": "kart-national-s3-2-first:1:26:finished,lima:2:19:finished,kowalski:3:15:finished,kart-national-s3-1-second:4:12:finished,kart-national-s3-1-first:5:10:finished,kart-national-s3-5-first:6:8:finished,kart-national-s3-0-second:7:6:finished,player:8:4:finished,kart-national-s3-4-first:9:2:finished,kart-national-s3-3-first:10:1:finished,ferraz:11:0:finished,kart-national-s3-7-second:12:0:finished,sato:13:0:finished,kart-national-s3-6-first:14:0:finished,kart-national-s3-9-first:15:0:finished,kart-national-s3-8-first:16:0:finished,kart-national-s3-9-second:17:0:finished,kart-national-s3-7-first:18:0:finished,kart-national-s3-8-second:19:0:finished,kart-national-s3-0-first:20:0:dnf",
   "seasonTotals": "bonus:2284,equipment:-2400,job:2400,living:-3000,seat:-16500,sponsors:23130,training:-1800,travel:-3600",
-  "hash": "174a9d24421a2a"
+  "hash": "009289016de723"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 4",
   "category": "kart-national",
   "season": 3,
   "round": 4,
-  "cash": 51604,
-  "netWorth": 51604,
+  "cash": 51704,
+  "netWorth": 51704,
   "reputation": 20,
   "position": 5,
   "points": 38,
@@ -413,15 +413,15 @@
   "teams": "kart-national-aguia-racing:114,kart-national-tupi-motorsport:78,kart-national-corsa-brasil:69,kart-national-meridional-kart:56,kart-national-ipe-competicoes:53,kart-national-sertao-kart:21,kart-national-litoral-racing-team:17,kart-national-paulista-speed:4,kart-national-nova-era-kart:0,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-0-second:1:27:finished,kart-national-s3-0-first:2:18:finished,player:3:15:finished,kart-national-s3-1-second:4:12:finished,kart-national-s3-4-first:5:10:finished,kart-national-s3-5-first:6:8:finished,kowalski:7:6:finished,kart-national-s3-2-first:8:4:finished,lima:9:2:finished,kart-national-s3-1-first:10:1:finished,kart-national-s3-7-first:11:0:finished,kart-national-s3-9-first:12:0:finished,kart-national-s3-6-first:13:0:finished,ferraz:14:0:finished,kart-national-s3-9-second:15:0:finished,kart-national-s3-8-second:16:0:finished,kart-national-s3-8-first:17:0:finished,kart-national-s3-7-second:18:0:finished,kart-national-s3-3-first:19:0:finished,sato:20:0:dnf",
   "seasonTotals": "bonus:4568,equipment:-3200,job:3200,living:-4000,seat:-22000,sponsors:30840,training:-2400,travel:-4800",
-  "hash": "01a4c956035785"
+  "hash": "1ed1b9dcd7a4b0"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 5",
   "category": "kart-national",
   "season": 3,
   "round": 5,
-  "cash": 51014,
-  "netWorth": 51014,
+  "cash": 51114,
+  "netWorth": 51114,
   "reputation": 20,
   "position": 5,
   "points": 46,
@@ -429,15 +429,15 @@
   "teams": "kart-national-aguia-racing:156,kart-national-tupi-motorsport:108,kart-national-corsa-brasil:87,kart-national-meridional-kart:59,kart-national-ipe-competicoes:53,kart-national-sertao-kart:27,kart-national-litoral-racing-team:21,kart-national-paulista-speed:4,kart-national-nova-era-kart:0,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-0-second:1:27:finished,kart-national-s3-2-first:2:18:finished,kart-national-s3-0-first:3:15:finished,lima:4:12:finished,kart-national-s3-4-first:5:10:finished,player:6:8:finished,sato:7:6:finished,ferraz:8:4:finished,kart-national-s3-1-first:9:2:finished,kart-national-s3-1-second:10:1:finished,kart-national-s3-6-first:11:0:finished,kowalski:12:0:finished,kart-national-s3-3-first:13:0:finished,kart-national-s3-7-first:14:0:finished,kart-national-s3-7-second:15:0:finished,kart-national-s3-8-first:16:0:finished,kart-national-s3-8-second:17:0:finished,kart-national-s3-5-first:18:0:finished,kart-national-s3-9-second:19:0:finished,kart-national-s3-9-first:20:0:finished",
   "seasonTotals": "bonus:4568,equipment:-4000,job:4000,living:-5000,seat:-27500,sponsors:38550,training:-3000,travel:-6000",
-  "hash": "064fb7bef7028b"
+  "hash": "0270262a066b98"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 6",
   "category": "kart-national",
   "season": 3,
   "round": 6,
-  "cash": 49624,
-  "netWorth": 49624,
+  "cash": 49724,
+  "netWorth": 49724,
   "reputation": 22,
   "position": 5,
   "points": 58,
@@ -445,15 +445,15 @@
   "teams": "kart-national-aguia-racing:174,kart-national-tupi-motorsport:129,kart-national-corsa-brasil:101,kart-national-meridional-kart:90,kart-national-ipe-competicoes:54,kart-national-sertao-kart:35,kart-national-litoral-racing-team:31,kart-national-paulista-speed:4,kart-national-nova-era-kart:0,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-1-first:1:27:finished,kart-national-s3-0-second:2:18:finished,lima:3:15:finished,player:4:12:finished,ferraz:5:10:finished,sato:6:8:finished,kart-national-s3-2-first:7:6:finished,kart-national-s3-1-second:8:4:finished,kart-national-s3-4-first:9:2:finished,kart-national-s3-3-first:10:1:finished,kart-national-s3-5-first:11:0:finished,kart-national-s3-7-first:12:0:finished,kowalski:13:0:finished,kart-national-s3-8-second:14:0:finished,kart-national-s3-7-second:15:0:finished,kart-national-s3-9-second:16:0:finished,kart-national-s3-8-first:17:0:finished,kart-national-s3-6-first:18:0:finished,kart-national-s3-9-first:19:0:finished,kart-national-s3-0-first:20:0:dnf",
   "seasonTotals": "bonus:4568,equipment:-4800,event:-800,job:4800,living:-6000,seat:-33000,sponsors:46260,training:-3600,travel:-7200",
-  "hash": "1f94b19401714f"
+  "hash": "008655e0572fae"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 7",
   "category": "kart-national",
   "season": 3,
   "round": 7,
-  "cash": 51318,
-  "netWorth": 51318,
+  "cash": 51418,
+  "netWorth": 51418,
   "reputation": 22,
   "position": 4,
   "points": 73,
@@ -461,15 +461,15 @@
   "teams": "kart-national-aguia-racing:198,kart-national-tupi-motorsport:149,kart-national-corsa-brasil:126,kart-national-meridional-kart:119,kart-national-ipe-competicoes:54,kart-national-sertao-kart:36,kart-national-litoral-racing-team:35,kart-national-paulista-speed:4,kart-national-nova-era-kart:0,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-1-first:1:27:finished,kart-national-s3-0-second:2:18:finished,player:3:15:finished,kart-national-s3-2-first:4:12:finished,kart-national-s3-4-first:5:10:finished,lima:6:8:finished,kart-national-s3-0-first:7:6:finished,ferraz:8:4:finished,kart-national-s3-1-second:9:2:finished,sato:10:1:finished,kart-national-s3-3-first:11:0:finished,kart-national-s3-5-first:12:0:finished,kart-national-s3-8-first:13:0:finished,kart-national-s3-6-first:14:0:finished,kowalski:15:0:finished,kart-national-s3-7-first:16:0:finished,kart-national-s3-9-first:17:0:finished,kart-national-s3-8-second:18:0:finished,kart-national-s3-9-second:19:0:finished,kart-national-s3-7-second:20:0:finished",
   "seasonTotals": "bonus:6852,equipment:-5600,event:-800,job:5600,living:-7000,seat:-38500,sponsors:53970,training:-4200,travel:-8400",
-  "hash": "05ec341808d958"
+  "hash": "1615c75de45de9"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 8",
   "category": "kart-national",
   "season": 3,
   "round": 8,
-  "cash": 50728,
-  "netWorth": 50728,
+  "cash": 50828,
+  "netWorth": 50828,
   "reputation": 22,
   "position": 5,
   "points": 83,
@@ -477,15 +477,15 @@
   "teams": "kart-national-aguia-racing:242,kart-national-tupi-motorsport:155,kart-national-meridional-kart:147,kart-national-corsa-brasil:144,kart-national-ipe-competicoes:60,kart-national-sertao-kart:36,kart-national-litoral-racing-team:35,kart-national-paulista-speed:4,kart-national-arara-azul-racing:1,kart-national-nova-era-kart:0",
   "lastRace": "kart-national-s3-0-first:1:26:finished,kart-national-s3-0-second:2:18:finished,kart-national-s3-1-first:3:16:finished,kart-national-s3-1-second:4:12:finished,player:5:10:finished,kart-national-s3-4-first:6:8:finished,kart-national-s3-2-first:7:6:finished,kart-national-s3-3-first:8:4:finished,kowalski:9:2:finished,kart-national-s3-8-first:10:1:finished,ferraz:11:0:finished,kart-national-s3-7-second:12:0:finished,kart-national-s3-6-first:13:0:finished,sato:14:0:finished,lima:15:0:finished,kart-national-s3-7-first:16:0:finished,kart-national-s3-9-second:17:0:finished,kart-national-s3-5-first:18:0:finished,kart-national-s3-8-second:19:0:finished,kart-national-s3-9-first:20:0:finished",
   "seasonTotals": "bonus:6852,equipment:-6400,event:-800,job:6400,living:-8000,seat:-44000,sponsors:61680,training:-4800,travel:-9600",
-  "hash": "1ce881a6a2ac04"
+  "hash": "0170fa3916f596"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 9",
   "category": "kart-national",
   "season": 3,
   "round": 9,
-  "cash": 50138,
-  "netWorth": 50138,
+  "cash": 50238,
+  "netWorth": 50238,
   "reputation": 21.5,
   "position": 6,
   "points": 83,
@@ -493,15 +493,15 @@
   "teams": "kart-national-aguia-racing:264,kart-national-tupi-motorsport:194,kart-national-meridional-kart:172,kart-national-corsa-brasil:144,kart-national-ipe-competicoes:69,kart-national-litoral-racing-team:41,kart-national-sertao-kart:38,kart-national-paulista-speed:4,kart-national-arara-azul-racing:1,kart-national-nova-era-kart:0",
   "lastRace": "lima:1:27:finished,kart-national-s3-0-first:2:18:finished,kart-national-s3-1-second:3:15:finished,kart-national-s3-2-first:4:12:finished,kart-national-s3-1-first:5:10:finished,kowalski:6:8:finished,ferraz:7:6:finished,kart-national-s3-0-second:8:4:finished,kart-national-s3-6-first:9:2:finished,kart-national-s3-3-first:10:1:finished,kart-national-s3-7-second:11:0:finished,player:12:0:finished,kart-national-s3-4-first:13:0:finished,kart-national-s3-5-first:14:0:finished,kart-national-s3-9-first:15:0:finished,kart-national-s3-8-first:16:0:finished,kart-national-s3-9-second:17:0:finished,kart-national-s3-7-first:18:0:finished,sato:19:0:finished,kart-national-s3-8-second:20:0:finished",
   "seasonTotals": "bonus:6852,equipment:-7200,event:-800,job:7200,living:-9000,seat:-49500,sponsors:69390,training:-5400,travel:-10800",
-  "hash": "09b761ac1c0cae"
+  "hash": "1b3ed6142b12fa"
  },
  {
   "label": "A · kart-national · temporada 3 · etapa 10",
   "category": "kart-national",
   "season": 3,
   "round": 10,
-  "cash": 49548,
-  "netWorth": 49548,
+  "cash": 49648,
+  "netWorth": 49648,
   "reputation": 21,
   "position": 6,
   "points": 93,
@@ -509,15 +509,15 @@
   "teams": "kart-national-aguia-racing:305,kart-national-tupi-motorsport:221,kart-national-meridional-kart:177,kart-national-corsa-brasil:156,kart-national-ipe-competicoes:81,kart-national-litoral-racing-team:47,kart-national-sertao-kart:38,kart-national-paulista-speed:4,kart-national-arara-azul-racing:1,kart-national-nova-era-kart:0",
   "lastRace": "kart-national-s3-0-second:1:26:finished,kart-national-s3-2-first:2:19:finished,kart-national-s3-0-first:3:15:finished,kowalski:4:12:finished,player:5:10:finished,lima:6:8:finished,ferraz:7:6:finished,kart-national-s3-1-second:8:4:finished,kart-national-s3-4-first:9:2:finished,kart-national-s3-1-first:10:1:finished,sato:11:0:finished,kart-national-s3-9-first:12:0:finished,kart-national-s3-6-first:13:0:finished,kart-national-s3-8-first:14:0:finished,kart-national-s3-7-second:15:0:finished,kart-national-s3-7-first:16:0:finished,kart-national-s3-3-first:17:0:finished,kart-national-s3-8-second:18:0:finished,kart-national-s3-9-second:19:0:finished,kart-national-s3-5-first:20:0:finished",
   "seasonTotals": "",
-  "hash": "08a22a34cb971f"
+  "hash": "1c1e884fe0aad6"
  },
  {
   "label": "A · virada para a temporada 4 (kart-national)",
   "category": "kart-national",
   "season": 4,
   "round": 0,
-  "cash": 49548,
-  "netWorth": 49548,
+  "cash": 49648,
+  "netWorth": 49648,
   "reputation": 21,
   "position": 19,
   "points": 0,
@@ -525,15 +525,15 @@
   "teams": "kart-national-aguia-racing:0,kart-national-arara-azul-racing:0,kart-national-corsa-brasil:0,kart-national-ipe-competicoes:0,kart-national-litoral-racing-team:0,kart-national-meridional-kart:0,kart-national-nova-era-kart:0,kart-national-paulista-speed:0,kart-national-sertao-kart:0,kart-national-tupi-motorsport:0",
   "lastRace": "",
   "seasonTotals": "",
-  "hash": "16ef056a7d90b3"
+  "hash": "18a7b3e8f19de8"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 1",
   "category": "kart-national",
   "season": 4,
   "round": 1,
-  "cash": 50028,
-  "netWorth": 50028,
+  "cash": 50128,
+  "netWorth": 50128,
   "reputation": 21,
   "position": 5,
   "points": 11,
@@ -541,15 +541,15 @@
   "teams": "kart-national-meridional-kart:43,kart-national-tupi-motorsport:20,kart-national-corsa-brasil:17,kart-national-aguia-racing:13,kart-national-ipe-competicoes:8,kart-national-litoral-racing-team:2,kart-national-sertao-kart:0,kart-national-arara-azul-racing:0,kart-national-paulista-speed:0,kart-national-nova-era-kart:0",
   "lastRace": "kart-national-s3-1-second:1:25:finished,kart-national-s3-1-first:2:18:finished,lima:3:16:finished,sato:4:12:finished,player:5:11:finished,kart-national-s3-3-first:6:8:finished,kart-national-s3-4-first:7:6:finished,ferraz:8:4:finished,kart-national-s3-1-reserve:9:2:finished,kowalski:10:1:finished,kart-national-s3-6-first:11:0:finished,kart-national-s4-rookie-5:12:0:finished,kart-national-s3-0-reserve:13:0:finished,kart-national-s3-7-second:14:0:finished,kart-national-s3-2-reserve:15:0:finished,kart-national-s3-8-first:16:0:finished,kart-national-s3-5-first:17:0:finished,kart-national-s3-8-second:18:0:finished,kart-national-s3-9-first:19:0:finished,kart-national-s3-7-first:20:0:finished",
   "seasonTotals": "equipment:-800,job:800,living:-1000,seat:-8000,sponsors:11280,training:-600,travel:-1200",
-  "hash": "00ea101e352d5b"
+  "hash": "1d50cdd2c6a5cc"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 2",
   "category": "kart-national",
   "season": 4,
   "round": 2,
-  "cash": 54220,
-  "netWorth": 54220,
+  "cash": 54320,
+  "netWorth": 54320,
   "reputation": 21,
   "position": 2,
   "points": 37,
@@ -557,15 +557,15 @@
   "teams": "kart-national-meridional-kart:71,kart-national-corsa-brasil:53,kart-national-tupi-motorsport:46,kart-national-aguia-racing:19,kart-national-ipe-competicoes:8,kart-national-litoral-racing-team:6,kart-national-paulista-speed:3,kart-national-sertao-kart:0,kart-national-arara-azul-racing:0,kart-national-nova-era-kart:0",
   "lastRace": "player:1:26:finished,ferraz:2:18:finished,kart-national-s3-1-second:3:16:finished,kart-national-s3-1-first:4:12:finished,kart-national-s3-4-first:5:10:finished,lima:6:8:finished,sato:7:6:finished,kart-national-s3-1-reserve:8:4:finished,kart-national-s3-7-second:9:2:finished,kart-national-s3-7-first:10:1:finished,kowalski:11:0:finished,kart-national-s4-rookie-5:12:0:finished,kart-national-s3-2-reserve:13:0:finished,kart-national-s3-3-first:14:0:finished,kart-national-s3-0-reserve:15:0:finished,kart-national-s3-9-first:16:0:finished,kart-national-s3-8-first:17:0:finished,kart-national-s3-8-second:18:0:finished,kart-national-s3-6-first:19:0:finished,kart-national-s3-5-first:20:0:dnf",
   "seasonTotals": "bonus:3712,equipment:-1600,job:1600,living:-2000,seat:-16000,sponsors:22560,training:-1200,travel:-2400",
-  "hash": "08b365af28b361"
+  "hash": "01b548b4b9e1c7"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 3",
   "category": "kart-national",
   "season": 4,
   "round": 3,
-  "cash": 53900,
-  "netWorth": 53900,
+  "cash": 54000,
+  "netWorth": 54000,
   "reputation": 21,
   "position": 2,
   "points": 49,
@@ -573,15 +573,15 @@
   "teams": "kart-national-meridional-kart:108,kart-national-tupi-motorsport:69,kart-national-corsa-brasil:65,kart-national-aguia-racing:37,kart-national-litoral-racing-team:13,kart-national-ipe-competicoes:12,kart-national-paulista-speed:5,kart-national-sertao-kart:0,kart-national-arara-azul-racing:0,kart-national-nova-era-kart:0",
   "lastRace": "kart-national-s3-1-second:1:27:finished,sato:2:18:finished,ferraz:3:15:finished,player:4:12:finished,kart-national-s3-1-first:5:10:finished,lima:6:8:finished,kart-national-s3-5-first:7:6:finished,kart-national-s3-0-reserve:8:4:finished,kart-national-s3-7-first:9:2:finished,kart-national-s3-1-reserve:10:1:finished,kart-national-s3-8-first:11:0:finished,kart-national-s3-6-first:12:0:finished,kart-national-s3-4-first:13:0:finished,kart-national-s3-3-first:14:0:finished,kowalski:15:0:finished,kart-national-s3-2-reserve:16:0:finished,kart-national-s4-rookie-5:17:0:finished,kart-national-s3-7-second:18:0:finished,kart-national-s3-8-second:19:0:finished,kart-national-s3-9-first:20:0:finished",
   "seasonTotals": "bonus:3712,equipment:-2400,event:-800,job:2400,living:-3000,seat:-24000,sponsors:33840,training:-1800,travel:-3600",
-  "hash": "0b907609d8c65f"
+  "hash": "1f60e128d5e1de"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 4",
   "category": "kart-national",
   "season": 4,
   "round": 4,
-  "cash": 58092,
-  "netWorth": 58092,
+  "cash": 58192,
+  "netWorth": 58192,
   "reputation": 20.5,
   "position": 3,
   "points": 65,
@@ -589,15 +589,15 @@
   "teams": "kart-national-meridional-kart:152,kart-national-corsa-brasil:85,kart-national-tupi-motorsport:85,kart-national-aguia-racing:57,kart-national-litoral-racing-team:14,kart-national-ipe-competicoes:12,kart-national-paulista-speed:5,kart-national-nova-era-kart:2,kart-national-sertao-kart:0,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-1-first:1:26:finished,kart-national-s3-1-second:2:18:finished,player:3:16:finished,sato:4:12:finished,ferraz:5:10:finished,kowalski:6:8:finished,lima:7:6:finished,kart-national-s3-4-first:8:4:finished,kart-national-s3-2-reserve:9:2:finished,kart-national-s3-1-reserve:10:1:finished,kart-national-s3-3-first:11:0:finished,kart-national-s3-7-first:12:0:finished,kart-national-s3-0-reserve:13:0:finished,kart-national-s4-rookie-5:14:0:finished,kart-national-s3-5-first:15:0:finished,kart-national-s3-8-first:16:0:finished,kart-national-s3-9-first:17:0:finished,kart-national-s3-6-first:18:0:finished,kart-national-s3-7-second:19:0:finished,kart-national-s3-8-second:20:0:dnf",
   "seasonTotals": "bonus:7424,equipment:-3200,event:-800,job:3200,living:-4000,seat:-32000,sponsors:45120,training:-2400,travel:-4800",
-  "hash": "123eebedfa17d6"
+  "hash": "04f064e142597c"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 5",
   "category": "kart-national",
   "season": 4,
   "round": 5,
-  "cash": 58572,
-  "netWorth": 58572,
+  "cash": 58672,
+  "netWorth": 58672,
   "reputation": 20.5,
   "position": 2,
   "points": 75,
@@ -605,15 +605,15 @@
   "teams": "kart-national-meridional-kart:171,kart-national-corsa-brasil:110,kart-national-aguia-racing:95,kart-national-tupi-motorsport:93,kart-national-ipe-competicoes:18,kart-national-litoral-racing-team:14,kart-national-paulista-speed:7,kart-national-sertao-kart:5,kart-national-nova-era-kart:2,kart-national-arara-azul-racing:0",
   "lastRace": "sato:1:26:finished,kart-national-s3-1-second:2:19:finished,kart-national-s3-4-first:3:15:finished,kowalski:4:12:finished,player:5:10:finished,lima:6:8:finished,kart-national-s3-3-first:7:6:finished,kart-national-s3-6-first:8:4:finished,kart-national-s3-7-first:9:2:finished,kart-national-s3-8-first:10:1:finished,kart-national-s3-1-first:11:0:finished,kart-national-s3-0-reserve:12:0:finished,kart-national-s3-5-first:13:0:finished,kart-national-s3-7-second:14:0:finished,kart-national-s3-1-reserve:15:0:finished,kart-national-s3-2-reserve:16:0:finished,kart-national-s4-rookie-5:17:0:finished,kart-national-s3-9-first:18:0:finished,kart-national-s3-8-second:19:0:finished,ferraz:20:0:dnf",
   "seasonTotals": "bonus:7424,equipment:-4000,event:-800,job:4000,living:-5000,seat:-40000,sponsors:56400,training:-3000,travel:-6000",
-  "hash": "0dd03add74d42a"
+  "hash": "04b88e1eeff24a"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 6",
   "category": "kart-national",
   "season": 4,
   "round": 6,
-  "cash": 59052,
-  "netWorth": 59052,
+  "cash": 59152,
+  "netWorth": 59152,
   "reputation": 20.5,
   "position": 4,
   "points": 85,
@@ -621,15 +621,15 @@
   "teams": "kart-national-meridional-kart:203,kart-national-aguia-racing:123,kart-national-corsa-brasil:120,kart-national-tupi-motorsport:119,kart-national-ipe-competicoes:24,kart-national-litoral-racing-team:14,kart-national-paulista-speed:8,kart-national-sertao-kart:5,kart-national-nova-era-kart:2,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-1-first:1:26:finished,lima:2:18:finished,kowalski:3:15:finished,sato:4:13:finished,player:5:10:finished,ferraz:6:8:finished,kart-national-s3-1-second:7:6:finished,kart-national-s3-3-first:8:4:finished,kart-national-s3-0-reserve:9:2:finished,kart-national-s3-7-first:10:1:finished,kart-national-s3-6-first:11:0:finished,kart-national-s3-4-first:12:0:finished,kart-national-s3-1-reserve:13:0:finished,kart-national-s3-5-first:14:0:finished,kart-national-s3-8-first:15:0:finished,kart-national-s3-9-first:16:0:finished,kart-national-s3-2-reserve:17:0:finished,kart-national-s4-rookie-5:18:0:finished,kart-national-s3-7-second:19:0:finished,kart-national-s3-8-second:20:0:finished",
   "seasonTotals": "bonus:7424,equipment:-4800,event:-800,job:4800,living:-6000,seat:-48000,sponsors:67680,training:-3600,travel:-7200",
-  "hash": "0ee88eb7f3ea18"
+  "hash": "0b9cb6aaca52fd"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 7",
   "category": "kart-national",
   "season": 4,
   "round": 7,
-  "cash": 59532,
-  "netWorth": 59532,
+  "cash": 59632,
+  "netWorth": 59632,
   "reputation": 20.5,
   "position": 4,
   "points": 94,
@@ -637,15 +637,15 @@
   "teams": "kart-national-meridional-kart:232,kart-national-aguia-racing:154,kart-national-tupi-motorsport:140,kart-national-corsa-brasil:139,kart-national-ipe-competicoes:27,kart-national-litoral-racing-team:14,kart-national-paulista-speed:8,kart-national-sertao-kart:5,kart-national-nova-era-kart:2,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-1-first:1:25:finished,kowalski:2:19:finished,lima:3:15:finished,sato:4:12:finished,kart-national-s3-4-first:5:10:finished,player:6:9:finished,ferraz:7:6:finished,kart-national-s3-1-second:8:4:finished,kart-national-s3-3-first:9:2:finished,kart-national-s3-0-reserve:10:1:finished,kart-national-s3-7-second:11:0:finished,kart-national-s4-rookie-5:12:0:finished,kart-national-s3-8-first:13:0:finished,kart-national-s3-9-first:14:0:finished,kart-national-s3-1-reserve:15:0:finished,kart-national-s3-7-first:16:0:finished,kart-national-s3-6-first:17:0:finished,kart-national-s3-2-reserve:18:0:finished,kart-national-s3-5-first:19:0:finished,kart-national-s3-8-second:20:0:finished",
   "seasonTotals": "bonus:7424,equipment:-5600,event:-800,job:5600,living:-7000,seat:-56000,sponsors:78960,training:-4200,travel:-8400",
-  "hash": "150f64c1a958c5"
+  "hash": "13f6e5b57f6599"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 8",
   "category": "kart-national",
   "season": 4,
   "round": 8,
-  "cash": 63724,
-  "netWorth": 63724,
+  "cash": 63824,
+  "netWorth": 63824,
   "reputation": 20.5,
   "position": 4,
   "points": 113,
@@ -653,15 +653,15 @@
   "teams": "kart-national-meridional-kart:266,kart-national-aguia-racing:169,kart-national-corsa-brasil:168,kart-national-tupi-motorsport:158,kart-national-ipe-competicoes:32,kart-national-litoral-racing-team:14,kart-national-paulista-speed:10,kart-national-sertao-kart:5,kart-national-nova-era-kart:2,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-1-first:1:26:finished,player:2:19:finished,sato:3:15:finished,ferraz:4:12:finished,kart-national-s3-4-first:5:10:finished,kart-national-s3-1-second:6:8:finished,lima:7:6:finished,kart-national-s3-3-first:8:4:finished,kart-national-s3-7-second:9:2:finished,kart-national-s3-0-reserve:10:1:finished,kart-national-s3-7-first:11:0:finished,kart-national-s3-2-reserve:12:0:finished,kart-national-s3-1-reserve:13:0:finished,kart-national-s3-5-first:14:0:finished,kart-national-s3-6-first:15:0:finished,kowalski:16:0:finished,kart-national-s3-9-first:17:0:finished,kart-national-s3-8-first:18:0:finished,kart-national-s4-rookie-5:19:0:finished,kart-national-s3-8-second:20:0:dnf",
   "seasonTotals": "bonus:11136,equipment:-6400,event:-800,job:6400,living:-8000,seat:-64000,sponsors:90240,training:-4800,travel:-9600",
-  "hash": "0619aa302b9940"
+  "hash": "0b1a8301bac7d2"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 9",
   "category": "kart-national",
   "season": 4,
   "round": 9,
-  "cash": 67664,
-  "netWorth": 67664,
+  "cash": 67764,
+  "netWorth": 67764,
   "reputation": 20.5,
   "position": 4,
   "points": 114,
@@ -669,15 +669,15 @@
   "teams": "kart-national-meridional-kart:300,kart-national-aguia-racing:185,kart-national-corsa-brasil:179,kart-national-tupi-motorsport:176,kart-national-ipe-competicoes:50,kart-national-litoral-racing-team:14,kart-national-paulista-speed:12,kart-national-sertao-kart:9,kart-national-nova-era-kart:2,kart-national-arara-azul-racing:0",
   "lastRace": "kart-national-s3-1-first:1:26:finished,lima:2:18:finished,kowalski:3:16:finished,kart-national-s3-0-reserve:4:12:finished,kart-national-s3-4-first:5:10:finished,kart-national-s3-1-second:6:8:finished,kart-national-s3-3-first:7:6:finished,kart-national-s3-8-first:8:4:finished,kart-national-s3-7-second:9:2:finished,player:10:1:finished,kart-national-s3-7-first:11:0:finished,kart-national-s3-2-reserve:12:0:finished,ferraz:13:0:finished,sato:14:0:finished,kart-national-s3-5-first:15:0:finished,kart-national-s4-rookie-5:16:0:finished,kart-national-s4-rookie-4:17:0:finished,kart-national-s3-6-first:18:0:finished,kart-national-s3-9-first:19:0:finished,kart-national-s3-1-reserve:20:0:finished",
   "seasonTotals": "bonus:11136,equipment:-7200,event:-800,job:7200,living:-9000,seat:-72000,sponsors:104980,training:-5400,travel:-10800",
-  "hash": "0418d0ad103ad7"
+  "hash": "15e898ece523fc"
  },
  {
   "label": "A · kart-national · temporada 4 · etapa 10",
   "category": "kart-national",
   "season": 4,
   "round": 10,
-  "cash": 71604,
-  "netWorth": 71604,
+  "cash": 71704,
+  "netWorth": 71704,
   "reputation": 25,
   "position": 4,
   "points": 122,
@@ -685,15 +685,15 @@
   "teams": "kart-national-meridional-kart:310,kart-national-aguia-racing:223,kart-national-corsa-brasil:202,kart-national-tupi-motorsport:195,kart-national-ipe-competicoes:52,kart-national-paulista-speed:18,kart-national-litoral-racing-team:14,kart-national-sertao-kart:13,kart-national-nova-era-kart:3,kart-national-arara-azul-racing:0",
   "lastRace": "kowalski:1:26:finished,lima:2:19:finished,kart-national-s3-4-first:3:15:finished,sato:4:12:finished,kart-national-s3-1-first:5:10:finished,player:6:8:finished,kart-national-s3-7-second:7:6:finished,kart-national-s3-8-first:8:4:finished,kart-national-s3-3-first:9:2:finished,kart-national-s3-2-reserve:10:1:finished,ferraz:11:0:finished,kart-national-s3-0-reserve:12:0:finished,kart-national-s3-6-first:13:0:finished,kart-national-s3-1-second:14:0:finished,kart-national-s3-7-first:15:0:finished,kart-national-s4-rookie-4:16:0:finished,kart-national-s4-rookie-5:17:0:finished,kart-national-s3-1-reserve:18:0:finished,kart-national-s3-9-first:19:0:finished,kart-national-s3-5-first:20:0:finished",
   "seasonTotals": "",
-  "hash": "007a8c334d75b6"
+  "hash": "1e405f1ee412ae"
  },
  {
   "label": "A · virada para a temporada 5 (f4)",
   "category": "f4",
   "season": 5,
   "round": 0,
-  "cash": 49604,
-  "netWorth": 49604,
+  "cash": 49704,
+  "netWorth": 49704,
   "reputation": 25,
   "position": 19,
   "points": 0,
@@ -701,15 +701,15 @@
   "teams": "f4-dragon-motorsport:0,f4-iberica-racing:0,f4-kestrel-autosport:0,f4-lone-star-academy:0,f4-prisma-racing:0,f4-riviera-junior-team:0,f4-sakura-racing:0,f4-southern-cross-motorsport:0,f4-van-aalst-racing:0,f4-velocita-junior:0",
   "lastRace": "",
   "seasonTotals": "release:-22000",
-  "hash": "0d73e29ef27e84"
+  "hash": "0d8e1e4d5f9b14"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 1",
   "category": "f4",
   "season": 5,
   "round": 1,
-  "cash": 19504,
-  "netWorth": 19504,
+  "cash": 19604,
+  "netWorth": 19604,
   "reputation": 25,
   "position": 18,
   "points": 0,
@@ -717,15 +717,15 @@
   "teams": "f4-velocita-junior:33,f4-kestrel-autosport:22,f4-prisma-racing:19,f4-dragon-motorsport:15,f4-iberica-racing:6,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-van-aalst-racing:0,f4-sakura-racing:0,f4-riviera-junior-team:0",
   "lastRace": "f4-s5-1-first:1:25:finished,f4-s5-0-first:2:19:finished,kart-national-s3-1-first:3:15:finished,sato:4:12:finished,f4-s5-5-first:5:10:finished,f4-s5-1-second:6:8:finished,f4-s5-4-second:7:6:finished,f4-s5-7-first:8:4:finished,f4-s5-9-first:9:2:finished,f4-s5-7-second:10:1:finished,kart-national-s3-1-second:11:0:finished,f4-s5-8-second:12:0:finished,f4-s5-8-first:13:0:finished,f4-s5-6-first:14:0:finished,f4-s5-2-first:15:0:finished,f4-s5-9-second:16:0:finished,f4-s5-0-second:17:0:finished,player:18:0:finished,f4-s5-3-first:19:0:finished,kowalski:20:0:dnf",
   "seasonTotals": "damage:-31200,equipment:-3500,job:800,living:-3000,release:-22000,seat:-73550,sponsors:86850,training:-2500,travel:-4000",
-  "hash": "17ca8bdec79d06"
+  "hash": "17d5f45b74a372"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 2",
   "category": "f4",
   "season": 5,
   "round": 2,
-  "cash": 55344,
-  "netWorth": 55344,
+  "cash": 55444,
+  "netWorth": 55444,
   "reputation": 25.5,
   "position": 3,
   "points": 19,
@@ -733,15 +733,15 @@
   "teams": "f4-velocita-junior:59,f4-iberica-racing:33,f4-prisma-racing:32,f4-dragon-motorsport:25,f4-kestrel-autosport:24,f4-van-aalst-racing:19,f4-riviera-junior-team:6,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-1-first:1:26:finished,player:2:19:finished,kart-national-s3-1-second:3:15:finished,f4-s5-0-first:4:12:finished,f4-s5-2-first:5:10:finished,f4-s5-4-second:6:8:finished,kowalski:7:6:finished,f4-s5-3-first:8:4:finished,sato:9:2:finished,f4-s5-0-second:10:1:finished,f4-s5-1-second:11:0:finished,f4-s5-5-first:12:0:finished,kart-national-s3-1-first:13:0:finished,f4-s5-8-first:14:0:finished,f4-s5-7-second:15:0:finished,f4-s5-8-second:16:0:finished,f4-s5-6-first:17:0:finished,f4-s5-9-first:18:0:finished,f4-s5-9-second:19:0:finished,f4-s5-7-first:20:0:finished",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-7000,job:1600,living:-6000,release:-22000,seat:-147100,sponsors:173700,training:-5000,travel:-8000",
-  "hash": "0bf6be038bab45"
+  "hash": "1d3b6ad21dd9b1"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 3",
   "category": "f4",
   "season": 5,
   "round": 3,
-  "cash": 56444,
-  "netWorth": 56444,
+  "cash": 56544,
+  "netWorth": 56544,
   "reputation": 25.5,
   "position": 7,
   "points": 20,
@@ -749,15 +749,15 @@
   "teams": "f4-velocita-junior:65,f4-van-aalst-racing:58,f4-prisma-racing:52,f4-kestrel-autosport:49,f4-iberica-racing:34,f4-dragon-motorsport:33,f4-riviera-junior-team:10,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-3-first:1:27:finished,f4-s5-0-second:2:18:finished,sato:3:15:finished,kart-national-s3-1-second:4:12:finished,f4-s5-5-first:5:10:finished,kart-national-s3-1-first:6:8:finished,f4-s5-1-first:7:6:finished,kowalski:8:4:finished,f4-s5-0-first:9:2:finished,player:10:1:finished,f4-s5-1-second:11:0:finished,f4-s5-7-first:12:0:finished,f4-s5-7-second:13:0:finished,f4-s5-8-first:14:0:finished,f4-s5-4-second:15:0:finished,f4-s5-9-first:16:0:finished,f4-s5-2-first:17:0:finished,f4-s5-8-second:18:0:finished,f4-s5-6-first:19:0:finished,f4-s5-9-second:20:0:finished",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-10500,job:2400,living:-9000,release:-22000,seat:-220650,sponsors:260550,training:-7500,travel:-12000",
-  "hash": "03964a44ae51b9"
+  "hash": "1fe461d8cc7461"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 4",
   "category": "f4",
   "season": 5,
   "round": 4,
-  "cash": 55144,
-  "netWorth": 55144,
+  "cash": 55244,
+  "netWorth": 55244,
   "reputation": 27.5,
   "position": 10,
   "points": 22,
@@ -765,15 +765,15 @@
   "teams": "f4-velocita-junior:85,f4-prisma-racing:79,f4-van-aalst-racing:68,f4-kestrel-autosport:61,f4-dragon-motorsport:59,f4-iberica-racing:42,f4-riviera-junior-team:10,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-2-first:1:26:finished,f4-s5-1-first:2:19:finished,f4-s5-0-first:3:15:finished,f4-s5-0-second:4:12:finished,f4-s5-3-first:5:10:finished,sato:6:8:finished,f4-s5-4-second:7:6:finished,f4-s5-5-first:8:4:finished,player:9:2:finished,f4-s5-1-second:10:1:finished,kart-national-s3-1-second:11:0:finished,f4-s5-8-first:12:0:finished,kowalski:13:0:finished,f4-s5-6-first:14:0:finished,f4-s5-7-second:15:0:finished,f4-s5-7-first:16:0:finished,f4-s5-9-second:17:0:finished,f4-s5-9-first:18:0:finished,f4-s5-8-second:19:0:finished,kart-national-s3-1-first:20:0:dnf",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-14000,event:-2400,job:3200,living:-12000,release:-22000,seat:-294200,sponsors:347400,training:-10000,travel:-16000",
-  "hash": "0e59d54af08fa9"
+  "hash": "060144bbfb0704"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 5",
   "category": "f4",
   "season": 5,
   "round": 5,
-  "cash": 56244,
-  "netWorth": 56244,
+  "cash": 56344,
+  "netWorth": 56344,
   "reputation": 27.5,
   "position": 13,
   "points": 22,
@@ -781,15 +781,15 @@
   "teams": "f4-prisma-racing:111,f4-velocita-junior:102,f4-van-aalst-racing:77,f4-kestrel-autosport:72,f4-dragon-motorsport:71,f4-iberica-racing:46,f4-riviera-junior-team:28,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-0-second:1:25:finished,kowalski:2:18:finished,f4-s5-1-second:3:15:finished,kart-national-s3-1-first:4:12:finished,f4-s5-5-first:5:11:finished,kart-national-s3-1-second:6:8:finished,f4-s5-0-first:7:7:finished,f4-s5-4-second:8:4:finished,f4-s5-1-first:9:2:finished,f4-s5-3-first:10:1:finished,player:11:0:finished,sato:12:0:finished,f4-s5-2-first:13:0:finished,f4-s5-8-first:14:0:finished,f4-s5-6-first:15:0:finished,f4-s5-7-second:16:0:finished,f4-s5-8-second:17:0:finished,f4-s5-9-second:18:0:finished,f4-s5-9-first:19:0:finished,f4-s5-7-first:20:0:dnf",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-17500,event:-2400,job:4000,living:-15000,release:-22000,seat:-367750,sponsors:434250,training:-12500,travel:-20000",
-  "hash": "09cc4292ba74e9"
+  "hash": "1ed66319b93232"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 6",
   "category": "f4",
   "season": 5,
   "round": 6,
-  "cash": 57344,
-  "netWorth": 57344,
+  "cash": 57444,
+  "netWorth": 57444,
   "reputation": 27.5,
   "position": 12,
   "points": 32,
@@ -797,15 +797,15 @@
   "teams": "f4-prisma-racing:155,f4-velocita-junior:114,f4-kestrel-autosport:88,f4-van-aalst-racing:85,f4-dragon-motorsport:74,f4-iberica-racing:60,f4-riviera-junior-team:34,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-0-second:1:26:finished,f4-s5-0-first:2:18:finished,sato:3:16:finished,f4-s5-1-second:4:12:finished,player:5:10:finished,f4-s5-3-first:6:8:finished,kowalski:7:6:finished,f4-s5-4-second:8:4:finished,kart-national-s3-1-first:9:2:finished,f4-s5-2-first:10:1:finished,f4-s5-1-first:11:0:finished,kart-national-s3-1-second:12:0:finished,f4-s5-5-first:13:0:finished,f4-s5-8-first:14:0:finished,f4-s5-6-first:15:0:finished,f4-s5-9-second:16:0:finished,f4-s5-7-second:17:0:finished,f4-s5-9-first:18:0:finished,f4-s5-8-second:19:0:finished,f4-s5-7-first:20:0:finished",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-21000,event:-2400,job:4800,living:-18000,release:-22000,seat:-441300,sponsors:521100,training:-15000,travel:-24000",
-  "hash": "1991e5a76c84aa"
+  "hash": "1233ed7667f606"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 7",
   "category": "f4",
   "season": 5,
   "round": 7,
-  "cash": 58444,
-  "netWorth": 58444,
+  "cash": 58544,
+  "netWorth": 58544,
   "reputation": 27.5,
   "position": 12,
   "points": 33,
@@ -813,15 +813,15 @@
   "teams": "f4-prisma-racing:189,f4-velocita-junior:129,f4-van-aalst-racing:97,f4-dragon-motorsport:92,f4-kestrel-autosport:92,f4-iberica-racing:61,f4-riviera-junior-team:53,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-0-second:1:25:finished,kowalski:2:19:finished,f4-s5-1-second:3:15:finished,f4-s5-2-first:4:12:finished,kart-national-s3-1-second:5:10:finished,f4-s5-0-first:6:9:finished,kart-national-s3-1-first:7:6:finished,sato:8:4:finished,f4-s5-3-first:9:2:finished,player:10:1:finished,f4-s5-5-first:11:0:finished,f4-s5-6-first:12:0:finished,f4-s5-1-first:13:0:finished,f4-s5-7-second:14:0:finished,f4-s5-9-first:15:0:finished,f4-s5-9-second:16:0:finished,f4-s5-8-first:17:0:finished,f4-s5-4-second:18:0:finished,f4-s5-8-second:19:0:finished,f4-s5-7-first:20:0:finished",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-24500,event:-2400,job:5600,living:-21000,release:-22000,seat:-514850,sponsors:607950,training:-17500,travel:-28000",
-  "hash": "04bf291217305e"
+  "hash": "16ac875c868f2e"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 8",
   "category": "f4",
   "season": 5,
   "round": 8,
-  "cash": 59544,
-  "netWorth": 59544,
+  "cash": 59644,
+  "netWorth": 59644,
   "reputation": 27.5,
   "position": 10,
   "points": 45,
@@ -829,15 +829,15 @@
   "teams": "f4-prisma-racing:231,f4-velocita-junior:133,f4-van-aalst-racing:108,f4-kestrel-autosport:102,f4-dragon-motorsport:98,f4-iberica-racing:73,f4-riviera-junior-team:71,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-0-first:1:27:finished,kowalski:2:18:finished,f4-s5-0-second:3:15:finished,player:4:12:finished,kart-national-s3-1-second:5:10:finished,sato:6:8:finished,f4-s5-2-first:7:6:finished,f4-s5-1-second:8:4:finished,f4-s5-5-first:9:2:finished,f4-s5-3-first:10:1:finished,f4-s5-1-first:11:0:finished,kart-national-s3-1-first:12:0:finished,f4-s5-8-second:13:0:finished,f4-s5-6-first:14:0:finished,f4-s5-7-second:15:0:finished,f4-s5-4-second:16:0:finished,f4-s5-8-first:17:0:finished,f4-s5-9-first:18:0:finished,f4-s5-9-second:19:0:finished,f4-s5-7-first:20:0:finished",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-28000,event:-2400,job:6400,living:-24000,release:-22000,seat:-588400,sponsors:694800,training:-20000,travel:-32000",
-  "hash": "14850976ff3ae6"
+  "hash": "0701cce4beb3ea"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 9",
   "category": "f4",
   "season": 5,
   "round": 9,
-  "cash": 60644,
-  "netWorth": 60644,
+  "cash": 60744,
+  "netWorth": 60744,
   "reputation": 27.5,
   "position": 9,
   "points": 55,
@@ -845,15 +845,15 @@
   "teams": "f4-prisma-racing:258,f4-velocita-junior:166,f4-dragon-motorsport:114,f4-van-aalst-racing:110,f4-kestrel-autosport:110,f4-iberica-racing:84,f4-riviera-junior-team:77,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-0-first:1:27:finished,f4-s5-1-first:2:18:finished,f4-s5-1-second:3:15:finished,f4-s5-2-first:4:12:finished,player:5:10:finished,f4-s5-5-first:6:8:finished,kowalski:7:6:finished,kart-national-s3-1-first:8:4:finished,kart-national-s3-1-second:9:2:finished,f4-s5-4-second:10:1:finished,sato:11:0:finished,f4-s5-8-second:12:0:finished,f4-s5-3-first:13:0:finished,f4-s5-6-first:14:0:finished,f4-s5-8-first:15:0:finished,f4-s5-9-first:16:0:finished,f4-s5-7-second:17:0:finished,f4-s5-0-second:18:0:finished,f4-s5-9-second:19:0:finished,f4-s5-7-first:20:0:finished",
   "seasonTotals": "bonus:34740,damage:-31200,equipment:-31500,event:-2400,job:7200,living:-27000,release:-22000,seat:-661950,sponsors:781650,training:-22500,travel:-36000",
-  "hash": "19ed0299df4216"
+  "hash": "0896c77638717c"
  },
  {
   "label": "A · f4 · temporada 5 · etapa 10",
   "category": "f4",
   "season": 5,
   "round": 10,
-  "cash": 52633,
-  "netWorth": 52633,
+  "cash": 52733,
+  "netWorth": 52733,
   "reputation": 36,
   "position": 8,
   "points": 63,
@@ -861,15 +861,15 @@
   "teams": "f4-prisma-racing:287,f4-velocita-junior:179,f4-dragon-motorsport:147,f4-kestrel-autosport:124,f4-van-aalst-racing:110,f4-iberica-racing:98,f4-riviera-junior-team:77,f4-lone-star-academy:5,f4-southern-cross-motorsport:2,f4-sakura-racing:0",
   "lastRace": "f4-s5-0-first:1:27:finished,f4-s5-2-first:2:18:finished,kart-national-s3-1-first:3:15:finished,f4-s5-1-second:4:12:finished,f4-s5-5-first:5:10:finished,player:6:8:finished,f4-s5-4-second:7:6:finished,sato:8:4:finished,f4-s5-0-second:9:2:finished,f4-s5-1-first:10:1:finished,f4-s5-3-first:11:0:finished,f4-s5-6-first:12:0:finished,kowalski:13:0:finished,f4-s5-7-first:14:0:finished,kart-national-s3-1-second:15:0:finished,f4-s5-8-first:16:0:finished,f4-s5-7-second:17:0:finished,f4-s5-8-second:18:0:finished,f4-s5-9-second:19:0:finished,f4-s5-9-first:20:0:finished",
   "seasonTotals": "",
-  "hash": "13a6ef3ca7feab"
+  "hash": "0612903fe7b4a1"
  },
  {
   "label": "A · virada para a temporada 6 (f4)",
   "category": "f4",
   "season": 6,
   "round": 0,
-  "cash": 52633,
-  "netWorth": 52633,
+  "cash": 52733,
+  "netWorth": 52733,
   "reputation": 36,
   "position": 19,
   "points": 0,
@@ -877,7 +877,7 @@
   "teams": "f4-dragon-motorsport:0,f4-iberica-racing:0,f4-kestrel-autosport:0,f4-lone-star-academy:0,f4-prisma-racing:0,f4-riviera-junior-team:0,f4-sakura-racing:0,f4-southern-cross-motorsport:0,f4-van-aalst-racing:0,f4-velocita-junior:0",
   "lastRace": "",
   "seasonTotals": "",
-  "hash": "07355620c9097c"
+  "hash": "1be9dc0712ed39"
  },
  {
   "label": "C · save aberto",

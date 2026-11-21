@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { feedback, feedbackOnce } from '../feedback/feedback';
-import { ArrowRight, Check as CheckIcon, MapPin, TriangleAlert } from 'lucide-react';
+import { ArrowRight, Check as CheckIcon, ChevronRight, MapPin, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FIRST_FORMULA_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import type { Offer, Offseason } from '@/domain/schemas';
@@ -13,6 +13,8 @@ import {
   fullName,
   licensePointsTotal,
   negotiationMargin,
+  offerHelp,
+  offerPricing,
   offerRequirements,
   rankTeams,
   reachableCategories,
@@ -355,6 +357,8 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
   const team = teamsOfCategory(career, offer.categoryId).find((t) => t.id === offer.teamId);
   const withdrawn = offer.status === 'withdrawn';
   const blocked = !withdrawn && !canAcceptOffer(career, offer);
+  const help = blocked ? offerHelp(career, offer) : null;
+  const pricing = offerPricing(career, offer);
   return (
     <button
       type="button"
@@ -376,15 +380,47 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
       <span className="flex w-full items-center justify-between gap-2 pl-3 text-xs text-ink-400">
         <span className="min-w-0 truncate">
           {category.shortName} · {offer.seatCost > 0 ? `vaga ${formatMoney(offer.seatCost)}` : `salário ${formatMoney(offer.salary)}`}
+          {offer.seatCost > 0 && pricing.discount >= 0.01 && ` (−${Math.round(pricing.discount * 100)}%)`}
         </span>
-        {blocked && (
-          <span className="flex shrink-0 items-center gap-1 text-gold-400">
-            <TriangleAlert size={13} strokeWidth={2} aria-hidden />
-            Falta requisito
-          </span>
-        )}
       </span>
+      {/* O requisito que falta, pelo nome; e, se uma porta dos Caminhos resolve, qual. */}
+      {help && (
+        <span className="flex w-full items-start gap-1 pl-3 text-xs text-gold-400">
+          <TriangleAlert size={13} strokeWidth={2} aria-hidden className="mt-px shrink-0" />
+          <span className="min-w-0">
+            Falta: {help.missing.map((r) => r.label).join(', ')}
+            {help.door && ` · ${DOOR_LABELS[help.door]} resolve`}
+          </span>
+        </span>
+      )}
     </button>
+  );
+}
+
+/** Como a tela Carreira chama cada porta dos Caminhos que pode abrir uma vaga. */
+const DOOR_LABELS = { academy: 'a academia', crowdfund: 'a vaquinha', investor: 'o investidor' } as const;
+
+/**
+ * O preço da vaga às claras: o preço cheio riscado, o desconto (a bolsa e o que a equipe deu) e o
+ * valor final. Sem isso, a renovação de quem subiu com bolsa parece um aumento.
+ */
+function SeatPrice({ offer }: { offer: Offer }) {
+  const { career } = useCareerView();
+  const pricing = offerPricing(career, offer);
+  if (offer.seatCost <= 0 || pricing.discount < 0.01) return <>{formatMoney(offer.seatCost)}</>;
+  const parts = [
+    pricing.scholarship >= 0.01 ? `bolsa de ${Math.round(pricing.scholarship * 100)}%` : null,
+    pricing.teamDiscount >= 0.01 ? `desconto da equipe de ${Math.round(pricing.teamDiscount * 100)}%` : null,
+  ].filter((part) => part !== null);
+  return (
+    <span className="flex flex-col items-end">
+      <span className="text-xs text-ink-400">
+        <span className="sr-only">Preço cheio: </span>
+        <s>{formatMoney(pricing.listPrice)}</s> <span className="text-go-400">−{Math.round(pricing.discount * 100)}%</span>
+      </span>
+      <b>{formatMoney(offer.seatCost)}</b>
+      <span className="text-xs text-ink-400">{parts.join(' + ')}</span>
+    </span>
   );
 }
 
@@ -447,7 +483,9 @@ function OfferDetail({ offer }: { offer: Offer }) {
               <b>{ROLE_LABELS[offer.role]}</b>
             </Term>
             <Term label="Duração">{counted(offer.years, 'ano', 'anos')}</Term>
-            <Term label="Vaga/ano">{formatMoney(offer.seatCost)}</Term>
+            <Term label="Vaga/ano">
+              <SeatPrice offer={offer} />
+            </Term>
             <Term label="Salário/ano">{formatMoney(offer.salary)}</Term>
             <Term label="Bônus vitória">{formatMoney(offer.bonuses.win)}</Term>
             <Term label="Multa">{formatMoney(offer.clauses.releaseFee)}</Term>
@@ -477,6 +515,14 @@ function OfferDetail({ offer }: { offer: Offer }) {
                 </Check>
               ))}
             </ul>
+          )}
+          {!withdrawn && !acceptable && (
+            <div className="space-y-1 text-xs text-ink-200">
+              <p>{offerHelp(career, offer).hint}</p>
+              <Link to="/paths" className="inline-flex min-h-11 items-center gap-1 font-semibold text-ink-100 underline underline-offset-2">
+                Abrir Caminhos <ChevronRight size={14} aria-hidden />
+              </Link>
+            </div>
           )}
           {offer.kind === 'fallback' && (
             <p className="text-xs text-ink-400">

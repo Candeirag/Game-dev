@@ -922,7 +922,14 @@ export type ExecutiveLogEntry = z.infer<typeof ExecutiveLogEntrySchema>;
 
 export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('stat'), stat: z.enum(['morale', 'confidence', 'form', 'reputation', 'teamTrust', 'teammateRelation']), value: z.number() }),
-  z.object({ type: z.literal('cash'), value: z.number(), ledger: LedgerKeySchema, label: z.string() }),
+  z.object({
+    type: z.literal('cash'),
+    value: z.number(),
+    ledger: LedgerKeySchema,
+    label: z.string(),
+    /** Pagamento que nunca leva o saldo ao negativo: sai no máximo o que há em caixa na hora (Fase 3 da grande atualização). */
+    capToCash: z.boolean().optional(),
+  }),
   z.object({ type: z.literal('rivalry'), driverId: z.string(), value: z.number() }),
   z.object({ type: z.literal('sponsorSatisfaction'), sponsorId: z.string().nullable(), value: z.number() }),
   z.object({ type: z.literal('addSponsor'), sponsor: SponsorSchema }),

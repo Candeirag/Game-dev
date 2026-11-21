@@ -31,8 +31,11 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
         return { ...career, relations: { ...career.relations, teammate: clamp(career.relations.teammate + effect.value) } };
       return updatePlayer({ condition: { ...player.condition, [effect.stat]: clamp(player.condition[effect.stat] + effect.value) } });
     }
-    case 'cash':
-      return { ...career, finance: post(career.finance, career.season, round, effect.ledger, effect.value, effect.label) };
+    case 'cash': {
+      // Um pagamento limitado ao caixa sai, no máximo, pelo que há na conta na hora: nunca deixa o saldo negativo.
+      const value = effect.capToCash && effect.value < 0 ? -Math.min(-effect.value, Math.max(0, Math.floor(career.finance.cash))) : effect.value;
+      return { ...career, finance: post(career.finance, career.season, round, effect.ledger, value, effect.label) };
+    }
     case 'rivalry': {
       const value = Math.min(100, Math.max(0, (career.relations.rivalries[effect.driverId] ?? 0) + effect.value));
       const rivalries = { ...career.relations.rivalries };

@@ -41,6 +41,7 @@ const NOT_BALANCE = new Set([
   // em HUB_RULES, RUNNING_COSTS, INVESTOR… em src/config/balance.ts.
   'HUBS',
   'CATEGORY_HUB',
+  'RENTAL_CATEGORY',
   'INVESTOR_NAMES',
   'SIDE_JOB_INFO',
   // Ids e estrutura.

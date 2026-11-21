@@ -299,6 +299,23 @@ export const CROWDFUND = {
 } as const;
 
 /**
+ * Evento "A equipe pede um aporte extra": um patrocinador da equipe não pagou e ela pede dinheiro
+ * ao piloto no meio do ano.
+ */
+export const TEAM_CASH_CALL = {
+  // O pedido é esta fração do custo anual da vaga...
+  SEAT_SHARE: 0.12,
+  // ...mas nunca mais que esta fração do dinheiro que o piloto tem em caixa: ninguém pede a quem não tem.
+  MAX_CASH_SHARE: 0.2,
+  // Abaixo deste valor não vale pedir: a equipe só propõe parcelar ou segue sem o dinheiro.
+  MIN_PAYMENT: 500,
+  // Parcelar no contrato: o custo anual da vaga sobe esta fração.
+  SPLIT_SEAT_SHARE: 0.08,
+  // Recusar: chance de a equipe cortar as atualizações do equipamento.
+  REFUSE_CUT_CHANCE: 0.4,
+} as const;
+
+/**
  * Trabalhos paralelos: dinheiro por etapa em troca de tempo de treino. Só até a Fórmula Júnior
  * (4º degrau): dali em diante a agenda não deixa.
  */

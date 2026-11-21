@@ -10,7 +10,7 @@
  * - "guaranteed": acontece sempre que a condição vale.
  * - "random": entra no sorteio da etapa, com o peso indicado.
  */
-import { ACADEMY_DOOR } from '@/config/balance';
+import { ACADEMY_DOOR, TEAM_CASH_CALL } from '@/config/balance';
 import type { Academy, CareerState, Driver, Effect, EventCategory, EventChoice, PendingEvent, RaceEntryResult, RoundRecord, Team } from '@/domain/schemas';
 import type { CategoryDefinition } from '@/data/categories';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
@@ -559,25 +559,37 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
     build(ctx) {
       const seat = ctx.career.contract.seatCost;
       if (seat <= 0 || ctx.round < 2 || ctx.round >= ctx.career.calendar.length - 1) return null;
-      const extra = Math.round((seat * 0.12) / 100) * 100;
+      // O pedido é uma fração da vaga, limitada a uma parte do caixa do piloto: ninguém pede a quem não tem.
+      const wanted = seat * TEAM_CASH_CALL.SEAT_SHARE;
+      const affordable = Math.max(0, ctx.career.finance.cash) * TEAM_CASH_CALL.MAX_CASH_SHARE;
+      const extra = Math.floor(Math.min(wanted, affordable) / 100) * 100;
+      const canPay = extra >= TEAM_CASH_CALL.MIN_PAYMENT;
+      const pay = choice(
+        'pay',
+        `Pagar ${money(ctx.career, extra)}`,
+        'A equipe mantém o desenvolvimento e fica em dívida com você.',
+        // O pagamento nunca leva o saldo ao negativo: se o caixa encolher até a decisão, sai só o que houver.
+        sure(
+          'O aporte garante as atualizações previstas.',
+          { type: 'cash', value: -extra, ledger: 'event', label: 'Aporte extra à equipe', capToCash: true },
+          stat('teamTrust', 7),
+        ),
+      );
       return {
         title: 'A equipe pede um aporte extra',
-        body: `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe pede ${money(ctx.career, extra)} a mais para manter o programa de desenvolvimento até o fim do ano.`,
+        body: canPay
+          ? `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe pede ${money(ctx.career, extra)} a mais para manter o programa de desenvolvimento até o fim do ano${extra < Math.floor(wanted / 100) * 100 ? ' (ela sabe que o seu caixa não aguenta mais que isso)' : ''}.`
+          : `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe precisa de dinheiro para manter o programa de desenvolvimento até o fim do ano, sabe que o seu caixa não tem de onde tirar e propõe diluir o valor no contrato.`,
         choices: [
-          choice(
-            'pay',
-            `Pagar ${money(ctx.career, extra)}`,
-            'A equipe mantém o desenvolvimento e fica em dívida com você.',
-            sure('O aporte garante as atualizações previstas.', cash(-extra, 'Aporte extra à equipe'), stat('teamTrust', 7)),
-          ),
+          ...(canPay ? [pay] : []),
           choice(
             'refuse',
             'Recusar',
             'Sem custo agora, mas a equipe pode cortar o desenvolvimento.',
             odds(
-              [0.6, 'A equipe aperta o cinto e segue como dá.', [stat('teamTrust', -8)]],
+              [1 - TEAM_CASH_CALL.REFUSE_CUT_CHANCE, 'A equipe aperta o cinto e segue como dá.', [stat('teamTrust', -8)]],
               [
-                0.4,
+                TEAM_CASH_CALL.REFUSE_CUT_CHANCE,
                 `Sem dinheiro, a equipe cancela as atualizações: o ${ctx.category.machine} perde rendimento.`,
                 [stat('teamTrust', -8), { type: 'carUpgrade', value: -1.5 }],
               ],
@@ -586,8 +598,8 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
           choice(
             'split',
             'Propor parcelar no contrato',
-            'O custo anual da vaga sobe 8%.',
-            sure('A equipe aceita diluir o valor nas próximas parcelas.', { type: 'seatCost', value: seat * 0.08 }, stat('teamTrust', 1)),
+            `O custo anual da vaga sobe ${Math.round(TEAM_CASH_CALL.SPLIT_SEAT_SHARE * 100)}%.`,
+            sure('A equipe aceita diluir o valor nas próximas parcelas.', { type: 'seatCost', value: seat * TEAM_CASH_CALL.SPLIT_SEAT_SHARE }, stat('teamTrust', 1)),
           ),
         ],
       };

@@ -6,6 +6,7 @@
  * Só apresentação: o retrato vem de `pathsReport`, do motor, e os botões chamam ações da store. As
  * portas pagas (academia, vaquinha, investidor) só podem ser usadas no fechamento do ano.
  */
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, CircleCheck, DoorClosed, DoorOpen, Hourglass, type LucideIcon } from 'lucide-react';
 import type { SideJob } from '@/domain/schemas';
@@ -21,6 +22,7 @@ import {
   type Door,
   type DoorStatus,
   investorAmount,
+  investorTerms,
   type NextSeat,
   pathsReport,
   type PathRequirement,
@@ -202,6 +204,8 @@ function DoorAction({ door, atOffseason }: { door: Door; atOffseason: boolean })
   const launchCrowdfund = useGameStore((s) => s.launchCrowdfund);
   const signInvestor = useGameStore((s) => s.signInvestor);
   const setSideJob = useGameStore((s) => s.setSideJob);
+  // O acordo com o investidor é para sempre: escolher a vaga só abre a confirmação; fechar é outro toque.
+  const [confirming, setConfirming] = useState<string | null>(null);
   const wrap = 'mt-4 flex flex-wrap items-center gap-2 border-t border-ink-700 pt-4';
 
   if (door.id === 'job') {
@@ -244,6 +248,46 @@ function DoorAction({ door, atOffseason }: { door: Door; atOffseason: boolean })
   if (door.id === 'investor') {
     const funded = career.investor?.funded?.season === career.season ? career.investor.funded.offerId : null;
     const offers = realOffers(career).filter((o) => canSignInvestor(career, o.id));
+    const chosen = offers.find((o) => o.id === confirming);
+    if (chosen) {
+      const terms = investorTerms(career);
+      const share = Math.round(terms.share * 100);
+      return (
+        <div role="group" aria-label="Confirmar o acordo com o investidor" className="mt-4 space-y-2 border-t border-ink-700 pt-4">
+          <h3 className="font-display text-base font-semibold uppercase leading-none tracking-wide text-ink-100">Confirmar o acordo</h3>
+          <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 text-sm">
+            <dt className="text-ink-300">Vaga</dt>
+            <dd className="text-right text-ink-100">
+              {chosen.teamName} · {getCategory(chosen.categoryId).shortName}
+            </dd>
+            <dt className="text-ink-300">{terms.name} põe na sua carreira</dt>
+            <dd className="text-right text-ink-100">{formatMoneyFull(investorAmount(career, chosen))}</dd>
+            <dt className="text-ink-300">Fatia dos seus ganhos</dt>
+            <dd className="text-right text-ink-100">
+              <b className="font-semibold">{share}%, para sempre</b>
+            </dd>
+          </dl>
+          <p className="text-sm text-ink-200">
+            {career.investor
+              ? `Hoje ele leva ${Math.round(career.investor.share * 100)}%; com este aporte passa a levar ${share}%.`
+              : `A partir de agora, ${share}% do seu salário, dos seus bônus e do que sobrar dos patrocínios depois de pagar a vaga vão para ele.`}{' '}
+            O acordo não tem prazo nem saída: vale por toda a sua carreira de piloto. O dinheiro só serve para esta vaga.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="primary"
+              onClick={() => {
+                signInvestor(chosen.id);
+                setConfirming(null);
+              }}
+            >
+              Fechar o acordo: {share}% para sempre
+            </Button>
+            <Button onClick={() => setConfirming(null)}>Cancelar</Button>
+          </div>
+        </div>
+      );
+    }
     return (
       <>
         {career.investor && (
@@ -260,7 +304,7 @@ function DoorAction({ door, atOffseason }: { door: Door; atOffseason: boolean })
                 <span className="min-w-0 text-sm text-ink-200">
                   {offer.teamName} · {getCategory(offer.categoryId).shortName}
                 </span>
-                <Button onClick={() => signInvestor(offer.id)}>Pagar esta vaga com o investidor ({formatMoney(investorAmount(career, offer))})</Button>
+                <Button onClick={() => setConfirming(offer.id)}>Pagar esta vaga com o investidor ({formatMoney(investorAmount(career, offer))})</Button>
               </li>
             ))}
           </ul>
