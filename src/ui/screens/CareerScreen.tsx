@@ -377,7 +377,7 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
           {withdrawn ? 'Retirada' : OFFER_KIND_LABELS[offer.kind]}
         </span>
       </span>
-      <span className="flex w-full items-center justify-between gap-2 pl-3 text-xs text-ink-400">
+      <span className="flex w-full items-center justify-between gap-2 pl-4 text-xs text-ink-400">
         <span className="min-w-0 truncate">
           {category.shortName} · {offer.seatCost > 0 ? `vaga ${formatMoney(offer.seatCost)}` : `salário ${formatMoney(offer.salary)}`}
           {offer.seatCost > 0 && pricing.discount >= 0.01 && ` (−${Math.round(pricing.discount * 100)}%)`}
@@ -385,7 +385,7 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
       </span>
       {/* O requisito que falta, pelo nome; e, se uma porta dos Caminhos resolve, qual. */}
       {help && (
-        <span className="flex w-full items-start gap-1 pl-3 text-xs text-gold-400">
+        <span className="flex w-full items-start gap-1 pl-4 text-xs text-gold-400">
           <TriangleAlert size={13} strokeWidth={2} aria-hidden className="mt-px shrink-0" />
           <span className="min-w-0">
             Falta: {help.missing.map((r) => r.label).join(', ')}
