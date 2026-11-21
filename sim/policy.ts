@@ -18,6 +18,36 @@ export interface Choices {
   mode?: RaceMode;
   /** Índice da escolha em cada evento pendente (padrão: a primeira). */
   eventChoice?: number;
+  /**
+   * Como o robô responde aos lances decisivos (Fase 4). O padrão é 'style': ele não responde, e o
+   * motor decide pelo estilo do piloto, como em "simular até o fim". 'safe' escolhe sempre a opção
+   * menos arriscada e 'bold', sempre a mais arriscada: servem para medir quanto vale cada postura.
+   */
+  moments?: MomentPolicy;
+}
+
+export type MomentPolicy = 'style' | 'safe' | 'bold';
+
+/** A opção de um lance pela política do robô: a menos ou a mais arriscada (na dúvida, a de maior chance). */
+export function botMomentChoice(moment: engine.RaceMoment, policy: Exclude<MomentPolicy, 'style'>): engine.MomentChoice {
+  const sign = policy === 'bold' ? 1 : -1;
+  const pick = [...moment.options].sort((a, b) => sign * (b.risk - a.risk) || b.chance - a.chance)[0]!;
+  return { option: pick.id, ...(moment.suggestedCompound ? { compound: moment.suggestedCompound } : {}) };
+}
+
+/** Corre a etapa até a bandeirada com o engenheiro automático e a política de lances dada. */
+export function botRace(career: CareerState, choices: Choices = {}): engine.RaceSimState {
+  const context = engine.buildRaceContext(career);
+  const mode = choices.mode ?? 'balanced';
+  const policy = choices.moments ?? 'style';
+  let race = engine.createWeekendRace(career);
+  if (policy === 'style') return engine.simulateRemainingRace(race, context, { mode, auto: true });
+  // Com política própria o robô responde lance a lance; o resto continua com o engenheiro automático.
+  while (!engine.isRaceFinished(race)) {
+    const moment = race.pendingMoment;
+    race = engine.stepRaceLap(race, context, { mode, pit: null, auto: true, moment: moment ? botMomentChoice(moment, policy) : null });
+  }
+  return race;
 }
 
 /**
@@ -53,8 +83,7 @@ export function playRound(career: CareerState, choices: Choices = {}): CareerSta
   if (!c.weekend!.playerParticipates) return engine.simulateAbsentWeekend(c);
   c = engine.runPractice(c, choices.program ?? 'setup');
   c = engine.runQualifying(c, choices.approach ?? 'balanced');
-  const race = engine.simulateRemainingRace(engine.createWeekendRace(c), engine.buildRaceContext(c), { mode: choices.mode ?? 'balanced', auto: true });
-  return engine.completeWeekend(c, race);
+  return engine.completeWeekend(c, botRace(c, choices));
 }
 
 export function playSeason(career: CareerState, choices: Choices = {}): CareerState {

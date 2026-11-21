@@ -46,7 +46,8 @@ function qualifyingGapToTeammate(record: RoundRecord, playerId: string): number 
   return own - other;
 }
 
-const wetRace = (c: RevealContext) => c.entry !== null && c.record.race.weather.condition !== 'dry';
+// Corrida que larga molhada, ou em que a chuva chegou no meio (o lance "chuva começando" da Fase 4).
+const wetRace = (c: RevealContext) => c.entry !== null && (c.record.race.weather.condition !== 'dry' || c.record.race.moments.some((m) => m.kind === 'rain'));
 const highWearFinish = (c: RevealContext) => c.entry?.status === 'finished' && getTrack(c.record.trackId).tyreWear >= TRAIT_REVEAL.HIGH_WEAR_TRACK;
 const crash = (c: RevealContext) => c.entry?.status === 'dnf' && (c.entry.dnfReason === 'crash' || c.entry.dnfReason === 'collision');
 const contact = (c: RevealContext) =>

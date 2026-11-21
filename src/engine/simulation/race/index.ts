@@ -5,5 +5,18 @@
 export * from './types';
 export { createRaceSim, stepRaceLap, simulateRemainingRace, isRaceFinished, gapToLeader } from './step';
 export { finalizeRace, gridDropsFromRace } from './finalize';
-export { buildStrategyOptions, chooseAiStrategy, bestCompoundFor, decidePit, type StrategyOption } from './strategy';
+export {
+  buildStrategyOptions,
+  chooseAiStrategy,
+  bestCompoundFor,
+  decidePit,
+  baseWearPerLap,
+  compoundLifeLaps,
+  pitWindow,
+  type StrategyOption,
+  type PitWindow,
+} from './strategy';
+export { chooseByStyle, drivingStyle, drivingStyleScore, upcomingMoment, type DrivingStyle } from './moments';
+export { cleanAirLapTime } from './pace';
+export { stressedCorner } from './radio';
 export { buildWetnessProfile, conditionFor } from './weatherProfile';

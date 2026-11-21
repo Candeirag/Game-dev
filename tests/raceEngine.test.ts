@@ -15,7 +15,7 @@ import {
   stepRaceLap,
   type RaceSimState,
 } from '@/engine';
-import { fuelPenalty, tyreCliffPenalty, tyreConditionEffect } from '@/engine/simulation/performance';
+import { fuelPenalty, tyreCliff, tyreConditionEffect, tyrePaceLoss } from '@/engine/simulation/performance';
 import { simulateQualifying } from '@/engine/simulation/qualifying';
 import { DRY, NEUTRAL_MODIFIERS, WET, raceSetup } from './raceSetup';
 
@@ -55,9 +55,10 @@ describe('pneus, combustível e clima', () => {
   });
 
   it('o penhasco do pneu e o peso do combustível deixam a volta mais lenta', () => {
-    expect(tyreCliffPenalty('medium', 0.7)).toBe(0);
-    expect(tyreCliffPenalty('medium', 0.95)).toBeGreaterThan(0.01);
-    expect(tyreCliffPenalty('kart', 0.95)).toBe(0);
+    // Antes do penhasco a perda é pequena; depois dele, passa de 1% da volta. Desde a Fase 4 o kart também tem penhasco.
+    expect(tyrePaceLoss('medium', 0.7)).toBeLessThan(0.006);
+    expect(tyrePaceLoss('medium', 0.95) - tyrePaceLoss('medium', tyreCliff('medium'))).toBeGreaterThan(0.01);
+    expect(tyrePaceLoss('kart', 0.95) - tyrePaceLoss('kart', tyreCliff('kart'))).toBeGreaterThan(0.01);
     expect(fuelPenalty(60, 60)).toBeCloseTo(RACE.FUEL_FULL_TANK_PENALTY, 6);
     expect(fuelPenalty(0, 60)).toBe(0);
   });

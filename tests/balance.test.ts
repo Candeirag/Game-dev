@@ -44,6 +44,11 @@ const NOT_BALANCE = new Set([
   'RENTAL_CATEGORY',
   'INVESTOR_NAMES',
   'SIDE_JOB_INFO',
+  // Lances decisivos e rádio do engenheiro (Fase 4): só as palavras. As chances, os ganhos e as
+  // perdas estão em RACE_MOMENTS, TYRE_CURVE e ENGINEER_RADIO, em src/config/balance.ts.
+  'MOMENT_TEXTS',
+  'MOMENT_CONSEQUENCE_TEXTS',
+  'RADIO_TEXTS',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',
