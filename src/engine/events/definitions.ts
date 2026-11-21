@@ -599,7 +599,11 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
             'split',
             'Propor parcelar no contrato',
             `O custo anual da vaga sobe ${Math.round(TEAM_CASH_CALL.SPLIT_SEAT_SHARE * 100)}%.`,
-            sure('A equipe aceita diluir o valor nas próximas parcelas.', { type: 'seatCost', value: seat * TEAM_CASH_CALL.SPLIT_SEAT_SHARE }, stat('teamTrust', 1)),
+            sure(
+              'A equipe aceita diluir o valor nas próximas parcelas.',
+              { type: 'seatCost', value: seat * TEAM_CASH_CALL.SPLIT_SEAT_SHARE },
+              stat('teamTrust', 1),
+            ),
           ),
         ],
       };

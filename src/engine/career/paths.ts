@@ -414,8 +414,10 @@ export function offerHelp(career: CareerState, offer: Offer): OfferHelp {
       hint: `Falta ${names}. Nenhuma porta compra requisito esportivo: ele vem com resultado, idade e quilometragem. Em Caminhos você acompanha cada um.`,
     };
   const door = doorFor(career, offer);
-  if (door === 'academy') return { missing, door, hint: 'Falta dinheiro. A academia abre esta vaga: ela paga a vaga e cobra exclusividade e resultado. Entre por Caminhos.' };
-  if (door === 'crowdfund') return { missing, door, hint: 'Falta dinheiro. A vaquinha da cidade abre esta vaga, e a torcida passa a cobrar o ano que vem. Faça por Caminhos.' };
+  if (door === 'academy')
+    return { missing, door, hint: 'Falta dinheiro. A academia abre esta vaga: ela paga a vaga e cobra exclusividade e resultado. Entre por Caminhos.' };
+  if (door === 'crowdfund')
+    return { missing, door, hint: 'Falta dinheiro. A vaquinha da cidade abre esta vaga, e a torcida passa a cobrar o ano que vem. Faça por Caminhos.' };
   if (door === 'investor') {
     const terms = investorTerms(career);
     return {
