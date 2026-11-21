@@ -3,9 +3,14 @@
  * recarrega no meio da prova, o save volta ao momento antes da largada.
  *
  * Para o jogador não perder a corrida, o navegador guarda os comandos dados a
- * cada volta (ritmo, parada, ordem de equipe). Como o motor é determinístico,
- * refazer as voltas com os mesmos comandos devolve exatamente a mesma corrida;
- * nada do resultado é guardado aqui, só os comandos.
+ * cada volta (ritmo, parada, ordem de equipe e, desde a Fase 4, a resposta a
+ * cada lance decisivo). Como o motor é determinístico, refazer as voltas com os
+ * mesmos comandos devolve exatamente a mesma corrida; nada do resultado é
+ * guardado aqui, só os comandos.
+ *
+ * O registro tem versão (`v`): a 2 é a das corridas com lances. Um registro da
+ * versão anterior foi gravado com as regras antigas de corrida e é descartado
+ * (a corrida recomeça da largada), em vez de ser refeito com regras diferentes.
  */
 import { z } from 'zod';
 import { RACE_MODES, type CareerState } from '@/domain/schemas';
@@ -32,7 +37,7 @@ export interface RaceResume {
 
 /** Só confere o formato geral; o conteúdo dos comandos é validado pelo motor ao refazer a corrida. */
 const RecordSchema = z.object({
-  v: z.literal(1),
+  v: z.literal(2),
   key: z.string(),
   plan: z.unknown(),
   steps: z.array(z.object({ mode: z.enum(RACE_MODES) }).passthrough()).min(1),
@@ -50,7 +55,7 @@ export function raceResumeKey(career: CareerState): string | null {
 }
 
 export function saveRaceResume(record: RaceResume): void {
-  writePreference(KEY, JSON.stringify({ v: 1, ...record }));
+  writePreference(KEY, JSON.stringify({ v: 2, ...record }));
 }
 
 export function clearRaceResume(): void {

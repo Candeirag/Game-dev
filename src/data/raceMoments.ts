@@ -179,8 +179,9 @@ export const MOMENT_CONSEQUENCE_TEXTS = {
 export const RADIO_TEXTS = {
   corners: ['Dianteiro esquerdo', 'Dianteiro direito', 'Traseiro esquerdo', 'Traseiro direito'],
   tyresLimit: (corner: string) => `${corner} no limite.`,
-  tyresLimitWindow: (corner: string, from: number, to: number) => `${corner} no limite. Janela de parada: voltas ${from} a ${to}.`,
-  tyresGone: (loss: string) => `O pneu acabou: estamos perdendo ${loss} s por volta.`,
+  tyresLimitWindow: (corner: string, from: number, to: number) =>
+    from === to ? `${corner} no limite. Pare na volta ${from}.` : `${corner} no limite. Janela de parada: voltas ${from} a ${to}.`,
+  tyresGone: (loss: string) => `O pneu acabou: já perdemos ${loss} s por volta, e vai piorar.`,
   rivalPittedAhead: (rival: string) => `${rival} parou. Dá para tentar o undercut.`,
   rivalPittedBehind: (rival: string) => `${rival} parou atrás de nós. Cuidado com o undercut.`,
   rain: (laps: number) => (laps <= 1 ? 'Chuva chegando na próxima volta.' : `Chuva prevista em ${laps} voltas.`),

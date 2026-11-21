@@ -606,6 +606,9 @@ export const ENGINEER_RADIO = {
   // Carro de trás chegando: a até isto (s) e tirando pelo menos isto por volta.
   CLOSING_GAP: 2,
   CLOSING_RATE: 0.3,
+  // Esse aviso só vale a partir desta volta e não se repete antes de passarem estas voltas.
+  CLOSING_FROM_LAP: 3,
+  CLOSING_REPEAT_LAPS: 4,
   // Aviso de chuva: quando faltam estas voltas para a previsão.
   RAIN_WARNING_LAPS: 2,
 } as const;

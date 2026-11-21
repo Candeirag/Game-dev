@@ -59,7 +59,9 @@ export function engineerRadio(previous: RaceSimState, next: RaceSimState, ctx: R
   }
 
   const green = next.neutralization.type === 'none' && previous.neutralization.type === 'none';
-  if (rules.pitStops && green && car.pitStops === before.pitStops && next.totalLaps - lap >= 3) {
+  // Só faz sentido falar em undercut para quem ainda tem parada a fazer neste stint, em pista seca.
+  const stopAhead = car.plan.length > 0 || stint !== null;
+  if (rules.pitStops && green && stopAhead && !TYRES[car.tyre.compound].rain && car.pitStops === before.pitStops && next.totalLaps - lap >= 3) {
     // Um carro que estava perto antes da volta e parou nela.
     for (const other of next.cars) {
       if (other.driverId === id || other.status !== 'running') continue;
@@ -89,7 +91,10 @@ export function engineerRadio(previous: RaceSimState, next: RaceSimState, ctx: R
     return say('pitWindow', RADIO_TEXTS.pitWindow(stint.from, stint.to));
   }
 
-  if (green) {
+  // Carro encostando: fora das primeiras voltas (o pelotão ainda está embolado) e sem repetir o aviso em seguida.
+  const lastTalk = previous.radio.at(-1);
+  const repeated = lastTalk?.topic === 'closing' && lap - lastTalk.lap < ENGINEER_RADIO.CLOSING_REPEAT_LAPS;
+  if (green && lap >= ENGINEER_RADIO.CLOSING_FROM_LAP && !repeated) {
     const running = next.cars.filter((c) => c.status === 'running');
     const behind = running[running.findIndex((c) => c.driverId === id) + 1];
     const behindBefore = behind ? previous.cars.find((c) => c.driverId === behind.driverId) : undefined;
