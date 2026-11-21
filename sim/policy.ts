@@ -78,8 +78,12 @@ export function pickBestOffer(career: CareerState): string {
   // Dentro da categoria, a equipe mais forte entre as que querem mesmo o piloto (interesse ≥ 60);
   // sem nenhuma assim, a de maior interesse. Evita assinar com uma equipe exigente demais.
   const keen = (o: (typeof offers)[number]) => (o.interest >= 60 || o.kind === 'continue' ? 1 : 0);
+  // Antes de tudo, as contas: o robô prefere uma vaga que não o deixe devendo no fim do ano
+  // (ou o contrato que já tem) a uma melhor que o endivide.
+  const sound = (o: (typeof offers)[number]) => (o.kind === 'continue' || engine.financeProjection(career, o).projected >= 0 ? 1 : 0);
   offers.sort(
     (a, b) =>
+      sound(b) - sound(a) ||
       getCategory(b.categoryId).tier - getCategory(a.categoryId).tier ||
       keen(b) - keen(a) ||
       (keen(a) ? strength(b.categoryId, b.teamId) - strength(a.categoryId, a.teamId) : b.interest - a.interest),
@@ -87,11 +91,60 @@ export function pickBestOffer(career: CareerState): string {
   return offers[0]!.id;
 }
 
+/** Como o robô conseguiu a vaga escolhida: com o que tinha ou por uma das portas (Fase 3). */
+export type BotDoor = engine.DoorKey | 'none';
+
+/**
+ * Portas no fim do ano: o robô fica com a melhor proposta que consegue aceitar sozinho
+ * (`pickBestOffer`), a não ser que uma porta paga (academia, vaquinha ou investidor, nesta ordem
+ * de preço) abra uma vaga num degrau acima dela, ou qualquer vaga de verdade quando só sobrou a
+ * de aluguel. Devolve a carreira com a porta já aberta e a proposta a assinar.
+ */
+export function botOffseason(career: CareerState): { career: CareerState; offerId: string; door: BotDoor } {
+  const strength = (categoryId: CareerState['categoryId'], teamId: string) => {
+    const ranked = engine.rankTeams(engine.teamsOfCategory(career, categoryId));
+    return ranked.length - ranked.findIndex((t) => t.id === teamId);
+  };
+  const best = pickBestOffer(career);
+  const bestTier = getCategory(career.offseason?.offers.find((o) => o.id === best)?.categoryId ?? career.categoryId).tier;
+  const fallbackOnly = career.offseason?.offers.find((o) => o.id === best)?.kind === 'fallback';
+  // Só vale abrir uma porta paga por uma vaga melhor do que a que o robô já consegue sozinho: um
+  // degrau acima, ou qualquer vaga de verdade quando só sobrou a de aluguel.
+  const wanted = engine
+    .realOffers(career)
+    .filter((o) => !engine.canAcceptOffer(career, o) && (fallbackOnly || getCategory(o.categoryId).tier > bestTier))
+    .sort((a, b) => getCategory(b.categoryId).tier - getCategory(a.categoryId).tier || strength(b.categoryId, b.teamId) - strength(a.categoryId, a.teamId));
+  // Dentro do degrau mais alto que abre, a porta mais barata: academia, vaquinha e, por último, investidor.
+  const cost: Record<engine.DoorKey, number> = { own: 0, academy: 1, crowdfund: 2, investor: 3 };
+  const options = wanted.flatMap((offer) => {
+    const door = engine.doorFor(career, offer);
+    return door === null ? [] : [{ offer, door }];
+  });
+  const topTier = Math.max(0, ...options.map((o) => getCategory(o.offer.categoryId).tier));
+  const choice = options.filter((o) => getCategory(o.offer.categoryId).tier === topTier).sort((a, b) => cost[a.door] - cost[b.door])[0];
+  if (choice) return { career: engine.openDoor(career, choice.offer, choice.door), offerId: choice.offer.id, door: choice.door };
+  return { career, offerId: best, door: fallbackOnly ? 'none' : 'own' };
+}
+
+/**
+ * Trabalho paralelo do robô: dá aulas de kart enquanto o caixa não cobre um ano de custos de
+ * correr no campeonato atual (e a agenda deixa); com folga, só treina.
+ */
+export function botSideJob(career: CareerState): CareerState {
+  if (career.mode !== 'driver') return career;
+  const category = getCategory(career.categoryId);
+  const yearCosts = engine.seasonRunningCosts(category.id, career.hub.id).total + category.economy.living + career.contract.seatCost;
+  const job = engine.sideJobAllowed(category.id) && career.finance.cash < yearCosts ? 'instructor' : 'none';
+  return job === career.sideJob ? career : engine.setSideJob(career, job);
+}
+
 /**
  * Política de treino do robô: velocidade enquanto houver margem (mais de 4
- * pontos até o potencial); depois, o grupo de atributos mais fraco.
+ * pontos até o potencial); depois, o grupo de atributos mais fraco. No começo
+ * de cada temporada ele decide também o trabalho paralelo (`botSideJob`).
  */
-export function botTraining(career: CareerState): CareerState {
+export function botTraining(start: CareerState): CareerState {
+  const career = botSideJob(start);
   const p = engine.getPlayer(career);
   const a = p.attributes;
   if (p.potential - a.pace > 4) return engine.setTrainingFocus(career, 'speed');
@@ -111,7 +164,8 @@ export function playCareer(career: CareerState, seasons: number, choices: Choice
   for (let i = 0; i < seasons; i++) {
     c = playSeason(botTraining(c), choices);
     onSeasonEnd?.(c);
-    c = engine.startNextSeason(c, pickBestOffer(c));
+    const next = botOffseason(c);
+    c = engine.startNextSeason(next.career, next.offerId);
   }
   return c;
 }
@@ -191,7 +245,8 @@ export function playLifeSeason(career: CareerState, policy: LifePolicy = {}, onS
     // dinheiro ou a reputação que a proposta escolhida antes exigia.
     const settled = resolvePending(c);
     if (engine.getPlayer(settled).age >= (policy.retireAge ?? 36)) return engine.retireFromDriving(settled);
-    return engine.startNextSeason(settled, pickBestOffer(settled));
+    const next = botOffseason(settled);
+    return engine.startNextSeason(next.career, next.offerId);
   }
   while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playExecutiveRound(c, policy.choices);
   onSeasonEnd?.(c);

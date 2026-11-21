@@ -91,6 +91,9 @@ function executiveMidSeason(): CareerState {
 
 function executiveSeasonEnd(): CareerState {
   let c = executiveMidSeason();
+  // Com a economia da Fase 3 o robô pendura o capacete sem dinheiro. O save de exemplo existe para
+  // cobrir o patrimônio (ações, imóvel, empresa, empréstimo), então a receita garante um caixa mínimo.
+  if (c.finance.cash < 60_000) c = { ...c, finance: { ...c.finance, cash: 60_000 } };
   // Patrimônio pessoal: ações sempre; imóvel e empresa, os mais baratos que o caixa e a reputação permitirem; e um empréstimo.
   const stock = [...STOCKS].sort((a, b) => a.startPrice - b.startPrice)[0]!;
   c = buyStock(c, stock.id, Math.max(1, Math.floor(Math.min(c.finance.cash * 0.1, 20_000) / stockPrice(c.finance, stock.id))));

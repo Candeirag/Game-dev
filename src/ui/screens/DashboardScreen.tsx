@@ -39,6 +39,7 @@ import { describeOvertaking, describePower, describeTyreWear, formatDate, format
 import { useCareerView } from '../hooks/useCareer';
 import { scrollToElement } from '../motion';
 import { primaryAction, useChrome, useMediaQuery } from '../layout/chrome';
+import { PathsSummary } from './PathsScreen';
 
 const MESSAGE_KIND: Record<InboxMessage['category'], string> = {
   team: 'Equipe',
@@ -286,6 +287,8 @@ export function DashboardScreen() {
             <TrainingFocusPicker />
           </div>
         </Panel>
+
+        <PathsSummary />
 
         <Panel
           title="Mensagens"

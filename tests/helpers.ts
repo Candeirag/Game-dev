@@ -9,6 +9,7 @@ import { createCareer, setTrainingFocus, type NewCareerInput } from './engineApi
 
 export {
   botExecutiveOffseason,
+  botOffseason,
   botSuccession,
   botTraining,
   pickBestOffer,

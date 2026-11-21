@@ -97,6 +97,11 @@ for (const formato of TELAS) {
       const erros = vigiarErros(page);
       await abrirSave(page, SAVES.fimDeTemporada);
       await conferirTela(page, 'painel-fim-de-temporada', formato.nome);
+      // Caminhos, no fim da temporada: as portas abertas podem ser usadas.
+      await page.getByRole('main').getByRole('link', { name: 'Ver caminhos' }).click();
+      await page.waitForTimeout(350);
+      await expect(page.getByRole('main')).toContainText('Mais um ano atrás de resultado');
+      await conferirTela(page, 'caminhos-fim-de-temporada', formato.nome);
       await irPara(page, 'Carreira');
       await conferirTela(page, 'carreira-propostas', formato.nome);
       expect(erros).toEqual([]);
@@ -106,6 +111,11 @@ for (const formato of TELAS) {
       const erros = vigiarErros(page);
       await abrirSave(page, SAVES.formula);
       await conferirTela(page, 'painel-formula', formato.nome);
+      // Caminhos (Fase 3 da grande atualização), aberta pelo resumo do Painel, no meio da temporada.
+      await page.getByRole('main').getByRole('link', { name: 'Ver caminhos' }).click();
+      await page.waitForTimeout(350);
+      await expect(page.getByRole('main')).toContainText('Vaquinha da cidade');
+      await conferirTela(page, 'caminhos', formato.nome);
       // Cada tela e, nas que têm abas, cada aba.
       for (const [nome, arquivo, abas] of [
         ['Fim de semana', 'fim-de-semana', []],

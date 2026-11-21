@@ -70,7 +70,7 @@ describe('economia', () => {
 
   it('uma etapa cobra a parcela da vaga e os custos, e paga os patrocínios', () => {
     const c = newCareer();
-    const f = settleRound(c, 1, entry(12));
+    const f = settleRound(c, 1, entry(12)).finance;
     const share = 1 / c.calendar.length;
     expect(f.seasonTotals.seat).toBe(-Math.round(c.contract.seatCost * share));
     // O apoio da família vem do nascimento: o valor por temporada que o sorteio deu.
@@ -81,8 +81,8 @@ describe('economia', () => {
     expect(f.seasonTotals.training).toBeLessThan(0);
     expect(f.seasonTotals.damage).toBeUndefined();
     // Dano vira conta; treino intenso custa mais.
-    expect(settleRound(c, 1, entry(12, { damage: 0.5 })).seasonTotals.damage).toBeLessThan(0);
-    expect(settleRound({ ...c, trainingIntensity: 'intense' }, 1, entry(12)).seasonTotals.training!).toBeLessThan(f.seasonTotals.training!);
+    expect(settleRound(c, 1, entry(12, { damage: 0.5 })).finance.seasonTotals.damage).toBeLessThan(0);
+    expect(settleRound({ ...c, trainingIntensity: 'intense' }, 1, entry(12)).finance.seasonTotals.training!).toBeLessThan(f.seasonTotals.training!);
   });
 
   it('o imposto é progressivo e isento na faixa mais baixa', () => {
@@ -249,8 +249,9 @@ describe('contratos e negociação', () => {
   it('toda temporada termina com ao menos uma proposta aceitável', () => {
     expect(offseason.offers.length).toBeGreaterThan(0);
     expect(offseason.offers.some((o) => canAcceptOffer(season, o))).toBe(true);
+    // A rede de segurança é uma vaga de aluguel: custa dinheiro, mas não exige nada (pode ser paga a crédito).
     const fallback = offseason.offers.find((o) => o.kind === 'fallback')!;
-    expect(fallback.seatCost).toBe(0);
+    expect(fallback.seatCost).toBeGreaterThan(0);
     expect(offerRequirements(season, fallback)).toEqual([]);
   });
 
@@ -296,12 +297,16 @@ describe('contratos e negociação', () => {
   it('o requisito financeiro barra uma vaga cara para quem não tem dinheiro nem patrocínio', () => {
     const poor: CareerState = { ...season, finance: emptyFinance(0), sponsors: [] };
     expect(financeRequirement(poor, sample).met).toBe(false);
-    const rich: CareerState = { ...poor, finance: emptyFinance(5_000_000) };
+    const rich: CareerState = { ...poor, finance: emptyFinance(50_000_000) };
     expect(financeRequirement(rich, sample).met).toBe(true);
     // Em dívida, mas com patrocínio que paga a temporada: aceito.
     const sponsor: Sponsor = { id: 's', name: 'S', tier: 3, perSeason: 50_000, podiumBonus: 0, endSeason: 99, satisfaction: 80, targetPosition: 5 };
     const funded: CareerState = { ...season, finance: emptyFinance(-10_000), sponsors: [sponsor, { ...sponsor, id: 's2' }, { ...sponsor, id: 's3' }] };
-    expect(financeRequirement(funded, { ...sample, categoryId: 'kart-regional', seatCost: 20_000, salary: 0 }).met).toBe(true);
+    // A meta dos três é o 5º lugar: com o piloto dentro dela eles ficam e pagam o ano; fora, rompem e a conta não fecha.
+    const top: CareerState = { ...funded, offseason: { ...offseason, playerPosition: 4 } };
+    const regionalSeat: Offer = { ...sample, categoryId: 'kart-regional', seatCost: 28_000, salary: 0, clauses: { releaseFee: 0, performanceTarget: null } };
+    expect(financeRequirement(top, regionalSeat).met).toBe(true);
+    expect(financeRequirement({ ...funded, offseason: { ...offseason, playerPosition: 12 } }, regionalSeat).met).toBe(false);
   });
 });
 
@@ -310,10 +315,14 @@ describe('patrocinadores e mercado', () => {
 
   it('o porte do patrocinador acompanha os resultados e a fama', () => {
     const category = getCategory('kart-regional');
-    expect(sponsorTierFor(5, category, 15)).toBe(1);
-    expect(sponsorTierFor(5, category, 6)).toBe(2);
-    expect(sponsorTierFor(5, category, 2)).toBe(3);
-    expect(sponsorTierFor(30, category, 15)).toBe(2);
+    // No Campeonato Brasileiro de Kart o teto é a empresa regional (porte 2); marca grande, só nas fórmulas de cima.
+    const national = getCategory('kart-national');
+    expect(sponsorTierFor(10, national, 15)).toBe(1);
+    expect(sponsorTierFor(10, national, 6)).toBe(2);
+    expect(sponsorTierFor(10, national, 2)).toBe(2);
+    expect(sponsorTierFor(30, national, 15)).toBe(2);
+    // No kart regional, só o comércio do bairro, com o resultado que for.
+    expect(sponsorTierFor(5, category, 2)).toBe(1);
     const small = buildSponsor(c, 1, 1);
     const big = buildSponsor(c, 3, 1);
     expect(big.perSeason).toBeGreaterThan(small.perSeason * 2);

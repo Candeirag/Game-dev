@@ -98,17 +98,21 @@ const KART_RACE: RaceRules = {
 
 const KART_POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1] as const;
 
-const BR_KART_TRACKS = [
+/**
+ * Etapas do kart regional: o campeonato tem polo em São Paulo e roda pelo estado, nos três
+ * kartódromos paulistas que o jogo tem (Cotia, São Paulo e Birigui), cada um mais de uma vez.
+ */
+const SP_KART_ROUNDS = [
   'vale-do-sol',
-  'lagoa-azul',
-  'serra-gaucha',
-  'planalto',
   'mantiqueira',
-  'litoral-norte',
-  'triangulo',
-  'pampas',
   'cerrado-paulista',
-  'guanabara',
+  'vale-do-sol',
+  'cerrado-paulista',
+  'mantiqueira',
+  'vale-do-sol',
+  'mantiqueira',
+  'cerrado-paulista',
+  'vale-do-sol',
 ] as const;
 const WORLD_KART_TRACKS = [
   'garda',
@@ -141,9 +145,14 @@ const CIRCUITS = [
 
 /**
  * Valores e sua origem:
- * - Custos na ordem de grandeza real, em euros, das categorias de base do automobilismo (uma
- *   temporada no primeiro degrau de monopostos custa algumas centenas de milhares; no último
- *   antes do topo, mais de 2 milhões).
+ * - Custos revistos na Fase 3 da grande atualização para a ordem de grandeza real, em reais, e
+ *   para subirem muito a cada degrau: uma temporada de kart regional custa dezenas de milhares;
+ *   o Brasileiro, mais de cem mil; o kart internacional, centenas de milhares; o primeiro degrau
+ *   de monopostos, perto de um milhão; e as fórmulas de fora, milhões (o último degrau antes do
+ *   topo passa de 10 milhões). Os valores foram calibrados no simulador (`npm run sim`) para um
+ *   piloto pobre e bom chegar à Fórmula Júnior com patrocínio e bolsa, e um pobre mediano precisar
+ *   de investidor, academia ou mais um ano. Viagens, equipamento e aluguel do polo ficam em
+ *   `RUNNING_COSTS` e `HUB_RULES` (`src/config/balance.ts`).
  * - Os pontos de licença seguem a lógica das licenças por pontos do automobilismo: 40 pontos
  *   em três temporadas para chegar ao Grand Prix Mundial; as três primeiras posições da
  *   Fórmula Elite garantem os 40 de uma vez.
@@ -162,7 +171,7 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     vehicle: 'kart',
     machine: 'kart',
     rounds: 10,
-    trackIds: BR_KART_TRACKS,
+    trackIds: SP_KART_ROUNDS,
     lapTimeFactor: 1,
     carFactor: 1,
     qualifyingFormat: 'single',
@@ -172,7 +181,7 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     fastestLapTop10Only: false,
     race: KART_RACE,
     field: { driverLevel: 68, driverSpread: 16, minAge: 13, maxAge: 20 },
-    economy: { seatCost: [30_000, 16_000], salary: [0, 0], living: 5_000, sponsorBase: 16_000, damageBill: 1_500, trainingCost: 250, winBonus: 0 },
+    economy: { seatCost: [30_000, 16_000], salary: [0, 0], living: 6_000, sponsorBase: 45_000, damageBill: 2_000, trainingCost: 300, winBonus: 0 },
     requirements: { minAge: 12, licensePoints: 0, minReputation: 0, minExperience: 0, licenseName: CATEGORY_NAMES['kart-regional'].licenseName },
     licensePoints: [10, 8, 6, 5, 4, 3, 2, 2, 1, 1],
   },
@@ -192,7 +201,7 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     fastestLapTop10Only: false,
     race: KART_RACE,
     field: { driverLevel: 72, driverSpread: 14, minAge: 14, maxAge: 21 },
-    economy: { seatCost: [60_000, 34_000], salary: [0, 0], living: 9_000, sponsorBase: 40_000, damageBill: 3_000, trainingCost: 500, winBonus: 0 },
+    economy: { seatCost: [140_000, 80_000], salary: [0, 0], living: 10_000, sponsorBase: 110_000, damageBill: 6_000, trainingCost: 600, winBonus: 0 },
     requirements: { minAge: 13, licensePoints: 2, minReputation: 10, minExperience: 26, licenseName: CATEGORY_NAMES['kart-national'].licenseName },
     licensePoints: [15, 12, 10, 8, 6, 5, 4, 3, 2, 1],
   },
@@ -212,7 +221,7 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     fastestLapTop10Only: false,
     race: KART_RACE,
     field: { driverLevel: 75, driverSpread: 14, minAge: 14, maxAge: 22 },
-    economy: { seatCost: [150_000, 90_000], salary: [0, 0], living: 18_000, sponsorBase: 85_000, damageBill: 6_000, trainingCost: 1_000, winBonus: 0 },
+    economy: { seatCost: [480_000, 300_000], salary: [0, 0], living: 40_000, sponsorBase: 480_000, damageBill: 15_000, trainingCost: 2_500, winBonus: 0 },
     requirements: { minAge: 14, licensePoints: 8, minReputation: 18, minExperience: 34, licenseName: CATEGORY_NAMES['kart-international'].licenseName },
     licensePoints: [20, 16, 13, 10, 8, 6, 5, 4, 3, 2],
   },
@@ -246,7 +255,7 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
       raceMinutes: 28,
     },
     field: { driverLevel: 76, driverSpread: 13, minAge: 15, maxAge: 21 },
-    economy: { seatCost: [380_000, 240_000], salary: [0, 0], living: 30_000, sponsorBase: 210_000, damageBill: 28_000, trainingCost: 2_500, winBonus: 0 },
+    economy: { seatCost: [1_000_000, 650_000], salary: [0, 0], living: 30_000, sponsorBase: 750_000, damageBill: 60_000, trainingCost: 2_500, winBonus: 0 },
     requirements: { minAge: 15, licensePoints: 12, minReputation: 25, minExperience: 40, licenseName: CATEGORY_NAMES.f4.licenseName },
     licensePoints: [25, 20, 16, 13, 10, 8, 6, 4, 3, 2],
   },
@@ -280,7 +289,15 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
       raceMinutes: 40,
     },
     field: { driverLevel: 78, driverSpread: 12, minAge: 16, maxAge: 23 },
-    economy: { seatCost: [950_000, 620_000], salary: [0, 0], living: 50_000, sponsorBase: 520_000, damageBill: 70_000, trainingCost: 5_000, winBonus: 8_000 },
+    economy: {
+      seatCost: [4_500_000, 3_000_000],
+      salary: [0, 0],
+      living: 60_000,
+      sponsorBase: 3_000_000,
+      damageBill: 200_000,
+      trainingCost: 5_000,
+      winBonus: 40_000,
+    },
     requirements: { minAge: 16, licensePoints: 18, minReputation: 36, minExperience: 50, licenseName: CATEGORY_NAMES.f3.licenseName },
     licensePoints: [30, 25, 20, 15, 12, 9, 7, 5, 3, 2],
   },
@@ -315,13 +332,13 @@ export const CATEGORIES: readonly CategoryDefinition[] = [
     },
     field: { driverLevel: 81, driverSpread: 11, minAge: 17, maxAge: 25 },
     economy: {
-      seatCost: [2_400_000, 1_600_000],
+      seatCost: [12_000_000, 8_000_000],
       salary: [0, 0],
-      living: 90_000,
-      sponsorBase: 1_300_000,
-      damageBill: 150_000,
+      living: 120_000,
+      sponsorBase: 8_000_000,
+      damageBill: 500_000,
       trainingCost: 10_000,
-      winBonus: 25_000,
+      winBonus: 120_000,
     },
     requirements: { minAge: 17, licensePoints: 25, minReputation: 48, minExperience: 58, licenseName: CATEGORY_NAMES.f2.licenseName },
     licensePoints: [40, 40, 40, 30, 20, 10, 8, 6, 4, 3],

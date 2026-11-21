@@ -23,5 +23,6 @@ mesmo envelope que o jogo exporta, com checksum.
 | `v4`  | Fase 0 da grande atualização | Kart na largada, monoposto no fim da temporada, dirigente no meio da temporada, dirigente no fechamento com patrimônio (ações, imóvel, empresa, empréstimo) e sucessão em aberto. |
 | `v5`  | Fase 1 da grande atualização | As mesmas situações da `v4`, com o retrato das temporadas (`seasonTrend`). Sem nascimento: abrem com `birth: null`. |
 | `v6`  | Fase 2 da grande atualização | As mesmas situações, agora com nascimento sorteado, e `nascimento-mudanca-pendente`: estreante nascido no interior depois da segunda etapa, com a mudança para São Paulo pendente e o traço de estreia revelado. |
+| `v7`  | Fase 3 da grande atualização | As mesmas situações da `v6`, com o polo em que o piloto mora, o investidor, a vaquinha, o trabalho paralelo e a conta das temporadas sem porta, já sob a economia nova (vaga de aluguel paga, viagens, equipamento, patrocinadores em escada). |
 
 Os arquivos `fase0-*` e os da `v4` em diante estão sem indentação, para pesarem menos. Abrem do mesmo jeito.

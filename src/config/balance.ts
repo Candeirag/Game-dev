@@ -165,6 +165,168 @@ export const TRAIT_REVEAL = {
   HIGH_WEAR_TRACK: 1.1,
 } as const;
 
+/* ------------------------------------------------------------------ */
+/* Economia, polos e portas (Fase 3)                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Polos: o que custa e o que rende morar onde o campeonato tem base. As chaves são os ids de
+ * `src/data/hubs.ts`. São Paulo é a casa do piloto: sem mudança e sem aluguel de polo (o custo de
+ * vida da categoria já cobre morar com a família).
+ */
+export const HUB_RULES = {
+  // Mudança para o polo, paga uma vez na chegada: passagens, caução do aluguel e curso do idioma.
+  MOVE_COST: { 'sao-paulo': 0, italia: 45_000, inglaterra: 70_000 },
+  // Aluguel de um quarto perto da equipe, por temporada (lançado em parcelas por etapa).
+  RENT_PER_SEASON: { 'sao-paulo': 0, italia: 60_000, inglaterra: 95_000 },
+  // A família longe pesa: moral tirada no começo de cada temporada morando fora do país.
+  FAMILY_FAR_MORALE: -8,
+  // Idioma novo: no primeiro ano no polo o treino rende 10% menos e a equipe começa confiando menos.
+  LANGUAGE_TRAINING_FACTOR: 0.9,
+  LANGUAGE_TEAM_TRUST: -5,
+  // Em troca, quem mora no polo aparece: pontos de interesse a mais das equipes dos campeonatos dali.
+  VISIBILITY_INTEREST: 6,
+} as const;
+
+/**
+ * Custos de correr que não são a vaga, por campeonato (ids das categorias). Viagem: por etapa
+ * (estrada pelo estado no regional, avião e hotel no Brasileiro, deslocamentos pela Europa nos de
+ * fora). Equipamento: por temporada (capacete, macacão, pneus de treino e, no kart, a revisão do
+ * motor). No Grand Prix Mundial a equipe paga tudo.
+ */
+export const RUNNING_COSTS = {
+  TRAVEL_PER_ROUND: { 'kart-regional': 300, 'kart-national': 1_200, 'kart-international': 5_000, f4: 4_000, f3: 12_000, f2: 25_000, f1: 0 },
+  EQUIPMENT_PER_SEASON: { 'kart-regional': 3_000, 'kart-national': 8_000, 'kart-international': 40_000, f4: 35_000, f3: 90_000, f2: 180_000, f1: 0 },
+  // A vaga da rede de segurança deixou de ser de graça: é uma vaga de aluguel na equipe mais fraca,
+  // por esta fração do preço de tabela da vaga mais barata do campeonato (1 = preço cheio: quem não
+  // interessa a ninguém não ganha desconto). Pode ser paga a crédito: é o que faz terminar mal
+  // custar dinheiro sem nunca deixar o piloto a pé.
+  FALLBACK_SEAT_SHARE: 1,
+} as const;
+
+/**
+ * Patrocinadores em escada. O porte (1 = comércio do bairro, 2 = empresa regional, 3 = marca
+ * grande) continua saindo do resultado, mas cada campeonato tem um teto, e marca grande só fecha
+ * com quem tem título e visibilidade (reputação).
+ */
+export const SPONSOR_LADDER = {
+  // Maior porte que se apresenta em cada campeonato: no kart regional, só o comércio do bairro.
+  MAX_TIER: { 'kart-regional': 1, 'kart-national': 2, 'kart-international': 2, f4: 2, f3: 3, f2: 3, f1: 3 },
+  // Marca grande antes das fórmulas de cima: só com um título na carreira e esta reputação.
+  BIG_BRAND_MIN_REPUTATION: 30,
+  // Degrau até onde o valor pago por cada porte acompanha o preço do campeonato (índice = porte).
+  // O comércio do bairro paga valor de kart regional onde quer que o piloto corra; a empresa
+  // regional e a marca grande acompanham o piloto até o topo (a regional paga 36% do valor de
+  // referência do campeonato; a grande, 60%: ver SPONSOR_RULES.TIER_SHARE).
+  VALUE_CEILING_TIER: [7, 1, 7, 7],
+  // Patrocínio esperado ao subir de degrau: a equipe de cima conta com esta fração do valor de um
+  // patrocinador do porte que o resultado do piloto atrai no campeonato novo (se ele tiver cota
+  // livre ou um patrocinador menor para trocar). É o que deixa o campeão pobre subir com
+  // patrocínio e bolsa, sem precisar de investidor.
+  EXPECTED_ON_PROMOTION: 1,
+  // Quem sobe de degrau com o piloto dá um desconto na meta: tantas posições a mais na primeira
+  // temporada no campeonato novo, até o teto. Na renovação, a meta volta à do porte.
+  PROMOTION_TARGET_RELIEF: 4,
+  MAX_TARGET: 15,
+} as const;
+
+/**
+ * Academia como porta: além do convite por evento, uma equipe do topo chama no fim do ano quem
+ * cumpre estes requisitos (todos visíveis na tela Caminhos). Ela paga a vaga; cobra exclusividade
+ * e resultado.
+ */
+export const ACADEMY_DOOR = {
+  // Do Campeonato Brasileiro de Kart (2º degrau) à Fórmula Elite (6º).
+  MIN_TIER: 2,
+  MAX_TIER: 6,
+  // Idade máxima na temporada seguinte e pior posição final aceita.
+  MAX_AGE: 21,
+  MAX_POSITION: 3,
+  // Fração da vaga que a academia paga, e a posição final que ela exige a cada temporada.
+  SUPPORT_SHARE: 1,
+  TARGET_POSITION: 6,
+  // Exclusividade: quantos patrocinadores pessoais o piloto da academia pode ter.
+  MAX_PERSONAL_SPONSORS: 1,
+} as const;
+
+/**
+ * Investidor: paga a vaga de uma proposta e leva uma fatia dos ganhos para sempre. Ganho é o que o
+ * piloto recebe por correr: salário, bônus e o que sobra dos patrocínios depois de pagar a parcela
+ * da vaga. Enquanto o patrocínio só cobre a vaga, ele leva pouco; quando o piloto passa a ganhar
+ * de verdade, a fatia pesa. É a porta cara.
+ */
+export const INVESTOR = {
+  // Quem ele procura: até esta posição final e esta idade (na temporada seguinte).
+  MAX_POSITION: 8,
+  MAX_AGE: 25,
+  // Fatia pela posição final: até o 3º lugar, 10%; até o 8º, 15%.
+  SHARE_TOP3: 0.1,
+  SHARE_TOP8: 0.15,
+  // Quem já tem investidor consegue outro aporte até esta posição; cada vaga a mais soma esta fatia.
+  KEEP_POSITION: 12,
+  EXTRA_SEAT_SHARE: 0.05,
+  MAX_SHARE: 0.4,
+  // Último recurso: depois deste número de temporadas seguidas sem nenhuma porta, um investidor
+  // aparece para qualquer piloto, cobra mais caro e, se nenhuma equipe fez proposta, traz uma vaga
+  // numa equipe do meio do grid (posição na ordem de forças, a partir de 0).
+  LAST_RESORT_AFTER: 2,
+  LAST_RESORT_SHARE: 0.25,
+  LAST_RESORT_TEAM_RANK: 6,
+} as const;
+
+/**
+ * Vaquinha da cidade: só com bom resultado e carisma. O dinheiro entra uma vez; em troca, a
+ * torcida local cobra o resultado da temporada seguinte.
+ */
+export const CROWDFUND = {
+  // Do kart regional à Fórmula Júnior (4º degrau): depois disso os valores são grandes demais para uma cidade.
+  MAX_TIER: 4,
+  MAX_POSITION: 5,
+  // Carisma de nascença mínimo (50 é o piloto comum; quem não tem nascimento sorteado conta como 50).
+  MIN_CHARISMA: 55,
+  // Arrecadação de referência por degrau em que o piloto corre (índice = degrau), multiplicada
+  // por (0,6 + carisma/100): carisma 55 arrecada 115% da referência; carisma 90, 150%.
+  BASE_BY_TIER: [0, 20_000, 80_000, 250_000, 400_000],
+  CHARISMA_BASE: 0.6,
+  // Temporadas de intervalo entre duas vaquinhas.
+  COOLDOWN_SEASONS: 3,
+  // A torcida espera, no ano seguinte, a posição final de agora mais esta folga (no degrau de cima, vale o dobro).
+  TARGET_SLACK: 4,
+  // Pressão: moral tirada no começo da temporada cobrada, e o preço de decepcionar a cidade.
+  PRESSURE_MORALE: -4,
+  MISS_MORALE: -10,
+  MISS_REPUTATION: -2,
+} as const;
+
+/**
+ * Evento "A equipe pede um aporte extra": um patrocinador da equipe não pagou e ela pede dinheiro
+ * ao piloto no meio do ano.
+ */
+export const TEAM_CASH_CALL = {
+  // O pedido é esta fração do custo anual da vaga...
+  SEAT_SHARE: 0.12,
+  // ...mas nunca mais que esta fração do dinheiro que o piloto tem em caixa: ninguém pede a quem não tem.
+  MAX_CASH_SHARE: 0.2,
+  // Abaixo deste valor não vale pedir: a equipe só propõe parcelar ou segue sem o dinheiro.
+  MIN_PAYMENT: 500,
+  // Parcelar no contrato: o custo anual da vaga sobe esta fração.
+  SPLIT_SEAT_SHARE: 0.08,
+  // Recusar: chance de a equipe cortar as atualizações do equipamento.
+  REFUSE_CUT_CHANCE: 0.4,
+} as const;
+
+/**
+ * Trabalhos paralelos: dinheiro por etapa em troca de tempo de treino. Só até a Fórmula Júnior
+ * (4º degrau): dali em diante a agenda não deixa.
+ */
+export const SIDE_JOBS = {
+  MAX_TIER: 4,
+  // Instrutor de kart: paga melhor; o treino rende 15% menos.
+  instructor: { perRound: 800, training: 0.85, damageDiscount: 0 },
+  // Ajudante de mecânico: paga menos, o treino rende 20% menos, mas o conserto depois de batida sai 30% mais barato.
+  mechanic: { perRound: 600, training: 0.8, damageDiscount: 0.3 },
+} as const;
+
 /**
  * Mapa das tabelas de balanceamento que moram fora deste arquivo: caminho do módulo → nomes
  * exportados. Dados por categoria, pista e equipe ficam em `src/data`; regras gerais de cada

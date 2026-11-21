@@ -464,8 +464,8 @@ describe('migração da versão 3 para a 4', () => {
       data = migrateStep(data, data.schemaVersion as number);
       seen.push(data.schemaVersion);
     }
-    expect(seen).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5]);
+    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
   });
 });
@@ -495,6 +495,50 @@ describe('migração da versão 5 para a 6 (nascimento)', () => {
     expect(career.birth).not.toBeNull();
     const raw = { ...(JSON.parse(JSON.stringify(career)) as Record<string, unknown>), schemaVersion: 5 };
     expect(migrateStep(raw, 5).birth).toEqual(career.birth);
+  });
+});
+
+describe('migração da versão 6 para a 7 (economia e polos)', () => {
+  const files = readdirSync('tests/fixtures/v6').filter((name) => name.endsWith('.json'));
+  const hubs: Record<string, string> = {
+    'kart-regional': 'sao-paulo',
+    'kart-national': 'sao-paulo',
+    'kart-international': 'italia',
+    f4: 'sao-paulo',
+    f3: 'inglaterra',
+    f2: 'inglaterra',
+    f1: 'inglaterra',
+  };
+
+  it.each(files)('%s: só acrescenta o polo do campeonato e os vínculos vazios, e sobe a versão', (name) => {
+    const before = (JSON.parse(readFileSync(`tests/fixtures/v6/${name}`, 'utf8')) as { career: Record<string, unknown> }).career;
+    expect(before.schemaVersion).toBe(6);
+    expect('hub' in before).toBe(false);
+    const after = migrateStep(before, 6);
+    expect(after).toEqual({
+      ...before,
+      schemaVersion: 7,
+      hub: { id: hubs[before.categoryId as string], arrivedSeason: 0 },
+      investor: null,
+      crowdfund: null,
+      sideJob: 'none',
+      noDoorSeasons: 0,
+    });
+    // Rodar de novo sobre o resultado não muda nada.
+    expect(migrateStep({ ...after, schemaVersion: 6 }, 6)).toEqual(after);
+  });
+
+  it.each(files)('%s: abre na versão atual, sem investidor, vaquinha nem trabalho paralelo, e sem ano de idioma a cumprir', (name) => {
+    const career = importCareer(readFileSync(`tests/fixtures/v6/${name}`, 'utf8'));
+    expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
+    expect(career).toMatchObject({
+      hub: { id: hubs[career.categoryId], arrivedSeason: 0 },
+      investor: null,
+      crowdfund: null,
+      sideJob: 'none',
+      noDoorSeasons: 0,
+    });
+    expect(validateCareerIntegrity(career)).toEqual([]);
   });
 });
 

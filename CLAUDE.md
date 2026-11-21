@@ -106,7 +106,7 @@ os mesmos argumentos e o mesmo código, sai sempre igual.
 - **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
   estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
   (`tests/names.test.ts` trava a lista).
-- **Saves.** Os de `tests/fixtures/` (versões 1 a 6) têm de continuar abrindo e jogáveis. Os
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 7) têm de continuar abrindo e jogáveis. Os
   das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
@@ -125,6 +125,13 @@ simulador, que só usam a API pública do motor).
 - Nascimento (Fase 2): sorteio, efeitos, revelação dos traços e mudança em `src/engine/birth`;
   números em `balance.ts` (`BIRTH`, `TRAIT_EFFECTS`…), textos em `src/data/birth.ts`. Vale só para
   o personagem que o sorteou (`activeBirth`); saves antigos têm `birth: null`.
+- Economia, polos e portas (Fase 3): polos em `src/data/hubs.ts` e `src/engine/career/hubs.ts`;
+  portas (academia, vaquinha, investidor, trabalho paralelo, último recurso) e o retrato da tela
+  Caminhos em `src/engine/career/paths.ts`; custos por etapa em `economy.ts`; escada e rompimento
+  de patrocinadores em `sponsors.ts`. Números em `balance.ts` (`HUB_RULES`, `RUNNING_COSTS`,
+  `SPONSOR_LADDER`, `ACADEMY_DOOR`, `INVESTOR`, `CROWDFUND`, `SIDE_JOBS`); preços das vagas em
+  `src/data/categories.ts`. Regra de ouro: sempre existe uma saída; `tests/economy.test.ts` e a
+  seção 8 do simulador conferem que ninguém fica mais de duas temporadas sem porta.
 - Toda aleatoriedade vem de `src/engine/rng.ts`, com semente (regra 4).
 - Dinheiro só por `src/domain/money.ts` (motor: `money(career, valor)`; interface:
   `formatMoney`). Plurais por `src/domain/text.ts`. Nome de categoria em frase só por

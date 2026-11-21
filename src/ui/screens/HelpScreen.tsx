@@ -102,7 +102,9 @@ const TOPICS: { id: string; title: string; icon: LucideIcon; items: string[] }[]
     title: 'Dinheiro',
     icon: Wallet,
     items: [
-      'A vaga custa caro nas categorias de base; a família ajuda só nos cinco primeiros anos. Patrocinadores vêm com resultados.',
+      'Correr custa caro e sobe muito a cada degrau: vaga, viagens, equipamento, treino e, fora do país, o aluguel do polo. A família ajuda pouco e por poucos anos.',
+      'Patrocinadores vêm com resultados e em escada: comércio do bairro no kart regional, empresas regionais no Brasileiro, marcas grandes só com título. Quem não vê a meta cumprida rompe no fim do ano.',
+      'Sempre existe uma porta: a tela Caminhos (no Painel) mostra quanto falta para a próxima vaga e como estão a academia, a vaquinha da cidade, o investidor (que fica com parte dos seus ganhos para sempre), o trabalho paralelo e a vaga de aluguel.',
       'Patrimônio: renda fixa, fundo, ações (preço muda a cada etapa), imóveis, empresas e participações em equipes.',
       'Empréstimo bancário custa 9% ao ano; caixa negativo custa 14%. Imposto de renda progressivo no fim do ano.',
     ],

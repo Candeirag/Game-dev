@@ -24,8 +24,10 @@ describe('simulação com semente fixa', () => {
     if (process.env.UPDATE_GOLDEN || !existsSync(GOLDEN)) writeFileSync(GOLDEN, `${JSON.stringify(current, null, 1)}\n`);
     const recorded = JSON.parse(readFileSync(GOLDEN, 'utf8')) as Checkpoint[];
     expect(current.length).toBe(recorded.length);
-    // Percorre do kart regional à Fórmula Júnior, mais a Fórmula Elite do save gravado.
-    expect([...new Set(current.map((c) => c.category))]).toEqual(['kart-regional', 'kart-national', 'kart-international', 'f4', 'f2']);
+    // Percorre do kart regional à Fórmula Júnior, mais a Fórmula Elite do save gravado. Desde a Fase 3
+    // da grande atualização o piloto de referência sobe do Brasileiro direto para a Fórmula Júnior,
+    // sem sair do país: o kart internacional, na Itália, é o caminho alternativo.
+    expect([...new Set(current.map((c) => c.category))]).toEqual(['kart-regional', 'kart-national', 'f4', 'f2']);
     // Aponta o primeiro ponto que divergiu e em quê, em vez de despejar a lista inteira.
     for (let i = 0; i < recorded.length; i++) {
       const was = recorded[i]!;

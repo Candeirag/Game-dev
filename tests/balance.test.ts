@@ -37,6 +37,13 @@ const NOT_BALANCE = new Set([
   'BIRTH_TRAITS',
   'BIRTH_ORIGIN_INFO',
   'BIRTH_ORIGIN_ORDER',
+  // Polos e portas (Fase 3 da grande atualização): nomes e o mapa campeonato → polo. Os custos estão
+  // em HUB_RULES, RUNNING_COSTS, INVESTOR… em src/config/balance.ts.
+  'HUBS',
+  'CATEGORY_HUB',
+  'RENTAL_CATEGORY',
+  'INVESTOR_NAMES',
+  'SIDE_JOB_INFO',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',
@@ -60,7 +67,7 @@ const NOT_BALANCE = new Set([
  * congelada: uma constante nova no motor ou nos dados que não esteja aqui faz o teste falhar.
  */
 const KNOWN_PRIVATE: Readonly<Record<string, readonly string[]>> = {
-  'src/data/categories.ts': ['BR_KART_TRACKS', 'CIRCUITS', 'KART_POINTS', 'KART_RACE', 'WORLD_KART_TRACKS'],
+  'src/data/categories.ts': ['CIRCUITS', 'KART_POINTS', 'KART_RACE', 'SP_KART_ROUNDS', 'WORLD_KART_TRACKS'],
   'src/data/drivers.ts': ['ROWS'],
   'src/data/management.ts': ['F1_RULES', 'KART_RULES', 'SPEC_RULES'],
   'src/data/teams.ts': ['CACHE', 'COLORS', 'FROZEN_SLUGS', 'REGIONAL_TEAMS', 'TARGETS', 'TEAM_NAMES'],

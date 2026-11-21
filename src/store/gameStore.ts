@@ -16,6 +16,7 @@ import type {
   QualifyingApproach,
   RaceMode,
   ResearchSpend,
+  SideJob,
   StaffRole,
   SupportLevel,
   TrainingFocus,
@@ -117,6 +118,11 @@ export interface GameStore {
   dismissOutcome(): void;
 
   setTrainingFocus(focus: TrainingFocus): void;
+  /** Portas da carreira (tela Caminhos): trabalho paralelo a qualquer hora; academia, vaquinha e investidor no fechamento do ano. */
+  setSideJob(job: SideJob): void;
+  joinAcademy(): void;
+  launchCrowdfund(): void;
+  signInvestor(offerId: string): void;
   setTrainingIntensity(intensity: TrainingIntensity): void;
   invest(product: InvestmentProduct, amount: number): void;
   resolveEvent(eventId: string, choiceId: string): void;
@@ -418,6 +424,22 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     setTrainingFocus(focus) {
       apply((c) => engine.setTrainingFocus(c, focus), { save: true });
+    },
+
+    setSideJob(job) {
+      apply((c) => engine.setSideJob(c, job), { save: true });
+    },
+
+    joinAcademy() {
+      apply(engine.joinAcademyDoor, { save: true });
+    },
+
+    launchCrowdfund() {
+      apply(engine.launchCrowdfund, { save: true });
+    },
+
+    signInvestor(offerId) {
+      apply((c) => engine.signInvestor(c, offerId), { save: true });
     },
 
     setTrainingIntensity(intensity) {

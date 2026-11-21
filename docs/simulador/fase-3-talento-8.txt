@@ -1,0 +1,138 @@
+APEX MOTORSPORT DYNASTY · SIMULADOR DE CARREIRAS
+50 carreiras (sementes 1 a 50), 15 temporadas cada: 750 temporadas disputadas
+Política: robô padrão (treino de acerto, classificação e corrida equilibradas, melhor proposta aceitável) · talento 8
+Idade média na estreia: 15,5 anos
+
+1. POSIÇÃO FINAL POR CATEGORIA
+
+Categoria                      Temporadas  Carreiras  Posição média  Mediana  Melhor  Entre os 3  Títulos
+-----------------------------  ----------  ---------  -------------  -------  ------  ----------  -------
+Campeonato Regional de Kart           166         50            9,2       9º      1º         15%        6
+Campeonato Brasileiro de Kart          95         50            6,3       6º      1º         17%        4
+Campeonato Mundial de Kart             71         38            7,5       8º      1º         20%        2
+Fórmula Júnior                        141         50            7,0       7º      1º         20%        5
+Fórmula Sprint                         84         50            6,5       6º      1º         23%        4
+Fórmula Elite                          80         44            7,6       7º      2º         14%        0
+Grand Prix Mundial                    113         29            5,5       5º      1º         38%       16
+
+2. CAIXA NO FIM DE CADA TEMPORADA
+
+Temporada  Carreiras   10% piores      Mediana  10% melhores  No vermelho  Patrimônio (mediana)
+---------  ---------  -----------  -----------  ------------  -----------  --------------------
+1                 50     R$ 4.600    R$ 18.168     R$ 30.598           2%             R$ 18.168
+2                 50     R$ 7.140    R$ 29.520     R$ 45.498           6%             R$ 29.520
+3                 50    R$ 17.164    R$ 40.400     R$ 72.054           2%             R$ 40.400
+4                 50     R$ 7.964    R$ 52.371    R$ 114 mil           2%             R$ 52.371
+5                 50    −R$ 3.329    R$ 54.458    R$ 163 mil          10%             R$ 54.458
+6                 50     R$ 4.108    R$ 63.293    R$ 332 mil           4%             R$ 63.293
+7                 50    −R$ 5.178   R$ 168 mil    R$ 414 mil          10%            R$ 168 mil
+8                 50   −R$ 15.650   R$ 145 mil    R$ 880 mil          14%            R$ 145 mil
+9                 50  −R$ 126 mil   R$ 217 mil    R$ 2,24 mi          16%            R$ 217 mil
+10                50   −R$ 90.303   R$ 242 mil    R$ 6,58 mi          16%            R$ 242 mil
+11                50   −R$ 15.096   R$ 1,09 mi   R$ 13,53 mi          12%            R$ 1,09 mi
+12                50  −R$ 521 mil   R$ 1,05 mi   R$ 22,35 mi          16%            R$ 1,05 mi
+13                50  −R$ 283 mil   R$ 2,76 mi   R$ 31,56 mi          14%            R$ 2,76 mi
+14                50  −R$ 370 mil    R$ 7,8 mi   R$ 41,52 mi          12%             R$ 7,8 mi
+15                50  −R$ 253 mil  R$ 12,37 mi   R$ 53,63 mi          12%           R$ 12,37 mi
+
+Caixa: dinheiro na conta depois do fechamento do ano (impostos, juros e rendimentos já lançados).
+"10% piores" e "10% melhores" são os percentis 10 e 90; "no vermelho" é a parcela das carreiras com caixa negativo.
+
+3. IDADE AO CHEGAR A CADA DEGRAU
+
+Degrau  Categoria                      Chegaram  Das carreiras  Idade média  Mais novo  Mais velho  Temporada média
+------  -----------------------------  --------  -------------  -----------  ---------  ----------  ---------------
+     1  Campeonato Regional de Kart          50           100%         15,5         14          17              1,0
+     2  Campeonato Brasileiro de Kart        50           100%         18,7         17          22              4,2
+     3  Campeonato Mundial de Kart           38            76%         20,4         18          23              5,8
+     4  Fórmula Júnior                       50           100%         22,0         19          26              7,5
+     5  Fórmula Sprint                       50           100%         24,8         21          29             10,3
+     6  Fórmula Elite                        44            88%         26,1         22          31             11,4
+     7  Grand Prix Mundial                   29            58%         26,6         23          30             12,1
+
+Chegar é subir: conta a primeira temporada no degrau vindo de um degrau mais baixo (ou a estreia). Quem pula um
+degrau por um atalho e depois cai nele não entra na linha desse degrau.
+
+4. CARREIRAS QUE CHEGAM AO TOPO
+
+Chegaram ao Grand Prix Mundial: 29 de 50 carreiras (58%).
+Degrau mais alto alcançado: 1º 0 · 2º 0 · 3º 0 · 4º 0 · 5º 6 · 6º 15 · 7º 29.
+
+5. TÍTULOS POR CARREIRA
+
+Média de 0,74 por carreira (37 títulos no total; o máximo numa carreira foi 6).
+Carreiras sem título: 34 · com um: 7 · com dois: 3 · com três ou mais: 6.
+
+6. TEMPORADAS PARADAS, SEM VAGA
+
+Sem vaga: 13 temporadas (0,26 por carreira), em 12 de 50 carreiras (24%).
+  Por quê: em 0, nenhuma equipe fez proposta; em 11, havia proposta e faltou dinheiro para a vaga; em 0, faltou outro requisito.
+Desceu de degrau: 17 temporadas (0,34 por carreira), em 15 de 50 carreiras.
+Maior sequência no mesmo degrau: 4,8 temporadas, em média.
+Etapas sem correr (lesão ou suspensão): 0,01 por temporada.
+Carreiras interrompidas por sucessão (morte ou acidente): 0.
+
+"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de
+segurança: a vaga de aluguel na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no
+primeiro). O jogo sempre oferece essa vaga: ninguém fica um ano inteiro sem correr. Desde a Fase 3 ela custa dinheiro.
+
+7. NASCIMENTO
+
+Grupo           Carreiras    Nota de nascença  Posição na estreia  Degrau mais alto  Monopostos  Topo  Títulos  Sem vaga
+--------------  ---------  ------------------  ------------------  ----------------  ----------  ----  -------  --------
+Nascença baixa         16  42,7 (36,2 a 46,8)                15,1              6,19        100%   38%     0,44      0,25
+Nascença média         18  50,2 (47,2 a 52,6)                14,9              6,56        100%   67%     0,61      0,28
+Nascença alta          16  57,4 (52,6 a 65,0)                13,1              6,63        100%   69%     1,19      0,25
+
+Grupo          Carreiras    Nota de nascença  Posição na estreia  Degrau mais alto  Monopostos  Topo  Títulos  Sem vaga
+-------------  ---------  ------------------  ------------------  ----------------  ----------  ----  -------  --------
+Capital               25  49,5 (36,8 a 61,4)                13,6              6,44        100%   56%     0,28      0,16
+Interior              25  50,7 (36,2 a 65,0)                15,1              6,48        100%   60%     1,20      0,36
+Dois talentos         33  51,5 (36,8 a 65,0)                13,8              6,58        100%   64%     0,79      0,21
+Dois defeitos         17  47,5 (36,2 a 56,0)                15,5              6,24        100%   47%     0,65      0,35
+
+Nota de nascença: a média das cinco aptidões de corpo e mente (reflexo, físico, inteligência, frieza e carisma; 50 é o
+piloto comum). As carreiras ficam em três grupos do mesmo tamanho pela nota. "Posição na estreia" é a posição média no
+campeonato da primeira temporada; "degrau mais alto", a média do degrau mais alto alcançado; "monopostos" e "topo", a
+parcela das carreiras que chegou ao 4º degrau e ao último; "títulos" e "sem vaga", por carreira. A segunda tabela separa
+quem nasceu na capital de quem nasceu no interior e quem nasceu com dois talentos de quem nasceu com dois defeitos.
+
+8. ECONOMIA E PORTAS
+
+Sem nenhuma porta: 13 temporadas, em 12 de 50 carreiras. Maior sequência numa carreira: 2 temporadas (o limite é 2).
+Investidor de último recurso: apareceu em 1 fechamento.
+Vagas por porta: 585 com dinheiro próprio, patrocínio e bolsa · 0 pela academia · 15 com a vaquinha · 87 com investidor · 13 de aluguel.
+Carreiras que terminam com investidor: 36 de 50 carreiras (fatia média de 22%; a maior, 40%).
+Carreiras que passaram por uma academia: 14 de 50 carreiras. Temporadas com trabalho paralelo: 401.
+Patrocinadores que romperam por meta não cumprida: 1,96 por carreira.
+
+Posição final no kart  Temporadas  Resultado do ano (mediana)
+---------------------  ----------  --------------------------
+1º a 5º                        95                   R$ 12.460
+6º a 10º                       93                    R$ 9.420
+11º a 15º                      47                    R$ 1.090
+16º a 20º                      26                   −R$ 4.720
+
+Resultado do ano por degrau    Temporadas  Do 1º ao 10º (mediana)  Do 11º em diante (mediana)
+-----------------------------  ----------  ----------------------  --------------------------
+Campeonato Regional de Kart           166                R$ 9.420                   −R$ 1.560
+Campeonato Brasileiro de Kart          95               R$ 13.955                  −R$ 19.240
+Campeonato Mundial de Kart             71               R$ 36.960                  −R$ 20.600
+Fórmula Júnior                        141               R$ 27.410                   −R$ 1.079
+Fórmula Sprint                         84              R$ 466 mil                 −R$ 239 mil
+Fórmula Elite                          80              R$ 539 mil                 −R$ 638 mil
+Grand Prix Mundial                    113              R$ 6,47 mi                   R$ 2,2 mi
+
+Entrada na Fórmula Júnior  Chegaram  Das carreiras  Temporada média  Patrocínio e bolsa  Academia  Vaquinha  Investidor
+-------------------------  --------  -------------  ---------------  ------------------  --------  --------  ----------
+Todas as carreiras               50           100%              7,5                  47         0         1           2
+Nascença alta                    16           100%              6,9                  16         0         0           0
+Nascença média                   18           100%              7,1                  17         0         0           1
+Nascença baixa                   16           100%              8,6                  14         0         1           1
+
+"Porta" é uma vaga, fora a de aluguel, que o piloto consegue aceitar de algum jeito: com o que tem (dinheiro, patrocínio
+e bolsa), pela academia, com a vaquinha da cidade ou com um investidor. Depois de duas temporadas seguidas sem nenhuma,
+o investidor de último recurso aparece (e traz uma vaga, se nenhuma equipe fez proposta). "Resultado do ano" é a soma
+de tudo o que entrou e saiu na temporada (vaga, viagens, equipamento, aluguel, treino, patrocínios, apoio da família,
+impostos e juros; aportes de investidor e vaquinha entram no ano seguinte ao da assinatura): terminar mal tem de custar
+dinheiro. A última tabela mostra como cada grupo pagou a primeira temporada na Fórmula Júnior.

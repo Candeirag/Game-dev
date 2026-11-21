@@ -34,6 +34,7 @@ import { LIFESTYLE_RULES } from '@/data/assets';
 import { partnerMoraleEffect } from '../dynasty/family';
 import { hasPersonalProperty, settleAssetsRound } from '../economy/assets';
 import { post, settleRound } from './economy';
+import { economyTrainingFactor } from './hubs';
 import { BIRTH } from '@/config/balance';
 import { birthTrainingFactor, interiorWeighs, sponsorSatisfactionBonus } from '../birth/effects';
 import { moveEventFor } from '../birth/move';
@@ -93,7 +94,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
 
   /* 1. Economia */
   const cashBefore = career.finance.cash;
-  career = { ...career, finance: settleRound(career, round, entry) };
+  career = { ...career, ...settleRound(career, round, entry) };
   // Patrimônio e família: cotações, aluguéis, parcelas de empréstimos e custos com os filhos.
   career = { ...career, finance: settleAssetsRound(career, round) };
   // Quem nasceu no interior e ainda não se mudou paga as viagens até os kartódromos.
@@ -232,7 +233,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   career = { ...career, sponsors: kept };
 
   /* 6. Evolução */
-  const multiplier = INTENSITY_GAIN[career.trainingIntensity] * (career.academy ? 1.1 : 1) * birthTrainingFactor(career);
+  const multiplier = INTENSITY_GAIN[career.trainingIntensity] * (career.academy ? 1.1 : 1) * birthTrainingFactor(career) * economyTrainingFactor(career);
   const developed = developAfterRound(career.drivers, career.seed, season, round, multiplier);
   career = { ...career, drivers: developed.drivers };
 

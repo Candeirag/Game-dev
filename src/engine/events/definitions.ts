@@ -10,10 +10,11 @@
  * - "guaranteed": acontece sempre que a condição vale.
  * - "random": entra no sorteio da etapa, com o peso indicado.
  */
+import { ACADEMY_DOOR, TEAM_CASH_CALL } from '@/config/balance';
 import type { Academy, CareerState, Driver, Effect, EventCategory, EventChoice, PendingEvent, RaceEntryResult, RoundRecord, Team } from '@/domain/schemas';
 import type { CategoryDefinition } from '@/data/categories';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
-import { buildSponsor, commercialSponsors, sponsorTierFor, SPONSOR_RULES } from '../career/sponsors';
+import { buildSponsor, careerTitles, commercialSponsors, maxSponsors, sponsorTierFor, SPONSOR_RULES } from '../career/sponsors';
 import { fullName, teamKey } from '../career/selectors';
 import { hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
@@ -558,25 +559,37 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
     build(ctx) {
       const seat = ctx.career.contract.seatCost;
       if (seat <= 0 || ctx.round < 2 || ctx.round >= ctx.career.calendar.length - 1) return null;
-      const extra = Math.round((seat * 0.12) / 100) * 100;
+      // O pedido é uma fração da vaga, limitada a uma parte do caixa do piloto: ninguém pede a quem não tem.
+      const wanted = seat * TEAM_CASH_CALL.SEAT_SHARE;
+      const affordable = Math.max(0, ctx.career.finance.cash) * TEAM_CASH_CALL.MAX_CASH_SHARE;
+      const extra = Math.floor(Math.min(wanted, affordable) / 100) * 100;
+      const canPay = extra >= TEAM_CASH_CALL.MIN_PAYMENT;
+      const pay = choice(
+        'pay',
+        `Pagar ${money(ctx.career, extra)}`,
+        'A equipe mantém o desenvolvimento e fica em dívida com você.',
+        // O pagamento nunca leva o saldo ao negativo: se o caixa encolher até a decisão, sai só o que houver.
+        sure(
+          'O aporte garante as atualizações previstas.',
+          { type: 'cash', value: -extra, ledger: 'event', label: 'Aporte extra à equipe', capToCash: true },
+          stat('teamTrust', 7),
+        ),
+      );
       return {
         title: 'A equipe pede um aporte extra',
-        body: `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe pede ${money(ctx.career, extra)} a mais para manter o programa de desenvolvimento até o fim do ano.`,
+        body: canPay
+          ? `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe pede ${money(ctx.career, extra)} a mais para manter o programa de desenvolvimento até o fim do ano${extra < Math.floor(wanted / 100) * 100 ? ' (ela sabe que o seu caixa não aguenta mais que isso)' : ''}.`
+          : `Um patrocinador da ${ctx.team.name} não honrou o contrato. A equipe precisa de dinheiro para manter o programa de desenvolvimento até o fim do ano, sabe que o seu caixa não tem de onde tirar e propõe diluir o valor no contrato.`,
         choices: [
-          choice(
-            'pay',
-            `Pagar ${money(ctx.career, extra)}`,
-            'A equipe mantém o desenvolvimento e fica em dívida com você.',
-            sure('O aporte garante as atualizações previstas.', cash(-extra, 'Aporte extra à equipe'), stat('teamTrust', 7)),
-          ),
+          ...(canPay ? [pay] : []),
           choice(
             'refuse',
             'Recusar',
             'Sem custo agora, mas a equipe pode cortar o desenvolvimento.',
             odds(
-              [0.6, 'A equipe aperta o cinto e segue como dá.', [stat('teamTrust', -8)]],
+              [1 - TEAM_CASH_CALL.REFUSE_CUT_CHANCE, 'A equipe aperta o cinto e segue como dá.', [stat('teamTrust', -8)]],
               [
-                0.4,
+                TEAM_CASH_CALL.REFUSE_CUT_CHANCE,
                 `Sem dinheiro, a equipe cancela as atualizações: o ${ctx.category.machine} perde rendimento.`,
                 [stat('teamTrust', -8), { type: 'carUpgrade', value: -1.5 }],
               ],
@@ -585,8 +598,12 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
           choice(
             'split',
             'Propor parcelar no contrato',
-            'O custo anual da vaga sobe 8%.',
-            sure('A equipe aceita diluir o valor nas próximas parcelas.', { type: 'seatCost', value: seat * 0.08 }, stat('teamTrust', 1)),
+            `O custo anual da vaga sobe ${Math.round(TEAM_CASH_CALL.SPLIT_SEAT_SHARE * 100)}%.`,
+            sure(
+              'A equipe aceita diluir o valor nas próximas parcelas.',
+              { type: 'seatCost', value: seat * TEAM_CASH_CALL.SPLIT_SEAT_SHARE },
+              stat('teamTrust', 1),
+            ),
           ),
         ],
       };
@@ -721,17 +738,21 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       const current = commercialSponsors(ctx.career.sponsors);
       // Antes da segunda etapa ainda não há tabela: vale a posição da temporada anterior (ou o meio do grid).
       const lastSeason = ctx.career.history[ctx.career.history.length - 1]?.playerPosition ?? 12;
-      const tier = sponsorTierFor(ctx.career.reputation, ctx.category, ctx.career.rounds.length >= 2 ? ctx.position : lastSeason);
-      // Com as três cotas ocupadas, só interessa um patrocinador maior que o menor atual, que seria substituído.
+      const position = ctx.career.rounds.length >= 2 ? ctx.position : lastSeason;
+      const tier = sponsorTierFor(ctx.career.reputation, ctx.category, position, careerTitles(ctx.career));
+      // Ninguém assina com um piloto que já está fora da meta que o contrato vai cobrar.
+      if (position > (SPONSOR_RULES.TIER_TARGET[tier] ?? 0)) return null;
+      // Com as cotas ocupadas (três; uma só para quem é de academia), só interessa um patrocinador maior que o menor atual, que seria substituído.
+      const slots = maxSponsors(ctx.career);
       const weakest = [...current].sort((a, b) => a.tier - b.tier || a.perSeason - b.perSeason)[0];
-      const replaces = current.length >= SPONSOR_RULES.MAX_SPONSORS ? weakest : undefined;
-      if (current.length >= SPONSOR_RULES.MAX_SPONSORS && (!weakest || weakest.tier >= tier)) return null;
+      const replaces = current.length >= slots ? weakest : undefined;
+      if (current.length >= slots && (!weakest || weakest.tier >= tier)) return null;
       const sponsor = buildSponsor(ctx.career, tier, hashSeed(ctx.seed, 'sponsor'));
       const better = { ...sponsor, perSeason: Math.round((sponsor.perSeason * 1.2) / 100) * 100, targetPosition: Math.max(1, sponsor.targetPosition - 1) };
       const swap: Effect[] = replaces ? [{ type: 'removeSponsor', sponsorId: replaces.id }] : [];
       return {
         title: `Proposta de patrocínio: ${sponsor.name}`,
-        body: `${sponsor.name} oferece ${money(ctx.career, sponsor.perSeason)} por temporada, mais ${money(ctx.career, sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.${replaces ? ` As suas três cotas estão ocupadas: para assinar, você precisa encerrar o contrato com ${replaces.name} (${money(ctx.career, replaces.perSeason)} por temporada).` : ''}`,
+        body: `${sponsor.name} oferece ${money(ctx.career, sponsor.perSeason)} por temporada, mais ${money(ctx.career, sponsor.podiumBonus)} por pódio, até o fim de ${ctx.career.year + (sponsor.endSeason - ctx.career.season)}. Em troca, espera ver você entre os ${sponsor.targetPosition} primeiros do campeonato.${replaces ? ` As suas cotas estão ocupadas: para assinar, você precisa encerrar o contrato com ${replaces.name} (${money(ctx.career, replaces.perSeason)} por temporada).` : ''}`,
         choices: [
           choice(
             'sign',
@@ -856,8 +877,8 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
         f1TeamId: f1TeamId(index),
         name: `Academia ${f1Name}`,
         joinedSeason: ctx.career.season,
-        supportShare: 0.7,
-        targetPosition: 6,
+        supportShare: ACADEMY_DOOR.SUPPORT_SHARE,
+        targetPosition: ACADEMY_DOOR.TARGET_POSITION,
         strikes: 0,
       };
       const success = Math.min(
@@ -866,7 +887,7 @@ export const EVENT_DEFINITIONS: readonly EventDefinition[] = [
       );
       return {
         title: `Convite da ${academy.name}`,
-        body: `Olheiros da ${f1Name}, ${categoryRef(TOP_CATEGORY_ID, 'de')}, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem 70% do custo da vaga pago e a atenção das equipes ligadas a ela; em troca, precisa terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
+        body: `Olheiros da ${f1Name}, ${categoryRef(TOP_CATEGORY_ID, 'de')}, acompanham a sua temporada e convidam você para um dia de avaliação. Quem entra na academia tem a vaga paga e a atenção das equipes ligadas a ela; em troca, ela cobra exclusividade (um patrocinador pessoal só, sem investidor e sem vaquinha) e resultado: terminar cada temporada entre os ${academy.targetPosition} primeiros.`,
         choices: [
           choice(
             'accept',

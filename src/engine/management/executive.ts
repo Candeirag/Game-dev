@@ -164,6 +164,11 @@ export function convertToExecutive(career: CareerState): CareerState {
     offseason: null,
     academy: null,
     sponsors: [],
+    // Quem deixa as pistas deixa também de dever ganhos de piloto ao investidor.
+    investor: null,
+    crowdfund: null,
+    sideJob: 'none',
+    noDoorSeasons: 0,
     marketInterest: {},
     pendingEvents: state.pendingEvents.filter((e) => e.category === 'family'),
     license: { ...state.license, banRounds: 0 },

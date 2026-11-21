@@ -9,6 +9,7 @@ import type { CareerState, Effect } from '@/domain/schemas';
 import { DEV_AREAS } from '@/domain/schemas';
 import { FAMILY } from '@/data/family';
 import { netWorth, post } from '../career/economy';
+import { enterAcademy } from '../career/paths';
 import { getPlayer } from '../career/selectors';
 import { relocate } from '../birth/move';
 import { setKartFunding, startChildCareer } from '../dynasty/family';
@@ -30,8 +31,11 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
         return { ...career, relations: { ...career.relations, teammate: clamp(career.relations.teammate + effect.value) } };
       return updatePlayer({ condition: { ...player.condition, [effect.stat]: clamp(player.condition[effect.stat] + effect.value) } });
     }
-    case 'cash':
-      return { ...career, finance: post(career.finance, career.season, round, effect.ledger, effect.value, effect.label) };
+    case 'cash': {
+      // Um pagamento limitado ao caixa sai, no máximo, pelo que há na conta na hora: nunca deixa o saldo negativo.
+      const value = effect.capToCash && effect.value < 0 ? -Math.min(-effect.value, Math.max(0, Math.floor(career.finance.cash))) : effect.value;
+      return { ...career, finance: post(career.finance, career.season, round, effect.ledger, value, effect.label) };
+    }
     case 'rivalry': {
       const value = Math.min(100, Math.max(0, (career.relations.rivalries[effect.driverId] ?? 0) + effect.value));
       const rivalries = { ...career.relations.rivalries };
@@ -61,7 +65,8 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
     case 'interest':
       return { ...career, marketInterest: { ...career.marketInterest, [effect.teamKey]: clamp((career.marketInterest[effect.teamKey] ?? 0) + effect.value) } };
     case 'joinAcademy':
-      return { ...career, academy: effect.academy };
+      // A academia cobra exclusividade: um patrocinador pessoal só (os outros saem na hora).
+      return enterAcademy(career, effect.academy);
     case 'leaveAcademy':
       return { ...career, academy: null };
     case 'attribute':

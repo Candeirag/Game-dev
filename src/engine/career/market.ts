@@ -2,9 +2,11 @@
  * Mercado: interesse das equipes no jogador e movimentação dos pilotos da IA
  * entre as temporadas.
  */
+import { HUB_RULES } from '@/config/balance';
 import type { CareerState, CategoryId, Driver, Team } from '@/domain/schemas';
 import { compareText } from '@/domain/text';
 import { categoryByTier, getCategory, type CategoryDefinition } from '@/data/categories';
+import { CATEGORY_HUB, getHub } from '@/data/hubs';
 import { initialTeams } from '@/data/teams';
 import { computeDriverStandings } from '../championship/standings';
 import { hashSeed } from '../rng';
@@ -66,6 +68,8 @@ export function targetInterest(career: CareerState, category: CategoryDefinition
   const youth = clamp((category.field.maxAge - player.age) / Math.max(1, category.field.maxAge - category.field.minAge), 0, 1);
   let value = 100 * (0.45 * performance + 0.3 * fit + 0.15 * (reputation / 100) + 0.1 * youth);
   if (career.academy && team.affiliation === career.academy.f1TeamId) value += MARKET.ACADEMY_BONUS;
+  // Quem mora num polo de fora aparece para as equipes dos campeonatos dali.
+  if (getHub(career.hub.id).foreign && CATEGORY_HUB[category.id] === career.hub.id) value += HUB_RULES.VISIBILITY_INTEREST;
   if (category.id === career.categoryId && team.id === player.teamId) value = 0.6 * value + 0.4 * career.relations.teamTrust;
   return clamp(value);
 }
