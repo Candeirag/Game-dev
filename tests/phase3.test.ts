@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CAREER_SCHEMA_VERSION, CareerStateSchema, type CareerState, type Child } from '@/domain/schemas';
+import { CAREER_SCHEMA_VERSION, CareerStateSchema, type CareerState, type Child, type RoundRecord } from '@/domain/schemas';
 import { ASSET_RULES, STOCKS } from '@/data/assets';
 import { FAMILY } from '@/data/family';
 import { MANAGEMENT, REGULATIONS, TEAM_ECONOMY } from '@/data/management';
@@ -963,6 +963,8 @@ describe('compatibilidade com saves da Fase 2', () => {
   const load = (name: string) => importCareer(readFileSync(`tests/fixtures/v2/${name}.json`, 'utf8'));
   const raw = (name: string) => JSON.parse(readFileSync(`tests/fixtures/v2/${name}.json`, 'utf8')) as { career: CareerState };
   const names = ['kart-mid-weekend', 'kart-pending-events', 'offseason', 'formula-mid-season'];
+  /** A etapa sem a lista de lances da corrida, para comparar com o que o save antigo trazia. */
+  const withoutMoments = ({ race: { moments: _moments, ...race }, ...round }: RoundRecord) => ({ ...round, race });
 
   it('os arquivos são mesmo da versão 2', () => {
     for (const name of names) expect(raw(name).career.schemaVersion).toBe(2);
@@ -974,14 +976,17 @@ describe('compatibilidade com saves da Fase 2', () => {
       const c = load(name);
       expect(c.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
       expectValid(c);
-      // Tudo o que o save tinha continua igual.
+      // Tudo o que o save tinha continua igual. As corridas guardadas só ganham a lista de lances
+      // decisivos (save v8, Fase 4), vazia: elas foram disputadas antes de os lances existirem.
       expect(c.drivers).toEqual(before.drivers);
       expect(c.teams).toEqual(before.teams);
-      expect(c.rounds).toEqual(before.rounds);
+      expect(c.rounds.every((r) => r.race.moments.length === 0)).toBe(true);
+      expect(c.rounds.map(withoutMoments)).toEqual(before.rounds);
       expect(c.contract).toEqual(before.contract);
       expect(c.finance.cash).toBe(before.finance.cash);
       expect(c.finance.transactions).toEqual(before.finance.transactions);
-      expect(c.history.map(({ mode: _mode, ...rest }) => rest)).toEqual(before.history);
+      expect(c.history.every((season) => season.rounds.every((r) => r.race.moments.length === 0))).toBe(true);
+      expect(c.history.map(({ mode: _mode, rounds, ...rest }) => ({ ...rest, rounds: rounds.map(withoutMoments) }))).toEqual(before.history);
       expect(c.offseason).toEqual(before.offseason);
       // Sistemas novos no estado inicial.
       expect(c).toMatchObject({ mode: 'driver', management: null, succession: null, executiveOffseason: null, family: { partner: null, children: [] } });

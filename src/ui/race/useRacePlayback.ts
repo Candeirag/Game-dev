@@ -6,6 +6,11 @@
  * (pela loja) e em que ritmo mostrar o que ele já calculou. As decisões do
  * jogador (ritmo, parada, ordem de equipe) continuam valendo para a próxima
  * volta que o motor simular, como no modo de cronometragem.
+ *
+ * Lance decisivo (Fase 4): enquanto o motor espera a resposta do jogador a um
+ * lance, o relógio para no ponto mais recente já simulado, sem tempo limite. A
+ * volta seguinte só é pedida depois da resposta, que vai pela loja
+ * (`answerMoment`); aqui o gancho só espera.
  */
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { lapInfoAt, type RaceTimeline } from '@/engine';
@@ -49,7 +54,11 @@ export function raceScreenSeconds(circuitLength: number, totalLaps: number, spee
   return lights + (totalLaps * (1 + TAIL / totalLaps) * lapSecondsFor(circuitLength, totalLaps)) / speed;
 }
 
-export type PlaybackPhase = 'grid' | 'lights' | 'racing' | 'paused' | 'order' | 'suspended' | 'finished';
+/** Tempo que uma mensagem de rádio do engenheiro fica na faixa, em segundos reais. */
+export const RADIO_SECONDS = 5;
+
+/** `order` e `moment`: a imagem chegou ao ponto em que o motor espera uma resposta do jogador. */
+export type PlaybackPhase = 'grid' | 'lights' | 'racing' | 'paused' | 'order' | 'moment' | 'suspended' | 'finished';
 
 export interface RacePlayback {
   /** Tempo de corrida, atualizado a cada quadro (o canvas lê daqui). */
@@ -64,6 +73,11 @@ export interface RacePlayback {
   /** A imagem está atrás do ponto mais recente já simulado (revendo a corrida). */
   behindLive: boolean;
   toggle(): void;
+  /**
+   * Põe a corrida para andar, se estiver parada: é o que acontece quando o jogador responde a um
+   * lance (na largada, as luzes acendem). Não faz nada se ela já está andando.
+   */
+  start(): void;
   setSpeed(speed: number): void;
   /** Volta a mostrar a corrida desde a largada, sem simular nada de novo. */
   restart(): void;
@@ -104,7 +118,7 @@ export function useRacePlayback(): RacePlayback {
   const [playing, setPlayingState] = useState(false);
   const [speed, setSpeedState] = useState(() => speedRef.current);
   const [lights, setLights] = useState<number | null>(null);
-  const [waitingOrder, setWaitingOrder] = useState(false);
+  const [waiting, setWaiting] = useState<'order' | 'moment' | null>(null);
   const timeline = useGameStore((s) => s.raceTimeline);
 
   const setPlaying = useCallback((value: boolean) => {
@@ -146,7 +160,7 @@ export function useRacePlayback(): RacePlayback {
       }
 
       let target = timeRef.current + dt * (tl.referenceLap / lapSecondsFor(tl.circuitLength, tl.totalLaps)) * speedRef.current;
-      let waiting = false;
+      let waitingFor: 'order' | 'moment' | null = null;
 
       // Bandeira vermelha: a imagem para no instante da bandeira e espera o jogador relargar.
       const suspension = openSuspension(tl);
@@ -159,10 +173,10 @@ export function useRacePlayback(): RacePlayback {
 
       while (target > tl.horizon && !tl.finished) {
         const race = useGameStore.getState().liveRace;
-        if (!race || race.pendingTeamOrder) {
-          // O motor só simula a próxima volta depois da resposta à ordem de equipe.
+        if (!race || race.pendingTeamOrder || race.pendingMoment) {
+          // O motor só simula a próxima volta depois da resposta à ordem de equipe ou ao lance decisivo.
           target = tl.horizon;
-          waiting = race?.pendingTeamOrder != null;
+          waitingFor = race?.pendingTeamOrder ? 'order' : race?.pendingMoment ? 'moment' : null;
           break;
         }
         useGameStore.getState().stepRace();
@@ -181,7 +195,7 @@ export function useRacePlayback(): RacePlayback {
           break;
         }
       }
-      setWaitingOrder(waiting);
+      setWaiting(waitingFor);
 
       if (tl.finished && target >= endOfBroadcast(tl)) {
         target = endOfBroadcast(tl);
@@ -210,13 +224,21 @@ export function useRacePlayback(): RacePlayback {
   }, []);
 
   const toggle = useCallback(() => {
-    const tl = useGameStore.getState().raceTimeline;
+    const { raceTimeline: tl, liveRace } = useGameStore.getState();
     if (!tl) return;
+    // Com um lance à espera de resposta, a corrida só anda pela resposta (ver `start`).
+    if (!playingRef.current && !tl.finished && liveRace?.pendingMoment && timeRef.current >= tl.horizon - 1e-6) return;
     // Depois do fim, "play" revê a corrida desde a largada.
     if (!playingRef.current && tl.finished && timeRef.current >= endOfBroadcast(tl) - 1e-6) jump(0);
     if (!playingRef.current) armLights();
     setPlaying(!playingRef.current);
   }, [armLights, jump, setPlaying]);
+
+  const start = useCallback(() => {
+    if (playingRef.current) return;
+    armLights();
+    setPlaying(true);
+  }, [armLights, setPlaying]);
 
   const setSpeed = useCallback((value: number) => {
     speedRef.current = value;
@@ -268,7 +290,7 @@ export function useRacePlayback(): RacePlayback {
     setLights(null);
     const now = timeRef.current;
     if (now >= tl.horizon - 1e-6 && !tl.finished) {
-      if (store.liveRace?.pendingTeamOrder) return;
+      if (store.liveRace?.pendingTeamOrder || store.liveRace?.pendingMoment) return;
       store.stepRace();
       tl = useGameStore.getState().raceTimeline ?? tl;
     }
@@ -296,8 +318,8 @@ export function useRacePlayback(): RacePlayback {
         ? 'lights'
         : suspension && time >= suspension.time - 1e-6
           ? 'suspended'
-          : waitingOrder && playing
-            ? 'order'
+          : waiting !== null && playing
+            ? waiting
             : playing
               ? 'racing'
               : time === 0
@@ -313,6 +335,7 @@ export function useRacePlayback(): RacePlayback {
     lights,
     behindLive: timeline ? time < (timeline.finished ? endOfBroadcast(timeline) : timeline.horizon) - timeline.referenceLap * 1.5 : false,
     toggle,
+    start,
     setSpeed,
     restart,
     goLive,

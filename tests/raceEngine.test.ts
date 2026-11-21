@@ -210,9 +210,12 @@ describe('corrida de F1', () => {
   });
 
   it('atrás do safety car ninguém ultrapassa na pista e o pelotão se reagrupa', () => {
-    const start = runUntil(f1.start(1), f1, (s) => s.neutralization.type === 'sc');
+    // Semente em que o safety car entra com a corrida já espalhada (volta 9). Entrando nas primeiras
+    // voltas, o pelotão ainda está mais junto do que a fila atrás do safety car e não há o que reagrupar.
+    const start = runUntil(f1.start(4), f1, (s) => s.neutralization.type === 'sc');
     expect(start.neutralization.type).toBe('sc');
     const spreadBefore = start.cars.filter((c) => c.status === 'running').slice(-1)[0]!.totalTime - start.cars[0]!.totalTime;
+    expect(spreadBefore).toBeGreaterThan(30);
     let s = start;
     let scLaps = 0;
     while (s.neutralization.type === 'sc' && !isRaceFinished(s)) {
@@ -245,7 +248,7 @@ describe('corrida de F1', () => {
   });
 
   it('bandeira vermelha: reagrupa, repara e relarga parado; no fim da prova, encerra', () => {
-    const restarted = runUntil(f1.start(2), f1, (s) => s.restart === 'standing');
+    const restarted = runUntil(f1.start(1), f1, (s) => s.restart === 'standing');
     expect(restarted.restart).toBe('standing');
     expect(restarted.redFlags).toBe(1);
     const running = restarted.cars.filter((c) => c.status === 'running');
@@ -254,7 +257,7 @@ describe('corrida de F1', () => {
     const after = stepRaceLap(restarted, f1.ctx, AUTO);
     expect(after.events.some((e) => e.type === 'restart' && e.lap === after.currentLap)).toBe(true);
 
-    const ended = simulateRemainingRace(f1.start(281), f1.ctx, AUTO);
+    const ended = simulateRemainingRace(f1.start(251), f1.ctx, AUTO);
     expect(ended.endedEarly).toBe(true);
     expect(ended.currentLap).toBeLessThan(ended.totalLaps);
     expect(ended.currentLap / ended.totalLaps).toBeGreaterThanOrEqual(RACE.RED_FLAG_END_PROGRESS);
@@ -262,8 +265,10 @@ describe('corrida de F1', () => {
   });
 
   it('ordem de equipe: obedecer troca as posições; ignorar fica registrado', () => {
-    const pending = runUntil(f1.start(2), f1, (s) => s.pendingTeamOrder !== null);
+    const pending = runUntil(f1.start(3), f1, (s) => s.pendingTeamOrder !== null);
     expect(pending.pendingTeamOrder).not.toBeNull();
+    // Uma pergunta por volta: com a ordem de equipe pendente, não há lance decisivo à espera.
+    expect(pending.pendingMoment).toBeNull();
     const favoured = pending.pendingTeamOrder!.favouredDriverId;
     const index = (s: RaceSimState, id: string) => s.cars.findIndex((c) => c.driverId === id);
     expect(index(pending, f1.playerId)).toBe(index(pending, favoured) - 1);
