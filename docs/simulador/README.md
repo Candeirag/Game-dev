@@ -16,6 +16,9 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
 | `fase-3.txt` | `npm run sim -- --seeds 50 --seasons 15`, com a economia nova (seção 8 nova: portas, temporadas sem porta, resultado do ano por posição e por degrau, entrada na Fórmula Júnior) |
 | `fase-3-talento-4.txt` | o mesmo, com `--talent 4` |
 | `fase-3-talento-8.txt` | o mesmo, com `--talent 8` |
+| `fase-4.txt` | `npm run sim -- --seeds 50 --seasons 15`, com a curva de pneus nova e os lances decisivos (seção 9 nova: lances por corrida, cada opção de cada lance, três faixas pela vantagem do piloto sobre o grid, rivalidades novas) |
+| `fase-4-talento-4.txt` | o mesmo, com `--talent 4` |
+| `fase-4-talento-8.txt` | o mesmo, com `--talent 8` |
 
 ## Como usar numa fase
 
@@ -58,3 +61,24 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
   cobre o ano; ele também passou a preferir a vaga que não o deixa devendo.
 - A seção 7 (Fase 2) separa as carreiras pela nota de nascença, a média das cinco aptidões, em três
   grupos do mesmo tamanho. É ali que se confere que nascer melhor rende carreira melhor.
+- A Fase 4 muda todas as corridas, e com elas todas as seções: a curva de pneus nova (o pneu perde
+  pouco no começo, estabiliza e cai do penhasco no fim da vida) vale para todos os carros, do kart
+  ao topo, e os lances decisivos mexem no resultado do piloto do jogador. Não espere o relatório da
+  Fase 4 igual ao da Fase 3 em nenhuma tabela.
+- A seção 9 (Fase 4) mede os lances decisivos. Só o piloto do jogador tem lances; os rivais
+  continuam disputando posição pela regra de sempre. O robô padrão não responde a nenhum: quem
+  escolhe é o estilo do piloto, como em "simular até o fim" (com `--moments safe` ou `--moments
+  bold` ele responde a todos com a opção mais segura ou com a mais arriscada, para comparar; a
+  linha "Política:" avisa). O que conferir:
+  - cada corrida completa (o piloto termina e a prova não é encerrada por bandeira vermelha) tem de
+    2 a 4 lances, e a primeira linha diz quantas ficaram fora da faixa;
+  - na tabela das opções, "deu certo" e "chance mostrada" têm de andar juntas: a chance que a tela
+    exibe é a que resolve o lance;
+  - na tabela das três faixas, as corridas são separadas em grupos do mesmo tamanho pela vantagem
+    do piloto sobre o grid na hora da corrida (a nota geral dele menos o nível médio dos pilotos da
+    categoria; a nota sozinha se confunde com a categoria, porque quem melhora sobe de degrau). É
+    ali que se confere o critério da fase, "pilotos melhores vencem mais lances": da faixa baixa
+    para a alta, a chance mostrada na opção arriscada e os lances arriscados vencidos por corrida
+    têm de crescer. "Saldo" é lances vencidos menos perdidos por corrida; o registro do lance não
+    diz quantas posições ele valeu, e o relatório não estima;
+  - "rivalidade nova" é o toque num lance com um piloto que ainda não era rival.
