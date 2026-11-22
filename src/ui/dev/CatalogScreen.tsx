@@ -583,8 +583,8 @@ export default function CatalogScreen() {
           </div>
           <p className="text-xs text-ink-400">
             A pergunta que para a corrida, sem tempo limite: rótulo, pergunta, opções, o detalhe da opção escolhida e as ações (a principal embaixo, à direita).
-            Cada opção mostra a chance em número e em barra e o risco em palavra, com ícone: seguro é verde, moderado é neutro e arriscado é âmbar. Tocar
-            seleciona; "Confirmar" envia. O selo marca a opção que o piloto escolheria.
+            Cada opção mostra a chance em número e em barra e, embaixo, o tamanho do prejuízo se der errado, com ícone: perder pouco é verde, perder posição é
+            neutro e poder abandonar é âmbar. Tocar seleciona; "Confirmar" envia. O selo marca a opção que o piloto escolheria.
           </p>
         </Section>
       </div>

@@ -232,6 +232,8 @@ O lance aparece na tarja inferior, como na TV, com a pergunta, as opções, a ch
 | **Parada**          | a até 2 voltas da parada planejada (só nas categorias com boxes, no seco) | Parar agora (undercut)   | moderado  | parada limpa e 2 voltas de saída 0,25% mais rápidas            | a parada sai 2,5 s mais lenta                                       |
 |                     |                                                                           | Esticar (overcut)        | moderado  | 3 voltas a mais com 25% menos desgaste e pista livre           | 3 voltas 0,5% mais lentas até a parada                              |
 
+Na tela, a coluna "Risco" aparece como o tamanho do prejuízo, logo abaixo da chance: "Se errar: perde pouco" (seguro), "Se errar: perde posição" (moderado) ou "Se errar: pode abandonar" (arriscado). A opção que não tem como dar errado mostra "Sem risco".
+
 Na parada o jogador também escolhe o composto (respeitando a regra dos dois compostos).
 
 - **A chance** é `sigmoide(base da opção + termos)`, limitada a 5%–97%, e é a mesma conta que resolve o lance. Entram: os atributos do piloto em relação ao nível do grid da categoria (e, nas disputas, os do rival), a vantagem de ritmo em pista livre (pneus, composto, dano, combustível), a dificuldade de ultrapassar e a sensibilidade a motor da pista, a diferença de motor, a equipe de box, a confiança, a umidade da pista com a nota de chuva de cada um, e os talentos e defeitos de nascença. "Esperar o erro" depende só do rival: consistência, concentração, pneus dele no limite e chuva. A tela mostra os fatores que mais pesam, em pontos percentuais.

@@ -6,13 +6,14 @@
  * - `DecisionBar` é a moldura. Quem a usa decide onde ela fica (presa ao pé da tela, na corrida) e
  *   o que entra em cada parte. É um diálogo que não trava o resto da tela: a pista continua à
  *   vista atrás e acima dela.
- * - `ChanceOption` é o botão de cada opção: o nome, a chance de dar certo em número e em barra e
- *   o risco em palavra, com ícone. A cor acompanha, nunca vai sozinha, e não existe vermelho para
- *   "ruim": seguro é verde, moderado é neutro e arriscado é âmbar.
+ * - `ChanceOption` é o botão de cada opção: o nome, a chance de dar certo em número e em barra e,
+ *   na linha de baixo, o tamanho do prejuízo se der errado ("Se errar: perde pouco", "perde
+ *   posição", "pode abandonar"), com ícone. A cor acompanha, nunca vai sozinha, e não existe
+ *   vermelho para "ruim": perder pouco é verde, perder posição é neutro e poder abandonar é âmbar.
  */
-import { Check, Scale, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { ArrowDown, Check, ShieldCheck, TriangleAlert } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
-import { MOMENT_RISK_LABELS } from '@/domain/labels';
+import { MOMENT_LOSS_LABELS, MOMENT_NO_LOSS_LABEL } from '@/domain/labels';
 import { cx, type Tone } from './cx';
 import { ProgressBar } from './ProgressBar';
 
@@ -93,7 +94,7 @@ export function DecisionBar({
 
 const RISK_TONE: Record<0 | 1 | 2, Tone> = { 0: 'good', 1: 'neutral', 2: 'attention' };
 const RISK_TEXT: Record<0 | 1 | 2, string> = { 0: 'text-go-400', 1: 'text-ink-200', 2: 'text-gold-400' };
-const RISK_ICON = { 0: ShieldCheck, 1: Scale, 2: TriangleAlert } as const;
+const RISK_ICON = { 0: ShieldCheck, 1: ArrowDown, 2: TriangleAlert } as const;
 
 export function ChanceOption({
   label,
@@ -110,7 +111,7 @@ export function ChanceOption({
   label: string;
   /** Chance de dar certo, de 0 a 1. */
   chance: number;
-  /** 0 = seguro, 1 = moderado, 2 = arriscado. */
+  /** O prejuízo se der errado: 0 = perde pouco, 1 = perde posição, 2 = pode abandonar. */
   risk: 0 | 1 | 2;
   selected: boolean;
   onSelect: () => void;
@@ -125,13 +126,15 @@ export function ChanceOption({
 }) {
   const percent = Math.round(chance * 100);
   const Icon = RISK_ICON[risk];
+  // Chance de 100% é a opção que não tem como dar errado: não há "se errar" a mostrar.
+  const loss = chance >= 1 ? MOMENT_NO_LOSS_LABEL : `Se errar: ${MOMENT_LOSS_LABELS[risk]}`;
   return (
     <div className={cx('relative flex min-w-0', className)}>
       <button
         type="button"
         role="radio"
         aria-checked={selected}
-        aria-label={`${label}: ${percent}% de chance de dar certo, ${MOMENT_RISK_LABELS[risk].toLowerCase()}${badgeLabel ? `, ${badgeLabel}` : ''}`}
+        aria-label={`${label}: ${percent}% de chance de dar certo; ${loss.toLowerCase()}${badgeLabel ? `, ${badgeLabel}` : ''}`}
         onClick={onSelect}
         disabled={disabled}
         className={cx(
@@ -154,10 +157,11 @@ export function ChanceOption({
         <span className="flex w-full items-center gap-2">
           <span className="shrink-0 font-display text-xl font-bold leading-none">{percent}%</span>
           <ProgressBar value={percent} tone={RISK_TONE[risk]} className="min-w-4 flex-1" />
-          <span className={cx('flex shrink-0 items-center gap-1 text-2xs font-semibold leading-none', RISK_TEXT[risk])}>
-            <Icon size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />
-            {MOMENT_RISK_LABELS[risk]}
-          </span>
+        </span>
+        {/* O prejuízo fica numa linha só dele, por extenso: ao lado do número ele parecia a nota da chance. */}
+        <span className={cx('flex w-full items-center gap-1 text-2xs font-semibold leading-tight', RISK_TEXT[risk])}>
+          <Icon size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />
+          <span className="min-w-0">{loss}</span>
         </span>
       </button>
       {seal && (

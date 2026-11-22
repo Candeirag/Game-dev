@@ -93,8 +93,8 @@ for (const formato of TELAS) {
       await expect(largada.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
       await expect(largada.getByRole('button', { name: 'Deixar com o piloto' })).toBeEnabled();
       await conferirTela(page, 'corrida-lance-largada', formato.nome);
-      // Uma opção marcada: a chance e o risco estão no nome dela; a tarja diz o que se ganha, o que se perde e o que pesa.
-      expect(await escolherOpcao(page, 'segura')).toMatch(/^.+: \d+% de chance de dar certo, seguro/);
+      // Uma opção marcada: a chance e o prejuízo se errar estão no nome dela; a tarja diz o que se ganha, o que se perde e o que pesa.
+      expect(await escolherOpcao(page, 'segura')).toMatch(/^.+: \d+% de chance de dar certo; (se errar: perde pouco|sem risco)/);
       await expect(largada).toContainText('Se der certo:');
       await expect(largada).toContainText('Se der errado:');
       await expect(largada).toContainText('Pesa na chance, em pontos:');

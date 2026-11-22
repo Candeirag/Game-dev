@@ -123,15 +123,15 @@ export function opcoesDoLance(page: Page): Locator {
 /**
  * Como responder a um lance:
  * - 'piloto': o botão "Deixar com o piloto" (o piloto decide pelo estilo dele);
- * - 'segura': a primeira opção de menor risco (segura; sem ela, moderada), e "Confirmar";
- * - 'ousada': a primeira de maior risco, e "Confirmar";
+ * - 'segura': a primeira opção de menor prejuízo se der errado ("sem risco" ou "perde pouco"; sem elas, "perde posição"), e "Confirmar";
+ * - 'ousada': a primeira de maior prejuízo ("pode abandonar"), e "Confirmar";
  * - uma expressão: a opção cujo nome acessível casa com ela ("Mergulhar na freada: 77% de chance..."), e "Confirmar".
  */
 export type RespostaAoLance = 'piloto' | 'segura' | 'ousada' | RegExp;
 
-const RISCOS = ['seguro', 'moderado', 'arriscado'] as const;
+const RISCOS = ['sem risco', 'se errar: perde pouco', 'se errar: perde posição', 'se errar: pode abandonar'] as const;
 
-/** Marca uma opção do lance aberto, sem confirmar, e devolve o nome acessível dela (rótulo, chance e risco). */
+/** Marca uma opção do lance aberto, sem confirmar, e devolve o nome acessível dela (rótulo, chance e prejuízo se errar). */
 export async function escolherOpcao(page: Page, resposta: Exclude<RespostaAoLance, 'piloto'>): Promise<string> {
   const opcoes = opcoesDoLance(page);
   await opcoes.first().waitFor();
@@ -139,9 +139,9 @@ export async function escolherOpcao(page: Page, resposta: Exclude<RespostaAoLanc
   let indice = -1;
   if (resposta instanceof RegExp) indice = nomes.findIndex((nome) => resposta.test(nome));
   else {
-    // O risco vem por extenso no nome da opção, depois da chance: "..., seguro" ou "..., seguro, escolha do piloto".
+    // O prejuízo vem por extenso no nome da opção, depois da chance: "...; se errar: perde pouco" ou "...; se errar: perde pouco, escolha do piloto".
     for (const risco of resposta === 'segura' ? RISCOS : [...RISCOS].reverse()) {
-      indice = nomes.findIndex((nome) => new RegExp(`, ${risco}(,|$)`).test(nome));
+      indice = nomes.findIndex((nome) => new RegExp(`; ${risco}(,|$)`).test(nome));
       if (indice >= 0) break;
     }
   }

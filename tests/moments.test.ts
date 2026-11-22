@@ -13,7 +13,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import { APTITUDE_EFFECTS, HISTORY_LIMITS, RACE_MOMENTS, TRAIT_EFFECTS } from '@/config/balance';
-import { DRIVING_STYLE_DESCRIPTIONS, DRIVING_STYLE_LABELS, MOMENT_FACTOR_LABELS, MOMENT_KIND_LABELS, MOMENT_RISK_LABELS } from '@/domain/labels';
+import {
+  DRIVING_STYLE_DESCRIPTIONS,
+  DRIVING_STYLE_LABELS,
+  MOMENT_FACTOR_LABELS,
+  MOMENT_KIND_LABELS,
+  MOMENT_LOSS_LABELS,
+  MOMENT_NO_LOSS_LABEL,
+  MOMENT_RISK_LABELS,
+} from '@/domain/labels';
 import {
   MOMENT_KINDS,
   MOMENT_OUTCOMES,
@@ -703,6 +711,23 @@ describe('as chances saem dos atributos, do carro, da pista e do clima', () => {
     // Depois de cumprir a regra, qualquer composto de pista seca serve.
     const done: RaceSimState = { ...state, cars: state.cars.map((c) => (c.driverId === f1.playerId ? { ...c, compoundsUsed: ['hard', 'soft'] } : c)) };
     expect(upcomingMoment(done, f1.ctx)?.compounds).toEqual([...f1.ctx.category.race.dryCompounds]);
+  });
+
+  it('o rótulo "Se errar" de cada opção diz a verdade: só a opção que pode abandonar tem batida, toque ou rodada', () => {
+    const rules: Record<string, Record<string, { risk: 0 | 1 | 2; crash?: number; spin?: number; contact?: number; sure?: boolean }>> = M.OPTIONS;
+    expect(Object.values(MOMENT_LOSS_LABELS)).toEqual(['perde pouco', 'perde posição', 'pode abandonar']);
+    expect(MOMENT_NO_LOSS_LABEL).toBe('Sem risco');
+    for (const [kind, options] of Object.entries(rules)) {
+      for (const [id, rule] of Object.entries(options)) {
+        const where = `${kind}.${id}`;
+        const danger = (rule.crash ?? 0) + (rule.spin ?? 0) + (rule.contact ?? 0);
+        // "Pode abandonar": existe batida na conta. "Perde pouco" e "perde posição": nenhum incidente.
+        if (rule.risk === 2) expect(rule.crash ?? 0, where).toBeGreaterThan(0);
+        else expect(danger, where).toBe(0);
+        // "Sem risco" (chance de 100%) só na opção que não tem como dar errado, e ela não tem incidente.
+        if (rule.sure) expect(rule.risk, where).toBe(0);
+      }
+    }
   });
 
   it('os fatores explicam a chance: sem repetição, sem zeros, do que mais pesa para o que menos pesa, e com o sinal coerente', () => {

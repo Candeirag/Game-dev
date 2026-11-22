@@ -278,5 +278,13 @@ export const MOMENT_FACTOR_LABELS: Record<'driver' | 'rival' | 'car' | 'crew' | 
   profile: 'Nascença',
 };
 
-/** Risco de uma opção de lance, em palavras (acompanha o ícone e a cor). */
+/** Classe de risco de uma opção de lance. Só para tabelas de análise (o relatório do simulador): na tela vale `MOMENT_LOSS_LABELS`. */
 export const MOMENT_RISK_LABELS: Record<0 | 1 | 2, string> = { 0: 'Seguro', 1: 'Moderado', 2: 'Arriscado' };
+
+/**
+ * O tamanho do prejuízo se a opção der errado, que é o que a classe de risco quer dizer. Na tela vem
+ * depois de "Se errar:", ao lado da chance: assim ninguém lê "26% · seguro" como chance de acerto.
+ */
+export const MOMENT_LOSS_LABELS: Record<0 | 1 | 2, string> = { 0: 'perde pouco', 1: 'perde posição', 2: 'pode abandonar' };
+/** A opção que não tem como dar errado (ceder a posição) não tem prejuízo a mostrar. */
+export const MOMENT_NO_LOSS_LABEL = 'Sem risco';
