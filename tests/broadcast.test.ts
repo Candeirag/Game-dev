@@ -23,6 +23,8 @@ import {
   finalizeRace,
   getCategory,
   isRaceFinished,
+  latestMoment,
+  latestRadio,
   paceAt,
   pitLateralAt,
   poseAt,
@@ -562,6 +564,61 @@ describe('linha do tempo da corrida', () => {
     expect(half.every((e) => e.time <= timeline.endTime! / 2)).toBe(true);
     expect(eventsUntil(timeline, timeline.endTime!)).toHaveLength(timeline.events.length);
     expect(timeline.events.find((e) => e.type === 'finish')!.time).toBeCloseTo(timeline.winnerTime!, 9);
+  });
+
+  it('os lances e o rádio do jogador entram na linha do tempo na volta em que aconteceram, e só aparecem na hora', () => {
+    const seen = { moments: 0, radio: 0, kinds: new Set<string>() };
+    for (const [categoryId, trackId, seed, wetness] of [
+      ['kart-regional', 'vale-do-sol', 11, 0],
+      ['f4', 'sao-paulo', 25, 0],
+      ['f2', 'monza', 23, 0],
+      ['f1', 'spa', 22, 0.7],
+      ['f1', 'singapura', 27, 0],
+    ] as const) {
+      const { ctx, states } = fieldRace(categoryId, trackId, seed, wetness);
+      const final = states.at(-1)!;
+      const timeline = buildRaceTimeline(states, ctx)!;
+      const mine = timeline.cars[final.playerDriverId]!;
+      const lapOf = (lap: number) => mine.laps.find((l) => l.lap === lap);
+
+      // Os lances do motor, todos e na ordem; a largada sempre tem o seu.
+      expect(timeline.moments.map(({ time: _time, ...record }) => record)).toEqual(final.moments);
+      expect(timeline.moments[0]).toMatchObject({ kind: 'start', lap: 1 });
+      for (const [index, moment] of timeline.moments.entries()) {
+        // O desfecho aparece dentro da volta do lance; se o carro parou nela, até o instante em que parou.
+        const lap = lapOf(moment.lap);
+        if (mine.retired?.lap === moment.lap) expect(moment.time).toBeLessThanOrEqual(mine.retired.time);
+        else {
+          expect(lap).toBeDefined();
+          expect(moment.time).toBeGreaterThan(lap!.t0);
+          expect(moment.time).toBeLessThan(lap!.t1);
+        }
+        // Antes do instante, a tela ainda mostra o lance anterior (ou nenhum); no instante, este.
+        expect(latestMoment(timeline, moment.time - 1e-6)).toBe(timeline.moments[index - 1] ?? null);
+        expect(latestMoment(timeline, moment.time)).toBe(moment);
+        seen.kinds.add(moment.kind);
+      }
+
+      // O rádio do engenheiro: as mensagens do motor, cada uma quando o jogador cruza a linha na volta dela.
+      expect(timeline.radio.map(({ time: _time, ...message }) => message)).toEqual(final.radio);
+      for (const [index, message] of timeline.radio.entries()) {
+        const lap = lapOf(message.lap);
+        if (lap) expect(message.time).toBeCloseTo(lap.t1, 9);
+        expect(latestRadio(timeline, message.time - 1e-6)).toBe(timeline.radio[index - 1] ?? null);
+        expect(latestRadio(timeline, message.time)).toBe(message);
+      }
+      // Nada disso aparece antes da largada, e no fim da corrida vale o último de cada.
+      expect(latestMoment(timeline, 0)).toBeNull();
+      expect(latestRadio(timeline, 0)).toBeNull();
+      expect(latestMoment(timeline, timeline.endTime!)).toBe(timeline.moments.at(-1) ?? null);
+      expect(latestRadio(timeline, timeline.endTime!)).toBe(timeline.radio.at(-1) ?? null);
+      seen.moments += timeline.moments.length;
+      seen.radio += timeline.radio.length;
+    }
+    // As corridas escolhidas têm lances de disputa e de parada, e o engenheiro fala em algumas delas.
+    expect(seen.moments).toBeGreaterThanOrEqual(10);
+    expect([...seen.kinds]).toEqual(expect.arrayContaining(['start', 'attack', 'pit']));
+    expect(seen.radio).toBeGreaterThan(0);
   });
 
   it('montar volta a volta (ao vivo) dá a mesma linha do tempo que montar tudo de uma vez', () => {

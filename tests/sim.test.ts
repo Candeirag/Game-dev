@@ -7,12 +7,19 @@ import { CATEGORIES } from '@/data/categories';
 import { PLAYER_BACKGROUNDS, PLAYER_MAX_AGE, PLAYER_MIN_AGE } from '@/data/rules';
 import { ROOKIE_TEAM_IDS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
+import type { MomentRecord } from '@/domain/schemas';
+import type { RaceMoment } from '@/engine';
 import { HELP, parseArgs, runCli } from '../sim/cli';
+import { playRound } from '../sim/policy';
 import { formatReport } from '../sim/report';
 import {
   type CareerSample,
   DEFAULT_SIM_OPTIONS,
   birthTerciles,
+  edgeTerciles,
+  type MomentSample,
+  type RaceSample,
+  SIM_CHOICES,
   SIM_POPULATION,
   type SeasonSample,
   type SimResult,
@@ -29,21 +36,24 @@ const small: SimResult = runSimulation(SMALL);
 
 describe('argumentos da linha de comando', () => {
   it('sem argumentos, vale o padrão: 50 carreiras de 15 temporadas', () => {
-    expect(parseArgs([])).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0, json: false, out: null, help: false });
-    expect(DEFAULT_SIM_OPTIONS).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0 });
+    expect(parseArgs([])).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style', json: false, out: null, help: false });
+    expect(DEFAULT_SIM_OPTIONS).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style' });
   });
 
   it('lê cada opção, com espaço ou com sinal de igual', () => {
-    expect(parseArgs(['--seeds', '8', '--seasons', '20', '--first-seed', '100', '--talent', '4', '--json', '--out', 'relatorio.txt'])).toEqual({
+    expect(
+      parseArgs(['--seeds', '8', '--seasons', '20', '--first-seed', '100', '--talent', '4', '--moments', 'bold', '--json', '--out', 'relatorio.txt']),
+    ).toEqual({
       seeds: 8,
       seasons: 20,
       firstSeed: 100,
       talent: 4,
+      moments: 'bold',
       json: true,
       out: 'relatorio.txt',
       help: false,
     });
-    expect(parseArgs(['--seeds=3', '--seasons=2'])).toMatchObject({ seeds: 3, seasons: 2 });
+    expect(parseArgs(['--seeds=3', '--seasons=2', '--moments=safe'])).toMatchObject({ seeds: 3, seasons: 2, moments: 'safe' });
     expect(parseArgs(['--help']).help).toBe(true);
   });
 
@@ -54,6 +64,8 @@ describe('argumentos da linha de comando', () => {
     expect(() => parseArgs(['--seeds', '0'])).toThrow(/número inteiro/);
     expect(() => parseArgs(['--seasons', '2.5'])).toThrow(/número inteiro de 1 a 80/);
     expect(() => parseArgs(['--talent', '99'])).toThrow(/de 0 a 12/);
+    expect(() => parseArgs(['--moments', 'ousado'])).toThrow(/--moments precisa ser style, safe ou bold \(veio "ousado"\)/);
+    expect(() => parseArgs(['--moments'])).toThrow(/Falta o valor de --moments/);
     expect(() => parseArgs(['--first-seed', '4294967295', '--seeds', '2'])).toThrow(/32 bits/);
   });
 
@@ -193,6 +205,8 @@ describe('agregados de carreiras montadas à mão', () => {
     investorShare: 0,
     sideJob: false,
     academy: false,
+    races: [],
+    freshRivalries: 0,
     ...extra,
   });
   const profile = { background: 'natural', age: 16, teamId: 'horizonte' } as const;
@@ -341,6 +355,8 @@ describe('portas nos agregados (Fase 3)', () => {
     investorShare: 0,
     sideJob: false,
     academy: false,
+    races: [],
+    freshRivalries: 0,
     ...extra,
   });
   // Duas temporadas sem porta, o último recurso na terceira (não conta como "sem porta") e mais uma sem porta.
@@ -387,10 +403,254 @@ describe('portas nos agregados (Fase 3)', () => {
   });
 });
 
+describe('lances decisivos nos agregados (Fase 4)', () => {
+  const moment = (
+    kind: MomentSample['kind'],
+    option: string,
+    risk: 0 | 1 | 2,
+    chance: number,
+    riskyChance: number | null,
+    extra: Partial<MomentSample> = {},
+  ): MomentSample => ({
+    kind,
+    option,
+    risk,
+    chance,
+    riskyChance,
+    success: true,
+    outcome: 'won',
+    contact: false,
+    penalized: false,
+    ...extra,
+  });
+  const lost = { success: false, outcome: 'lost' } as const;
+  const race = (round: number, edge: number, moments: MomentSample[], completed = true): RaceSample => ({ round, edge, completed, moments });
+  const career = (seed: number, categoryId: SeasonSample['categoryId'], tier: number, races: RaceSample[], freshRivalries: number): CareerSample => ({
+    seed,
+    profile: { background: 'natural', age: 16, teamId: 'horizonte' },
+    birth: { score: 50, region: 'capital', traitBalance: 1 },
+    ended: 'completed',
+    seasons: [
+      {
+        season: 1,
+        categoryId,
+        tier,
+        age: 16,
+        position: 10,
+        wins: 0,
+        podiums: 0,
+        title: false,
+        cash: 0,
+        netWorth: 0,
+        reputation: 5,
+        overall: 60,
+        roundsMissed: 0,
+        seat: 'initial',
+        noSeatCause: null,
+        offersMade: 1,
+        offers: 1,
+        doorOpen: true,
+        lastResort: false,
+        door: 'initial',
+        yearResult: 0,
+        sponsorsBroken: 0,
+        investorShare: 0,
+        sideJob: false,
+        academy: false,
+        races,
+        freshRivalries,
+      },
+    ],
+  });
+  // No kart: uma corrida de 2 lances, uma de 3 (com um toque punido) e um abandono na largada, que não é corrida completa.
+  const kart = career(
+    1,
+    'kart-regional',
+    1,
+    [
+      race(1, -6, [moment('start', 'outside', 1, 0.5, 0.3), moment('lastLap', 'secure', 0, 0.9, 0.6)]),
+      race(2, -2, [
+        moment('start', 'inside', 2, 0.4, 0.4, { success: false, outcome: 'touch', contact: true, penalized: true }),
+        moment('attack', 'wait', 0, 0.2, 0.5, lost),
+        moment('lastLap', 'allIn', 2, 0.7, 0.7),
+      ]),
+      race(3, 0, [moment('start', 'inside', 2, 0.5, 0.5, { success: false, outcome: 'retired', contact: true })], false),
+    ],
+    2,
+  );
+  // Nos monopostos: uma corrida de 4 lances (o de parada não tem opção arriscada), uma de 1 só (fora da faixa) e uma de 2.
+  const formula = career(
+    2,
+    'f4',
+    4,
+    [
+      race(1, 3, [
+        moment('start', 'inside', 2, 0.8, 0.8),
+        moment('pit', 'undercut', 1, 0.6, null),
+        moment('attack', 'dive', 2, 0.7, 0.7),
+        moment('lastLap', 'allIn', 2, 0.8, 0.8, { success: false, outcome: 'spin' }),
+      ]),
+      race(2, 5, [moment('start', 'hold', 0, 0.8, 0.4)]),
+      race(3, 8, [moment('start', 'inside', 2, 0.9, 0.9), moment('defense', 'block', 2, 0.8, 0.8)]),
+    ],
+    0,
+  );
+  const stats = summarize([kart, formula], { seeds: 2, seasons: 1, firstSeed: 1, talent: 0 }).moments;
+
+  it('conta os lances por corrida completa, no total e por categoria', () => {
+    expect(stats.moments).toBe(13);
+    expect(stats.all).toEqual({ races: 6, completeRaces: 5, perRace: 2.4, two: 2, three: 1, four: 1, other: 1 });
+    expect(stats.byCategory).toEqual([
+      { categoryId: 'kart-regional', races: 3, completeRaces: 2, perRace: 2.5, two: 1, three: 1, four: 0, other: 0 },
+      { categoryId: 'f4', races: 3, completeRaces: 3, perRace: 7 / 3, two: 1, three: 0, four: 1, other: 1 },
+    ]);
+  });
+
+  it('mede cada opção de cada lance: vezes, acerto, chance mostrada e consequências', () => {
+    // Todas as opções do jogo aparecem, na ordem dele, mesmo as que ninguém escolheu.
+    expect(stats.byOption).toHaveLength(14);
+    expect(stats.byOption.map((o) => `${o.kind}/${o.option}`).slice(0, 4)).toEqual(['start/inside', 'start/outside', 'start/hold', 'attack/dive']);
+    const option = (kind: string, id: string) => stats.byOption.find((o) => o.kind === kind && o.option === id);
+    const inside = option('start', 'inside');
+    expect(inside).toMatchObject({ risk: 2, times: 4, successShare: 0.5, spins: 0, contacts: 2, retired: 1, penalized: 1 });
+    expect(inside?.averageChance).toBeCloseTo(0.65, 10);
+    expect(option('lastLap', 'allIn')).toMatchObject({ risk: 2, times: 2, successShare: 0.5, averageChance: 0.75, spins: 1, contacts: 0 });
+    expect(option('rain', 'stay')).toEqual({
+      kind: 'rain',
+      option: 'stay',
+      risk: 2,
+      times: 0,
+      successShare: 0,
+      averageChance: 0,
+      spins: 0,
+      contacts: 0,
+      retired: 0,
+      penalized: 0,
+    });
+    expect(stats.byOption.reduce((total, o) => total + o.times, 0)).toBe(stats.moments);
+  });
+
+  it('separa as corridas em três faixas do mesmo tamanho pela vantagem sobre o grid', () => {
+    const [low, mid, high] = stats.byEdge;
+    expect(stats.byEdge.map((g) => g.group)).toEqual(['low', 'mid', 'high']);
+    // Baixa: as corridas de vantagem −6 e −2. Cinco lances, todos com opção arriscada; o piloto foi nela em dois e venceu um.
+    expect(low).toMatchObject({ races: 2, averageEdge: -4, minEdge: -6, maxEdge: -2, moments: 5, riskyOffered: 5, riskyTakenShare: 0.4, successShare: 0.6 });
+    expect(low?.riskyChance).toBeCloseTo(0.5, 10);
+    expect(low).toMatchObject({ riskyWonPerRace: 0.5, balancePerRace: 0.5 });
+    // Média: 0 e +3. O lance de parada não oferece opção arriscada e fica fora da chance e do "arriscou".
+    expect(mid).toMatchObject({ races: 2, minEdge: 0, maxEdge: 3, moments: 5, riskyOffered: 4, riskyTakenShare: 1, successShare: 0.6, riskyWonPerRace: 1 });
+    expect(mid?.riskyChance).toBeCloseTo(0.7, 10);
+    // Alta: +5 e +8. Três lances vencidos, dois deles arriscados; o seguro também conta na chance oferecida (40%).
+    expect(high).toMatchObject({ races: 2, minEdge: 5, maxEdge: 8, moments: 3, riskyOffered: 3, successShare: 1, riskyWonPerRace: 1, balancePerRace: 1.5 });
+    expect(high?.riskyChance).toBeCloseTo(0.7, 10);
+    expect(high?.riskyTakenShare).toBeCloseTo(2 / 3, 10);
+  });
+
+  it('nos terços, o do meio fica com a sobra e o empate segue a ordem das corridas', () => {
+    const tied = [race(1, 2, []), race(2, 1, []), race(3, 2, []), race(4, 2, []), race(5, 0, [])];
+    expect(edgeTerciles(tied).map((group) => group.map((r) => r.round))).toEqual([[5], [2, 1, 3], [4]]);
+    expect(edgeTerciles([race(1, 0, []), race(2, 1, [])]).map((group) => group.length)).toEqual([0, 2, 0]);
+  });
+
+  it('conta as rivalidades novas e os toques por 100 lances', () => {
+    expect(stats).toMatchObject({ freshRivalries: 2, freshRivalriesPerCareer: 1 });
+    expect(stats.contactsPer100).toBeCloseTo((2 / 13) * 100, 10);
+  });
+
+  it('o relatório mostra essas tabelas, e sem carreira nenhuma não inventa número', () => {
+    const text = formatReport(summarize([kart, formula], { seeds: 2, seasons: 1, firstSeed: 1, talent: 0 }));
+    expect(text).toContain('Lances: 13 em 6 corridas (5 completas). Corridas completas fora da faixa de 2 a 4 lances: 1.');
+    expect(text).toContain('Rivalidades novas: 2 (1,00 por carreira). Toques em lances: 15,4 a cada 100 lances.');
+    expect(text).toMatch(/Todas as categorias +6 +5 +2,40 +40% +20% +20%/);
+    expect(text).toMatch(/Largada +Arriscar por dentro +Arriscado +4 +50% +65% +0 +2 +1 +1/);
+    expect(text).toMatch(/Chuva começando +Arriscar na pista +Arriscado +0 +- +- +0 +0 +0 +0/);
+    expect(text).toMatch(/Baixa +2 +−4,0 \(−6,0 a −2,0\) +5 +50% +40% +60% +0,50 +\+0,50/);
+    expect(text).toMatch(/Alta +2 +\+6,5 \(\+5,0 a \+8,0\) +3 +70% +67% +100% +1,00 +\+1,50/);
+    const empty = summarize([], SMALL);
+    expect(empty.moments).toMatchObject({
+      moments: 0,
+      all: { races: 0, completeRaces: 0, perRace: 0 },
+      byCategory: [],
+      byEdge: [],
+      freshRivalriesPerCareer: 0,
+      contactsPer100: 0,
+    });
+    expect(empty.moments.byOption).toHaveLength(14);
+    const section = formatReport(empty).split('9. LANCES DECISIVOS')[1] ?? '';
+    expect(section).toContain('Lances: 0 em 0 corridas (0 completas).');
+    expect(section).not.toMatch(/NaN|undefined|Infinity/);
+  });
+});
+
+describe('lances decisivos em carreiras de verdade (Fase 4)', () => {
+  it('acompanhar a corrida não a muda, e o que o observador vê é o que fica no resultado', () => {
+    const career = createSimCareer(11);
+    const seen: { moment: RaceMoment; record: MomentRecord }[] = [];
+    let races = 0;
+    const watched = playRound(career, SIM_CHOICES, { onMoment: (moment, record) => seen.push({ moment, record }), onRace: () => races++ });
+    expect(watched).toEqual(playRound(career, SIM_CHOICES));
+    expect(races).toBe(1);
+    expect(seen.map((s) => s.record)).toEqual(watched.rounds.at(-1)?.race.moments);
+    expect(seen[0]?.moment.kind).toBe('start');
+    for (const { moment, record } of seen) {
+      // O lance oferecido é o que foi resolvido, e a chance gravada é a que a opção mostrava.
+      expect([moment.kind, moment.lap]).toEqual([record.kind, record.lap]);
+      expect(moment.options.find((o) => o.id === record.option)?.chance).toBe(record.chance);
+      // O robô padrão não responde: quem escolheu foi o estilo do piloto.
+      expect(record.auto).toBe(true);
+    }
+  });
+
+  it('cada corrida da amostra traz os seus lances, a começar pela largada', () => {
+    const seasons = small.samples.flatMap((c) => c.seasons);
+    const races = seasons.flatMap((s) => s.races);
+    expect(races.length).toBeGreaterThan(0);
+    for (const season of seasons) expect(season.races.map((r) => r.round)).toEqual([...season.races.map((r) => r.round)].sort((a, b) => a - b));
+    for (const r of races) {
+      expect(r.moments[0]?.kind).toBe('start');
+      expect(r.moments.length).toBeLessThanOrEqual(4);
+      expect(Number.isFinite(r.edge)).toBe(true);
+      for (const m of r.moments) {
+        expect(m.chance).toBeGreaterThanOrEqual(0);
+        expect(m.chance).toBeLessThanOrEqual(1);
+        // A opção arriscada escolhida é a própria opção arriscada do lance.
+        if (m.risk === 2) expect(m.riskyChance).toBe(m.chance);
+      }
+    }
+    expect(small.summary.moments.moments).toBe(races.reduce((total, r) => total + r.moments.length, 0));
+    expect(small.summary.moments.byEdge.reduce((total, g) => total + g.races, 0)).toBe(races.length);
+  });
+
+  it('a política de lances muda as escolhas: "bold" vai sempre na opção arriscada e "safe", nunca', () => {
+    const chosen = (moments: 'safe' | 'bold') =>
+      simulateCareer(11, { seasons: 1, talent: 0, moments })
+        .seasons.flatMap((s) => s.races)
+        .flatMap((r) => r.moments);
+    const bold = chosen('bold');
+    expect(bold.length).toBeGreaterThan(0);
+    for (const m of bold) if (m.riskyChance !== null) expect(m.risk).toBe(2);
+    // Todo lance com opção arriscada tem também uma mais segura.
+    for (const m of chosen('safe')) expect(m.risk).toBeLessThan(2);
+  });
+
+  // Critério de aceite da Fase 4: pilotos melhores vencem mais lances. Com o mesmo robô, as corridas
+  // em que o piloto tem mais vantagem sobre o grid mostram chances maiores na opção arriscada e
+  // rendem mais lances arriscados vencidos.
+  it('pilotos melhores veem chances maiores e vencem mais lances arriscados', () => {
+    const { byEdge } = runSimulation({ seeds: 8, seasons: 6, firstSeed: 11, talent: 0 }).summary.moments;
+    const [low, , high] = byEdge;
+    expect(byEdge.map((g) => g.group)).toEqual(['low', 'mid', 'high']);
+    expect(high!.averageEdge).toBeGreaterThan(low!.averageEdge);
+    expect(high!.riskyChance).toBeGreaterThan(low!.riskyChance);
+    expect(high!.riskyWonPerRace).toBeGreaterThan(low!.riskyWonPerRace);
+  });
+});
+
 describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
-  // A semente 11 chega ao fim da segunda temporada em 20º, com proposta de equipe e sem caixa para
-  // bancá-la, e nenhuma porta se abre: nem academia, nem vaquinha, nem investidor.
-  const sample = simulateCareer(11, { seasons: 3, talent: 0 });
+  // A semente 38 chega ao fim da segunda temporada em 20º, com proposta de equipe e sem caixa para
+  // bancá-la, e nenhuma porta se abre: nem academia, nem vaquinha, nem investidor. (Até a Fase 3 o
+  // exemplo era a semente 11; com a curva de pneus e os lances da Fase 4 as corridas dela mudaram.)
+  const sample = simulateCareer(38, { seasons: 3, talent: 0 });
 
   it('a temporada seguinte é disputada pela vaga de aluguel, com o motivo "dinheiro"', () => {
     expect(sample.seasons[2]).toMatchObject({ season: 3, seat: 'fallback', noSeatCause: 'money', door: 'none' });
@@ -398,14 +658,15 @@ describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
     expect(sample.seasons[1]?.offersMade).toBeGreaterThan(0);
     expect(sample.seasons[1]?.offers).toBe(0);
     expect(sample.seasons[1]?.doorOpen).toBe(false);
-    expect(summarize([sample], { seeds: 1, seasons: 3, firstSeed: 11, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
+    expect(sample.seasons[1]?.position).toBe(20);
+    expect(summarize([sample], { seeds: 1, seasons: 3, firstSeed: 38, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
   });
 });
 
 describe('relatório', () => {
   const report = formatReport(small.summary);
 
-  it('traz as seis medidas pedidas', () => {
+  it('traz as seis medidas pedidas e as seções das fases seguintes', () => {
     for (const title of [
       '1. POSIÇÃO FINAL POR CATEGORIA',
       '2. CAIXA NO FIM DE CADA TEMPORADA',
@@ -415,6 +676,7 @@ describe('relatório', () => {
       '6. TEMPORADAS PARADAS, SEM VAGA',
       '7. NASCIMENTO',
       '8. ECONOMIA E PORTAS',
+      '9. LANCES DECISIVOS',
     ]) {
       expect(report).toContain(title);
     }
@@ -471,6 +733,22 @@ describe('linha de comando', () => {
     expect(result.out).not.toMatch(/save v\d|jogo \d/i);
   });
 
+  it('--moments troca a política de lances do robô e aparece na linha da política; o padrão não muda de texto', () => {
+    const bold = run(['--seeds', '1', '--seasons', '1', '--first-seed', '11', '--moments', 'bold']);
+    expect(bold.code).toBe(0);
+    expect(bold.out).toContain('melhor proposta aceitável) · talento 0 · lances: sempre a opção mais arriscada\n');
+    expect(bold.out).toContain('Nesta execução o robô responde a todos, sempre com a opção mais arriscada');
+    const safe = run(['--seeds', '1', '--seasons', '1', '--first-seed', '11', '--moments=safe']);
+    expect(safe.out).toContain('· talento 0 · lances: sempre a opção mais segura\n');
+    const standard = run(['--seeds', '1', '--seasons', '1', '--first-seed', '11']);
+    expect(run(['--seeds', '1', '--seasons', '1', '--first-seed', '11', '--moments', 'style']).out).toBe(standard.out);
+    expect(standard.out).toContain('melhor proposta aceitável) · talento 0\n');
+    expect(standard.out).toContain('O robô não responde a nenhum: quem escolhe a opção é o estilo do piloto');
+    expect(new Set([standard.out, bold.out, safe.out]).size).toBe(3);
+    expect(HELP).toContain('--moments P');
+    expect(run(['--moments', 'ousado'])).toMatchObject({ code: 2, out: '' });
+  });
+
   it('um arquivo de saída em que não dá para gravar é recusado antes de simular', () => {
     const never = () => {
       throw new Error('não era para simular');
@@ -489,7 +767,9 @@ describe('linha de comando', () => {
     const result = run(['--seeds', '2', '--seasons', '2', '--json', '--out', file]);
     const data = JSON.parse(result.out) as SimResult;
     expect(data.samples).toHaveLength(2);
-    expect(data.summary.options).toEqual({ seeds: 2, seasons: 2, firstSeed: 1, talent: 0 });
+    expect(data.summary.options).toEqual({ seeds: 2, seasons: 2, firstSeed: 1, talent: 0, moments: 'style' });
+    // Os dados completos trazem os lances de cada corrida, com a chance mostrada.
+    expect(data.samples[0]?.seasons[0]?.races[0]?.moments[0]).toMatchObject({ kind: 'start', chance: expect.any(Number) });
     expect(readFileSync(file, 'utf8')).toBe(result.out);
     expect(result.err).toContain(`gravado em ${file}`);
   });

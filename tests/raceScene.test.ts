@@ -167,9 +167,12 @@ describe('formação dos carros na pista', () => {
   });
 
   // Defeito conhecido da cena (`placeCars`, em src/ui/race/raceScene.ts), que o ritmo da Fase 4 trouxe
-  // para o 1×: a rampa de saída dos boxes tem 38 unidades e o carro anda mais que isso por quadro,
-  // então ele sai do pit lane ainda a 30 unidades do eixo e leva uns 18 quadros para voltar ao
-  // asfalto. Reproduz com fieldRace('f1', 'suzuka', 3): `widest` chega a 26,6, contra o limite de 7,75.
+  // para o 1× (antes só aparecia em 8×): a rampa de saída dos boxes tem 38 unidades e o carro anda 32
+  // por quadro, então o último quadro "no pit lane" o pega ainda no meio da rampa, a mais de 20
+  // unidades do eixo. Dali ele volta à linha de corrida aos poucos (o `ease` é por tempo de tela, não
+  // por distância percorrida) e passa de 5 a 9 quadros desenhado fora do asfalto, já como carro em
+  // pista. Reproduz com fieldRace('f1', 'suzuka', 3) em 1×: `widest` chega a 26,6, contra o limite de
+  // 10,15 (meia pista menos meio carro).
   it.todo('saindo dos boxes no ritmo da transmissão, o carro volta à pista sem ser desenhado fora do asfalto');
 
   it('a sigla do piloto usa só letras', () => {

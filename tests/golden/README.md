@@ -50,3 +50,39 @@ Júnior, a carreira A usa agora o quarto sorteio da mesma semente (`birthAttempt
 reputação nos 10 pontos de conferência; só o hash mudou, porque o estado ganhou o campo
 `birth: null`.
 
+## Fase 4 (21/11/2026): corrida com lances e pneus
+
+As regras da corrida mudaram de propósito, e com elas todos os resultados. O arquivo foi regravado
+inteiro (65 pontos, como antes). O que mudou:
+
+- **Curva de pneus para todos os carros.** O pneu agora aguenta, cai aos poucos e despenca no
+  penhasco (`TYRE_CURVE`), e a IA passou a poupar pneu. O ritmo do pelotão inteiro é outro, do kart
+  à Fórmula Elite.
+- **Lances decisivos do jogador** (`RACE_MOMENTS`): até quatro por corrida, a largada sempre. O
+  robô das carreiras de referência não responde a eles, e o piloto decide pelo estilo, como em
+  "simular até o fim". O desfecho de um lance pode custar posição, dano, punição ou a corrida.
+- **Estado novo da carreira.** Cada corrida guardada leva `race.moments` e as relações levam
+  `rivalryLog`, o registro dos toques em lances que criaram rivalidade. Os dois entram no hash.
+
+O resumo ganhou uma coluna, `lastMoments` (volta, lance, opção e desfecho de cada lance da última
+corrida), para uma mudança nos lances aparecer pelo nome e não só pelo hash.
+
+**Carreira A: semente e sorteio novos.** Com a semente de antes (`20260311`) nenhum sorteio de
+nascimento, do primeiro ao décimo primeiro, mantinha o caminho do kart regional à Fórmula Júnior. O
+quarto (`birthAttempt: 3`, o das Fases 2 e 3) passou a subir pelo kart internacional e só chega à
+Fórmula Júnior na última virada, sem disputar nenhuma corrida de monoposto; os que disputam uma
+temporada de Fórmula Júnior (0, 2, 5 e 6) sobem em seguida para a Fórmula Sprint, que o teste não
+espera na lista. A carreira A usa agora a semente `20260321` no terceiro sorteio (`birthAttempt: 2`,
+dentro dos sorteios gratuitos): duas temporadas no kart regional (5º e 2º), uma no kart nacional
+(3º) e duas na Fórmula Júnior (14º e 11º), a segunda fechando com o caixa no vermelho. Em relação à
+Fase 3 (duas no regional, duas no nacional, uma na Fórmula Júnior), há uma temporada a mais de
+monoposto. Em cinco temporadas a carreira A tem dois toques em lances, os dois no `rivalryLog`.
+
+**Carreira C** (o mesmo save de Fórmula Elite da Fase 2, sem nascimento): o save aberto tem os
+mesmos números, e só o hash muda (o estado ganhou `moments: []` nas corridas guardadas e
+`rivalryLog: []`). Dali em diante as nove corridas são outras: o piloto termina o ano de novo em 2º,
+com 136 pontos em vez de 143, e com o caixa em 979 mil em vez de 2,10 milhões. A diferença de caixa
+aparece nas etapas em que o carro sofre dano (7, 8, 10 e 11): o estilo desse piloto escolhe a linha
+de dentro em oito das nove largadas, e a etapa 8 termina num abandono no lance da largada (dano
+total, 406 mil a menos no caixa numa etapa só). O lance da parada (`pit`) aparece em três das nove
+corridas.

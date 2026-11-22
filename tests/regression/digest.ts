@@ -30,6 +30,8 @@ export interface Checkpoint {
   standings: string;
   teams: string;
   lastRace: string;
+  /** Lances decisivos do jogador na última corrida (Fase 4): volta, lance, opção e desfecho. */
+  lastMoments: string;
   seasonTotals: string;
   /** Hash do estado inteiro da carreira, sem as frases. */
   hash: string;
@@ -75,6 +77,7 @@ export function checkpoint(label: string, career: CareerState): Checkpoint {
       .map((s) => `${s.teamId}:${s.points}`)
       .join(','),
     lastRace: last ? last.race.entries.map((e) => `${e.driverId}:${e.position}:${e.points}:${e.status}`).join(',') : '',
+    lastMoments: last ? last.race.moments.map((m) => `${m.lap}:${m.kind}:${m.option}:${m.outcome}`).join(',') : '',
     seasonTotals: Object.entries(career.finance.seasonTotals)
       .sort()
       .map(([key, value]) => `${key}:${Math.round(value)}`)
@@ -96,16 +99,19 @@ function playOut(career: CareerState, tag: string, log: Checkpoint[]): CareerSta
 
 /**
  * As carreiras de referência:
- * - A: robô talentoso, cinco temporadas a partir do kart regional (passa pelo kart nacional e
- *   pelo internacional e chega à Fórmula Júnior), com todas as viradas de temporada. Desde a Fase 2
- *   a carreira tem nascimento sorteado; o quarto sorteio da semente (o terceiro refeito) é o que
- *   mantém o caminho por todas essas categorias;
+ * - A: robô talentoso, cinco temporadas a partir do kart regional, com todas as viradas de
+ *   temporada: duas no kart regional, uma no kart nacional e duas na Fórmula Júnior. A carreira tem
+ *   nascimento sorteado desde a Fase 2, e a semente e o sorteio são os que mantêm esse caminho.
+ *   Desde a Fase 4 (curva de pneus e lances decisivos) é a semente 20260321, no terceiro sorteio (o
+ *   segundo refeito): com a semente anterior nenhum sorteio passava mais pelas três categorias sem
+ *   subir além da Fórmula Júnior (ver tests/golden/README.md). O robô não responde aos lances: o
+ *   piloto decide pelo estilo, como em "simular até o fim";
  * - C: save de monopostos gravado no meio de uma temporada de Fórmula Elite, jogado até o fim do ano
- *   (boxes, compostos, combustível, safety car, ordens de equipe).
+ *   (boxes, compostos, combustível, safety car, ordens de equipe e o lance da parada).
  */
 export function referenceCheckpoints(): Checkpoint[] {
   const log: Checkpoint[] = [];
-  let a = botCareer(20260311, 9, { birthAttempt: 3 });
+  let a = botCareer(20260321, 9, { birthAttempt: 2 });
   for (let i = 0; i < 5; i++) {
     a = playOut(a, 'A', log);
     a = startNextSeason(a, pickBestOffer(a));
