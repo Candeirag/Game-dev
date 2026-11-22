@@ -1,10 +1,10 @@
 /**
  * Fluxo principal, do começo ao fim, como um jogador faria no celular deitado: criar a carreira,
- * disputar treino, classificação e corrida (mudando o ritmo pela barra fixa), concluir a etapa
- * e recarregar a página para abrir o save automático.
+ * disputar treino, classificação e corrida (respondendo aos lances decisivos e mudando o ritmo pela
+ * barra fixa), concluir a etapa e recarregar a página para abrir o save automático.
  */
 import { expect, test } from '@playwright/test';
-import { NOMES_ANTIGOS, SAVES, abrirSave, irPara, vigiarErros } from './apoio';
+import { NOMES_ANTIGOS, SAVES, abrirSave, irPara, responderLance, responderLances, tarjaDoLance, vigiarErros } from './apoio';
 
 test.use({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
@@ -46,14 +46,20 @@ test('criar carreira, disputar uma etapa inteira e recarregar o save', async ({ 
   await expect(page.getByText('Grid de largada')).toBeVisible();
   await page.getByRole('button', { name: 'Ir para a largada' }).click();
 
-  // Corrida: a barra fixa fica na tela, com o ritmo sempre à mão.
+  // Corrida: ela começa pelo lance da largada, que já vem aberto no grid, no lugar da barra de comandos.
   const barra = page.getByRole('region', { name: 'Comandos da corrida' });
+  await expect(tarjaDoLance(page, 'Largada')).toBeVisible();
+  await expect(barra).toHaveCount(0);
+  await responderLance(page, 'segura');
+  // Respondido o lance, a barra fixa fica na tela, com o ritmo sempre à mão. A carreira é nova (semente
+  // sorteada), então os lances seguintes mudam a cada execução: qualquer um que abrir é respondido.
+  await responderLances(page);
   await expect(barra).toBeVisible();
-  await barra.getByRole('button', { name: 'Largar' }).click();
   await barra.getByRole('button', { name: '8×' }).click();
   await barra.getByRole('button', { name: 'Agressivo' }).click();
   await expect(barra.getByRole('button', { name: 'Agressivo' })).toHaveAttribute('aria-pressed', 'true');
   await expect(barra).toContainText(/Volta [2-9]\/22/, { timeout: 30_000 });
+  await expect(barra).toBeVisible();
   const caixaDaBarra = await barra.boundingBox();
   expect(caixaDaBarra && caixaDaBarra.y + caixaDaBarra.height).toBeLessThanOrEqual(390);
   await barra.getByRole('button', { name: 'Conservador' }).click();
@@ -82,7 +88,12 @@ test('abre um save gravado antes da reformulação visual e segue para a corrida
   await expect(page.getByRole('banner').first()).toContainText('Etapa 4 de 10');
   await irPara(page, 'Fim de semana');
   await page.getByRole('button', { name: 'Ir para a largada' }).click();
-  await expect(page.getByRole('region', { name: 'Comandos da corrida' })).toBeVisible();
+  // No grid, o lance da largada; respondido, a corrida anda e a barra de comandos aparece.
+  await expect(tarjaDoLance(page, 'Largada')).toBeVisible();
+  await responderLance(page, 'piloto');
+  const barra = page.getByRole('region', { name: 'Comandos da corrida' });
+  await expect(barra).toBeVisible();
+  await expect(barra).toContainText(/Volta [1-9]\/19/, { timeout: 30_000 });
   expect(erros).toEqual([]);
 });
 

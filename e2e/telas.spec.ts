@@ -5,7 +5,22 @@
  */
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { SAVES, TELAS, abrirSave, conferirTela, gravarNoAparelho, irPara, vigiarErros } from './apoio';
+import {
+  SAVES,
+  TELAS,
+  abrirSave,
+  conferirTela,
+  correrAteOLance,
+  desfechoDoLance,
+  escolherOpcao,
+  gravarNoAparelho,
+  irPara,
+  opcoesDoLance,
+  responderLance,
+  responderLances,
+  tarjaDoLance,
+  vigiarErros,
+} from './apoio';
 
 for (const formato of TELAS) {
   test.describe(`telas em ${formato.width}×${formato.height}`, () => {
@@ -46,13 +61,80 @@ for (const formato of TELAS) {
       await irPara(page, 'Fim de semana');
       await conferirTela(page, 'fim-de-semana-grid', formato.nome);
       await page.getByRole('button', { name: 'Ir para a largada' }).click();
-      const barra = page.getByRole('region', { name: 'Comandos da corrida' });
-      await barra.getByRole('button', { name: 'Largar' }).click();
-      await page.waitForTimeout(4000);
+      // A corrida começa pela resposta ao lance da largada (aqui, entregue ao piloto): as luzes acendem.
+      await responderLance(page, 'piloto');
+      await expect(page.getByRole('region', { name: 'Comandos da corrida' })).toBeVisible();
+      // O desfecho da largada passa pela tarja inferior e sai; a corrida segue, com os pneus à vista.
+      await expect(desfechoDoLance(page)).toBeVisible({ timeout: 20_000 });
+      await expect(desfechoDoLance(page)).toHaveCount(0);
+      await expect(page.getByText(/Desgaste \d+% ·/).first()).toBeVisible();
       await conferirTela(page, 'corrida', formato.nome);
+      // "Simular até o fim": os lances que faltam ficam com o piloto, e o resultado diz isso em cada um.
       await page.getByRole('button', { name: 'Simular até o fim' }).click();
       await expect(page.getByRole('button', { name: 'Concluir etapa e salvar' })).toBeVisible();
+      await expect(page.getByRole('main')).toContainText('Lances da corrida');
+      await expect(page.getByText('Decidido pelo piloto').first()).toBeVisible();
       await conferirTela(page, 'resultado', formato.nome);
+      expect(erros).toEqual([]);
+    });
+
+    test('corrida com lances decisivos: largada, desfecho, pneus, lance no meio da prova e resultado', async ({ page }) => {
+      test.setTimeout(180_000);
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.naLargada);
+      await irPara(page, 'Fim de semana');
+      await page.getByRole('button', { name: 'Ir para a largada' }).click();
+      // No grid, a tarja do lance toma o lugar da barra de comandos: não há "Largar", e nada se confirma sem escolher.
+      const largada = tarjaDoLance(page, 'Largada');
+      const barra = page.getByRole('region', { name: 'Comandos da corrida' });
+      await expect(largada).toBeVisible();
+      await expect(barra).toHaveCount(0);
+      await expect(opcoesDoLance(page)).toHaveCount(3);
+      await expect(largada.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+      await expect(largada.getByRole('button', { name: 'Deixar com o piloto' })).toBeEnabled();
+      await conferirTela(page, 'corrida-lance-largada', formato.nome);
+      // Uma opção marcada: a chance e o risco estão no nome dela; a tarja diz o que se ganha, o que se perde e o que pesa.
+      expect(await escolherOpcao(page, 'segura')).toMatch(/^.+: \d+% de chance de dar certo, seguro/);
+      await expect(largada).toContainText('Se der certo:');
+      await expect(largada).toContainText('Se der errado:');
+      await expect(largada).toContainText('Pesa na chance, em pontos:');
+      await conferirTela(page, 'corrida-lance-opcao', formato.nome);
+      await largada.getByRole('button', { name: 'Confirmar' }).click();
+      // As luzes apagam e o desfecho aparece na tarja inferior, em palavras (não só na cor).
+      const desfecho = desfechoDoLance(page);
+      await expect(desfecho).toBeVisible({ timeout: 20_000 });
+      await expect(desfecho).toContainText('Lance · Largada');
+      await conferirTela(page, 'corrida-lance-desfecho', formato.nome);
+      await expect(desfecho).toHaveCount(0);
+      // O painel de pneus completo (gaveta "Piloto" nas telas largas, aba "Piloto" em pé): desgaste em
+      // número e palavra, o gráfico do tempo de volta e até quando o pneu vai.
+      const paineis = page.getByRole('group', { name: 'Painéis da corrida' });
+      if (await paineis.count()) await paineis.getByRole('button', { name: 'Piloto' }).click();
+      else await page.getByRole('tab', { name: 'Piloto' }).click();
+      const pneus = page.getByRole('region', { name: 'Pneus' });
+      await expect(pneus).toContainText(/Desgaste \d+% · \S+/);
+      await expect(pneus.getByRole('img', { name: /^Tempo de volta/ })).toBeVisible();
+      await expect(pneus).toContainText(/Cai do penhasco na volta \d+|Aguenta até a bandeirada|O pneu já caiu do penhasco/);
+      // Na gaveta, os pneus vêm depois da ficha do piloto: rola até eles para o print.
+      await pneus.scrollIntoViewIfNeeded();
+      await conferirTela(page, 'corrida-pneus', formato.nome);
+      // Um lance no meio da prova (nesta semente, um ataque na volta 7): a corrida para sozinha e a pista continua à vista.
+      await barra.getByRole('button', { name: '8×' }).click();
+      const disputa = await correrAteOLance(page, /Ataque|Defesa/);
+      await expect(barra).toHaveCount(0);
+      await expect(disputa.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+      await conferirTela(page, 'corrida-lance-ataque', formato.nome);
+      // Até a bandeirada, todos os lances respondidos pelo jogador: nenhum fica marcado como decidido pelo piloto.
+      await responderLance(page, 'ousada');
+      await responderLances(page, 'segura');
+      await expect(page.getByRole('button', { name: 'Concluir etapa e salvar' })).toBeVisible({ timeout: 90_000 });
+      const principal = page.getByRole('main');
+      await expect(principal).toContainText('Lances da corrida');
+      await expect(principal).toContainText(/Largada: .+\d+% de chance/);
+      await expect(principal).toContainText(/(Ataque|Defesa): .+\d+% de chance/);
+      await expect(principal).toContainText(/\d (deu certo|deram certo) de \d/);
+      await expect(page.getByText('Decidido pelo piloto')).toHaveCount(0);
+      await conferirTela(page, 'corrida-resultado-lances', formato.nome);
       expect(erros).toEqual([]);
     });
 
@@ -68,16 +150,30 @@ for (const formato of TELAS) {
       await conferirTela(page, 'fim-de-semana-grid-formula', formato.nome);
       await page.getByRole('button', { name: 'Ir para a largada' }).click();
       await page.getByRole('button', { name: 'Modo cronometragem' }).click();
+      // Também na cronometragem a corrida começa pelo lance da largada: a tarja fica no lugar da barra de comandos.
       const barra = page.getByRole('region', { name: 'Comandos da corrida' });
+      await expect(tarjaDoLance(page, 'Largada')).toBeVisible();
+      await expect(barra).toHaveCount(0);
+      await conferirTela(page, 'cronometragem-lance', formato.nome);
+      await responderLance(page, 'segura');
       await barra.getByRole('button', { name: '8×' }).click();
-      await barra.getByRole('button', { name: 'Largar' }).click();
       await expect(barra).toContainText(/Volta [3-9]\/44/);
+      // Parada para o print: em 8× a parada planejada (e o lance dela) chegaria no meio da conferência.
+      await barra.getByRole('button', { name: 'Pausar' }).click();
       await conferirTela(page, 'cronometragem', formato.nome);
       await page.getByRole('tab', { name: 'Boxes' }).click();
       await conferirTela(page, 'cronometragem-boxes', formato.nome);
       // A escolha do modo de exibição fica guardada; volta para a corrida visual.
       await page.getByRole('button', { name: 'Voltar à corrida visual' }).click();
       await expect(page.getByRole('button', { name: 'Modo cronometragem' })).toBeVisible();
+      // Na corrida visual, a prova segue até o lance da parada (nesta semente, na volta 31): além das
+      // opções, a tarja mostra o pneu que está no carro e deixa escolher o que entra.
+      await barra.getByRole('button', { name: '8×' }).click();
+      await barra.getByRole('button', { name: /^(Continuar|Largar)$/ }).click();
+      const parada = await correrAteOLance(page, 'Parada');
+      await expect(parada).toContainText(/Desgaste \d+% ·/);
+      await expect(parada.getByRole('radiogroup', { name: 'Pneu a colocar' }).getByRole('radio', { checked: true })).toHaveCount(1);
+      await conferirTela(page, 'corrida-lance-parada', formato.nome);
       expect(erros).toEqual([]);
     });
 
@@ -281,6 +377,26 @@ test.describe('ajustes de acessibilidade em 844×390', () => {
     expect(erros).toEqual([]);
   });
 
+  test('texto muito grande no lance da largada: a pergunta, as opções e os botões cabem', async ({ page }) => {
+    const erros = vigiarErros(page);
+    await abrirSave(page, SAVES.naLargada);
+    await irPara(page, 'Ajustes');
+    await page.getByRole('radio', { name: 'Muito grande' }).click();
+    await irPara(page, 'Fim de semana');
+    await page.getByRole('button', { name: 'Ir para a largada' }).click();
+    const tarja = tarjaDoLance(page, 'Largada');
+    await expect(tarja).toBeVisible();
+    await conferirTela(page, 'texto-grande-lance', 'deitado');
+    // Com uma opção marcada a tarja fica mais alta (entra o detalhe do que se ganha e do que se perde).
+    await escolherOpcao(page, 'segura');
+    await conferirTela(page, 'texto-grande-lance-opcao', 'deitado');
+    // A pista continua à vista acima da tarja, e os dois botões ficam inteiros dentro da tela.
+    const caixa = await tarja.boundingBox();
+    expect(caixa?.y ?? 0).toBeGreaterThanOrEqual(96);
+    for (const nome of ['Deixar com o piloto', 'Confirmar']) await expect(tarja.getByRole('button', { name: nome })).toBeInViewport({ ratio: 1 });
+    expect(erros).toEqual([]);
+  });
+
   test('texto muito grande na corrida: a torre e os comandos cabem', async ({ page }) => {
     const erros = vigiarErros(page);
     await abrirSave(page, SAVES.naLargada);
@@ -288,8 +404,10 @@ test.describe('ajustes de acessibilidade em 844×390', () => {
     await page.getByRole('radio', { name: 'Muito grande' }).click();
     await irPara(page, 'Fim de semana');
     await page.getByRole('button', { name: 'Ir para a largada' }).click();
-    await page.getByRole('region', { name: 'Comandos da corrida' }).getByRole('button', { name: 'Largar' }).click();
-    await page.waitForTimeout(3000);
+    // A corrida começa pela resposta ao lance da largada; o print é depois que o desfecho sai da tarja inferior.
+    await responderLance(page, 'segura');
+    await expect(desfechoDoLance(page)).toBeVisible({ timeout: 20_000 });
+    await expect(desfechoDoLance(page)).toHaveCount(0);
     await conferirTela(page, 'texto-grande-corrida', 'deitado');
     expect(erros).toEqual([]);
   });
@@ -347,9 +465,11 @@ test.describe('torre da corrida em 844×390', () => {
     await page.getByRole('button', { name: 'Disputar treino livre' }).click();
     await page.getByRole('button', { name: 'Disputar classificação' }).click();
     await page.getByRole('button', { name: 'Ir para a largada' }).click();
+    // Larga segurando a posição (o jogador sai da pole e continua na frente); os lances seguintes se respondem sozinhos.
+    await responderLance(page, 'segura');
+    await responderLances(page);
     const barra = page.getByRole('region', { name: 'Comandos da corrida' });
     await barra.getByRole('button', { name: '8×' }).click();
-    await barra.getByRole('button', { name: 'Largar' }).click();
     const torre = page.locator('[data-whole-rows]');
     const leituras = async () => {
       const valores: number[] = [];

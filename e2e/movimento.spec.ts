@@ -1,10 +1,11 @@
 /**
  * Movimento da interface: entradas e saídas curtas (150 a 300 ms), interrompíveis; nada piscando
  * a 3 Hz ou mais; e, para quem pede menos movimento (ao sistema ou em Ajustes), só um esmaecer
- * curto no lugar de deslizamento e zoom, com a câmera da corrida parada.
+ * curto no lugar de deslizamento e zoom, com a câmera da corrida parada. Vale também para a tarja
+ * do lance decisivo e para a faixa do desfecho (Fase 4).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { SAVES, abrirSave } from './apoio';
+import { SAVES, abrirSave, desfechoDoLance, responderLance, tarjaDoLance } from './apoio';
 
 test.use({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
@@ -21,6 +22,49 @@ async function maiorDuracao(page: Page): Promise<number> {
     return longest;
   });
 }
+
+/** Seletores da tarja do lance decisivo e da faixa do desfecho (a tarja inferior da transmissão). */
+const TARJA_DO_LANCE = '[role="dialog"][aria-label^="Lance decisivo"]';
+const FAIXA_DO_DESFECHO = '[data-slot="tarja-inferior"] [role="status"]';
+
+interface Transicao {
+  propriedade: string;
+  /** Duração declarada para o elemento, em ms. */
+  duracao: number;
+}
+
+/**
+ * Passa a anotar toda transição que começar na página daqui em diante (o jogo é uma página só, então
+ * a anotação continua valendo ao trocar de tela). `transicoesDe` devolve as de um elemento.
+ */
+async function anotarTransicoes(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const anotadas: { alvo: Element; propriedade: string; duracao: number }[] = [];
+    (window as unknown as { transicoesAnotadas: typeof anotadas }).transicoesAnotadas = anotadas;
+    document.addEventListener(
+      'transitionrun',
+      (event) => {
+        if (!(event.target instanceof Element)) return;
+        const duracoes = getComputedStyle(event.target)
+          .transitionDuration.split(',')
+          .map((parte) => (parte.trim().endsWith('ms') ? parseFloat(parte) : parseFloat(parte) * 1000));
+        anotadas.push({ alvo: event.target, propriedade: event.propertyName, duracao: Math.max(0, ...duracoes) });
+      },
+      true,
+    );
+  });
+}
+
+/** As transições anotadas do elemento que casa com o seletor (o próprio elemento, não o que está dentro dele). */
+async function transicoesDe(page: Page, seletor: string): Promise<Transicao[]> {
+  return page.evaluate((alvo) => {
+    const anotadas = (window as unknown as { transicoesAnotadas?: { alvo: Element; propriedade: string; duracao: number }[] }).transicoesAnotadas ?? [];
+    return anotadas.filter((item) => item.alvo.matches(alvo)).map(({ propriedade, duracao }) => ({ propriedade, duracao }));
+  }, seletor);
+}
+
+/** Propriedades que mudam de lugar, de tamanho ou de giro: o que "desliza" e o que "dá zoom". */
+const MOVIMENTO = /^(all|translate|transform|scale|rotate|zoom|width|height|top|left|right|bottom|inset.*|margin.*|padding.*)$/;
 
 test('o "Mais" entra e sai em até 300 ms e pode ser interrompido', async ({ page }) => {
   await abrirSave(page, SAVES.naLargada);
@@ -49,8 +93,28 @@ test('nenhuma transição das telas passa de 300 ms', async ({ page }) => {
     .getByRole('navigation', { name: 'Navegação principal' })
     .getByRole('link', { name: /^Fim de semana/ })
     .click();
+  await anotarTransicoes(page);
   await page.getByRole('button', { name: 'Ir para a largada' }).click();
+  // No grid, o lance da largada: a tarja sobe do rodapé esmaecendo, numa transição de 150 a 300 ms.
+  await expect(tarjaDoLance(page, 'Largada')).toBeVisible();
+  expect(await maiorDuracao(page)).toBeLessThanOrEqual(300);
+  const entrada = await transicoesDe(page, TARJA_DO_LANCE);
+  expect(entrada.map((t) => t.propriedade).sort()).toEqual(['opacity', 'translate']);
+  for (const transicao of entrada) {
+    expect(transicao.duracao).toBeGreaterThanOrEqual(150);
+    expect(transicao.duracao).toBeLessThanOrEqual(300);
+  }
+  // Uma opção marcada (a tarja cresce com o detalhe) e a resposta: nada novo passa do limite.
+  await responderLance(page, 'segura');
   await expect(page.getByRole('region', { name: 'Comandos da corrida' })).toBeVisible();
+  expect(await maiorDuracao(page)).toBeLessThanOrEqual(300);
+  // O desfecho entra na tarja inferior do mesmo jeito, e a corrida segue.
+  await expect(desfechoDoLance(page)).toBeVisible({ timeout: 20_000 });
+  expect(await maiorDuracao(page)).toBeLessThanOrEqual(300);
+  const desfecho = await transicoesDe(page, FAIXA_DO_DESFECHO);
+  expect(desfecho.map((t) => t.propriedade)).toContain('opacity');
+  for (const transicao of desfecho) expect(transicao.duracao).toBeLessThanOrEqual(300);
+  await expect(desfechoDoLance(page)).toHaveCount(0);
   expect(await maiorDuracao(page)).toBeLessThanOrEqual(300);
 });
 
@@ -92,8 +156,13 @@ test('nada pisca três vezes por segundo ou mais', async ({ page }) => {
     .getByRole('link', { name: /^Fim de semana/ })
     .click();
   await page.getByRole('button', { name: 'Ir para a largada' }).click();
-  await page.getByRole('region', { name: 'Comandos da corrida' }).getByRole('button', { name: 'Largar' }).click();
+  // Com o lance da largada aberto, nas luzes da largada e com o desfecho na tela.
+  await expect(tarjaDoLance(page, 'Largada')).toBeVisible();
+  expect(await piscando(page)).toEqual([]);
+  await responderLance(page, 'segura');
   await page.waitForTimeout(1500);
+  expect(await piscando(page)).toEqual([]);
+  await expect(desfechoDoLance(page)).toBeVisible({ timeout: 20_000 });
   expect(await piscando(page)).toEqual([]);
 });
 
@@ -131,10 +200,47 @@ async function conferirMenosMovimento(page: Page): Promise<void> {
     .getByRole('navigation', { name: 'Navegação principal' })
     .getByRole('link', { name: /^Fim de semana/ })
     .click();
+  await anotarTransicoes(page);
   await page.getByRole('button', { name: 'Ir para a largada' }).click();
   await expect(page.getByRole('button', { name: 'Câmera geral' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Meu piloto' })).toHaveAttribute('aria-pressed', 'false');
   expect(await transicoesDeMovimento(page)).toEqual([]);
+  // O lance da largada já está aberto no grid: a tarja não sobe do rodapé, só esmaece, e depressa.
+  const tarja = tarjaDoLance(page, 'Largada');
+  await expect(tarja).toBeVisible();
+  await conferirSoEsmaece(page, TARJA_DO_LANCE);
+  // Marcar uma opção faz a tarja crescer (entra o detalhe): de uma vez, sem transição de tamanho.
+  await responderLance(page, 'segura');
+  expect(await transicoesDe(page, TARJA_DO_LANCE).then((lista) => lista.filter((t) => MOVIMENTO.test(t.propriedade)))).toEqual([]);
+  // O desfecho entra na tarja inferior do mesmo jeito, e a câmera continua parada no circuito inteiro.
+  await expect(desfechoDoLance(page)).toBeVisible({ timeout: 20_000 });
+  await conferirSoEsmaece(page, FAIXA_DO_DESFECHO);
+  await expect(page.getByRole('button', { name: 'Câmera geral' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await transicoesDeMovimento(page)).toEqual([]);
+  expect(await maiorDuracao(page)).toBeLessThanOrEqual(150);
+}
+
+/**
+ * Com menos movimento, o elemento que acabou de entrar só esmaeceu: houve transição de opacidade,
+ * curta, nenhuma de posição, tamanho ou giro, e ele está parado no lugar (sem deslocamento nem escala).
+ */
+async function conferirSoEsmaece(page: Page, seletor: string): Promise<void> {
+  const transicoes = await transicoesDe(page, seletor);
+  expect(
+    transicoes.map((t) => t.propriedade),
+    `${seletor}: tem de esmaecer ao entrar`,
+  ).toContain('opacity');
+  expect(
+    transicoes.filter((t) => MOVIMENTO.test(t.propriedade)),
+    `${seletor}: nada desliza nem dá zoom`,
+  ).toEqual([]);
+  for (const transicao of transicoes) expect(transicao.duracao).toBeLessThanOrEqual(300);
+  const parado = await page.locator(seletor).evaluate((elemento) => {
+    const estilo = getComputedStyle(elemento);
+    return { translate: estilo.translate, scale: estilo.scale, rotate: estilo.rotate, transform: estilo.transform };
+  });
+  expect(parado).toEqual({ translate: 'none', scale: 'none', rotate: 'none', transform: 'none' });
+  expect(await maiorDuracao(page)).toBeLessThanOrEqual(150);
 }
 
 test.describe('com "reduzir movimento" ligado no sistema', () => {

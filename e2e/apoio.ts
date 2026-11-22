@@ -1,6 +1,6 @@
 /** Apoio aos testes no navegador: tamanhos de tela, abertura de saves e a verificação visual. */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { descrever, medirContraste, reprovadas } from './contraste';
 
 /**
@@ -96,6 +96,135 @@ export async function irPara(page: Page, nome: string): Promise<void> {
   }
   // Espera a troca de tela e as imagens (sprites e fontes) assentarem.
   await page.waitForTimeout(350);
+}
+
+/**
+ * Lances decisivos (Fase 4). A corrida para numa tarja presa ao pé da tela, sem tempo limite, e só
+ * anda de novo com a resposta do jogador. Para quem corre não existe mais o botão "Largar": a
+ * corrida começa pela resposta ao lance da largada, que já vem aberto no grid.
+ */
+
+/**
+ * A tarja do lance aberto. `tipo` é o título do lance ("Largada", "Ataque", "Defesa", "Chuva
+ * começando", "Última volta", "Parada") ou uma expressão que case com ele (/Ataque|Defesa/); sem
+ * ele, qualquer lance.
+ */
+export function tarjaDoLance(page: Page, tipo?: string | RegExp): Locator {
+  if (tipo === undefined) return page.getByRole('dialog', { name: /^Lance decisivo: / });
+  if (typeof tipo === 'string') return page.getByRole('dialog', { name: `Lance decisivo: ${tipo}`, exact: true });
+  return page.getByRole('dialog', { name: new RegExp(`^Lance decisivo: (?:${tipo.source})$`) });
+}
+
+/** As opções do lance aberto (os pneus do lance de parada ficam em outro grupo e não entram aqui). */
+export function opcoesDoLance(page: Page): Locator {
+  return tarjaDoLance(page).getByRole('radiogroup', { name: 'Opções do lance' }).getByRole('radio');
+}
+
+/**
+ * Como responder a um lance:
+ * - 'piloto': o botão "Deixar com o piloto" (o piloto decide pelo estilo dele);
+ * - 'segura': a primeira opção de menor risco (segura; sem ela, moderada), e "Confirmar";
+ * - 'ousada': a primeira de maior risco, e "Confirmar";
+ * - uma expressão: a opção cujo nome acessível casa com ela ("Mergulhar na freada: 77% de chance..."), e "Confirmar".
+ */
+export type RespostaAoLance = 'piloto' | 'segura' | 'ousada' | RegExp;
+
+const RISCOS = ['seguro', 'moderado', 'arriscado'] as const;
+
+/** Marca uma opção do lance aberto, sem confirmar, e devolve o nome acessível dela (rótulo, chance e risco). */
+export async function escolherOpcao(page: Page, resposta: Exclude<RespostaAoLance, 'piloto'>): Promise<string> {
+  const opcoes = opcoesDoLance(page);
+  await opcoes.first().waitFor();
+  const nomes = await opcoes.evaluateAll((lista) => lista.map((opcao) => opcao.getAttribute('aria-label') ?? ''));
+  let indice = -1;
+  if (resposta instanceof RegExp) indice = nomes.findIndex((nome) => resposta.test(nome));
+  else {
+    // O risco vem por extenso no nome da opção, depois da chance: "..., seguro" ou "..., seguro, escolha do piloto".
+    for (const risco of resposta === 'segura' ? RISCOS : [...RISCOS].reverse()) {
+      indice = nomes.findIndex((nome) => new RegExp(`, ${risco}(,|$)`).test(nome));
+      if (indice >= 0) break;
+    }
+  }
+  expect(indice, `nenhuma opção do lance casa com ${String(resposta)}; as opções são:\n  ${nomes.join('\n  ')}`).toBeGreaterThanOrEqual(0);
+  const opcao = opcoes.nth(indice);
+  await opcao.click();
+  await expect(opcao).toHaveAttribute('aria-checked', 'true');
+  return nomes[indice] ?? '';
+}
+
+/**
+ * Responde ao lance aberto (espera a tarja, se ela ainda não apareceu) e devolve a opção escolhida
+ * ('piloto' quando a decisão ficou com ele). No lance de parada, `pneu` troca o composto sugerido
+ * ("Pneu duro (H)").
+ */
+export async function responderLance(page: Page, resposta: RespostaAoLance = 'segura', pneu?: string | RegExp): Promise<string> {
+  const tarja = tarjaDoLance(page);
+  await tarja.waitFor();
+  if (resposta === 'piloto') {
+    await tarja.getByRole('button', { name: 'Deixar com o piloto', exact: true }).click();
+    return 'piloto';
+  }
+  const escolhida = await escolherOpcao(page, resposta);
+  if (pneu) await tarja.getByRole('radiogroup', { name: 'Pneu a colocar' }).getByRole('radio', { name: pneu }).click();
+  await tarja.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  return escolhida;
+}
+
+/**
+ * Daqui em diante, todo lance que abrir é respondido sozinho, para os testes que só querem ver a
+ * corrida andar. A resposta é dada quando o teste vai agir sobre a página ou esperar algo dela
+ * (clique, `expect` de um elemento): esperas de relógio e `conferirTela` não respondem a nada.
+ * Quem quer ver um lance aberto não liga isto, ou desliga antes com `pararDeResponder`.
+ */
+export async function responderLances(page: Page, resposta: RespostaAoLance = 'segura'): Promise<void> {
+  await page.addLocatorHandler(
+    tarjaDoLance(page),
+    async () => {
+      await responderLance(page, resposta);
+    },
+    // Um lance pode abrir logo atrás do outro (na cronometragem em 8×): não espera a tarja sumir.
+    { noWaitAfter: true },
+  );
+}
+
+/** Desfaz `responderLances`: o próximo lance fica aberto, à espera do teste. */
+export async function pararDeResponder(page: Page): Promise<void> {
+  await page.removeLocatorHandler(tarjaDoLance(page));
+}
+
+/**
+ * Deixa a corrida andar até abrir um lance do tipo pedido ("Parada", /Ataque|Defesa/), respondendo aos
+ * outros que aparecerem antes. Falha se a corrida acabar, ou o prazo vencer, sem esse lance.
+ */
+export async function correrAteOLance(page: Page, tipo: string | RegExp, resposta: RespostaAoLance = 'segura', prazo = 90_000): Promise<Locator> {
+  const pedido = typeof tipo === 'string' ? new RegExp(`^Lance decisivo: ${tipo}$`) : new RegExp(`^Lance decisivo: (?:${tipo.source})$`);
+  const resultado = page.getByRole('button', { name: 'Concluir etapa e salvar' });
+  const limite = Date.now() + prazo;
+  for (;;) {
+    // Uma leitura só por volta do laço: o lance que está aberto agora é o pedido, ou é outro e recebe a resposta.
+    const abertos = await tarjaDoLance(page).evaluateAll((lista) => lista.map((tarja) => tarja.getAttribute('aria-label') ?? ''));
+    if (abertos.some((nome) => pedido.test(nome))) break;
+    if (abertos.length > 0) await responderLance(page, resposta);
+    else {
+      expect(await resultado.count(), `a corrida acabou sem um lance de ${String(tipo)}`).toBe(0);
+      expect(Date.now(), `nenhum lance de ${String(tipo)} abriu em ${prazo / 1000} s`).toBeLessThan(limite);
+      await page.waitForTimeout(100);
+    }
+  }
+  const alvo = tarjaDoLance(page, tipo);
+  await expect(alvo).toBeVisible();
+  return alvo;
+}
+
+/**
+ * A faixa de desfecho de um lance, na corrida visual: "Deu certo" ou "Deu errado", com a frase do
+ * que aconteceu. Fica alguns segundos sobre a pista (no lugar da tarja inferior).
+ */
+export function desfechoDoLance(page: Page): Locator {
+  return page
+    .locator('[data-slot="tarja-inferior"]')
+    .getByRole('status')
+    .filter({ hasText: /Deu (certo|errado)/ });
 }
 
 export interface Sobreposicao {
