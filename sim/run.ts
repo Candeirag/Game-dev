@@ -7,10 +7,24 @@
  * último resultado. Por isso o relatório de duas execuções com os mesmos argumentos é idêntico,
  * e uma diferença entre duas versões do código é sempre efeito do código.
  */
-import { MOMENT_KINDS, type CareerState, type CategoryId, type MomentKind, type MomentOutcome, type MomentRecord, type Offer } from '@/domain/schemas';
+import {
+  MOMENT_KINDS,
+  type CareerState,
+  type CategoryId,
+  type EventChoice,
+  type EventCategory,
+  type MomentKind,
+  type MomentOutcome,
+  type MomentRecord,
+  type Offer,
+  type PendingEvent,
+} from '@/domain/schemas';
+import { STORY_CATEGORIES, type StoryCategory } from '@/domain/storyEvents';
+import { compareText } from '@/domain/text';
 import { RACE_MOMENTS } from '@/config/balance';
-import { BIRTH_TRAITS } from '@/data/birth';
+import { APTITUDE_ORDER, BIRTH_TRAITS } from '@/data/birth';
 import { CATEGORIES, getCategory } from '@/data/categories';
+import { SPONSOR_PROFILES, STORY_CHAINS, STORY_EVENT_CATALOG } from '@/data/events';
 import type { PlayerBackground } from '@/data/rules';
 import * as engine from '@/engine';
 import { botOffseason, botTraining, playRound, resolvePending, withTalent, type BotDoor, type Choices, type MomentPolicy, type RaceWatch } from './policy';
@@ -114,6 +128,33 @@ export interface SeasonSample {
   races: RaceSample[];
   /** Rivalidades que nasceram nesta temporada de um toque num lance (`relations.rivalryLog`, com `fresh`). */
   freshRivalries: number;
+  /** Eventos (Fase 5): os cartões que apareceram na temporada, contados antes da resposta do robô. */
+  events: EventSample;
+}
+
+/** Uma escolha que existe por causa de um traço de nascença ou de uma aptidão. */
+export type UnlockSample = NonNullable<EventChoice['unlock']>;
+
+/**
+ * Os cartões de eventos de uma temporada. Os da Fase 5 são os de `definitionId` 'story:…' (eventos
+ * avulsos, passos de cadeia e propostas de patrocínio); os outros são os de família e a mudança.
+ */
+export interface EventSample {
+  /** Cartões da Fase 5 gerados depois de cada etapa disputada (posição 0 = etapa 1). */
+  perRound: number[];
+  /** Cartões da Fase 5 do começo da temporada (a de estreia não tem começo). */
+  seasonStart: number;
+  /** Cartões da Fase 5 por categoria, das etapas e do começo da temporada. */
+  byCategory: Record<StoryCategory, number>;
+  /** Cadeias com algum cartão nesta temporada, e as concluídas até o fechamento dela (ids, sem repetir). */
+  chains: string[];
+  chainsDone: string[];
+  /** Uma entrada por escolha liberada por traço ou aptidão que um cartão da Fase 5 ofereceu. */
+  unlocks: UnlockSample[];
+  /** O perfil de cada proposta de patrocínio da Fase 5 ('story:sponsor:<perfil>'). */
+  sponsorOffers: string[];
+  /** Eventos de fora da Fase 5: os de família e a mudança. */
+  others: number;
 }
 
 /** Um lance do piloto: a opção escolhida, o que a tela mostrava e como terminou. */
@@ -166,6 +207,30 @@ export interface CareerSample {
   seasons: SeasonSample[];
   /** 'completed' = jogou todas as temporadas pedidas; 'succession' = a carreira passou a um herdeiro antes disso. */
   ended: 'completed' | 'succession';
+  /** Textos de evento que esta carreira viu mais de uma vez (Fase 5: nenhum texto pode se repetir). */
+  texts: TextRepeatSample;
+}
+
+/** Um texto que apareceu mais de uma vez na mesma carreira. */
+export interface RepeatedText {
+  /** O começo do texto. */
+  text: string;
+  /** Quantas vezes apareceu, e quantas delas num cartão da Fase 5. */
+  times: number;
+  story: number;
+  /** Os eventos (`definitionId`) em que apareceu, na ordem em que apareceram. */
+  events: string[];
+}
+
+/**
+ * Textos repetidos numa carreira: título, corpo, rótulo de escolha e texto de desfecho de todos os
+ * cartões que ela viu. `story` conta só os cartões da Fase 5; `all`, todos os eventos (com família e
+ * mudança). Os dois são textos distintos que apareceram mais de uma vez.
+ */
+export interface TextRepeatSample {
+  story: number;
+  all: number;
+  repeated: RepeatedText[];
 }
 
 /**
@@ -242,6 +307,101 @@ function watchMoments(races: RaceSample[]): RaceWatch {
   };
 }
 
+/** Os cartões da Fase 5 (eventos avulsos, passos de cadeia e propostas de patrocínio) começam assim. */
+const STORY_PREFIX = 'story:';
+const SPONSOR_PREFIX = 'story:sponsor:';
+/** Até quantas letras de um texto repetido o relatório mostra. */
+const EXCERPT_LENGTH = 60;
+
+const isStoryCategory = (category: EventCategory): category is StoryCategory => STORY_CATEGORIES.some((c) => c === category);
+const excerpt = (text: string) => (text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH - 1).trimEnd()}…` : text);
+
+/** Os textos que o jogador lê num cartão: título, corpo, rótulo de cada escolha e texto de cada desfecho. */
+function eventTexts(event: PendingEvent): string[] {
+  return [event.title, event.body, ...event.choices.flatMap((c) => [c.label, ...c.outcomes.map((o) => o.text)])].filter((text) => text !== '');
+}
+
+export function emptyEventSample(): EventSample {
+  return {
+    perRound: [],
+    seasonStart: 0,
+    byCategory: { track: 0, career: 0, money: 0, health: 0, personal: 0 },
+    chains: [],
+    chainsDone: [],
+    unlocks: [],
+    sponsorOffers: [],
+    others: 0,
+  };
+}
+
+/** Quem acompanha os cartões de uma carreira (o que a seção 10 do relatório mede). */
+export interface EventWatch {
+  /** Lê os cartões pendentes, sem mexer na carreira, e conta os que ainda não tinha visto (que devolve). */
+  look(career: CareerState): PendingEvent[];
+  /** Fecha a temporada (depois do fechamento e das respostas): devolve o que ela teve e começa a próxima. */
+  closeSeason(career: CareerState): EventSample;
+  /** Os textos que a carreira viu mais de uma vez até agora. */
+  texts(): TextRepeatSample;
+}
+
+/**
+ * Acompanha os cartões de uma carreira. O simulador chama `look` antes de cada resposta do robô: os
+ * cartões gerados depois da etapa N são resolvidos no começo da etapa N+1, os da última etapa depois
+ * do fechamento do ano e os do começo da temporada antes da primeira etapa. Cada cartão conta uma
+ * vez (pelo id), na temporada em que apareceu. Só lê: a carreira é a mesma com ou sem ele.
+ */
+export function watchEvents(): EventWatch {
+  const seen = new Set<string>();
+  const tally = new Map<string, { times: number; story: number; events: string[] }>();
+  let season = emptyEventSample();
+  const count = (text: string, event: PendingEvent, story: boolean) => {
+    const row = tally.get(text) ?? { times: 0, story: 0, events: [] };
+    row.times++;
+    if (story) row.story++;
+    if (!row.events.includes(event.definitionId)) row.events.push(event.definitionId);
+    tally.set(text, row);
+  };
+  return {
+    look(career) {
+      const fresh = career.pendingEvents.filter((e) => !seen.has(e.id));
+      for (const event of fresh) {
+        seen.add(event.id);
+        const story = event.definitionId.startsWith(STORY_PREFIX);
+        for (const text of eventTexts(event)) count(text, event, story);
+        if (!story) {
+          season.others++;
+          continue;
+        }
+        if (event.round > 0) season.perRound[event.round - 1] = (season.perRound[event.round - 1] ?? 0) + 1;
+        else season.seasonStart++;
+        if (isStoryCategory(event.category)) season.byCategory[event.category]++;
+        if (event.chain && !season.chains.includes(event.chain.id)) season.chains.push(event.chain.id);
+        for (const choice of event.choices) if (choice.unlock) season.unlocks.push(choice.unlock);
+        if (event.definitionId.startsWith(SPONSOR_PREFIX)) season.sponsorOffers.push(event.definitionId.slice(SPONSOR_PREFIX.length));
+      }
+      return fresh;
+    },
+    closeSeason(career) {
+      const rounds = Math.max(career.rounds.length, season.perRound.length);
+      const done = engine
+        .storyOf(career)
+        .chains.filter((c) => c.status === 'done')
+        .map((c) => c.id);
+      const sample: EventSample = { ...season, perRound: Array.from({ length: rounds }, (_, i) => season.perRound[i] ?? 0), chainsDone: done };
+      season = emptyEventSample();
+      return sample;
+    },
+    texts() {
+      const rows = [...tally].filter(([, row]) => row.times > 1);
+      return {
+        story: rows.filter(([, row]) => row.story > 1).length,
+        all: rows.length,
+        repeated: rows.map(([text, row]) => ({ text: excerpt(text), times: row.times, story: row.story, events: [...row.events] })),
+      };
+    },
+  };
+}
+
 function sampleSeason(
   career: CareerState,
   index: number,
@@ -249,6 +409,7 @@ function sampleSeason(
   noSeatCause: NoSeatCause | null,
   door: BotDoor | 'initial',
   races: RaceSample[],
+  events: EventSample,
 ): SeasonSample {
   const offseason = career.offseason;
   if (!offseason) throw new Error('Temporada sem fechamento.');
@@ -283,6 +444,7 @@ function sampleSeason(
     academy: career.academy !== null,
     races,
     freshRivalries: career.relations.rivalryLog.filter((r) => r.season === career.season && r.fresh).length,
+    events,
   };
 }
 
@@ -310,28 +472,35 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
     let seat: SeatOrigin = 'initial';
     let cause: NoSeatCause | null = null;
     let door: BotDoor | 'initial' = 'initial';
+    // Os cartões são lidos antes de cada resposta do robô (o `resolvePending` do começo de cada etapa
+    // e o do fechamento do ano); ler não muda a carreira.
+    const events = watchEvents();
     for (; index <= options.seasons; index++) {
       career = botTraining(career);
       const races: RaceSample[] = [];
       const watch = watchMoments(races);
-      while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, choices, watch);
+      while (career.nextRoundIndex < career.calendar.length && !career.succession) {
+        events.look(career);
+        career = playRound(career, choices, watch);
+      }
       // Um acidente fatal no meio do ano encerra a amostra sem contar a temporada incompleta.
-      if (!career.offseason) return { seed, profile, birth, seasons, ended: 'succession' };
+      if (!career.offseason) return { seed, profile, birth, seasons, ended: 'succession', texts: events.texts() };
       // As decisões que a última etapa deixou pendentes são resolvidas aqui, depois do fechamento
       // do ano (que acontece ao concluir a última etapa) e antes de medir o caixa e de escolher a
       // proposta, como faz o jogador.
+      events.look(career);
       if (!career.succession) career = resolvePending(career, choices.eventChoice);
-      seasons.push(sampleSeason(career, index, seat, cause, door, races));
+      seasons.push(sampleSeason(career, index, seat, cause, door, races, events.closeSeason(career)));
       // Quem jogou todas as temporadas pedidas completou a carreira, mesmo que a sucessão venha no último fechamento.
       if (index === options.seasons) break;
-      if (career.succession) return { seed, profile, birth, seasons, ended: 'succession' };
+      if (career.succession) return { seed, profile, birth, seasons, ended: 'succession', texts: events.texts() };
       const next = botOffseason(career);
       seat = career.offseason?.offers.find((o) => o.id === next.offerId)?.kind ?? 'fallback';
       cause = seat === 'fallback' ? seatMarket(career).cause : null;
       door = next.door;
       career = engine.startNextSeason(next.career, next.offerId);
     }
-    return { seed, profile, birth, seasons, ended: 'completed' };
+    return { seed, profile, birth, seasons, ended: 'completed', texts: events.texts() };
   } catch (error) {
     // Uma carreira que quebra tem de dizer qual foi: é com a semente que se reproduz o defeito.
     throw new Error(`A carreira da semente ${seed} falhou na temporada ${index}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
@@ -439,6 +608,79 @@ export interface SimSummary {
   doors: DoorStats;
   /** Lances decisivos (Fase 4). */
   moments: MomentStats;
+  /** Eventos encadeados com memória (Fase 5). */
+  events: EventStats;
+}
+
+/** Cartões da Fase 5 por etapa disputada e no começo da temporada (a regra é de 1 a 3 por etapa). */
+export interface EventCountStats {
+  /** Etapas disputadas e os cartões gerados depois delas. */
+  rounds: number;
+  cards: number;
+  /** Cartões por etapa, em média. */
+  perRound: number;
+  /** Etapas com 0, 1, 2, 3 e mais de 3 cartões. */
+  zero: number;
+  one: number;
+  two: number;
+  three: number;
+  more: number;
+  /** Temporadas com começo (todas, menos a de estreia) e os cartões desse começo. */
+  starts: number;
+  startCards: number;
+  perStart: number;
+}
+
+/** Uma cadeia do catálogo: quantas carreiras a começaram e quantas a concluíram. */
+export interface ChainStats {
+  id: string;
+  title: string;
+  started: number;
+  done: number;
+}
+
+/** Um traço ou aptidão que libera escolhas: quantas o catálogo tem e quantas apareceram. */
+export interface UnlockStats extends UnlockSample {
+  /** Escolhas do catálogo (eventos avulsos e passos de cadeia) que ele libera. */
+  inCatalog: number;
+  /** Vezes em que uma escolha liberada por ele foi oferecida, e em quantas carreiras. */
+  times: number;
+  careers: number;
+}
+
+export interface EventStats {
+  all: EventCountStats;
+  /** O mesmo por temporada da carreira (1 = a de estreia): mostra se o catálogo se esgota. */
+  bySeason: (EventCountStats & { season: number })[];
+  /** Todos os cartões da Fase 5 (etapas e começos de temporada) e os eventos de fora dela (família e mudança). */
+  cards: number;
+  others: number;
+  /** Parcela de cada categoria nos cartões da Fase 5, na ordem do jogo. */
+  byCategory: { category: StoryCategory; cards: number; share: number }[];
+  /** Todas as cadeias do catálogo, na ordem dele (e, no fim, alguma que só a amostra tenha). */
+  chains: ChainStats[];
+  chainsStartedPerCareer: number;
+  chainsDonePerCareer: number;
+  /** Escolhas liberadas por traço ou aptidão: no total, por carreira, carreiras que viram alguma e por traço/aptidão. */
+  unlocks: number;
+  unlocksPerCareer: number;
+  unlockCareers: number;
+  byUnlock: UnlockStats[];
+  /** Propostas de patrocínio da Fase 5, perfis distintos (e quantos o catálogo tem) e perfis repetidos numa mesma carreira. */
+  sponsorOffers: number;
+  sponsorOffersPerCareer: number;
+  sponsorProfiles: number;
+  sponsorCatalog: number;
+  sponsorRepeated: number;
+  /** Textos repetidos na mesma carreira (a soma das carreiras), e quantas carreiras têm algum. */
+  repeats: {
+    story: number;
+    storyCareers: number;
+    all: number;
+    allCareers: number;
+    /** Os textos repetidos, juntando as carreiras: primeiro os da Fase 5, depois os que mais carreiras viram. */
+    examples: (RepeatedText & { careers: number })[];
+  };
 }
 
 /** Quantos lances têm as corridas completas de um grupo (a regra é de 2 a 4 por corrida). */
@@ -713,6 +955,137 @@ function momentStats(samples: readonly CareerSample[]): MomentStats {
   };
 }
 
+function eventCounts(seasons: readonly SeasonSample[]): EventCountStats {
+  const perRound = seasons.flatMap((s) => s.events.perRound);
+  // A temporada de estreia não tem começo: a carreira já nasce nela.
+  const starts = seasons.filter((s) => s.season > 1).map((s) => s.events.seasonStart);
+  const rounds = (cards: number) => perRound.filter((n) => n === cards).length;
+  return {
+    rounds: perRound.length,
+    cards: sum(perRound),
+    perRound: mean(perRound),
+    zero: rounds(0),
+    one: rounds(1),
+    two: rounds(2),
+    three: rounds(3),
+    more: perRound.filter((n) => n > 3).length,
+    starts: starts.length,
+    startCards: sum(starts),
+    perStart: mean(starts),
+  };
+}
+
+const unlockKey = (unlock: UnlockSample) => `${unlock.kind}:${unlock.id}`;
+
+/**
+ * Escolhas do catálogo liberadas por cada traço ou aptidão. Vale a primeira condição de traço ou
+ * aptidão da escolha, que é a que o cartão mostra.
+ */
+function catalogUnlocks(): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const spec of [...STORY_EVENT_CATALOG, ...STORY_CHAINS.flatMap((chain) => chain.steps)])
+    for (const choice of spec.choices) {
+      const condition = choice.requires?.find((c) => c.c === 'trait' || c.c === 'aptitude');
+      const unlock: UnlockSample | null =
+        condition?.c === 'trait' ? { kind: 'trait', id: condition.trait } : condition?.c === 'aptitude' ? { kind: 'aptitude', id: condition.aptitude } : null;
+      if (unlock) out.set(unlockKey(unlock), (out.get(unlockKey(unlock)) ?? 0) + 1);
+    }
+  return out;
+}
+
+/** Os textos repetidos de todas as carreiras, juntos: primeiro os da Fase 5, depois os que mais carreiras viram. */
+function repeatedExamples(samples: readonly CareerSample[]): (RepeatedText & { careers: number })[] {
+  const byText = new Map<string, RepeatedText & { careers: number }>();
+  for (const career of samples)
+    for (const repeated of career.texts.repeated) {
+      const row = byText.get(repeated.text);
+      if (!row) {
+        byText.set(repeated.text, { ...repeated, events: [...repeated.events], careers: 1 });
+        continue;
+      }
+      row.times += repeated.times;
+      row.story += repeated.story;
+      row.careers++;
+      for (const event of repeated.events) if (!row.events.includes(event)) row.events.push(event);
+    }
+  return [...byText.values()].sort((a, b) => b.story - a.story || b.careers - a.careers || b.times - a.times || compareText(a.text, b.text));
+}
+
+function eventStats(samples: readonly CareerSample[], seasonsAsked: number): EventStats {
+  const seasons = samples.flatMap((c) => c.seasons);
+  const events = seasons.map((s) => s.events);
+  const all = eventCounts(seasons);
+  const cards = sum(events.map((e) => sum(e.perRound) + e.seasonStart));
+  const perCareer = (count: number) => (samples.length ? count / samples.length : 0);
+  const union = (career: CareerSample, pick: (e: EventSample) => readonly string[]) => new Set(career.seasons.flatMap((s) => pick(s.events)));
+
+  const started = samples.map((c) => union(c, (e) => e.chains));
+  const done = samples.map((c) => union(c, (e) => e.chainsDone));
+  const chainIds = [...STORY_CHAINS.map((chain) => chain.id), ...started.flatMap((set) => [...set])].filter((id, i, ids) => ids.indexOf(id) === i);
+
+  const inCatalog = catalogUnlocks();
+  const offered = events.flatMap((e) => e.unlocks);
+  const unlockOrder: UnlockSample[] = [
+    ...Object.values(BIRTH_TRAITS).map((t): UnlockSample => ({ kind: 'trait', id: t.id })),
+    ...APTITUDE_ORDER.map((id): UnlockSample => ({ kind: 'aptitude', id })),
+    ...offered,
+  ].filter((u, i, list) => list.findIndex((v) => unlockKey(v) === unlockKey(u)) === i);
+
+  const sponsorRepeated = samples.reduce((total, c) => {
+    const offers = c.seasons.flatMap((s) => s.events.sponsorOffers);
+    return total + new Set(offers.filter((id, i) => offers.indexOf(id) !== i)).size;
+  }, 0);
+  const sponsorOffers = events.flatMap((e) => e.sponsorOffers);
+
+  return {
+    all,
+    bySeason: Array.from({ length: seasonsAsked }, (_, i) => {
+      const rows = seasons.filter((s) => s.season === i + 1);
+      return rows.length ? [{ season: i + 1, ...eventCounts(rows) }] : [];
+    }).flat(),
+    cards,
+    others: sum(events.map((e) => e.others)),
+    byCategory: STORY_CATEGORIES.map((category) => {
+      const count = sum(events.map((e) => e.byCategory[category]));
+      return { category, cards: count, share: cards ? count / cards : 0 };
+    }),
+    chains: chainIds.map((id) => ({
+      id,
+      title: STORY_CHAINS.find((chain) => chain.id === id)?.title ?? id,
+      started: started.filter((set) => set.has(id)).length,
+      done: done.filter((set) => set.has(id)).length,
+    })),
+    chainsStartedPerCareer: perCareer(sum(started.map((set) => set.size))),
+    chainsDonePerCareer: perCareer(sum(done.map((set) => set.size))),
+    unlocks: offered.length,
+    unlocksPerCareer: perCareer(offered.length),
+    unlockCareers: samples.filter((c) => c.seasons.some((s) => s.events.unlocks.length > 0)).length,
+    byUnlock: unlockOrder
+      .map((unlock) => {
+        const key = unlockKey(unlock);
+        return {
+          ...unlock,
+          inCatalog: inCatalog.get(key) ?? 0,
+          times: offered.filter((u) => unlockKey(u) === key).length,
+          careers: samples.filter((c) => c.seasons.some((s) => s.events.unlocks.some((u) => unlockKey(u) === key))).length,
+        };
+      })
+      .filter((row) => row.inCatalog > 0 || row.times > 0),
+    sponsorOffers: sponsorOffers.length,
+    sponsorOffersPerCareer: perCareer(sponsorOffers.length),
+    sponsorProfiles: new Set(sponsorOffers).size,
+    sponsorCatalog: SPONSOR_PROFILES.filter((p) => !p.chainOnly).length,
+    sponsorRepeated,
+    repeats: {
+      story: sum(samples.map((c) => c.texts.story)),
+      storyCareers: samples.filter((c) => c.texts.story > 0).length,
+      all: sum(samples.map((c) => c.texts.all)),
+      allCareers: samples.filter((c) => c.texts.all > 0).length,
+      examples: repeatedExamples(samples),
+    },
+  };
+}
+
 /** Percentil pelo método do posto mais próximo (0,5 = mediana). */
 export function percentile(values: readonly number[], fraction: number): number {
   if (values.length === 0) return 0;
@@ -883,6 +1256,7 @@ export function summarize(samples: readonly CareerSample[], options: SimOptions)
     ].filter((row): row is BirthGroupStats => row !== null),
     doors: doorStats(samples),
     moments: momentStats(samples),
+    events: eventStats(samples, options.seasons),
   };
 }
 

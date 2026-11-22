@@ -4,13 +4,14 @@
  * do jogo mudar, e dá para comparar o relatório de uma fase com o da anterior num diff.
  */
 import { categoryRef } from '@/domain/categoryNames';
-import { MOMENT_KIND_LABELS, MOMENT_RISK_LABELS } from '@/domain/labels';
+import { EVENT_CATEGORY_LABELS, MOMENT_KIND_LABELS, MOMENT_RISK_LABELS } from '@/domain/labels';
 import { formatMoney } from '@/domain/money';
 import { counted } from '@/domain/text';
+import { APTITUDE_INFO, APTITUDE_ORDER, BIRTH_TRAITS } from '@/data/birth';
 import { CATEGORIES, getCategory } from '@/data/categories';
 import { MOMENT_TEXTS } from '@/data/raceMoments';
 import type { MomentPolicy } from './policy';
-import type { BirthGroupStats, MomentCountStats, MomentEdgeStats, SimSummary } from './run';
+import type { BirthGroupStats, EventCountStats, MomentCountStats, MomentEdgeStats, SimSummary, UnlockSample } from './run';
 
 const GROUP_LABELS: Readonly<Record<BirthGroupStats['group'], string>> = {
   low: 'Nascença baixa',
@@ -34,6 +35,19 @@ const signed = (value: number, digits = 1) => {
   const text = decimal(Math.abs(value), digits);
   return /[1-9]/.test(text) ? `${value < 0 ? '−' : '+'}${text}` : text;
 };
+/** Quantos textos repetidos o relatório mostra como exemplo. */
+const REPEAT_EXAMPLES = 5;
+
+/** Nome e tipo (talento, defeito ou aptidão) de quem libera uma escolha; um id desconhecido sai como veio. */
+function unlockLabel(unlock: UnlockSample): { name: string; kind: string } {
+  if (unlock.kind === 'trait') {
+    const trait = Object.values(BIRTH_TRAITS).find((t) => t.id === unlock.id);
+    return { name: trait?.name ?? unlock.id, kind: trait?.kind === 'defect' ? 'Defeito' : 'Talento' };
+  }
+  const aptitude = APTITUDE_ORDER.find((key) => key === unlock.id);
+  return { name: aptitude ? APTITUDE_INFO[aptitude].label : unlock.id, kind: 'Aptidão' };
+}
+
 /** O simulador cria pilotos brasileiros; a moeda é só apresentação e não muda os números. */
 const cash = (value: number) => formatMoney(value, 'BRL', { compact: true });
 
@@ -314,6 +328,78 @@ export function formatReport(summary: SimSummary): string {
         'arriscados que deram certo, por corrida; "saldo", os lances vencidos menos os perdidos, por corrida (o registro não diz',
         'quantas posições cada lance valeu). Piloto melhor tem de ver chances maiores e vencer mais lances arriscados.',
         '"Rivalidade nova" é o toque num lance com um piloto que ainda não era rival.',
+      ].join(' '),
+    ),
+  );
+
+  section('10. Eventos');
+  const events = summary.events;
+  const eventRow = (label: string, c: EventCountStats) => [
+    label,
+    String(c.rounds),
+    c.rounds ? decimal(c.perRound, 2) : '-',
+    share(c.zero, c.rounds),
+    share(c.one, c.rounds),
+    share(c.two, c.rounds),
+    share(c.three, c.rounds),
+    share(c.more, c.rounds),
+    c.starts ? decimal(c.perStart, 2) : '-',
+  ];
+  const repeatLine = (scope: string, texts: number, withRepeats: number) =>
+    `Textos repetidos na mesma carreira, ${scope}: ${texts} (em ${withRepeats} de ${careers}).`;
+  out.push(
+    `Cartões da Fase 5: ${events.cards} (${events.all.rounds ? decimal(events.all.perRound, 2) : '-'} por etapa disputada; ${events.all.starts ? decimal(events.all.perStart, 2) : '-'} no começo de cada temporada, da segunda em diante). Eventos de família e mudança: ${events.others}.`,
+    `Etapas disputadas: ${events.all.rounds}. Sem nenhum cartão: ${events.all.zero}. Com mais de 3: ${events.all.more}.`,
+    '',
+    ...table(
+      ['Cartões por etapa', 'Etapas', 'Média', 'Com 0', 'Com 1', 'Com 2', 'Com 3', 'Mais de 3', 'No começo do ano'],
+      [eventRow('Todas as temporadas', events.all), ...events.bySeason.map((s) => eventRow(`Temporada ${s.season}`, s))],
+    ),
+    '',
+    ...table(
+      ['Categoria', 'Cartões', 'Parcela'],
+      events.byCategory.map((c) => [EVENT_CATEGORY_LABELS[c.category], String(c.cards), events.cards ? percent(c.share) : '-']),
+    ),
+    '',
+    `Cadeias por carreira: ${decimal(events.chainsStartedPerCareer, 2)} começadas e ${decimal(events.chainsDonePerCareer, 2)} concluídas, em média.`,
+    '',
+    ...table(
+      ['Cadeia', 'Id', 'Começaram', 'Concluíram'],
+      events.chains.map((c) => [c.title, c.id, String(c.started), String(c.done)]),
+      ['left', 'left'],
+    ),
+    '',
+    `Escolhas de traço ou aptidão oferecidas: ${events.unlocks} (${decimal(events.unlocksPerCareer, 2)} por carreira), em ${events.unlockCareers} de ${careers}.`,
+    '',
+    ...table(
+      ['Traço ou aptidão', 'Tipo', 'Escolhas no catálogo', 'Oferecidas', 'Carreiras'],
+      events.byUnlock.map((u) => {
+        const label = unlockLabel(u);
+        return [label.name, label.kind, String(u.inCatalog), String(u.times), String(u.careers)];
+      }),
+      ['left', 'left'],
+    ),
+    '',
+    `Propostas de patrocínio: ${events.sponsorOffers} (${decimal(events.sponsorOffersPerCareer, 2)} por carreira), de ${counted(events.sponsorProfiles, 'perfil diferente', 'perfis diferentes')} (o catálogo tem ${events.sponsorCatalog}). Perfil repetido na mesma carreira: ${events.sponsorRepeated}.`,
+    '',
+    repeatLine('só nos cartões da Fase 5', events.repeats.story, events.repeats.storyCareers),
+    repeatLine('em todos os eventos (com família e mudança)', events.repeats.all, events.repeats.allCareers),
+    ...events.repeats.examples
+      .slice(0, REPEAT_EXAMPLES)
+      .map((r) => `  "${r.text}" (${r.events.join(', ')}): ${counted(r.times, 'vez', 'vezes')}, em ${counted(r.careers, 'carreira', 'carreiras')}.`),
+    '',
+    ...paragraph(
+      [
+        'Os cartões da Fase 5 são os eventos encadeados com memória: avulsos, passos de cadeia e propostas de patrocínio; os',
+        'de família e a mudança ficam de fora das contas, menos na última linha de textos repetidos. Cada cartão conta quando',
+        'aparece, antes da resposta do robô (que fica sempre com a primeira escolha). A regra é de 1 a 3 cartões por etapa:',
+        'etapa sem cartão é catálogo sem texto novo para o momento, e uma temporada que perde cartões com o tempo mostra o',
+        'catálogo se esgotando. "No começo do ano" é a média de cartões antes da primeira etapa, da segunda temporada em diante.',
+        'Uma cadeia começa com o primeiro cartão dela e termina quando um desfecho a encerra. "Escolhas no catálogo" conta as',
+        'escolhas que o traço ou a aptidão libera nos dados; "oferecidas", as vezes em que uma delas apareceu num cartão.',
+        '"Texto repetido" é um título, corpo, rótulo de escolha ou desfecho que a mesma carreira viu mais de uma vez: o',
+        'critério de aceite da fase é zero nos cartões da Fase 5, em 15 temporadas. Os exemplos mostram o começo do texto e de',
+        'que eventos ele veio.',
       ].join(' '),
     ),
   );
