@@ -241,7 +241,7 @@ export function MomentBar({
         </>
       }
       // Nunca cobre a tela toda: sobram a barra superior e uma faixa de pista acima da tarja.
-      className="fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-40 max-h-[calc(100dvh-11rem-var(--safe-top))] pb-[var(--safe-bottom)] pr-[var(--safe-right)]"
+      className="fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-40 max-h-[calc(100dvh-9rem-var(--safe-top))] pb-[var(--safe-bottom)] pr-[var(--safe-right)]"
     >
       {tyreChooser ? (
         <div className={cx('flex min-w-0 gap-2', !wide && 'flex-col')}>
