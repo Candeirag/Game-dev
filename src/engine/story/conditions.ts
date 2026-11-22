@@ -132,6 +132,10 @@ export function conditionHolds(ctx: StoryContext, condition: StoryCondition): bo
     }
     case 'careerSeason':
       return (condition.min === undefined || ctx.characterSeason >= condition.min) && (condition.max === undefined || ctx.characterSeason <= condition.max);
+    case 'categoryDebut': {
+      const last = career.history[career.history.length - 1];
+      return !last || last.categoryId !== career.categoryId || last.mode !== 'driver';
+    }
     case 'season':
       return seasonPart(ctx.round, career.calendar.length) === condition.part;
     case 'race':

@@ -176,6 +176,8 @@ export type StoryCondition =
   | { c: 'age'; from?: AgeStage; to?: AgeStage }
   /** Temporada da carreira deste personagem (1 = a primeira). */
   | { c: 'careerSeason'; min?: number; max?: number }
+  /** Primeira temporada do piloto nesta categoria (estreia, depois de subir ou de descer). */
+  | { c: 'categoryDebut' }
   /** Momento da temporada. */
   | { c: 'season'; part: SeasonPart }
   /** O que aconteceu na etapa recém-disputada. */
