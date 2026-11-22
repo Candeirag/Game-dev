@@ -74,15 +74,16 @@ export function DecisionBar({
           {aside && <div className="shrink-0">{aside}</div>}
         </div>
         <div className="shrink-0">{children}</div>
-        <div className={cx('flex min-h-0 min-w-0 gap-2', stacked ? 'flex-col' : 'items-end')}>
-          <div
-            className={cx(
-              'max-h-full min-h-0 min-w-0 flex-1 self-stretch overflow-y-auto overscroll-contain text-xs leading-snug text-ink-200',
-              !stacked && 'min-h-12',
-            )}
-          >
-            {detail}
-          </div>
+        <div className={cx('flex min-w-0 gap-2', stacked ? 'min-h-0 flex-col' : 'min-h-14 shrink-0 items-end')}>
+          {stacked ? (
+            <div className="max-h-full min-h-0 min-w-0 flex-1 self-stretch overflow-y-auto overscroll-contain text-xs leading-snug text-ink-200">{detail}</div>
+          ) : (
+            // Deitado, o detalhe ocupa a altura da linha dos botões e rola dentro dela quando não cabe.
+            // Assim a linha nunca encolhe abaixo dos botões, e eles não encostam nas opções de cima.
+            <div className="relative min-w-0 flex-1 self-stretch">
+              <div className="absolute inset-0 overflow-y-auto overscroll-contain text-xs leading-snug text-ink-200">{detail}</div>
+            </div>
+          )}
           <div className={cx('flex shrink-0 gap-2', stacked && '*:flex-1')}>{actions}</div>
         </div>
       </div>
