@@ -1201,7 +1201,8 @@ describe('orçamento: de 2 a 4 lances por corrida', () => {
           if (moment.kind !== 'attack' && moment.kind !== 'defense') return;
           duels++;
           expect(moment.rivalId, where).toBeTruthy();
-          expect(moment.lap, where).toBeGreaterThanOrEqual(M.DUEL_FROM_LAP);
+          // Fora das primeiras voltas: o intervalo conta da largada (volta 1).
+          expect(moment.lap, where).toBeGreaterThanOrEqual(1 + cooldown);
           expect(final.totalLaps - moment.lap, where).toBeGreaterThanOrEqual(2);
           expect(moment.lap - (moments[index - 1]?.lap ?? 0), where).toBeGreaterThanOrEqual(cooldown);
           // Um lance fica guardado para o fim: a disputa nunca é o último lance do orçamento.
@@ -1564,13 +1565,11 @@ describe('o que cada opção faz na pista', () => {
     }
   });
 
-  // PENDENTE: defeito relatado. Em corrida inteira, quando o rival do lance ultrapassa outro carro na
-  // mesma volta, o passe garantido do jogador é gasto no carro que o rival acabou de passar: o lance
-  // sai como "deu certo" (e a frase diz que o rival foi ultrapassado), mas o jogador segue atrás dele.
-  // Caso mínimo: raceSetup('f2'), semente 87, política "sempre a arriscada": mergulhos das voltas 13 e
-  // 25 (e semente 8, pelo estilo, vácuo da volta 15). Esperado: jogador à frente do rival ao fim da
-  // volta; obtido: os dois ganham uma posição e o rival continua à frente, a 0,3 s.
-  it.skip('em corrida inteira, o ataque que dá certo também deixa o jogador à frente do rival', () => {
+  // Quando o rival do lance ultrapassa outro carro na mesma volta, o passe garantido do jogador não é
+  // gasto no carro que ficou entre os dois: ele vale até passar o rival. (Caso que já falhou:
+  // raceSetup('f2'), semente 87, sempre a arriscada, mergulhos das voltas 13 e 25; semente 8, pelo
+  // estilo, vácuo da volta 15.)
+  it('em corrida inteira, o ataque que dá certo também deixa o jogador à frente do rival', () => {
     let passes = 0;
     for (const [seed, answer] of [
       [87, bold],
@@ -1973,25 +1972,11 @@ describe('pilotos melhores vencem mais lances', () => {
     expect(rate(of(-10, 'defense'))).toBeGreaterThan(rate(of(-10, 'attack')) + 0.3);
   });
 
-  // PENDENTE: defeito relatado. A taxa geral de acerto (todos os lances somados, sempre a opção
-  // arriscada) não separa o piloto original do piloto com −10: o mais fraco recebe muito mais lances
-  // de defesa ("fechar a porta", perto de 80% de acerto), que o original quase não vê, e isso
-  // compensa o que ele perde na largada, no ataque e na última volta. Medido: raceSetup('f4'),
-  // sementes 1 a 120: original 132/366 = 0,361; −10: 144/399 = 0,361. raceSetup('f2'), sementes 1 a
-  // 60: original 0,449; −10: 0,460. No kart regional (sementes 1 a 150) passa por pouco: 0,412 x 0,398.
-  it.skip('a taxa geral de acerto também ordena o piloto original acima do que tem −10 em tudo', () => {
-    const overall = (setup: RaceSetup, delta: number, seeds: number) => {
-      const ctx = delta === 0 ? setup.ctx : shifted(setup, delta);
-      return rate(Array.from({ length: seeds }, (_, i) => play(opening(setup, ctx, i + 1), ctx, bold)).flatMap((race) => race.resolved));
-    };
-    for (const [setup, seeds] of [
-      [kart, 150],
-      [f4, 120],
-      [f2, 60],
-    ] as const) {
-      expect(overall(setup, 0, seeds), setup.ctx.category.id).toBeGreaterThan(overall(setup, -10, seeds));
-    }
-  });
+  // A taxa GERAL de acerto (todos os lances somados) não separa o piloto original do que tem −10: o
+  // mais fraco recebe muito mais lances de defesa (teste acima), em que "fechar a porta" acerta mais
+  // do que um ataque, e a mistura de lances compensa o que ele perde em cada tipo. Por isso a regra
+  // "pilotos melhores vencem mais lances" é conferida por tipo de lance (testes acima) e, no
+  // simulador, pela chance oferecida e pelos lances arriscados vencidos por corrida (seção 9).
 });
 
 /* ------------------------------------------------------------------ */

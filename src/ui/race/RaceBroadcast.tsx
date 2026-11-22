@@ -844,7 +844,8 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
               <div data-slot="tarja-inferior" aria-live="polite" className="flex min-w-0 flex-col items-start gap-1">
                 {banner}
                 {!drawer && !momentDue && !banner && tickerList}
-                {!momentDue && creditLine}
+                {/* Com a faixa do lance ou do rádio na tela, o crédito sai: a faixa desce e o carro do jogador fica à vista. */}
+                {!momentDue && !banner && creditLine}
               </div>
               {/* Enquanto a faixa do lance ou do rádio está na tela, ela fica com a largura: o cartão volta em seguida. */}
               {!drawer && !momentDue && !banner && focusCard}
@@ -867,9 +868,10 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
                 {banner}
                 {!momentDue && !banner && tickerList}
               </div>
+              {/* O crédito vai numa linha própria, acima do cartão: ao lado dele, quebrava em três linhas. */}
               {!momentDue && (
-                <div className="flex items-end justify-between gap-2">
-                  <div className="min-w-0">{creditLine}</div>
+                <div className="flex flex-col items-end gap-1">
+                  {!banner && <div className="min-w-0 max-w-full self-start">{creditLine}</div>}
                   {focusCard}
                 </div>
               )}

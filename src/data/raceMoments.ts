@@ -141,7 +141,7 @@ export const MOMENT_TEXTS: Readonly<Record<MomentKind, MomentText>> = {
   },
   pit: {
     title: 'Parada',
-    question: () => 'A janela de parada abriu. Parar agora ou esticar?',
+    question: () => 'A parada planejada está chegando. Parar agora ou esticar?',
     options: {
       undercut: {
         label: 'Parar agora (undercut)',
@@ -169,6 +169,8 @@ export const MOMENT_CONSEQUENCE_TEXTS = {
   retired: (rival: string) => ` O toque com ${rival} tirou você da corrida.`,
   rivalRetired: (rival: string) => ` O toque tirou ${rival} da corrida.`,
   penalty: (seconds: number) => ` Punição de ${seconds} s.`,
+  // Frase inteira do resultado quando o ataque deu certo mas o rival terminou a volta à frente.
+  escaped: (rival: string) => `O lance saiu limpo, mas ${rival} abriu distância: a ultrapassagem fica para a próxima volta.`,
 } as const;
 
 /**

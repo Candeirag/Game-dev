@@ -166,14 +166,16 @@ describe('formação dos carros na pista', () => {
     }
   });
 
-  // Defeito conhecido da cena (`placeCars`, em src/ui/race/raceScene.ts), que o ritmo da Fase 4 trouxe
-  // para o 1× (antes só aparecia em 8×): a rampa de saída dos boxes tem 38 unidades e o carro anda 32
-  // por quadro, então o último quadro "no pit lane" o pega ainda no meio da rampa, a mais de 20
-  // unidades do eixo. Dali ele volta à linha de corrida aos poucos (o `ease` é por tempo de tela, não
-  // por distância percorrida) e passa de 5 a 9 quadros desenhado fora do asfalto, já como carro em
-  // pista. Reproduz com fieldRace('f1', 'suzuka', 3) em 1×: `widest` chega a 26,6, contra o limite de
-  // 10,15 (meia pista menos meio carro).
-  it.todo('saindo dos boxes no ritmo da transmissão, o carro volta à pista sem ser desenhado fora do asfalto');
+  // No ritmo da Fase 4 a rampa de saída dos boxes (38 unidades) passa em pouco mais de um quadro (o
+  // carro anda 32 por quadro em 1×): o último quadro "no pit lane" pega o carro ainda longe do eixo.
+  // A cena o traz para a borda da pista antes de seguir para a linha de corrida, em vez de desenhá-lo
+  // fora do asfalto por vários quadros. Corrida seca com paradas em bandeira verde.
+  it('saindo dos boxes no ritmo da transmissão, o carro volta à pista sem ser desenhado fora do asfalto', () => {
+    const race = fieldRace('f1', 'suzuka', 3);
+    expect(race.final.cars.some((c) => c.pitStops > 0)).toBe(true);
+    const inside = CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('f1').width / 2;
+    for (const speed of [1, 8]) expect(play(race, 0, race.timeline.endTime!, speed).widest, `${speed}×`).toBeLessThanOrEqual(inside + 1e-9);
+  });
 
   it('a sigla do piloto usa só letras', () => {
     expect(driverCode('De Groot')).toBe('DEG');

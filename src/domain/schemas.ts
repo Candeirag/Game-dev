@@ -693,7 +693,7 @@ export const RivalryRecordSchema = z.object({
   round: z.number().int().min(1),
   lap: z.number().int().min(1),
   /** O lance em que o toque aconteceu. */
-  kind: z.enum(['start', 'attack', 'defense', 'rain', 'lastLap', 'pit']),
+  kind: MomentKindSchema,
   /** Alguém abandonou por causa do toque. */
   retired: z.boolean(),
   /** O piloto não era rival antes desta etapa: a rivalidade nasceu aqui. */

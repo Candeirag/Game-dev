@@ -59,7 +59,8 @@ export function DecisionBar({
       aria-label={label}
       aria-modal="false"
       tabIndex={-1}
-      className={cx('enter-up flex max-w-full items-stretch border-t border-ink-600 bg-ink-950/95 text-ink-100 shadow-bar', className)}
+      // Fundo opaco: a pista fica acima da tarja, e o que está atrás dela (abas, torre) não pode vazar pelo texto.
+      className={cx('enter-up flex max-w-full items-stretch border-t border-ink-600 bg-ink-950 text-ink-100 shadow-bar', className)}
     >
       <span aria-hidden className={cx('w-1.5 shrink-0', BAR[tone])} />
       {/* Se a tarja bater na altura máxima (texto muito grande), só o detalhe rola: a pergunta, as opções e as ações ficam sempre à vista. */}

@@ -188,7 +188,9 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
 
   // Lance decisivo desta volta (só o jogador tem): a escolha dele ou, sem ela, a do estilo do piloto.
   const lm = resolveMoment(state, ctx, input, lap);
-  const facts: MomentFacts | null = lm ? { outcome: lm.success ? 'won' : 'lost', contact: false, rivalRetired: false, penaltySeconds: 0 } : null;
+  const facts: MomentFacts | null = lm
+    ? { outcome: lm.success ? 'won' : 'lost', contact: false, rivalRetired: false, escaped: false, penaltySeconds: 0 }
+    : null;
   // Efeito de lance em vigor nesta volta: o que começa agora ou o que vinha de voltas anteriores.
   const carryNow = activeCarry(lm?.carry ?? null, lap) ?? activeCarry(state.carry, lap);
 
@@ -722,7 +724,10 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         };
         if (takes || given) {
           // Decidido pelo lance, sem sorteio.
-          if (takes) passLeft = false;
+          // O passe do lance vale até o jogador passar o rival: se o rival passou outro carro nesta
+          // volta, o carro que ficou entre os dois não gasta o passe.
+          const rivalId = lm?.moment.rivalId ?? null;
+          if (takes) passLeft = rivalId !== null && resolved.slice(0, idx - 1).some((x) => x.car.driverId === rivalId);
           else yieldLeft = false;
           overtake();
           continue;
@@ -865,6 +870,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     }
   }
   resolved = resolved.filter((w) => !w.retired);
+  // Lance de ataque que deu certo, mas o rival terminou a volta à frente (abriu mais que o alcance do lance).
+  if (lm?.pass && facts && lm.moment.rivalId) {
+    const order = resolved.map((w) => w.car.driverId);
+    const mineAt = order.indexOf(state.playerDriverId);
+    const rivalAt = order.indexOf(lm.moment.rivalId);
+    facts.escaped = mineAt >= 0 && rivalAt >= 0 && rivalAt < mineAt;
+  }
 
   /* ---------- 3. Atualização dos carros ---------- */
   let fastestLap = state.fastestLap;

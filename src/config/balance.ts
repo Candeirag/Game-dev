@@ -429,11 +429,10 @@ export const RACE_MOMENTS = {
   MAX_PER_RACE: 4,
   // Ataques e defesas somados, no máximo, e voltas de intervalo entre dois lances de disputa.
   MAX_DUELS: 2,
-  // O intervalo é esta fração da corrida, com este mínimo de voltas.
+  // O intervalo é esta fração da corrida, com este mínimo de voltas (conta da largada também: não
+  // há disputa nas primeiras voltas, com o pelotão ainda embolado). Nem na penúltima volta.
   COOLDOWN_SHARE: 0.3,
   COOLDOWN_LAPS: 4,
-  // Nada de lance de disputa nas primeiras voltas (o pelotão ainda está embolado) nem na penúltima.
-  DUEL_FROM_LAP: 4,
   // Distância (s) para o carro da frente que abre o lance de ataque, e para o de trás que abre a defesa.
   ATTACK_GAP: 0.5,
   DEFENSE_GAP: 0.5,
@@ -470,7 +469,7 @@ export const RACE_MOMENTS = {
     },
     defense: {
       // Fechar a porta: segura a posição; errando, perde a posição e pode haver toque e punição.
-      block: { risk: 2, base: 1, win: { rival: 0.3 }, lose: { time: 0.2 }, crash: 0.01, spin: 0.03, contact: 0.22 },
+      block: { risk: 2, base: 0.3, win: { rival: 0.3 }, lose: { time: 0.2 }, crash: 0.01, spin: 0.03, contact: 0.22 },
       // Ceder: perde a posição sem perder tempo nem pneu.
       yield: { risk: 0, base: 0, sure: true, win: { time: -0.25, wear: 0.8 }, lose: {}, crash: 0, spin: 0, contact: 0 },
     },

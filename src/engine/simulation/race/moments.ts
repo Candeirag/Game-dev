@@ -355,10 +355,11 @@ export function upcomingMoment(state: RaceSimState, ctx: RaceContext): RaceMomen
   if (!me) return null;
   const lap = state.currentLap + 1;
   if (lap === 1) return startMoment(state, ctx, me);
-  // Uma pergunta por volta: com ordem de equipe pendente, sob bandeira ou em relargada não há lance.
-  if (state.pendingTeamOrder || state.neutralization.type !== 'none' || state.restart !== 'none') return null;
   const done = state.moments;
   if (done.length >= M.MAX_PER_RACE) return null;
+  // Atrás do safety car (ou sob o virtual) ninguém disputa: não há lance. Uma corrida que termina
+  // assim pode ficar só com o da largada.
+  if (state.neutralization.type !== 'none') return null;
 
   const rules = ctx.category.race;
   const running = state.cars.filter((c) => c.status === 'running');
@@ -373,8 +374,11 @@ export function upcomingMoment(state: RaceSimState, ctx: RaceContext): RaceMomen
   if (lap === state.totalLaps) {
     const fight = gapAhead <= M.LAST_LAP_GAP || gapBehind <= M.LAST_LAP_GAP;
     const rival = gapAhead <= M.LAST_LAP_REACH ? ahead : null;
+    // Vale também na relargada: é a última chance de disputar.
     return done.length < M.MIN_PER_RACE || fight ? lastLapMoment(state, ctx, me, rival, lap, wetness) : null;
   }
+  // Uma pergunta por volta: com ordem de equipe pendente ou em relargada não há lance de meio de corrida.
+  if (state.pendingTeamOrder || state.restart !== 'none') return null;
 
   const had = (kind: MomentKind) => done.some((m) => m.kind === kind);
   const canPit = rules.pitStops && lapsAfter >= 2;
@@ -401,7 +405,7 @@ export function upcomingMoment(state: RaceSimState, ctx: RaceContext): RaceMomen
   const duels = done.filter((m) => m.kind === 'attack' || m.kind === 'defense').length;
   const lastLapOfMoment = done.at(-1)?.lap ?? 0;
   const cooldown = Math.max(M.COOLDOWN_LAPS, Math.round(state.totalLaps * M.COOLDOWN_SHARE));
-  if (duels >= M.MAX_DUELS || done.length >= M.MAX_PER_RACE - 1 || lap < M.DUEL_FROM_LAP || lapsAfter < 2 || lap - lastLapOfMoment < cooldown) return null;
+  if (duels >= M.MAX_DUELS || done.length >= M.MAX_PER_RACE - 1 || lapsAfter < 2 || lap - lastLapOfMoment < cooldown) return null;
   const canAttack = ahead !== null && gapAhead <= M.ATTACK_GAP;
   const canDefend = behind !== null && gapBehind <= M.DEFENSE_GAP && paceEdge(state, ctx, behind, me, wetness) >= M.DEFENSE_PACE_EDGE;
   // Com as duas disputas abertas, vem a que ainda não aconteceu nesta corrida; no empate, a mais apertada.
@@ -598,6 +602,8 @@ export interface MomentFacts {
   contact: boolean;
   /** O rival abandonou no toque. */
   rivalRetired: boolean;
+  /** O ataque deu certo, mas o rival terminou a volta à frente (abriu mais que o alcance do lance). */
+  escaped: boolean;
   penaltySeconds: number;
 }
 
@@ -608,6 +614,7 @@ export function momentRecord(plan: MomentPlan, ctx: RaceContext, facts: MomentFa
   const text = MOMENT_TEXTS[pending.kind].options[option.id];
   const C = MOMENT_CONSEQUENCE_TEXTS;
   let message = text ? (plan.success ? text.won(rival) : text.lost(rival)) : '';
+  if (facts.escaped && plan.success) message = C.escaped(rival);
   if (facts.outcome === 'spin') message += C.spin();
   else if (facts.outcome === 'retired') message += facts.contact ? C.retired(rival) : C.crash();
   else if (facts.contact) message += facts.rivalRetired ? C.rivalRetired(rival) : C.touch(rival);
