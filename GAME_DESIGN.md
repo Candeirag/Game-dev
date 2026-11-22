@@ -242,7 +242,7 @@ Na parada o jogador também escolhe o composto (respeitando a regra dos dois com
 - **Estilo do piloto.** Vai de 0 (cauteloso) a 100 (agressivo): `50 + 0,4 × (ultrapassagem − defesa) + 0,3 × (velocidade − consistência) + 0,2 × (confiança − 50)`, mais 16 para o esquentado, menos 12 para o piloto limpo, e ±12 pelo ritmo de corrida escolhido. Quando o jogador não decide (simular direto ou "Deixar com o piloto"), o piloto pega a opção mais ousada cuja chance o estilo aceita: a arriscada com 75% (cauteloso) a 45% (agressivo) de chance; a moderada com 55% a 30%. Não há sorteio na escolha.
 - **Sorte.** O desfecho de cada lance tem um sorteio próprio, que não mexe na sorte dos outros carros: a mesma semente e as mesmas escolhas dão a mesma corrida.
 
-Calibragem (`npm run calibrate`, as mesmas 2.100 corridas corridas com quatro posturas): ler os números e arriscar com 60% de chance ou mais rende 5,4 pontos por corrida; ficar sempre na opção segura, 5,4; o estilo do piloto, 5,3; arriscar sempre, 4,7, com o dobro de abandonos. Arriscar compensa quando a chance é alta, e a chance sobe com a qualidade do piloto: na opção arriscada, o acerto vai de 30% (piloto 8 pontos abaixo do grid) a 55% (8 pontos acima).
+Calibragem (`npm run calibrate`, as mesmas 2.160 corridas disputadas com quatro posturas): ler os números e arriscar com 60% de chance ou mais rende 5,4 pontos por corrida; ficar sempre na opção segura, 5,3; o estilo do piloto, 5,3; arriscar sempre, 4,6, com 7% de abandonos contra 4%. Arriscar compensa quando a chance é alta, e a chance sobe com a qualidade do piloto: na opção arriscada, o acerto vai de 29% (piloto mais de 8 pontos abaixo do grid) a mais de 50% (8 pontos acima).
 
 ### Rádio do engenheiro
 
@@ -605,7 +605,13 @@ Mais carreiras chegam ao topo porque os nascimentos espalham os pilotos: a médi
 
 A curva de pneus vale para todos os carros e os lances, só para o piloto do jogador; o robô do simulador não responde aos lances, então o estilo do piloto decide por ele. Os relatórios completos estão em `docs/simulador/fase-4*.txt`; a seção 9 de cada um mede os lances (quantos por corrida, acerto por tipo e por faixa de qualidade do piloto).
 
-FASE4_TABELA
+| Robô                  | Chegam ao Grand Prix Mundial | Títulos por carreira | Temporadas sem vaga por carreira | Lances por corrida completa | Chance na opção arriscada (faixa baixa → alta) | Lances arriscados vencidos por corrida (baixa → alta) |
+| --------------------- | ---------------------------- | -------------------- | -------------------------------- | --------------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| Mediano (talento 0)   | 8% (Fase 3: 8%)              | 0,34 (0,38)          | 0,42 (0,60)                      | 3,36                        | 40% → 54%                                      | 0,42 → 0,97                                           |
+| Bom (talento 4)       | 38% (24%)                    | 0,58 (0,40)          | 0,50 (0,42)                      | 3,32                        | 43% → 56%                                      | 0,51 → 1,06                                           |
+| Excelente (talento 8) | 74% (58%)                    | 1,12 (0,74)          | 0,20 (0,26)                      | 3,23                        | 46% → 59%                                      | 0,57 → 1,16                                           |
+
+As faixas são terços das corridas pela vantagem do piloto sobre o grid (nota geral menos o nível da categoria). Piloto melhor vê chances maiores e vence mais lances arriscados; por isso os lances pesam mais para quem joga bem: com talento 0 o topo fica onde estava, e com talento 4 e 8 mais carreiras chegam lá e ganham títulos (perto do que era na Fase 2, antes de a economia apertar). A "taxa de acerto geral" quase não muda entre as faixas (56% a 63%), porque o estilo do piloto escolhe opções seguras quando a chance é baixa. No padrão, 54% das corridas completas têm 4 lances, 28% têm 3 e 18% têm 2; 10 de 7.206 terminam atrás do safety car e ficam só com o da largada. Cada carreira ganha em média 3 rivalidades novas em 15 temporadas, e há menos de 1 toque a cada 100 lances.
 
 ## Limitações conhecidas e próximos passos
 
