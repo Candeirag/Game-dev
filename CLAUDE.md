@@ -92,8 +92,9 @@ O Playwright usa o Chromium. Em uma máquina nova: `npx playwright install chrom
 Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
 
 Simulador: `npm run sim -- --seeds 50 --seasons 15` (o padrão; cerca de 25 s). Outras opções:
-`--first-seed N`, `--talent N` (0 = o robô puro; 4 = bom jogador; 8 = excelente), `--json`,
-`--out arquivo`, `--help`. O relatório vai para a saída padrão e não tem data nem duração: com
+`--first-seed N`, `--talent N` (0 = o robô puro; 4 = bom jogador; 8 = excelente),
+`--moments style|safe|bold` (como o robô responde aos lances; o padrão, `style`, deixa o estilo do
+piloto decidir), `--json`, `--out arquivo`, `--help`. O relatório vai para a saída padrão e não tem data nem duração: com
 os mesmos argumentos e o mesmo código, sai sempre igual.
 
 ## O que não pode mudar sem querer
