@@ -11,7 +11,7 @@
  * cronometragem) usam esta mesma tarja.
  */
 import { CircleMinus, CirclePlus, UserRound } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DRIVING_STYLE_DESCRIPTIONS, DRIVING_STYLE_LABELS } from '@/domain/labels';
 import type { TyreCompound } from '@/domain/schemas';
@@ -23,16 +23,43 @@ import { useCareerView } from '../hooks/useCareer';
 import { useChrome, useRaceBarSpace } from '../layout/chrome';
 import { playerRaceProfile, shownFactors } from './raceInfo';
 
+/**
+ * O espaço que sobra acima da tarja, na tela deitada: quem mostra a corrida (a pista com a torre,
+ * ou a tabela da cronometragem) encolhe para caber inteiro ali, e nada fica atrás da tarja. Devolve
+ * a referência para pôr no bloco que encolhe, a altura a dar a ele (null = a altura normal) e o
+ * aviso de altura para passar à `MomentBar`.
+ */
+export function useStageAboveMoment<T extends HTMLElement>(open: boolean) {
+  const stage = useRef<T>(null);
+  const [barHeight, setBarHeight] = useState(0);
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const element = stage.current;
+    if (!open || !element || barHeight <= 0) {
+      setHeight(null);
+      return;
+    }
+    const measure = () => setHeight(Math.max(96, Math.floor(window.innerHeight - barHeight - element.getBoundingClientRect().top - 8)));
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [open, barHeight]);
+  return { stage, height, onHeight: setBarHeight };
+}
+
 export function MomentBar({
   race,
   tyre,
   onAnswered,
+  onHeight,
 }: {
   race: RaceSimState;
   /** O pneu do jogador como está na tela, para o lance de parada. */
   tyre?: { compound: TyreCompound; wear: number } | null;
   /** Depois da resposta: quem mostra a corrida a põe para andar. */
   onAnswered?: () => void;
+  /** Altura da tarja na tela (0 quando fecha): quem mostra a pista a encolhe para caber acima dela. */
+  onHeight?: (height: number) => void;
 }) {
   const moment = race.pendingMoment;
   const { wide } = useChrome();
@@ -50,6 +77,19 @@ export function MomentBar({
   useEffect(() => {
     if (key) dialog.current?.focus({ preventScroll: true });
   }, [key]);
+  // A altura muda com a opção escolhida e com o tamanho do texto: quem mostra a pista acompanha.
+  useLayoutEffect(() => {
+    const element = dialog.current;
+    if (!key || !element || !onHeight) return;
+    const report = () => onHeight(element.offsetHeight);
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      onHeight(0);
+    };
+  }, [key, onHeight]);
   if (!moment) return null;
 
   const styleScore = drivingStyleScore(player, profile, raceMode);
@@ -74,7 +114,7 @@ export function MomentBar({
     <div
       role="radiogroup"
       aria-label="Opções do lance"
-      className={cx('grid min-w-0 gap-2', wide && moment.options.length > 2 ? 'grid-cols-3' : 'grid-cols-2', wide && compounds.length > 0 && 'col-span-2')}
+      className={cx('grid min-w-0 flex-1 gap-2', wide && moment.options.length > 2 ? 'grid-cols-3' : 'grid-cols-2')}
     >
       {moment.options.map((option, index) => {
         const mine = option.id === pilotPick;
@@ -89,17 +129,13 @@ export function MomentBar({
             selected={selected?.id === option.id}
             onSelect={() => setPick({ key, option: option.id })}
             badgeLabel={badges.join(', ') || undefined}
-            badge={
-              (mine || tyreIn) && (
-                <span className="flex shrink-0 items-center gap-1">
-                  {tyreIn && <TyreBadge compound={tyreIn} />}
-                  {mine && (
-                    <Chip size="sm" icon={<UserRound size={12} aria-hidden className="shrink-0" />}>
-                      Piloto
-                    </Chip>
-                  )}
-                </span>
-              )
+            badge={tyreIn ? <TyreBadge compound={tyreIn} /> : undefined}
+            seal={
+              mine ? (
+                <Chip size="sm" icon={<UserRound size={12} aria-hidden className="shrink-0" />} className="shadow-ring">
+                  Piloto
+                </Chip>
+              ) : undefined
             }
             // Em pé, as opções vão em duas colunas; a terceira ocupa a linha de baixo inteira.
             className={!wide && moment.options.length % 2 === 1 && index === moment.options.length - 1 ? 'col-span-2' : undefined}
@@ -110,8 +146,8 @@ export function MomentBar({
   );
 
   const tyreChooser = compounds.length > 0 && (
-    <div className="flex min-w-0 flex-col gap-1">
-      <div id="lance-pneu" className="text-2xs font-semibold text-ink-300">
+    <div className="flex min-w-0 shrink-0 flex-col gap-1">
+      <div id="lance-pneu" className="text-2xs font-semibold leading-none text-ink-300">
         Pneu a colocar
       </div>
       <div role="radiogroup" aria-labelledby="lance-pneu" className="flex flex-1 gap-2">
@@ -141,27 +177,21 @@ export function MomentBar({
     </div>
   );
 
+  // Texto corrido, para quebrar em menos linhas: o que se ganha, o que se perde, o pneu que entra e o que pesa.
   const detail = selected ? (
-    <div className="flex flex-wrap gap-x-4 gap-y-1">
-      <span className="flex items-start gap-1">
-        <CirclePlus size={14} aria-hidden className="mt-px shrink-0 text-go-400" />
-        <span>
-          <b className="font-semibold text-ink-100">Ganha:</b> {selected.gain}
-        </span>
-      </span>
-      <span className="flex items-start gap-1">
-        <CircleMinus size={14} aria-hidden className="mt-px shrink-0 text-gold-400" />
-        <span>
-          <b className="font-semibold text-ink-100">Perde:</b> {selected.loss}
-        </span>
-      </span>
+    <p>
+      <CirclePlus size={14} aria-hidden className="mr-1 inline align-[-2px] text-go-400" />
+      <b className="font-semibold text-ink-100">Se der certo:</b> {selected.gain}.{' '}
+      <CircleMinus size={14} aria-hidden className="mr-1 inline align-[-2px] text-gold-400" />
+      <b className="font-semibold text-ink-100">Se der errado:</b> {selected.loss}.
       {fitsTyre(selected.id) && compound && (
-        <span>
-          <b className="font-semibold text-ink-100">Pneu que entra:</b> {tyreName(compound)}
-        </span>
+        <>
+          {' '}
+          <b className="font-semibold text-ink-100">Pneu que entra:</b> {tyreName(compound)}.
+        </>
       )}
       {factors.length > 0 && (
-        <span className="flex flex-wrap items-center gap-x-2">
+        <span className="mt-1 flex flex-wrap items-center gap-x-2">
           <b className="font-semibold text-ink-100">Pesa na chance, em pontos:</b>
           {factors.map((factor) => (
             <span key={factor.key} className="inline-flex items-center gap-1 whitespace-nowrap">
@@ -171,9 +201,9 @@ export function MomentBar({
           ))}
         </span>
       )}
-    </div>
+    </p>
   ) : (
-    <span className="text-ink-300">Toque numa opção para ver o que se ganha, o que se perde e o que pesa na chance. Sem pressa: a corrida espera.</span>
+    <p className="text-ink-300">Toque numa opção para ver o que se ganha, o que se perde e o que pesa na chance. Sem pressa: a corrida espera.</p>
   );
 
   return createPortal(
@@ -183,30 +213,38 @@ export function MomentBar({
       kicker={`${moment.title} · volta ${moment.lap}`}
       title={moment.question}
       stacked={!wide}
-      aside={moment.kind === 'pit' && tyre ? <TyreGauge compound={tyre.compound} wear={tyre.wear} className="w-40" /> : undefined}
+      aside={moment.kind === 'pit' && tyre ? <TyreGauge compound={tyre.compound} wear={tyre.wear} className="w-48" /> : undefined}
       detail={detail}
       actions={
         <>
-          <p className={cx('text-2xs leading-snug text-ink-300', !wide && 'w-full')}>
-            Estilo do piloto: <b className="font-semibold text-ink-100">{DRIVING_STYLE_LABELS[style]}</b>. {DRIVING_STYLE_DESCRIPTIONS[style]}
-          </p>
-          <Button onClick={() => answer(null)} className={cx('px-2', !wide && 'flex-1')} title="O piloto escolhe pelo próprio estilo">
-            Deixar com o piloto
+          {/* O nome do botão é só a ação; o estilo do piloto vai como descrição. */}
+          <Button
+            onClick={() => answer(null)}
+            aria-label="Deixar com o piloto"
+            aria-describedby="lance-estilo"
+            title={`O piloto escolhe pelo próprio estilo. ${DRIVING_STYLE_LABELS[style]}: ${DRIVING_STYLE_DESCRIPTIONS[style].toLowerCase()}`}
+            className="flex-col gap-1 px-2 leading-none"
+          >
+            <span>Deixar com o piloto</span>
+            <span id="lance-estilo" className="text-2xs font-medium text-ink-300">
+              Estilo: {DRIVING_STYLE_LABELS[style]}
+            </span>
           </Button>
           <Button
             variant="primary"
             disabled={!selected}
             onClick={() => selected && answer({ option: selected.id, ...(compound ? { compound } : {}) })}
-            className={cx('px-2', !wide && 'flex-1')}
+            className="min-w-28 px-4"
           >
             Confirmar
           </Button>
         </>
       }
-      className="fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-40 max-h-[calc(100dvh-3.5rem-var(--safe-top))] overflow-y-auto overscroll-contain pb-[var(--safe-bottom)] pr-[var(--safe-right)]"
+      // Nunca cobre a tela toda: sobram a barra superior e uma faixa de pista acima da tarja.
+      className="fixed bottom-0 left-[var(--rail-w,0px)] right-0 z-40 max-h-[calc(100dvh-11rem-var(--safe-top))] pb-[var(--safe-bottom)] pr-[var(--safe-right)]"
     >
       {tyreChooser ? (
-        <div className={cx('grid min-w-0 gap-2', wide ? 'grid-cols-3' : 'grid-cols-1')}>
+        <div className={cx('flex min-w-0 gap-2', !wide && 'flex-col')}>
           {options}
           {tyreChooser}
         </div>

@@ -75,7 +75,12 @@ export function shownFactors(option: MomentOption, kind: MomentKind, birth: Birt
     }
     shown.push({ key: factor.key, label: MOMENT_FACTOR_LABELS[factor.key], points: factor.points });
   }
-  return shown.slice(0, limit);
+  // Do que mais pesa para o que menos pesa, a favor ou contra; no empate, vale a ordem do motor.
+  return shown
+    .map((factor, index) => ({ factor, index }))
+    .sort((a, b) => Math.abs(b.factor.points) - Math.abs(a.factor.points) || a.index - b.index)
+    .slice(0, limit)
+    .map((entry) => entry.factor);
 }
 
 /* ------------------------------------------------------------------ */
@@ -116,7 +121,7 @@ export function tyreOutlook(input: {
       : { text: `Cai do penhasco na volta ${cliffLap}`, tone: cliffLap - lap <= 2 ? 'attention' : 'neutral' };
   }
   // Com pneu de chuva, quem manda na parada é a pista, não o desgaste.
-  if (TYRES[compound].rain) return { text: gone ? 'Pare já' : 'Pneu de chuva: a troca depende da pista', tone: gone ? 'attention' : 'neutral' };
+  if (TYRES[compound].rain) return { text: gone ? 'Pare já' : 'Troca conforme a pista secar', tone: gone ? 'attention' : 'neutral' };
   const window = pitWindow({ tyre }, attributes, track, rules, lap, totalLaps, factor);
   if (!window) return { text: 'O pneu vai até o fim', tone: 'good' };
   if (gone || window.lapsLeft <= 0) return { text: 'Pare já', tone: 'attention' };
@@ -138,7 +143,7 @@ export function shownLapTimes(timeline: RaceTimeline, driverId: string, time: nu
   for (const lap of car?.laps ?? []) {
     if (lap.t1 > time || lap.lastLap === null || lap.pitIn || lap.pitOut || car?.retired?.lap === lap.lap) continue;
     const info = timeline.laps[lap.lap - 1];
-    if (!info || info.flag !== 'green' || info.standing) continue;
+    if (info?.flag !== 'green' || info.standing) continue;
     times.push(lap.lastLap);
   }
   return times.slice(-limit);

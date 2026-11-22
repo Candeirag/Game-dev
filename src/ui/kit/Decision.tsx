@@ -42,10 +42,10 @@ export function DecisionBar({
   /** As opções (`ChanceOption`), já no grupo delas. */
   children: ReactNode;
   /** O que se ganha, o que se perde e o que pesa na opção escolhida. */
-  detail?: ReactNode;
+  detail: ReactNode;
   /** Botões de ação; o principal por último. */
   actions: ReactNode;
-  /** Em pé: tudo empilhado, com as ações numa linha no fim. Deitado: as ações numa coluna à direita. */
+  /** Em pé: tudo empilhado, com as ações numa linha no fim. Deitado: as ações ao lado do detalhe, no canto de baixo. */
   stacked?: boolean;
   tone?: Tone;
   className?: string;
@@ -59,22 +59,31 @@ export function DecisionBar({
       aria-label={label}
       aria-modal="false"
       tabIndex={-1}
-      className={cx('enter-up flex max-w-full items-stretch border-t border-ink-600 bg-ink-950/90 text-ink-100 shadow-bar', className)}
+      className={cx('enter-up flex max-w-full items-stretch border-t border-ink-600 bg-ink-950/95 text-ink-100 shadow-bar', className)}
     >
       <span aria-hidden className={cx('w-1.5 shrink-0', BAR[tone])} />
-      <div className={cx('grid min-w-0 flex-1 gap-2 p-2', stacked ? 'grid-cols-1' : 'grid-cols-[minmax(0,1fr)_minmax(0,12rem)]')}>
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 items-end justify-between gap-4">
-            <div className="min-w-0 leading-tight">
-              {kicker && <div className="text-2xs font-semibold uppercase tracking-wider text-ink-300">{kicker}</div>}
-              <div className="font-display text-lg font-semibold leading-tight tracking-wide">{title}</div>
-            </div>
-            {aside && <div className="shrink-0">{aside}</div>}
+      {/* Se a tarja bater na altura máxima (texto muito grande), só o detalhe rola: a pergunta, as opções e as ações ficam sempre à vista. */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 p-2">
+        <div className="flex min-w-0 shrink-0 items-end justify-between gap-4">
+          {/* Deitado, o rótulo e a pergunta dividem a linha: cada linha a menos é pista a mais. */}
+          <div className={cx('min-w-0 leading-tight', !stacked && 'flex flex-wrap items-baseline gap-x-2')}>
+            {kicker && <div className="text-2xs font-semibold uppercase tracking-wider text-ink-300">{kicker}</div>}
+            <div className="font-display text-lg font-semibold leading-tight tracking-wide">{title}</div>
           </div>
-          {children}
-          {detail && <div className="min-h-8 text-xs leading-snug text-ink-200">{detail}</div>}
+          {aside && <div className="shrink-0">{aside}</div>}
         </div>
-        <div className={cx('flex min-w-0 gap-2', stacked ? 'flex-wrap items-end justify-end' : 'flex-col justify-end')}>{actions}</div>
+        <div className="shrink-0">{children}</div>
+        <div className={cx('flex min-h-0 min-w-0 gap-2', stacked ? 'flex-col' : 'items-end')}>
+          <div
+            className={cx(
+              'max-h-full min-h-0 min-w-0 flex-1 self-stretch overflow-y-auto overscroll-contain text-xs leading-snug text-ink-200',
+              !stacked && 'min-h-12',
+            )}
+          >
+            {detail}
+          </div>
+          <div className={cx('flex shrink-0 gap-2', stacked && '*:flex-1')}>{actions}</div>
+        </div>
       </div>
     </div>
   );
@@ -91,6 +100,7 @@ export function ChanceOption({
   selected,
   onSelect,
   badge,
+  seal,
   badgeLabel,
   disabled,
   className,
@@ -102,9 +112,11 @@ export function ChanceOption({
   risk: 0 | 1 | 2;
   selected: boolean;
   onSelect: () => void;
-  /** Selo discreto ao lado do nome (a opção que o piloto escolheria). */
+  /** Marca pequena ao lado do nome (o selo do pneu que entra, na opção de parar). */
   badge?: ReactNode;
-  /** O mesmo selo, em palavras, para o nome acessível do botão. */
+  /** Selo discreto preso à borda de cima, à direita (a opção que o piloto escolheria): não tira espaço do nome. */
+  seal?: ReactNode;
+  /** O selo e a marca, em palavras, para o nome acessível do botão. */
   badgeLabel?: string;
   disabled?: boolean;
   className?: string;
@@ -112,35 +124,45 @@ export function ChanceOption({
   const percent = Math.round(chance * 100);
   const Icon = RISK_ICON[risk];
   return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      aria-label={`${label}: ${percent}% de chance de dar certo, ${MOMENT_RISK_LABELS[risk].toLowerCase()}${badgeLabel ? `, ${badgeLabel}` : ''}`}
-      onClick={onSelect}
-      disabled={disabled}
-      className={cx(
-        'chamfer-br flex min-h-14 min-w-0 flex-col justify-center gap-1 px-2 py-2 text-left transition-colors',
-        // A opção escolhida tem contorno vermelho, barra na base e o visto (forma, não só cor).
-        selected
-          ? 'bg-apex-500/20 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-400),inset_0_-4px_0_0_var(--color-apex-400)]'
-          : 'bg-ink-800 text-ink-100 shadow-ring hover:bg-ink-700',
-        className,
-      )}
-    >
-      <span className="flex w-full items-center gap-2">
-        {selected && <Check size={14} strokeWidth={3} aria-hidden className="shrink-0 text-apex-400" />}
-        <span className="min-w-0 flex-1 text-sm font-semibold leading-tight">{label}</span>
-        {badge}
-      </span>
-      <span className="flex w-full items-center gap-2">
-        <span className="shrink-0 font-display text-xl font-bold leading-none">{percent}%</span>
-        <ProgressBar value={percent} tone={RISK_TONE[risk]} className="min-w-4 flex-1" />
-        <span className={cx('flex shrink-0 items-center gap-1 text-2xs font-semibold leading-none', RISK_TEXT[risk])}>
-          <Icon size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />
-          {MOMENT_RISK_LABELS[risk]}
+    <div className={cx('relative flex min-w-0', className)}>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={selected}
+        aria-label={`${label}: ${percent}% de chance de dar certo, ${MOMENT_RISK_LABELS[risk].toLowerCase()}${badgeLabel ? `, ${badgeLabel}` : ''}`}
+        onClick={onSelect}
+        disabled={disabled}
+        className={cx(
+          'chamfer-br flex min-h-14 min-w-0 flex-1 flex-col justify-center gap-1 px-2 py-2 text-left transition-colors',
+          // A opção escolhida tem contorno vermelho, barra na base e o visto (forma, não só cor).
+          selected
+            ? 'bg-apex-500/20 text-ink-100 shadow-[inset_0_0_0_1px_var(--color-apex-400),inset_0_-4px_0_0_var(--color-apex-400)]'
+            : 'bg-ink-800 text-ink-100 shadow-ring hover:bg-ink-700',
+        )}
+      >
+        <span className="flex w-full items-center gap-2">
+          {selected && <Check size={14} strokeWidth={3} aria-hidden className="shrink-0 text-apex-400" />}
+          <span className="min-w-0 flex-1 text-sm font-semibold leading-tight">
+            {/* O selo avança um pouco sobre a primeira linha: este calço faz o nome comprido quebrar antes dele. */}
+            {seal && <span aria-hidden className="float-right h-2 w-[calc(4.5rem*var(--text-scale,1))]" />}
+            {label}
+          </span>
+          {badge}
         </span>
-      </span>
-    </button>
+        <span className="flex w-full items-center gap-2">
+          <span className="shrink-0 font-display text-xl font-bold leading-none">{percent}%</span>
+          <ProgressBar value={percent} tone={RISK_TONE[risk]} className="min-w-4 flex-1" />
+          <span className={cx('flex shrink-0 items-center gap-1 text-2xs font-semibold leading-none', RISK_TEXT[risk])}>
+            <Icon size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />
+            {MOMENT_RISK_LABELS[risk]}
+          </span>
+        </span>
+      </button>
+      {seal && (
+        <span aria-hidden className="pointer-events-none absolute -top-2 right-2 flex">
+          {seal}
+        </span>
+      )}
+    </div>
   );
 }

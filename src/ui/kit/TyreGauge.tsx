@@ -12,6 +12,7 @@
  *   porcentagem e a palavra vão no rótulo acessível e na dica.
  */
 import { TriangleAlert } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { TyreCompound } from '@/domain/schemas';
 import { TYRE_STATE_LABELS } from '@/domain/labels';
 import { tyreCliff, tyreState, type TyreState } from '@/engine';
@@ -35,7 +36,11 @@ function Track({ compound, wear, state, className }: { compound: TyreCompound; w
       {/* Um mínimo de preenchimento, para o pneu novo não parecer uma barra vazia. */}
       <span className={cx('block h-full', FILL[state])} style={{ width: `${Math.max(6, fill)}%` }} />
       {/* A marca do penhasco: um risco claro com contorno escuro, visível sobre a barra cheia ou vazia. */}
-      <span aria-hidden className="absolute inset-y-0 w-0.5 bg-ink-100 shadow-[0_0_0_1px_var(--color-ink-950)]" style={{ left: `${tyreCliff(compound) * 100}%` }} />
+      <span
+        aria-hidden
+        className="absolute inset-y-0 w-0.5 bg-ink-100 shadow-[0_0_0_1px_var(--color-ink-950)]"
+        style={{ left: `${tyreCliff(compound) * 100}%` }}
+      />
     </span>
   );
 }
@@ -54,6 +59,7 @@ export function TyreGauge({
   wear,
   badge = true,
   caption = false,
+  trailing,
   className,
 }: {
   compound: TyreCompound;
@@ -63,6 +69,8 @@ export function TyreGauge({
   badge?: boolean;
   /** Linha de apoio que explica a marca do penhasco. */
   caption?: boolean;
+  /** O que vai ao lado da barra, à direita (o gráfico pequeno do tempo de volta). */
+  trailing?: ReactNode;
   className?: string;
 }) {
   const { percent, state, label } = tyreWearInfo(compound, wear);
@@ -70,18 +78,21 @@ export function TyreGauge({
   const alert = state === 'limit' || state === 'gone';
   return (
     <div className={cx('min-w-0', className)}>
-      <div className="flex items-center gap-2 text-xs leading-tight">
+      <div className="flex items-center gap-2 whitespace-nowrap text-xs leading-tight">
         {badge && <TyreBadge compound={compound} />}
         <span className="min-w-0">
           <span className="text-ink-300">Desgaste</span> <b className="font-semibold text-ink-100">{percent}%</b> <span className="text-ink-300">·</span>{' '}
-          <b className={cx('inline-flex items-center gap-1 whitespace-nowrap font-semibold', TEXT[state])}>
+          <b className={cx('inline-flex items-center gap-1 font-semibold', TEXT[state])}>
             {alert && <TriangleAlert size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />}
             {TYRE_STATE_LABELS[state]}
           </b>
         </span>
       </div>
-      <div role="img" aria-label={`${label}. O penhasco deste pneu fica em ${cliff}% de desgaste.`} className="mt-1">
-        <Track compound={compound} wear={wear} state={state} className="h-2 w-full" />
+      <div className="mt-1 flex items-center gap-2">
+        <div role="img" aria-label={`${label}. O penhasco deste pneu fica em ${cliff}% de desgaste.`} className="min-w-0 flex-1">
+          <Track compound={compound} wear={wear} state={state} className="h-2 w-full" />
+        </div>
+        {trailing}
       </div>
       {caption && <div className="mt-1 text-2xs text-ink-300">O risco claro marca o penhasco ({cliff}%): dali em diante o pneu perde segundos por volta.</div>}
     </div>

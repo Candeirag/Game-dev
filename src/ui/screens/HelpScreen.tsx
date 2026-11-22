@@ -1,6 +1,7 @@
 /** Ajuda: tutorial em passos e um resumo de como o jogo funciona, um assunto por vez. */
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Briefcase, Check, CircleUser, Flag, Heart, ListChecks, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
+import { RACE_MOMENTS } from '@/config/balance';
 import { CATEGORY_NAMES, FIRST_CATEGORY_ID, FIRST_FORMULA_CATEGORY_ID, TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { capitalize } from '@/domain/text';
 import { tutorialSteps } from '@/engine';
@@ -82,8 +83,13 @@ const TOPICS: { id: string; title: string; icon: LucideIcon; items: string[] }[]
       'Treino livre: acerto, simulação de classificação ou ritmo de corrida. Classificação: segura, equilibrada ou ataque total.',
       `${capitalize(categoryRef(FIRST_FORMULA_CATEGORY_ID, 'de'))} em diante há estratégia de pneus, paradas, combustível, safety car e chuva que muda no meio da prova.`,
       'As decisões pendentes (eventos) precisam ser resolvidas antes de abrir o fim de semana.',
-      'A corrida é mostrada na pista: toque em Largar, controle a transmissão com Pausar, 1× a 8× e +1 volta, e escolha entre a câmera geral e a que acompanha o seu carro. Tocar num piloto da classificação (ou num carro) o destaca.',
+      'A corrida é mostrada na pista e anda sozinha: em 1×, uma prova inteira leva poucos minutos. Controle a transmissão com Pausar, 1× a 8× e +1 volta, e escolha entre a câmera geral e a que acompanha o seu carro. Tocar num piloto da classificação (ou num carro) o destaca.',
+      `Lances decisivos: de ${RACE_MOMENTS.MIN_PER_RACE} a ${RACE_MOMENTS.MAX_PER_RACE} por corrida, e a largada é sempre um deles (os outros: ataque, defesa, chuva começando, parada e última volta). A corrida para, sem tempo limite, e a tarja mostra cada opção com a chance de dar certo, o risco (seguro, moderado ou arriscado), o que se ganha e o que se perde. Toque numa opção e depois em Confirmar. O desfecho aparece na pista, e um toque numa disputa pode virar rivalidade.`,
+      'Deixar com o piloto entrega o lance ao estilo dele (cauteloso, equilibrado ou agressivo), que sai dos atributos, da confiança e do ritmo escolhido; o painel Piloto da corrida mostra qual é.',
+      'Pneus: o desgaste aparece em porcentagem e em palavra (novo, bom, gasto, no limite, acabado). Cada composto tem o seu penhasco, marcado na barra: passou dali, o pneu perde segundos por volta. A tela mostra o gráfico dos tempos de volta e a janela ideal de parada; no kart, que não troca pneus, a volta em que o pneu cai do penhasco.',
+      'O engenheiro fala pelo rádio só quando importa: pneu no limite, janela de parada aberta, rival que parou, carro encostando, chuva chegando.',
       'Ritmo e pedido de parada valem para a volta seguinte à que o líder está fazendo; a tela mostra qual é. Reiniciar visualização só repete as imagens: o que já aconteceu não muda.',
+      'Simular até o fim leva direto ao resultado: o piloto decide todos os lances pelo estilo dele e o engenheiro cuida das paradas e do combustível. O resultado lista cada lance da corrida e marca os que o piloto decidiu.',
       `Cada categoria tem o seu veículo, do ${CATEGORY_NAMES[FIRST_CATEGORY_ID].vehicleName.toLowerCase()} ao ${CATEGORY_NAMES[TOP_CATEGORY_ID].vehicleName}. As pistas seguem o traçado de circuitos reais, com nomes fictícios. Autódromos: geometria de bacinger/f1-circuits (licença MIT). Kartódromos: traçados © OpenStreetMap contributors (licença ODbL); só o Circuito do Oásis ainda tem traçado gerado pelo jogo.`,
     ],
   },

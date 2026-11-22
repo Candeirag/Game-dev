@@ -94,7 +94,15 @@ export function useRaceBanners({
 }): RaceBanners {
   const active = enabled ? timeline : null;
   const near = (active?.referenceLap ?? 0) * NEAR_LAPS;
-  const outcome = useFresh(active?.moments ?? NO_MOMENTS, active ? latestMoment(active, time) : null, time, playing, near, MOMENT_RESULT_SECONDS, momentFeedback);
+  const outcome = useFresh(
+    active?.moments ?? NO_MOMENTS,
+    active ? latestMoment(active, time) : null,
+    time,
+    playing,
+    near,
+    MOMENT_RESULT_SECONDS,
+    momentFeedback,
+  );
   const radio = useFresh(active?.radio ?? NO_RADIO, active ? latestRadio(active, time) : null, time, playing, near, RADIO_SECONDS);
   return { outcome, radio };
 }
