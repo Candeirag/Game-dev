@@ -189,6 +189,44 @@ for (const formato of TELAS) {
       expect(erros).toEqual([]);
     });
 
+    test('decisões: um cartão por vez e o desfecho com o que mudou', async ({ page }) => {
+      const erros = vigiarErros(page);
+      // Dois cartões antigos pendentes (o aporte extra à equipe e a mudança para São Paulo): só o primeiro aparece.
+      await abrirSave(page, SAVES.nascimento);
+      const cartao = page.getByRole('region', { name: 'A equipe pede um aporte extra' });
+      await expect(cartao).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Mudança para São Paulo' })).toHaveCount(0);
+      await expect(cartao).toContainText('Contrato');
+      await expect(cartao).toContainText('Decisão 1 de 2');
+      // A escolha com mais de um desfecho leva o dado e a palavra; a explicação dos cartões antigos continua lá.
+      const escolhas = cartao.getByRole('group', { name: 'Escolhas' }).getByRole('button');
+      await expect(escolhas).toHaveCount(3);
+      await expect(escolhas.filter({ hasText: 'Recusar' })).toContainText('Incerto');
+      await expect(escolhas.filter({ hasText: 'Pagar' })).not.toContainText('Incerto');
+      await expect(escolhas.filter({ hasText: 'Pagar' })).toContainText('fica em dívida com você');
+      await cartao.scrollIntoViewIfNeeded();
+      await conferirTela(page, 'decisao-cartao', formato.nome);
+      // Tocar numa escolha resolve na hora: o cartão vira o desfecho, com o que mudou em ícone, texto e seta.
+      await escolhas.filter({ hasText: 'Pagar' }).click();
+      const desfecho = page.getByRole('region', { name: 'Desfecho: A equipe pede um aporte extra' });
+      await expect(desfecho).toBeVisible();
+      await expect(desfecho).toContainText('Você escolheu: Pagar R$ 1.400');
+      await expect(desfecho).toContainText('O aporte garante as atualizações previstas.');
+      const mudancas = desfecho.getByRole('list', { name: 'O que mudou' }).getByRole('listitem');
+      await expect(mudancas).toHaveCount(2);
+      await expect(mudancas.filter({ hasText: 'Caixa' })).toContainText(/caiu\s*−R\$\s1\.400/);
+      await expect(mudancas.filter({ hasText: 'Confiança da equipe' })).toContainText(/subiu\s*\+\d/);
+      await expect(desfecho).toContainText('Falta 1 decisão');
+      await desfecho.scrollIntoViewIfNeeded();
+      await conferirTela(page, 'decisao-desfecho', formato.nome);
+      // "Próxima decisão" traz o segundo cartão, com o contador andando.
+      await desfecho.getByRole('button', { name: 'Próxima decisão' }).click();
+      const segundo = page.getByRole('region', { name: 'Mudança para São Paulo' });
+      await expect(segundo).toContainText('Decisão 2 de 2');
+      await expect(segundo).toContainText('Família');
+      expect(erros).toEqual([]);
+    });
+
     test('carreira e painel no fim da temporada', async ({ page }) => {
       const erros = vigiarErros(page);
       await abrirSave(page, SAVES.fimDeTemporada);

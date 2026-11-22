@@ -33,6 +33,7 @@ import type {
   PlayerRaceInput,
   RaceSimState,
   RaceTimeline,
+  StoryEffectView,
   StrategyPlan,
 } from '@/engine';
 import { readBirthDraft, readLastExport, writeBirthDraft, writeLastExport, type BirthDraft } from '@/persistence/preferences';
@@ -63,6 +64,16 @@ export type SaveStatus =
   | { kind: 'saving' }
   | { kind: 'saved'; at: string; slot: SaveSlotId }
   | { kind: 'error'; message: string; problems?: string[] };
+
+/** Desfecho da última decisão, como a tela mostra: a escolha, o que aconteceu e o que mudou. */
+export interface EventOutcomeView {
+  eventId: string;
+  title: string;
+  choiceLabel: string;
+  text: string;
+  /** O que de fato mudou na carreira (`describeEffects`, do motor). */
+  effects: StoryEffectView[];
+}
 
 export interface GameStore {
   storage: StorageAdapter;
@@ -100,7 +111,7 @@ export interface GameStore {
   originalCopies: OriginalCopyInfo[];
   notice: string | null;
   /** Desfecho do último evento resolvido, para mostrar ao jogador. */
-  lastOutcome: { title: string; text: string } | null;
+  lastOutcome: EventOutcomeView | null;
 
   /** Testa o armazenamento do navegador e escolhe o que funciona (chamado uma vez, na abertura). */
   initStorage(): Promise<void>;
@@ -504,7 +515,14 @@ export const useGameStore = create<GameStore>((set, get) => {
       if (!career || !event) return;
       try {
         const result = engine.resolveEvent(career, eventId, choiceId);
-        set({ career: result.career, lastOutcome: { title: event.title, text: result.outcome }, notice: null });
+        const lastOutcome: EventOutcomeView = {
+          eventId,
+          title: event.title,
+          choiceLabel: result.choiceLabel,
+          text: result.outcome,
+          effects: engine.describeEffects(career, result.career, result.effects),
+        };
+        set({ career: result.career, lastOutcome, notice: null });
         void autosave(result.career);
       } catch (error) {
         set({ notice: errorMessage(error) });
