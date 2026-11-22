@@ -66,6 +66,8 @@ const NOT_BALANCE = new Set([
   'SPONSOR_PROFILES',
   'STORY_FIRST_NAMES',
   'STORY_LAST_NAMES',
+  // Textos dos eventos de família em variantes (Fase 5): só palavras; os valores chegam prontos.
+  'FAMILY_EVENT_TEXTS',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',

@@ -13,6 +13,8 @@
  * cartão é criado. Se o catálogo não tiver mais nada que sirva, a etapa fica com menos cartões
  * (o simulador conta essas etapas na seção 10).
  *
+ * Uma cadeia adormecida (esperando algo de longo prazo) não ocupa vaga no limite de cadeias.
+ *
  * Sorteios com nome próprio: 'story-round' (quantos e quais), 'story-variant' (qual texto),
  * 'story-team' (a "outra equipe" de um cartão), 'story-person' (nome de pessoa nova),
  * 'story-sponsor' e 'story-offer' (patrocinador).
@@ -60,6 +62,21 @@ function cardCandidate(ctx: StoryContext, source: CardSource): ((rng: Rng) => { 
   };
 }
 
+/**
+ * Cadeias que ocupam espaço agora: as que têm passo agendado ou com condição valendo. Uma cadeia
+ * adormecida (o prazo venceu, mas o passo espera algo de longo prazo, como chegar ao topo) não
+ * conta para o limite de STORY_EVENTS.MAX_ACTIVE_CHAINS.
+ */
+function busyChains(ctx: StoryContext): number {
+  let busy = 0;
+  for (const state of activeChains(ctx.story)) {
+    const spec = STORY_CHAINS.find((c) => c.id === state.id)?.steps.find((s) => s.id === state.next);
+    const waiting = !isDue(state.notBefore, ctx.career.season, ctx.round);
+    if (waiting || (spec && allHold(ctx, spec.when))) busy++;
+  }
+  return busy;
+}
+
 function eventCandidates(ctx: StoryContext, taken: ReadonlySet<string>): Candidate[] {
   const out: Candidate[] = [];
   const { story, career } = ctx;
@@ -71,7 +88,7 @@ function eventCandidates(ctx: StoryContext, taken: ReadonlySet<string>): Candida
     if (build) out.push({ id: spec.id, category: spec.category, weight: weightOf(spec, spec.frequency), build });
   }
   // Passos iniciais de cadeias que ainda não aconteceram com este personagem.
-  if (activeChains(story).length < STORY_EVENTS.MAX_ACTIVE_CHAINS) {
+  if (busyChains(ctx) < STORY_EVENTS.MAX_ACTIVE_CHAINS) {
     for (const chain of STORY_CHAINS) {
       if (findChain(story, chain.id) || taken.has(`chain:${chain.id}`)) continue;
       const spec = chain.steps.find((s) => s.id === chain.start);

@@ -27,6 +27,7 @@ import { PENALTY_POINTS_BAN, getCategory } from '@/data/categories';
 import { getTrack } from '@/data/tracks';
 import { computeDriverStandings } from '../championship/standings';
 import { addRoundStoryEvents } from '../story/select';
+import { markSeen } from '../story/memory';
 import { createRng, hashSeed } from '../rng';
 import { conditionAfterRace, recoverInjury, rollInjury } from './condition';
 import { INTENSITY_GAIN, developAfterRound, type AttributeDelta } from './development';
@@ -316,6 +317,6 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   /* 8. Eventos: de 1 a 3 cartões encadeados (Fase 5) e, para quem nasceu no interior, a mudança. */
   career = addRoundStoryEvents(career, record, round);
   const move = moveEventFor(career, round);
-  if (move) career = { ...career, pendingEvents: [...career.pendingEvents, move] };
+  if (move) career = markSeen({ ...career, pendingEvents: [...career.pendingEvents, move] }, move.storyKey ? [move.storyKey] : [], round);
   return career;
 }
