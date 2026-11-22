@@ -229,7 +229,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     sponsors: birth.support.seasons > 0 ? [familySupport(birth.support.perSeason, birth.support.seasons)] : [],
     academy: null,
     license: { history: [], penaltyPoints: 0, banRounds: 0 },
-    relations: { teamTrust: 50, teammate: 50, rivalries: {} },
+    relations: { teamTrust: 50, teammate: 50, rivalries: {}, rivalryLog: [] },
     marketInterest: {},
     pendingEvents: [],
     eventLog: [],

@@ -31,7 +31,16 @@ export { EVENT_DEFINITIONS } from './events/definitions';
 export * from './simulation/race';
 export * from './broadcast';
 export { TYRES, RACE } from './simulation/constants';
-export { overallRating, driverPaceRating, carRating, conditionEffects } from './simulation/performance';
+export {
+  overallRating,
+  driverPaceRating,
+  carRating,
+  conditionEffects,
+  tyreCliff,
+  tyrePaceLoss,
+  tyreState,
+  type TyreState,
+} from './simulation/performance';
 export { rankTeams, teamStrength, buildCategoryField } from './world/generation';
 export { createRng, hashSeed, randomSeed, textHash, textHash01 } from './rng';
 export { recordSeasonTrend, seasonTrendPoint } from './career/trend';

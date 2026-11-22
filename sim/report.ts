@@ -4,10 +4,13 @@
  * do jogo mudar, e dá para comparar o relatório de uma fase com o da anterior num diff.
  */
 import { categoryRef } from '@/domain/categoryNames';
+import { MOMENT_KIND_LABELS, MOMENT_RISK_LABELS } from '@/domain/labels';
 import { formatMoney } from '@/domain/money';
 import { counted } from '@/domain/text';
 import { CATEGORIES, getCategory } from '@/data/categories';
-import type { BirthGroupStats, SimSummary } from './run';
+import { MOMENT_TEXTS } from '@/data/raceMoments';
+import type { MomentPolicy } from './policy';
+import type { BirthGroupStats, MomentCountStats, MomentEdgeStats, SimSummary } from './run';
 
 const GROUP_LABELS: Readonly<Record<BirthGroupStats['group'], string>> = {
   low: 'Nascença baixa',
@@ -19,10 +22,33 @@ const GROUP_LABELS: Readonly<Record<BirthGroupStats['group'], string>> = {
   defects: 'Dois defeitos',
 };
 
+const EDGE_LABELS: Readonly<Record<MomentEdgeStats['group'], string>> = { low: 'Baixa', mid: 'Média', high: 'Alta' };
+
+/** A opção que o robô escolhe em todo lance quando a política de lances não é a padrão. */
+const MOMENT_POLICY_LABELS: Readonly<Record<Exclude<MomentPolicy, 'style'>, string>> = { safe: 'mais segura', bold: 'mais arriscada' };
+
 const decimal = (value: number, digits = 1) => value.toFixed(digits).replace('.', ',');
 const percent = (fraction: number) => `${Math.round(fraction * 100)}%`;
+/** Número com sinal (o de menos tipográfico, como no dinheiro); o que arredonda para zero sai sem sinal. */
+const signed = (value: number, digits = 1) => {
+  const text = decimal(Math.abs(value), digits);
+  return /[1-9]/.test(text) ? `${value < 0 ? '−' : '+'}${text}` : text;
+};
 /** O simulador cria pilotos brasileiros; a moeda é só apresentação e não muda os números. */
 const cash = (value: number) => formatMoney(value, 'BRL', { compact: true });
+
+/** Quebra um parágrafo em linhas da largura do relatório. */
+function paragraph(text: string, width = 120): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    if (line && line.length + 1 + word.length > width) {
+      lines.push(line);
+      line = word;
+    } else line = line ? `${line} ${word}` : word;
+  }
+  return line ? [...lines, line] : lines;
+}
 
 type Align = 'left' | 'right';
 
@@ -43,11 +69,12 @@ export function formatReport(summary: SimSummary): string {
   const out: string[] = [];
   const section = (title: string) => out.push('', title.toUpperCase(), '');
   const careers = counted(summary.careers, 'carreira', 'carreiras');
+  const policy = options.moments ?? 'style';
 
   out.push(
     'APEX MOTORSPORT DYNASTY · SIMULADOR DE CARREIRAS',
     `${counted(summary.careers, 'carreira', 'carreiras')} (${options.seeds === 1 ? `semente ${lastSeed}` : `sementes ${options.firstSeed} a ${lastSeed}`}), ${counted(options.seasons, 'temporada', 'temporadas')} cada: ${counted(summary.seasonsPlayed, 'temporada disputada', 'temporadas disputadas')}`,
-    `Política: robô padrão (treino de acerto, classificação e corrida equilibradas, melhor proposta aceitável) · talento ${options.talent}`,
+    `Política: robô padrão (treino de acerto, classificação e corrida equilibradas, melhor proposta aceitável) · talento ${options.talent}${policy === 'style' ? '' : ` · lances: sempre a opção ${MOMENT_POLICY_LABELS[policy]}`}`,
     `Idade média na estreia: ${decimal(summary.averageStartAge)} anos`,
   );
 
@@ -204,6 +231,91 @@ export function formatReport(summary: SimSummary): string {
     'de tudo o que entrou e saiu na temporada (vaga, viagens, equipamento, aluguel, treino, patrocínios, apoio da família,',
     'impostos e juros; aportes de investidor e vaquinha entram no ano seguinte ao da assinatura): terminar mal tem de custar',
     'dinheiro. A última tabela mostra como cada grupo pagou a primeira temporada na Fórmula Júnior.',
+  );
+
+  section('9. Lances decisivos');
+  const moments = summary.moments;
+  const share = (count: number, total: number) => (total ? percent(count / total) : '-');
+  const countRow = (label: string, c: MomentCountStats) => [
+    label,
+    String(c.races),
+    String(c.completeRaces),
+    c.completeRaces ? decimal(c.perRace, 2) : '-',
+    share(c.two, c.completeRaces),
+    share(c.three, c.completeRaces),
+    share(c.four, c.completeRaces),
+  ];
+  out.push(
+    `Lances: ${moments.moments} em ${counted(moments.all.races, 'corrida', 'corridas')} (${counted(moments.all.completeRaces, 'completa', 'completas')}). Corridas completas fora da faixa de 2 a 4 lances: ${moments.all.other}.`,
+    `Rivalidades novas: ${moments.freshRivalries} (${decimal(moments.freshRivalriesPerCareer, 2)} por carreira). Toques em lances: ${decimal(moments.contactsPer100)} a cada 100 lances.`,
+    '',
+    ...table(
+      ['Lances por corrida completa', 'Corridas', 'Completas', 'Média', 'Com 2', 'Com 3', 'Com 4'],
+      [countRow('Todas as categorias', moments.all), ...moments.byCategory.map((c) => countRow(getCategory(c.categoryId).name, c))],
+    ),
+    '',
+    ...table(
+      ['Lance', 'Opção', 'Risco', 'Vezes', 'Deu certo', 'Chance mostrada', 'Rodou', 'Tocou', 'Abandonou', 'Punido'],
+      moments.byOption.map((o) => [
+        MOMENT_KIND_LABELS[o.kind],
+        MOMENT_TEXTS[o.kind].options[o.option]?.label ?? o.option,
+        MOMENT_RISK_LABELS[o.risk],
+        String(o.times),
+        o.times ? percent(o.successShare) : '-',
+        o.times ? percent(o.averageChance) : '-',
+        String(o.spins),
+        String(o.contacts),
+        String(o.retired),
+        String(o.penalized),
+      ]),
+      ['left', 'left', 'left'],
+    ),
+    '',
+    ...table(
+      [
+        'Vantagem sobre o grid',
+        'Corridas',
+        'Pontos de vantagem',
+        'Lances',
+        'Chance na opção arriscada',
+        'Arriscou',
+        'Acerto geral',
+        'Arriscados vencidos',
+        'Saldo',
+      ],
+      moments.byEdge.map((g) => [
+        EDGE_LABELS[g.group],
+        String(g.races),
+        `${signed(g.averageEdge)} (${signed(g.minEdge)} a ${signed(g.maxEdge)})`,
+        String(g.moments),
+        g.riskyOffered ? percent(g.riskyChance) : '-',
+        g.riskyOffered ? percent(g.riskyTakenShare) : '-',
+        g.moments ? percent(g.successShare) : '-',
+        decimal(g.riskyWonPerRace, 2),
+        signed(g.balancePerRace, 2),
+      ]),
+    ),
+    '',
+    ...paragraph(
+      [
+        'Só o piloto do jogador tem lances.',
+        policy === 'style'
+          ? 'O robô não responde a nenhum: quem escolhe a opção é o estilo do piloto, como em "simular até o fim".'
+          : `Nesta execução o robô responde a todos, sempre com a opção ${MOMENT_POLICY_LABELS[policy]} (no relatório padrão, quem escolhe é o estilo do piloto).`,
+        '"Corrida completa" é a que o piloto termina sem a prova ser encerrada antes por bandeira vermelha: a regra é de 2 a 4',
+        'lances por corrida completa, e a largada sempre é um deles (a primeira linha diz quantas ficaram fora da faixa).',
+        'Na segunda tabela, "deu certo" é a parcela das vezes em que a opção funcionou e "chance mostrada", a média da chance',
+        'que a tela exibia nela: as duas têm de andar juntas. "Rodou", "tocou", "abandonou" e "punido" contam os lances errados',
+        'que terminaram assim (o toque que tira o piloto da corrida conta em "tocou" e em "abandonou").',
+        'A terceira tabela separa as corridas em três grupos do mesmo tamanho pela vantagem do piloto sobre o grid na hora da',
+        'corrida: a nota geral dele menos o nível médio dos pilotos da categoria. "Chance na opção arriscada" é a média da',
+        'chance mostrada na opção arriscada dos lances que tinham uma, escolhida ou não; "arriscou", a parcela desses lances em',
+        'que o piloto foi nela; "acerto geral", a parcela de todos os lances que deram certo; "arriscados vencidos", os lances',
+        'arriscados que deram certo, por corrida; "saldo", os lances vencidos menos os perdidos, por corrida (o registro não diz',
+        'quantas posições cada lance valeu). Piloto melhor tem de ver chances maiores e vencer mais lances arriscados.',
+        '"Rivalidade nova" é o toque num lance com um piloto que ainda não era rival.',
+      ].join(' '),
+    ),
   );
 
   return `${out.join('\n')}\n`;

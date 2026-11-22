@@ -264,7 +264,13 @@ export function placeCars(
       memory.shift.delete(row.driverId);
       continue;
     }
-    const previous = memory.lateral.get(row.driverId);
+    const remembered = memory.lateral.get(row.driverId);
+    // Carro em pista nunca parte de fora do asfalto: ao sair dos boxes, o último quadro "no pit lane"
+    // pode tê-lo deixado ainda na rampa de saída, longe do eixo (com a corrida rápida na tela, a rampa
+    // inteira passa em um quadro). Dali ele entra pela borda da pista e segue para a linha de corrida.
+    const onTrack = sample.state !== 'retired' && !sample.inPitLane;
+    const edge = CIRCUIT.TRACK_WIDTH / 2 - size.width / 2;
+    const previous = remembered !== undefined && onTrack ? Math.max(-edge, Math.min(edge, remembered)) : remembered;
     // No pit lane e no grid (parado ou ainda atrás da linha) a posição é exata; na pista, o carro
     // muda de lado aos poucos.
     const exact = previous === undefined || sample.inPitLane || sample.state === 'grid' || (sample.gridSlot !== null && sample.inLap <= 0);

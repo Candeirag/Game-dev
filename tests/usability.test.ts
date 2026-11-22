@@ -10,7 +10,24 @@ import { currencyForNationality, formatMoney, relabelMoney } from '@/domain/mone
 import { amongTheFirst, counted, fixStoredPlurals, pluralWord } from '@/domain/text';
 import { importCareer, exportCareer } from '@/persistence/saveService';
 import { loadRaceResume, raceResumeKey } from '@/persistence/raceResume';
-import { careerCurrency, money, runPractice, runQualifying, startWeekend } from './engineApi';
+import type { GameStore } from '@/store/gameStore';
+import {
+  buildRaceContext,
+  careerCurrency,
+  completeWeekend,
+  createWeekendRace,
+  isRaceFinished,
+  money,
+  runPractice,
+  runQualifying,
+  simulateRemainingRace,
+  startWeekend,
+  stepRaceLap,
+  type MomentChoice,
+  type PlayerRaceInput,
+  type RaceMoment,
+  type RaceSimState,
+} from './engineApi';
 import { NOW, newCareer, playRound, resolvePending } from './helpers';
 
 /** localStorage de mentira, para a store e as anotações do navegador funcionarem no Node. */
@@ -115,6 +132,38 @@ describe('plurais', () => {
   });
 });
 
+/** A resposta do jogador a cada lance decisivo, pela ordem em que aparecem (`null`: o piloto decide pelo estilo). */
+type Answer = (moment: RaceMoment, index: number) => MomentChoice | null;
+
+/** O comando de uma volta em que o jogador não pede parada nem usa o engenheiro automático. */
+const lapInput = (mode: PlayerRaceInput['mode'], extra: Pick<PlayerRaceInput, 'moment' | 'teamOrder'>): PlayerRaceInput => ({
+  mode,
+  pit: null,
+  skipPlannedStop: false,
+  auto: false,
+  ...extra,
+});
+
+/**
+ * Uma volta como o jogador a joga na tela: responde ao lance decisivo pendente (sem `answer`, deixa
+ * o piloto decidir pelo estilo), obedece à ordem de equipe pendente ou só deixa a volta correr.
+ * Devolve o que a volta acrescenta ao comando gravado para a retomada.
+ */
+function playLap(store: () => GameStore, answer: Answer = () => null): Pick<PlayerRaceInput, 'moment' | 'teamOrder'> {
+  const race = store().liveRace!;
+  if (race.pendingMoment) {
+    const moment = answer(race.pendingMoment, race.moments.length);
+    store().answerMoment(moment);
+    return { moment };
+  }
+  if (race.pendingTeamOrder) {
+    store().stepRace('obey');
+    return { teamOrder: 'obey' };
+  }
+  store().stepRace();
+  return {};
+}
+
 describe('corrida interrompida', () => {
   beforeEach(() => {
     installLocalStorage();
@@ -127,13 +176,22 @@ describe('corrida interrompida', () => {
     await store().importJson(exportCareer(weekend, NOW));
     expect(store().raceResume).toBeNull();
 
-    // Corre seis voltas mudando o ritmo, como o jogador faria pela barra fixa.
+    // A largada sempre tem um lance decisivo: enquanto ele espera a resposta, a volta não anda.
     store().beginRace();
+    expect(store().liveRace!.pendingMoment?.kind).toBe('start');
+    store().stepRace();
+    expect(store().liveRace!.currentLap).toBe(0);
+    expect(store().raceSteps).toEqual([]);
+
+    // Corre seis voltas mudando o ritmo, como o jogador faria pela barra fixa. Nos lances que
+    // aparecem (o da largada, pelo menos), deixa o piloto decidir pelo estilo.
     const modes = ['balanced', 'aggressive', 'aggressive', 'conservative', 'balanced', 'aggressive'] as const;
+    const steps: PlayerRaceInput[] = [];
     for (const mode of modes) {
       store().setRaceMode(mode);
-      store().stepRace();
+      steps.push(lapInput(mode, playLap(store)));
     }
+    expect(steps[0]).toHaveProperty('moment', null);
     store().noteLapShown(5);
     // Ritmo trocado depois da última volta simulada: também tem de sobreviver à recarga.
     store().setRaceMode('conservative');
@@ -144,6 +202,7 @@ describe('corrida interrompida', () => {
     const career = store().career!;
     expect(raceResumeKey(career)).not.toBeNull();
     expect(loadRaceResume(career)?.steps).toHaveLength(6);
+    expect(loadRaceResume(career)?.steps).toEqual(steps);
 
     // Resultado de referência: a corrida seguindo direto até o fim.
     store().simulateRestOfRace();
@@ -157,7 +216,7 @@ describe('corrida interrompida', () => {
       raceResume: {
         key: raceResumeKey(career)!,
         plan: null,
-        steps: modes.map((mode) => ({ mode, pit: null, skipPlannedStop: false, auto: false })),
+        steps,
         mode: 'aggressive',
         autoEngineer: false,
         shownLap: 5,
@@ -186,8 +245,8 @@ describe('corrida interrompida', () => {
     const weekend = runQualifying(runPractice(startWeekend(resolvePending(newCareer(555))), 'setup'), 'balanced');
     await store().importJson(exportCareer(weekend, NOW));
     store().beginRace();
-    store().stepRace();
-    store().stepRace();
+    playLap(store);
+    playLap(store);
     const career = store().career!;
     expect(loadRaceResume(career)?.steps).toHaveLength(2);
     // Outra carreira, na mesma etapa: não herda a corrida.
@@ -202,4 +261,116 @@ describe('corrida interrompida', () => {
     expect(store().raceResume).toBeNull();
     expect(loadRaceResume(career)).toBeNull();
   });
+
+  /**
+   * Corridas com lances respondidos (Fase 4). `answers` é o que o jogador responde a cada lance, na
+   * ordem; `kinds`, os lances que a corrida tem com essas respostas (se o motor mudar e a lista for
+   * outra, o roteiro precisa ser refeito); `stop`, o ponto em que a página fecha.
+   */
+  const interruptions: {
+    name: string;
+    careerOf: () => CareerState;
+    answers: (MomentChoice | null)[];
+    kinds: string[];
+    stop: (race: RaceSimState) => boolean;
+  }[] = [
+    {
+      // Kart, sem boxes: a página fecha com a pergunta do terceiro lance na tela, ainda sem resposta.
+      name: 'kart, com a pergunta de um lance na tela',
+      careerOf: () => newCareer(2026),
+      answers: [{ option: 'inside' }, null, { option: 'dive' }, null],
+      kinds: ['start', 'attack', 'attack', 'lastLap'],
+      stop: (race) => race.moments.length === 2 && race.pendingMoment !== null,
+    },
+    {
+      // Monoposto com boxes: a resposta ao lance da parada leva o composto; fecha duas voltas depois.
+      name: 'monoposto, duas voltas depois do lance da parada',
+      careerOf: () => importCareer(readFileSync('tests/fixtures/v2/formula-mid-season.json', 'utf8')),
+      answers: [null, { option: 'undercut', compound: 'soft' }],
+      kinds: ['start', 'pit'],
+      stop: (race) => race.moments.length === 2 && race.currentLap >= race.moments[1]!.lap + 2,
+    },
+  ];
+
+  it.each(interruptions)(
+    'com lances respondidos ($name): a retomada refaz as respostas e a corrida termina igual',
+    async ({ careerOf, answers, kinds, stop }) => {
+      const { useGameStore } = await import('@/store/gameStore');
+      const store = () => useGameStore.getState();
+      const weekend = runQualifying(runPractice(startWeekend(resolvePending(careerOf())), 'setup'), 'balanced');
+      // A resposta do roteiro, conferindo que ela existe mesmo entre as opções do lance que apareceu.
+      const answer: Answer = (moment, index) => {
+        const choice = answers[index] ?? null;
+        if (choice) expect(moment.options.map((o) => o.id)).toContain(choice.option);
+        if (choice?.compound) expect(moment.compounds).toContain(choice.compound);
+        return choice;
+      };
+
+      // Referência: a mesma corrida, com as mesmas respostas, direto no motor e sem interrupção.
+      const context = buildRaceContext(weekend);
+      let reference = createWeekendRace(weekend);
+      while (!isRaceFinished(reference)) {
+        const pending = reference.pendingMoment;
+        const extra = pending ? { moment: answer(pending, reference.moments.length) } : reference.pendingTeamOrder ? { teamOrder: 'obey' as const } : {};
+        reference = stepRaceLap(reference, context, lapInput('balanced', extra));
+      }
+      expect(reference.moments.map((m) => m.kind)).toEqual(kinds);
+      // Lance respondido pelo jogador fica com a opção dele; o que ele deixou passar, com a do estilo.
+      expect(reference.moments.map((m) => m.auto)).toEqual(answers.map((choice) => choice === null));
+      for (const [index, choice] of answers.entries()) if (choice) expect(reference.moments[index]?.option).toBe(choice.option);
+
+      // O jogador corre até o ponto em que a página fecha.
+      await store().importJson(exportCareer(weekend, NOW));
+      const loaded = store().career!;
+      store().beginRace();
+      const steps: PlayerRaceInput[] = [];
+      const lap = () => steps.push(lapInput('balanced', playLap(store, answer)));
+      while (!stop(store().liveRace!) && !isRaceFinished(store().liveRace!)) lap();
+      const interrupted = store().liveRace!;
+      const shown = store().raceTimeline!;
+      expect(isRaceFinished(interrupted)).toBe(false);
+      expect(interrupted.moments).toHaveLength(2);
+      // As respostas ficam nos comandos gravados, cada uma na volta do seu lance; as demais voltas não levam resposta.
+      expect(store().raceSteps).toEqual(steps);
+      const answeredLaps = steps.flatMap((step, index) => ('moment' in step ? [index + 1] : []));
+      expect(answeredLaps).toEqual(interrupted.moments.map((m) => m.lap));
+      expect(answeredLaps.map((n) => steps[n - 1]!.moment)).toEqual(answers.slice(0, 2));
+
+      // "Recarrega": a corrida ao vivo some, o save volta para antes da largada e o registro é oferecido.
+      store().exitToMenu();
+      await store().importJson(exportCareer(weekend, NOW));
+      expect(store().liveRace).toBeNull();
+      const record = store().raceResume!;
+      expect(record.steps).toEqual(steps);
+
+      // "Continuar": a mesma corrida, com os mesmos lances já resolvidos, a mesma pergunta à espera (se
+      // havia uma) e a mesma linha do tempo da transmissão.
+      store().resumeRace(false);
+      expect(store().liveRace).toEqual(interrupted);
+      expect(store().liveRace!.pendingMoment).toEqual(interrupted.pendingMoment);
+      expect(store().raceSteps).toEqual(steps);
+      expect(store().raceTimeline).toEqual(shown);
+
+      // "Ver resultado", a partir do mesmo registro: o que já foi respondido vale, e o resto o piloto decide.
+      useGameStore.setState({ liveRace: null, raceTimeline: null, raceResume: record });
+      store().resumeRace(true);
+      const toTheEnd = store().liveRace!;
+      expect(toTheEnd).toEqual(simulateRemainingRace(interrupted, context, { mode: 'balanced', auto: true }));
+      expect(toTheEnd.moments.slice(0, 2)).toEqual(interrupted.moments);
+      expect(toTheEnd.moments.slice(2).every((m) => m.auto)).toBe(true);
+
+      // De volta ao ponto da interrupção, o jogador segue respondendo até a bandeirada: o resultado bate com a referência.
+      useGameStore.setState({ liveRace: null, raceTimeline: null, raceResume: record });
+      store().resumeRace(false);
+      while (!isRaceFinished(store().liveRace!)) lap();
+      expect(store().liveRace).toEqual(reference);
+      expect(store().raceSteps).toEqual(steps);
+      store().completeWeekend();
+      const expected = completeWeekend(loaded, reference);
+      expect(store().career!.rounds).toEqual(expected.rounds);
+      expect(store().career!.rounds.at(-1)!.race.moments).toEqual(reference.moments);
+      expect(store().career!.relations).toEqual(expected.relations);
+      expect(loadRaceResume(loaded)).toBeNull();
+    },
+  );
 });

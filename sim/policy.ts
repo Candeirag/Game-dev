@@ -8,7 +8,7 @@
  * Mexer em qualquer decisão daqui muda os valores gravados em `tests/golden/simulation.json`
  * e a linha de base do simulador. Se for de propósito, regrave e explique no PR.
  */
-import type { CareerState, PracticeProgram, QualifyingApproach, RaceMode } from '@/domain/schemas';
+import type { CareerState, MomentRecord, PracticeProgram, QualifyingApproach, RaceMode } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
 import * as engine from '@/engine';
 
@@ -18,6 +18,58 @@ export interface Choices {
   mode?: RaceMode;
   /** Índice da escolha em cada evento pendente (padrão: a primeira). */
   eventChoice?: number;
+  /**
+   * Como o robô responde aos lances decisivos (Fase 4). O padrão é 'style': ele não responde, e o
+   * motor decide pelo estilo do piloto, como em "simular até o fim". 'safe' escolhe sempre a opção
+   * menos arriscada e 'bold', sempre a mais arriscada: servem para medir quanto vale cada postura.
+   */
+  moments?: MomentPolicy;
+}
+
+export type MomentPolicy = 'style' | 'safe' | 'bold';
+
+/** A opção de um lance pela política do robô: a menos ou a mais arriscada (na dúvida, a de maior chance). */
+export function botMomentChoice(moment: engine.RaceMoment, policy: Exclude<MomentPolicy, 'style'>): engine.MomentChoice {
+  const sign = policy === 'bold' ? 1 : -1;
+  const pick = [...moment.options].sort((a, b) => sign * (b.risk - a.risk) || b.chance - a.chance)[0]!;
+  return { option: pick.id, ...(moment.suggestedCompound ? { compound: moment.suggestedCompound } : {}) };
+}
+
+/**
+ * Quem acompanha a corrida do robô por dentro. É o que o simulador usa para medir os lances (a
+ * seção 9 do relatório): o registro gravado no resultado diz só a opção escolhida, e é o lance
+ * pendente que traz as chances de todas as opções oferecidas. Acompanhar não muda a corrida.
+ */
+export interface RaceWatch {
+  /** A cada lance do piloto: como foi oferecido (opções e chances) e como terminou. */
+  onMoment?: (moment: engine.RaceMoment, record: MomentRecord) => void;
+  /** A corrida terminada, antes de virar resultado (`career` é o fim de semana que a disputou). */
+  onRace?: (race: engine.RaceSimState, career: CareerState) => void;
+}
+
+/**
+ * Corre a etapa até a bandeirada com o engenheiro automático e a política de lances dada. Com a
+ * política padrão o robô não responde a lance nenhum: o estilo do piloto decide, e a corrida é a
+ * mesma de `simulateRemainingRace` ("simular até o fim"), com ou sem alguém acompanhando.
+ */
+export function botRace(career: CareerState, choices: Choices = {}, watch?: RaceWatch): engine.RaceSimState {
+  const context = engine.buildRaceContext(career);
+  const mode = choices.mode ?? 'balanced';
+  const policy = choices.moments ?? 'style';
+  let race = engine.createWeekendRace(career);
+  if (policy === 'style' && !watch) return engine.simulateRemainingRace(race, context, { mode, auto: true });
+  // Volta a volta: para responder aos lances (política própria) ou para mostrá-los a quem acompanha.
+  // O resto continua com o engenheiro automático.
+  while (!engine.isRaceFinished(race)) {
+    const moment = race.pendingMoment;
+    const resolved = race.moments.length;
+    race = engine.stepRaceLap(race, context, { mode, pit: null, auto: true, moment: moment && policy !== 'style' ? botMomentChoice(moment, policy) : null });
+    // Só conta o lance que o motor registrou nesta volta (o registro é o que vai para o resultado).
+    const record = race.moments[resolved];
+    if (moment && record) watch?.onMoment?.(moment, record);
+  }
+  watch?.onRace?.(race, career);
+  return race;
 }
 
 /**
@@ -47,14 +99,13 @@ export function resolvePending(career: CareerState, choiceIndex = 0): CareerStat
   return c;
 }
 
-/** Joga uma etapa inteira com o piloto automático. */
-export function playRound(career: CareerState, choices: Choices = {}): CareerState {
+/** Joga uma etapa inteira com o piloto automático. `watch` acompanha a corrida, se o piloto correr. */
+export function playRound(career: CareerState, choices: Choices = {}, watch?: RaceWatch): CareerState {
   let c = engine.startWeekend(resolvePending(career, choices.eventChoice));
   if (!c.weekend!.playerParticipates) return engine.simulateAbsentWeekend(c);
   c = engine.runPractice(c, choices.program ?? 'setup');
   c = engine.runQualifying(c, choices.approach ?? 'balanced');
-  const race = engine.simulateRemainingRace(engine.createWeekendRace(c), engine.buildRaceContext(c), { mode: choices.mode ?? 'balanced', auto: true });
-  return engine.completeWeekend(c, race);
+  return engine.completeWeekend(c, botRace(c, choices, watch));
 }
 
 export function playSeason(career: CareerState, choices: Choices = {}): CareerState {

@@ -12,11 +12,13 @@ import {
   ArrowLeftRight,
   ChevronDown,
   ChevronUp,
+  CircleCheck,
   CircleUser,
   Crosshair,
   Eye,
   FastForward,
   Flag,
+  Headset,
   ListOrdered,
   type LucideIcon,
   Pause,
@@ -25,27 +27,52 @@ import {
   RotateCcw,
   ScrollText,
   SkipForward,
+  TriangleAlert,
   Video,
   Wrench,
   X,
 } from 'lucide-react';
-import { RACE_MODE_DESCRIPTIONS, RACE_MODE_LABELS, WEATHER_LABELS } from '@/domain/labels';
+import {
+  DRIVING_STYLE_DESCRIPTIONS,
+  DRIVING_STYLE_LABELS,
+  MOMENT_KIND_LABELS,
+  RACE_MODE_DESCRIPTIONS,
+  RACE_MODE_LABELS,
+  WEATHER_LABELS,
+} from '@/domain/labels';
 import { getTrack } from '@/data/tracks';
-import { buildCircuit, conditionFor, eventsUntil, finalizeRace, fullName, isRaceFinished, lapInfoAt, standingsAt, type StandingRow } from '@/engine';
+import {
+  buildCircuit,
+  conditionFor,
+  drivingStyle,
+  drivingStyleScore,
+  eventsUntil,
+  finalizeRace,
+  fullName,
+  isRaceFinished,
+  lapInfoAt,
+  standingsAt,
+  type StandingRow,
+} from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { CarSprite } from '../components/CarSprite';
 import { RaceResultPanel } from '../components/RaceView';
-import { Button, cx, Delta, PortraitOr, Tower, type TowerRow, TyreBadge, TyreLegend, tyreName, WholeRows } from '@/ui/kit';
+import { Button, cx, Delta, LowerThird, PortraitOr, Tower, type TowerRow, TyreBadge, TyreGauge, TyreLegend, TyreWearBar, tyreName, WholeRows } from '@/ui/kit';
 import { portraitUrl } from '../images';
 import { feedback } from '../feedback/feedback';
 import { formatInterval, formatLap, trackCredit } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { useChrome, useMediaQuery } from '../layout/chrome';
+import { prefersReducedMotion } from '../motion';
+import { MomentBar, useStageAboveMoment } from './MomentBar';
 import { EVENT_TONE, HeaderButton, Mark } from './raceBits';
 import { RaceCanvas } from './RaceCanvas';
 import { PitStrategyCard, TeamOrderDialog } from './RaceCommands';
 import { RaceControlBar } from './RaceControlBar';
+import { playerRaceProfile, shownLapTimes } from './raceInfo';
 import { driverCode, type CameraMode } from './raceScene';
+import { PlayerTyrePanel, type ShownTyre } from './TyrePanel';
+import { useRaceBanners } from './useRaceBanners';
 import { useRaceFeedback } from './useRaceFeedback';
 import { SPEEDS, useRacePlayback } from './useRacePlayback';
 import { useSettings } from '../settings/useSettings';
@@ -167,6 +194,24 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
     chequered: timeline !== null && timeline.winnerTime !== null && time >= timeline.winnerTime,
   });
 
+  // Faixas passageiras de quem corre: o desfecho de cada lance decisivo e o rádio do engenheiro.
+  const banners = useRaceBanners({ timeline, time, playing: playback.playing, enabled: !spectator && mineIds.has(player.id) });
+  const profile = useMemo(() => playerRaceProfile(career), [career]);
+
+  // Lance decisivo: a pergunta só aparece quando a imagem chega ao ponto em que o motor precisa da
+  // resposta (na largada, já no grid). A corrida fica parada, sem tempo limite.
+  const momentDue = !spectator && race !== null && timeline !== null && race.pendingMoment !== null && !timeline.finished && time >= timeline.horizon - 1e-6;
+  // A tarja do lance ocupa o pé da tela: a gaveta aberta sairia de baixo dela, então fecha.
+  useEffect(() => {
+    if (!momentDue) return;
+    setDrawer(null);
+    // Em pé a página rola: ela volta ao topo, para a pista ficar à vista acima da tarja.
+    if (!wide) window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  }, [momentDue, wide]);
+  // Deitado, a pista e a torre encolhem para caber inteiras acima da tarja: nada fica atrás dela e o
+  // carro do jogador continua no centro da imagem. Em pé a página rola, e a tarja fica sobre o pé dela.
+  const { stage, height: stageHeight, onHeight: setMomentBarHeight } = useStageAboveMoment<HTMLDivElement>(momentDue && wide);
+
   if (!race || !timeline || !circuit) return null;
 
   const rules = category.race;
@@ -236,6 +281,19 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   const myCar = race.cars.find((c) => c.driverId === player.id);
   const live = !timeline.finished || leaderLap >= raceLaps;
   const showBar = !spectator && myRow !== undefined && !chequered && live;
+  // O pneu do jogador como está na imagem (não o do motor, que anda até uma volta à frente).
+  const myTyre: ShownTyre | null =
+    !spectator && myRow
+      ? {
+          compound: myRow.compound,
+          wear: myRow.wear,
+          lap: Math.min(timeline.totalLaps, myRow.laps),
+          totalLaps: timeline.totalLaps,
+          times: shownLapTimes(timeline, player.id, time),
+          state: myRow.state === 'retired' ? 'retired' : myRow.state === 'finished' ? 'finished' : 'running',
+        }
+      : null;
+  const style = drivingStyle(drivingStyleScore(player, profile, raceMode));
 
   const weatherText = (
     <>
@@ -250,10 +308,17 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
     </>
   );
 
+  // Deitado, o resumo dos pneus do jogador vai na barra superior (em pé, no cartão do piloto em foco).
+  const tyreAtSight = wide && myTyre && (
+    <div title="Pneus do seu carro" className="w-52 min-w-0 shrink overflow-hidden">
+      <PlayerTyrePanel tyre={myTyre} compact />
+    </div>
+  );
+
   // Cabeçalho da transmissão: volta, bandeira, clima e os comandos da reprodução. No formato largo ele
   // ocupa a barra superior do jogo, para a pista ficar com toda a altura da tela.
   const header = (
-    <div className={cx('flex min-w-0 flex-1 items-center gap-x-3', !topSlot && 'flex-wrap py-1')}>
+    <div className={cx('flex min-w-0 flex-1 items-center gap-x-2', !topSlot && 'flex-wrap py-1')}>
       <div className="flex shrink-0 items-baseline gap-2 leading-none">
         <span className="text-2xs font-medium text-ink-400">Volta</span>
         <span className="font-display text-2xl font-bold leading-none">
@@ -272,22 +337,29 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         {flag.label}
       </span>
       <span className="hidden min-w-0 truncate text-xs text-ink-300 lg:inline">{weatherText}</span>
+      {/* Os pneus do jogador, sempre à vista sem tapar a pista: desgaste, penhasco, tempos de volta e a janela de parada. */}
+      {tyreAtSight}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {playback.behindLive && !timeline.finished && <HeaderButton icon={Radio} label="Voltar ao vivo" onClick={playback.goLive} />}
         <HeaderButton
           icon={SkipForward}
           label="+1 volta"
-          always
+          // Com os pneus na barra superior, o nome do botão só aparece quando sobra largura.
+          always={!tyreAtSight}
           onClick={playback.skipLap}
-          disabled={orderDue || playback.phase === 'suspended' || playback.phase === 'lights'}
-          title="Avança até o fim da volta do líder"
+          disabled={orderDue || momentDue || playback.phase === 'suspended' || playback.phase === 'lights'}
+          title={momentDue ? 'Responda ao lance para a corrida seguir' : 'Avança até o fim da volta do líder'}
         />
         {!timeline.finished && (
           <HeaderButton
             icon={FastForward}
             label="Simular até o fim"
             onClick={playback.finish}
-            title="O engenheiro assume paradas e combustível até o fim, e a tela vai direto para o resultado"
+            title={
+              spectator
+                ? 'A tela vai direto para o resultado'
+                : 'O piloto decide os lances pelo estilo dele, o engenheiro assume paradas e combustível, e a tela vai direto para o resultado'
+            }
           />
         )}
         <HeaderButton
@@ -364,7 +436,6 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   const towerRows: TowerRow[] = rows.map((row) => {
     const out = row.state === 'retired';
     const gained = row.grid - row.position;
-    const tyreLeft = Math.round((1 - row.wear) * 100);
     return {
       id: row.driverId,
       position: out ? '–' : row.position,
@@ -381,13 +452,8 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
       tyre: (
         <>
           {rules.pitStops && <TyreBadge compound={row.compound} />}
-          {/* O comprimento da barra é o quanto resta de pneu; a cor só reforça. */}
-          <span role="img" aria-label={`${tyreLeft}% de pneu`} title={`${tyreLeft}% de pneu`} className="h-1.5 w-5 overflow-hidden bg-ink-700">
-            <span
-              className={cx('block h-full', row.wear > 0.75 ? 'bg-gold-400' : row.wear > 0.45 ? 'bg-ink-200' : 'bg-go-400')}
-              style={{ width: `${Math.max(6, tyreLeft)}%` }}
-            />
-          </span>
+          {/* A barra enche conforme o pneu gasta, até a marca do penhasco; o estado vai em palavras na dica. */}
+          <TyreWearBar compound={row.compound} wear={row.wear} className="w-5" />
         </>
       ),
       mine: mineIds.has(row.driverId),
@@ -489,19 +555,18 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
       <dl className="mt-2 grid grid-cols-3 gap-2">
         {fact('Velocidade', `${Math.round(focus.speed)} km/h`)}
         {fact('Volta', `${Math.min(raceLaps, started ? focus.sample.lap : 0)}/${raceLaps}`)}
-        {fact(
-          'Pneus',
-          <span className="flex items-center gap-1">
-            {rules.pitStops && <TyreBadge compound={focus.compound} />}
-            {Math.round((1 - focus.wear) * 100)}%
-          </span>,
-        )}
+        {fact(rules.pitStops ? 'Paradas' : 'Largou em', rules.pitStops ? focus.pitStops : `${focus.grid}º`)}
         {fact('À frente', intervalAhead !== null ? formatInterval(intervalAhead) : '–')}
         {fact('Atrás', intervalBehind !== null ? formatInterval(intervalBehind) : '–')}
-        {fact(rules.pitStops ? 'Paradas' : 'Largou em', rules.pitStops ? focus.pitStops : `${focus.grid}º`)}
         {fact('Última volta', formatLap(focus.lastLap))}
-        {fact('Melhor', formatLap(focus.bestLap))}
       </dl>
+      <div className="mt-2 text-2xs text-ink-300">
+        Melhor volta: <b className="font-semibold text-ink-100">{formatLap(focus.bestLap)}</b>
+      </div>
+      {/* Pneus: o painel completo para o carro do jogador; para os outros, só o desgaste. */}
+      <div className="mt-2 border-t border-ink-700 pt-2">
+        {focusIsPlayer && myTyre ? <PlayerTyrePanel tyre={myTyre} /> : <TyreGauge compound={focus.compound} wear={focus.wear} badge={rules.pitStops} />}
+      </div>
       {(focus.damage >= 0.05 || focus.penaltySeconds > 0 || (rules.fuel && focusIsPlayer && focus.sample.record)) && (
         <p className="mt-2 text-xs text-gold-400">
           {rules.fuel && focusIsPlayer && focus.sample.record && (
@@ -518,6 +583,12 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         <p className="mt-2 border-t border-ink-700 pt-2 text-xs leading-snug text-ink-300">
           <b className="font-semibold text-ink-100">{RACE_MODE_LABELS[raceMode]}.</b> {RACE_MODE_DESCRIPTIONS[raceMode]}
           {rules.fuel ? ' O ritmo também muda o consumo de combustível.' : ''}
+        </p>
+      )}
+      {!spectator && mineIds.has(player.id) && (
+        <p className="mt-2 border-t border-ink-700 pt-2 text-xs leading-snug text-ink-300">
+          <b className="font-semibold text-ink-100">Estilo do piloto: {DRIVING_STYLE_LABELS[style]}.</b> {DRIVING_STYLE_DESCRIPTIONS[style]} É ele quem decide
+          os lances que você deixar com o piloto e todos os de "Simular até o fim". O ritmo escolhido puxa o estilo para um lado ou para o outro.
         </p>
       )}
     </div>
@@ -549,7 +620,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
     </ul>
   );
   const panelContent = (which: Exclude<SidePanel, 'tower'>) =>
-    which === 'driver' ? driverPanel : which === 'pits' ? <PitStrategyCard race={race} bare /> : eventsPanel;
+    which === 'driver' ? driverPanel : which === 'pits' ? <PitStrategyCard race={race} tyre={myTyre} bare /> : eventsPanel;
 
   const credit = trackId ? trackCredit(trackId) : null;
   const pickMine = () => {
@@ -616,37 +687,62 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
   );
   const drawerTitle = drawer === 'driver' ? 'Piloto em foco' : drawer === 'pits' ? 'Boxes e estratégia' : 'Eventos da corrida';
 
-  // O piloto em foco, num cartão fino no pé da pista.
+  // O piloto em foco, num cartão fino no pé da pista. Em pé, quando é o carro do jogador, os pneus
+  // dele vêm junto (deitado, ficam na barra superior: ver `tyreAtSight`).
   const focusCard = focus && (
-    <div className="overlay pointer-events-none flex shrink-0 items-stretch text-ink-100">
-      <div aria-hidden className="w-1.5" style={{ background: teams[focus.teamId]?.color }} />
-      <div className="px-2 py-1">
-        <div className="flex items-baseline gap-2">
-          <span className="font-display text-2xl font-bold leading-none">{focus.state === 'retired' ? 'AB' : `P${focus.position}`}</span>
-          <span className={cx('font-display text-lg font-bold leading-none tracking-wide', focusIsMine && 'text-apex-400')}>{codeOf(focus.driverId)}</span>
-          <span className="text-2xs text-ink-200">#{focus.number}</span>
-          {focusIsMine && <span className="text-2xs font-semibold text-ink-100">{mineIds.has(player.id) ? 'você' : 'sua equipe'}</span>}
-        </div>
-        <div className="mt-1 flex items-center gap-2 text-2xs text-ink-200">
-          <span>
-            <b className="font-display text-base text-ink-100">{Math.round(focus.speed)}</b> km/h
-          </span>
-          {intervalAhead !== null && (
-            <span className="flex items-center">
-              <ChevronUp size={12} aria-label="para o carro da frente" /> {formatInterval(intervalAhead)}
+    <div className="overlay pointer-events-none flex min-w-0 max-w-full shrink-0 items-stretch text-ink-100">
+      <div aria-hidden className="w-1.5 shrink-0" style={{ background: teams[focus.teamId]?.color }} />
+      <div className="min-w-0 px-2 py-1">
+        <div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-display text-2xl font-bold leading-none">{focus.state === 'retired' ? 'AB' : `P${focus.position}`}</span>
+            <span className={cx('font-display text-lg font-bold leading-none tracking-wide', focusIsMine && 'text-apex-400')}>{codeOf(focus.driverId)}</span>
+            <span className="text-2xs text-ink-200">#{focus.number}</span>
+            {focusIsMine && <span className="text-2xs font-semibold text-ink-100">{mineIds.has(player.id) ? 'você' : 'sua equipe'}</span>}
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-2xs text-ink-200">
+            <span>
+              <b className="font-display text-base text-ink-100">{Math.round(focus.speed)}</b> km/h
             </span>
-          )}
-          {intervalBehind !== null && (
-            <span className="flex items-center">
-              <ChevronDown size={12} aria-label="para o carro de trás" /> {formatInterval(intervalBehind)}
-            </span>
-          )}
+            {intervalAhead !== null && (
+              <span className="flex items-center">
+                <ChevronUp size={12} aria-label="para o carro da frente" /> {formatInterval(intervalAhead)}
+              </span>
+            )}
+            {intervalBehind !== null && (
+              <span className="flex items-center">
+                <ChevronDown size={12} aria-label="para o carro de trás" /> {formatInterval(intervalBehind)}
+              </span>
+            )}
+          </div>
         </div>
+        {!wide && focusIsPlayer && myTyre && <PlayerTyrePanel tyre={myTyre} compact className="mt-1 w-44 border-t border-ink-600 pt-1" />}
       </div>
     </div>
   );
+  // Faixa passageira no pé da pista: o desfecho de um lance vem antes do rádio, e o rádio antes dos eventos.
+  const outcome = momentDue ? null : banners.outcome;
+  const radio = momentDue || outcome ? null : banners.radio;
+  const banner = outcome ? (
+    <LowerThird
+      kicker={`Lance · ${MOMENT_KIND_LABELS[outcome.kind]}`}
+      title={outcome.success ? 'Deu certo' : 'Deu errado'}
+      detail={outcome.message}
+      tone={outcome.success ? 'good' : 'attention'}
+      icon={
+        outcome.success ? (
+          <CircleCheck size={20} aria-hidden className="shrink-0 text-go-400" />
+        ) : (
+          <TriangleAlert size={20} aria-hidden className="shrink-0 text-gold-400" />
+        )
+      }
+      wrap
+    />
+  ) : radio ? (
+    <LowerThird kicker="Rádio · engenheiro" title={radio.message} icon={<Headset size={18} aria-hidden className="shrink-0 text-ink-200" />} compact />
+  ) : null;
   const tickerList = (
-    <ul className="space-y-1" aria-live="polite">
+    <ul className="space-y-1">
       {ticker.map((e) => (
         <li
           key={e.index}
@@ -691,9 +787,13 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
       {wide ? (
         // Em tela larga tudo cabe sem rolar: a torre fixa à esquerda, a pista dominando e a barra de comandos embaixo.
         <div
-          className="grid min-h-[13.5rem] grid-cols-[15rem_minmax(0,1fr)] gap-2 xl:grid-cols-[19rem_minmax(0,1fr)]"
+          ref={stage}
+          className={cx('grid grid-cols-[15rem_minmax(0,1fr)] gap-2 xl:grid-cols-[19rem_minmax(0,1fr)]', stageHeight === null && 'min-h-[13.5rem]')}
           style={{
-            height: `calc(100dvh - ${showBar ? '8.75rem' : '5.5rem'} - env(safe-area-inset-top) - max(var(--action-bar-h, 0px), env(safe-area-inset-bottom)))`,
+            height:
+              stageHeight !== null
+                ? `${stageHeight}px`
+                : `calc(100dvh - ${showBar ? '8.75rem' : '5.5rem'} - env(safe-area-inset-top) - max(var(--action-bar-h, 0px), env(safe-area-inset-bottom)))`,
           }}
         >
           <aside aria-label="Classificação da corrida" className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
@@ -712,11 +812,14 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
               <div role="group" aria-label="Câmera" className="flex gap-2">
                 {cameraButtons}
               </div>
-              <div role="group" aria-label="Painéis da corrida" className="flex flex-col gap-2">
-                {panelButtons}
-              </div>
+              {/* Com o lance aberto, a tarja cobre o pé da pista: os botões dos painéis saem de baixo dela. */}
+              {!momentDue && (
+                <div role="group" aria-label="Painéis da corrida" className="flex flex-col gap-2">
+                  {panelButtons}
+                </div>
+              )}
             </div>
-            {drawer && (
+            {drawer && !momentDue && (
               <section
                 aria-label={drawerTitle}
                 className="overlay enter absolute bottom-2 right-[4.5rem] top-[3.75rem] flex w-[min(18rem,calc(100%-5.5rem))] flex-col text-ink-100"
@@ -738,11 +841,14 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
             {/* Pé da pista: o lugar da tarja inferior (os lances decisivos da Fase 4 entram aqui, com
                 `LowerThird`), os eventos recentes e o piloto em foco. */}
             <div className="pointer-events-none absolute bottom-2 left-2 right-[4.5rem] flex items-end justify-between gap-2">
-              <div data-slot="tarja-inferior" className="flex min-w-0 flex-col items-start gap-1">
-                {!drawer && tickerList}
-                {creditLine}
+              <div data-slot="tarja-inferior" aria-live="polite" className="flex min-w-0 flex-col items-start gap-1">
+                {banner}
+                {!drawer && !momentDue && !banner && tickerList}
+                {/* Com a faixa do lance ou do rádio na tela, o crédito sai: a faixa desce e o carro do jogador fica à vista. */}
+                {!momentDue && !banner && creditLine}
               </div>
-              {!drawer && focusCard}
+              {/* Enquanto a faixa do lance ou do rádio está na tela, ela fica com a largura: o cartão volta em seguida. */}
+              {!drawer && !momentDue && !banner && focusCard}
             </div>
           </div>
         </div>
@@ -756,12 +862,19 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
                 {cameraButtons}
               </div>
             </div>
-            <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-end justify-between gap-2">
-              <div data-slot="tarja-inferior" className="flex min-w-0 flex-col items-start gap-1">
-                {tickerList}
-                {creditLine}
+            {/* Em pé há altura de sobra: a tarja e os eventos ficam em cima, com a largura toda, e o cartão embaixo. */}
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 flex flex-col gap-1">
+              <div data-slot="tarja-inferior" aria-live="polite" className="flex min-w-0 flex-col items-start gap-1">
+                {banner}
+                {!momentDue && !banner && tickerList}
               </div>
-              {focusCard}
+              {/* O crédito vai numa linha própria, acima do cartão: ao lado dele, quebrava em três linhas. */}
+              {!momentDue && (
+                <div className="flex flex-col items-end gap-1">
+                  {!banner && <div className="min-w-0 max-w-full self-start">{creditLine}</div>}
+                  {focusCard}
+                </div>
+              )}
             </div>
           </div>
           <aside className="flex min-h-0 flex-col bg-ink-900 shadow-frame">
@@ -795,7 +908,9 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         </div>
       )}
 
-      {showBar && myRow && (
+      {/* Lance decisivo: a tarja toma o lugar da barra de comandos até o jogador responder. */}
+      {momentDue && <MomentBar race={race} tyre={myTyre} onAnswered={playback.start} onHeight={setMomentBarHeight} />}
+      {showBar && !momentDue && myRow && (
         <RaceControlBar
           position={myRow.state === 'retired' ? 'AB' : `P${started ? myRow.position : myRow.grid}`}
           lap={`Volta ${Math.min(raceLaps, started ? myRow.sample.lap : 0)}/${raceLaps}`}
@@ -811,7 +926,7 @@ export function RaceBroadcast({ onTimingView, spectator = false }: { onTimingVie
         />
       )}
       {/* Quem só assiste não tem a barra de ritmo, mas precisa de pausar e da velocidade. */}
-      {!showBar && (
+      {!showBar && !momentDue && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button variant={playback.playing ? 'secondary' : 'primary'} onClick={playback.toggle} disabled={orderDue} className="min-w-28">
             {playback.playing ? <Pause size={16} aria-hidden /> : <Play size={16} aria-hidden />}

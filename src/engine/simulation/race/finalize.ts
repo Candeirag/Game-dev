@@ -66,6 +66,7 @@ export function finalizeRace(state: RaceSimState, category: CategoryDefinition):
     virtualSafetyCars: state.virtualSafetyCars,
     redFlags: state.redFlags,
     teamOrders: state.teamOrders,
+    moments: state.moments,
   };
 }
 

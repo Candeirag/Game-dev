@@ -71,10 +71,11 @@ export const SIM = {
 
   /* ---------------- Pneus ---------------- */
 
-  /** Desgaste por volta em pista de desgaste médio (1.0) com gestão de pneus 50. */
+  /**
+   * Desgaste por volta em pista de desgaste médio (1.0) com gestão de pneus 50. Quanto tempo de
+   * volta cada ponto de desgaste custa está em `TYRE_CURVE` (`src/config/balance.ts`).
+   */
   TYRE_WEAR_PER_LAP: 0.032,
-  /** Perda de tempo com o pneu no limite (desgaste 1.0): 1,4% da volta, aplicada de forma quadrática. */
-  TYRE_WEAR_TIME_PENALTY: 0.014,
   /** Na chuva, o pneu aquece menos e desgasta menos. */
   WET_TYRE_WEAR_MULTIPLIER: 0.6,
 
@@ -163,10 +164,11 @@ export const PRACTICE_PROGRAM_EFFECTS = {
  * rápido) e "wear" multiplica o desgaste por volta.
  *
  * Calibragem: com desgaste-base de 3,2% por volta, o médio chega ao "penhasco"
- * (80% de desgaste) em cerca de 26 voltas, o macio em 15 e o duro em 37. Numa
- * corrida do Grand Prix Mundial de 58 voltas, uma parada (médio + duro) e duas paradas (macio +
- * médio + médio) custam quase o mesmo tempo total; a escolha depende da pista,
- * do piloto e das neutralizações.
+ * (80% de desgaste) em cerca de 25 voltas, o macio (72%) em 13 e o duro (88%) em 40; os
+ * penhascos e a curva de perda de cada composto estão em `TYRE_CURVE`
+ * (`src/config/balance.ts`). Numa corrida do Grand Prix Mundial de 58 voltas, uma parada
+ * (médio + duro) e duas paradas (macio + médio + médio) custam quase o mesmo tempo total; a
+ * escolha depende da pista, do piloto e das neutralizações.
  */
 export const TYRES = {
   kart: { pace: 0, wear: 1, rain: false, label: 'Kart' },
@@ -178,13 +180,6 @@ export const TYRES = {
 } as const;
 
 export const RACE = {
-  /* ---------------- Pneus ---------------- */
-
-  /** Desgaste a partir do qual o pneu "cai do penhasco". */
-  TYRE_CLIFF: 0.8,
-  /** Perda extra por ponto de desgaste além do penhasco (8% por unidade). */
-  TYRE_CLIFF_PENALTY: 0.08,
-
   /* ---------------- Combustível ---------------- */
 
   /** Um tanque cheio (combustível para a corrida toda) deixa a volta 2,5% mais lenta. */

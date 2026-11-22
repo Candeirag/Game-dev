@@ -323,7 +323,8 @@ export function evolveTeams(teams: readonly Team[], career: CareerState): Team[]
  * Versão compacta de uma etapa para o arquivo de temporadas: ficam o resultado
  * oficial e o grid, que é o que o histórico mostra. A narração volta a volta,
  * as tentativas de classificação e os tempos de treino são descartados, para
- * o save não crescer vários megabytes ao longo de uma carreira longa.
+ * o save não crescer vários megabytes ao longo de uma carreira longa. Os lances
+ * decisivos ficam (são poucos por corrida) e só saem nas temporadas antigas.
  */
 export function compactRound(record: RoundRecord): RoundRecord {
   return {
@@ -352,7 +353,7 @@ export function trimHistory(history: readonly SeasonSummary[], familyIds: Readon
       rounds: summary.rounds.map((r) => ({
         ...r,
         qualifying: { ...r.qualifying, entries: r.qualifying.entries.filter((e) => familyIds.has(e.driverId)) },
-        race: { ...r.race, entries: r.race.entries.filter((e) => e.position <= 3 || familyIds.has(e.driverId)), teamOrders: [] },
+        race: { ...r.race, entries: r.race.entries.filter((e) => e.position <= 3 || familyIds.has(e.driverId)), teamOrders: [], moments: [] },
       })),
     };
   });
@@ -580,6 +581,8 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
         (moving && getHub(hub.id).foreign ? HUB_RULES.LANGUAGE_TEAM_TRUST : 0),
       teammate: 50,
       rivalries,
+      // O registro dos toques em lances é história: fica, mesmo que o rival tenha mudado de campeonato.
+      rivalryLog: career.relations.rivalryLog,
     },
     marketInterest: {},
     pendingEvents: [],

@@ -4,11 +4,12 @@
  * As mesmas funções servem ao jogador (opções mostradas antes da largada e
  * piloto automático) e à IA. Nenhuma decisão usa sorteio.
  */
+import { TYRE_CURVE } from '@/config/balance';
 import type { DriverAttributes, Track, TyreCompound } from '@/domain/schemas';
 import { compareText } from '@/domain/text';
 import type { RaceRules } from '@/data/categories';
 import { RACE, SIM, TYRES } from '../constants';
-import { tyreCliffPenalty, tyreConditionEffect } from '../performance';
+import { tyreCliff, tyreConditionEffect, tyreManagementFactor, tyrePaceLoss } from '../performance';
 import type { PlannedStop, RaceCar, StrategyPlan } from './types';
 
 /** Perda mínima de ritmo (fração da volta) que justifica parar para trocar o tipo de pneu. */
@@ -33,21 +34,64 @@ export function bestCompoundFor(rules: RaceRules, wetness: number, preferDry?: T
   return best;
 }
 
-/** Desgaste por volta de um composto, sem modo de pilotagem (base das estimativas). */
-export function baseWearPerLap(attributes: DriverAttributes, track: Track, compound: TyreCompound): number {
-  const skill = 1.3 - (attributes.tyreManagement / 100) * 0.6;
-  return SIM.TYRE_WEAR_PER_LAP * track.tyreWear * skill * TYRES[compound].wear;
+/**
+ * Desgaste por volta de um composto em pista seca e ritmo equilibrado (base das estimativas).
+ * `factor` junta o que é próprio do piloto e do fim de semana: o treino de ritmo de corrida
+ * (`tyreWearFactor`) e o poupador ou gastador de pneus (`profile.tyreWear`).
+ */
+export function baseWearPerLap(attributes: DriverAttributes, track: Track, compound: TyreCompound, factor = 1): number {
+  return SIM.TYRE_WEAR_PER_LAP * track.tyreWear * tyreManagementFactor(attributes) * TYRES[compound].wear * factor;
+}
+
+/** Voltas que um pneu novo deste composto dura até o penhasco, para este piloto nesta pista. */
+export function compoundLifeLaps(attributes: DriverAttributes, track: Track, compound: TyreCompound, factor = 1): number {
+  return tyreCliff(compound) / baseWearPerLap(attributes, track, compound, factor);
 }
 
 /** Tempo perdido (em frações de volta, somadas) em um stint de n voltas com o composto. */
 function stintCost(attributes: DriverAttributes, track: Track, compound: TyreCompound, laps: number): number {
   const rate = baseWearPerLap(attributes, track, compound);
   let cost = 0;
-  for (let i = 1; i <= laps; i++) {
-    const wear = Math.min(1, rate * i);
-    cost += TYRES[compound].pace + SIM.TYRE_WEAR_TIME_PENALTY * wear ** 2 + tyreCliffPenalty(compound, wear);
-  }
+  for (let i = 1; i <= laps; i++) cost += TYRES[compound].pace + tyrePaceLoss(compound, Math.min(1, rate * i));
   return cost;
+}
+
+/**
+ * Voltas inteiras que o pneu ainda aguenta antes do penhasco, em pista seca e ritmo equilibrado
+ * (0 se já passou). Serve também ao kart, que não para: diz em que volta o pneu acaba.
+ */
+export function lapsToCliff(tyre: RaceCar['tyre'], attributes: DriverAttributes, track: Track, factor = 1): number {
+  return Math.max(0, Math.floor((tyreCliff(tyre.compound) - tyre.wear) / baseWearPerLap(attributes, track, tyre.compound, factor)));
+}
+
+/** Janela ideal de parada: as últimas voltas antes de o pneu cair do penhasco. */
+export interface PitWindow {
+  /** Primeira e última volta da janela (a parada acontece no fim da volta). */
+  from: number;
+  to: number;
+  /** Voltas que o pneu ainda aguenta antes do penhasco, a partir de agora. */
+  lapsLeft: number;
+}
+
+/**
+ * Janela de parada do carro, pelo desgaste de agora e pela taxa em pista seca e ritmo equilibrado.
+ * Devolve null quando o pneu chega ao fim da corrida sem cair do penhasco (não é preciso parar por
+ * desgaste) e nas categorias sem boxes. `lap` é a volta já completada.
+ */
+export function pitWindow(
+  car: Pick<RaceCar, 'tyre'>,
+  attributes: DriverAttributes,
+  track: Track,
+  rules: RaceRules,
+  lap: number,
+  totalLaps: number,
+  factor = 1,
+): PitWindow | null {
+  if (!rules.pitStops) return null;
+  const lapsLeft = lapsToCliff(car.tyre, attributes, track, factor);
+  const to = lap + lapsLeft;
+  if (to >= totalLaps) return null;
+  return { from: Math.max(lap + 1, to - TYRE_CURVE.PIT_WINDOW_LAPS + 1), to: Math.max(lap + 1, to), lapsLeft };
 }
 
 export interface StrategyOption {
@@ -108,10 +152,10 @@ export function buildStrategyOptions(
   const options: StrategyOption[] = [];
   for (const sequence of sequences) {
     if (rules.mandatoryTwoCompounds && new Set(sequence).size < 2) continue;
-    const lives = sequence.map((c) => RACE.TYRE_CLIFF / baseWearPerLap(attributes, track, c));
+    const lives = sequence.map((c) => compoundLifeLaps(attributes, track, c));
     const totalLife = lives.reduce((a, b) => a + b, 0);
     // Descarta estratégias que não chegam ao fim sem cair do penhasco.
-    if (totalLife < totalLaps * 0.92) continue;
+    if (totalLife < totalLaps * TYRE_CURVE.STRATEGY_MIN_LIFE) continue;
     const stops: PlannedStop[] = [];
     const stints: number[] = [];
     let covered = 0;
@@ -182,7 +226,7 @@ export function decidePit(car: RaceCar, rules: RaceRules, s: PitSituation): Tyre
     const unused = rules.dryCompounds.filter((c) => !car.compoundsUsed.includes(c));
     const pool = s.needsSecondCompound && unused.length ? unused : rules.dryCompounds;
     return (
-      [...pool].sort((a, b) => TYRES[a].pace - TYRES[b].pace).find((c) => RACE.TYRE_CLIFF / (SIM.TYRE_WEAR_PER_LAP * TYRES[c].wear) >= lapsRemaining) ??
+      [...pool].sort((a, b) => TYRES[a].pace - TYRES[b].pace).find((c) => tyreCliff(c) / (SIM.TYRE_WEAR_PER_LAP * TYRES[c].wear) >= lapsRemaining) ??
       pool[pool.length - 1] ??
       car.tyre.compound
     );
@@ -196,7 +240,7 @@ export function decidePit(car: RaceCar, rules: RaceRules, s: PitSituation): Tyre
     if (s.neutralized && next.lap - s.lap <= 10 && car.tyre.age >= 3) return next.compound;
   }
 
-  if (car.tyre.wear >= RACE.TYRE_CLIFF + 0.03 && lapsRemaining >= 5) return sameType();
+  if (car.tyre.wear >= tyreCliff(car.tyre.compound) + TYRE_CURVE.PIT_PAST_CLIFF && lapsRemaining >= TYRE_CURVE.PIT_MIN_LAPS_LEFT) return sameType();
 
   if (s.needsSecondCompound && lapsRemaining <= 2) return dryPick();
   return null;

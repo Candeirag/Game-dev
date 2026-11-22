@@ -401,7 +401,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
       management: keepsTeam ? state.management : null,
       executiveLog: [],
       license: { history: heirRacing?.license ?? [], penaltyPoints: 0, banRounds: 0 },
-      relations: { teamTrust: 50, teammate: 50, rivalries: {} },
+      relations: { teamTrust: 50, teammate: 50, rivalries: {}, rivalryLog: [] },
       family,
       dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(base.id, option.name, option.age, state.year)] },
     };
@@ -531,7 +531,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     sideJob: 'none',
     noDoorSeasons: 0,
     license: { history: heirRacing.license, penaltyPoints: 0, banRounds: 0 },
-    relations: { teamTrust: 50, teammate: 50, rivalries: {} },
+    relations: { teamTrust: 50, teammate: 50, rivalries: {}, rivalryLog: [] },
     marketInterest: {},
     pendingEvents: [],
     offseason: null,

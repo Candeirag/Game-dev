@@ -414,7 +414,12 @@ describe('revelação dos traços: um teste por gatilho', () => {
     expect(byId.bigStage).toMatchObject({ revealedSeason: 1, revealedRound: 1 });
     expect(byId.hothead).toMatchObject({ revealedSeason: null, revealedRound: null });
     expect(revealed.inbox[0]?.title).toMatch(/^Talento descoberto: (Gênio na chuva|Brilha nas estreias)$/);
-    expect(revealed.inbox.filter((m) => m.title.includes('descoberto'))).toHaveLength(2);
+    // Duas mensagens novas, uma por traço revelado. (A etapa disputada já pode ter deixado na caixa a
+    // revelação de um traço do nascimento sorteado, que este teste trocou: essa não conta.)
+    const known = new Set(career.inbox.map((m) => m.id));
+    const fresh = revealed.inbox.filter((m) => !known.has(m.id));
+    expect(fresh).toHaveLength(2);
+    expect(fresh.every((m) => m.title.includes('descoberto'))).toBe(true);
     // De novo, com o mesmo gatilho, nada muda.
     expect(revealTraits(revealed, { ...record, race: { ...record.race, weather: wet, events: [] } })).toBe(revealed);
   });

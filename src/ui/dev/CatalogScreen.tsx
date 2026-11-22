@@ -4,7 +4,7 @@
  * a rota não é registrada no build de produção e este arquivo não entra no pacote.
 
  */
-import { ArrowLeft, Flag, Play, Trash2, Trophy } from 'lucide-react';
+import { ArrowLeft, CircleCheck, Flag, Headset, Play, Trash2, TriangleAlert, Trophy, UserRound } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { TYRE_COMPOUNDS } from '@/domain/schemas';
@@ -12,9 +12,11 @@ import {
   advanceButtonClass,
   Button,
   Card,
+  ChanceOption,
   Check,
   Chip,
   ChoiceCard,
+  DecisionBar,
   Delta,
   EmptyState,
   Gauge,
@@ -41,7 +43,9 @@ import {
   Tower,
   type TowerRow,
   TyreBadge,
+  TyreGauge,
   TyreLegend,
+  TyreWearBar,
   useRevealSequence,
   WholeRows,
 } from '@/ui/kit';
@@ -167,6 +171,7 @@ export default function CatalogScreen() {
   const [on, setOn] = useState(true);
   const [size, setSize] = useState<'p' | 'm' | 'g'>('m');
   const [volume, setVolume] = useState(60);
+  const [option, setOption] = useState<string | null>('fora');
   return (
     <main className="mx-auto min-h-dvh w-full max-w-[1500px] pb-[calc(1.5rem+var(--safe-bottom))] pl-[calc(1rem+var(--safe-left))] pr-[calc(1rem+var(--safe-right))] pt-[calc(1rem+var(--safe-top))]">
       <Link to="/" className="mb-2 inline-flex min-h-11 items-center gap-2 pr-4 text-sm font-semibold text-ink-200 hover:text-ink-100">
@@ -314,6 +319,29 @@ export default function CatalogScreen() {
           <TyreLegend compounds={TYRE_COMPOUNDS} />
           <p className="text-xs text-ink-400">
             Cada composto tem a cor do anel e a letra das transmissões (S, M, H, I, W); o nome em português vai no texto de apoio e na legenda.
+          </p>
+        </Section>
+
+        <Section title="Medidor de pneu">
+          <TyreGauge compound="medium" wear={0.08} />
+          <TyreGauge compound="medium" wear={0.52} />
+          <TyreGauge
+            compound="soft"
+            wear={0.66}
+            trailing={
+              <Sparkline values={[83.1, 83.0, 83.2, 83.5, 84.1]} label="Tempo de volta nas últimas 5 voltas: de 1:23.100 a 1:24.100" width={40} height={14} />
+            }
+          />
+          <TyreGauge compound="hard" wear={0.93} caption />
+          <div className="flex items-center gap-4 text-xs text-ink-300">
+            Só a barra, para listas:
+            <TyreWearBar compound="medium" wear={0.2} className="w-8" />
+            <TyreWearBar compound="medium" wear={0.6} className="w-8" />
+            <TyreWearBar compound="medium" wear={0.9} className="w-8" />
+          </div>
+          <p className="text-xs text-ink-400">
+            A barra enche conforme o pneu gasta; o risco claro é o penhasco do composto. O estado vem sempre em número e em palavra (novo, bom, gasto, no
+            limite, acabado), com o triângulo perto do fim: a cor só acompanha. Os limites são os do motor, os mesmos do rádio do engenheiro.
           </p>
         </Section>
 
@@ -471,9 +499,92 @@ export default function CatalogScreen() {
               <LowerThird tone="attention" kicker="Direção de prova" title="Safety car" />
             </div>
           </div>
+          <div data-overlay-ok className="relative h-56 overflow-hidden bg-[#13231b] shadow-frame">
+            <div aria-hidden className="absolute inset-0 bg-[repeating-linear-gradient(110deg,#1b3326_0_40px,#16291f_40px_80px)]" />
+            <div className="absolute inset-x-2 bottom-2 flex flex-wrap items-end gap-2">
+              <LowerThird
+                tone="good"
+                kicker="Lance · Ataque"
+                title="Deu certo"
+                detail="No vácuo da reta, você passa M. Rocha antes da freada."
+                icon={<CircleCheck size={20} aria-hidden className="shrink-0 text-go-400" />}
+                wrap
+              />
+              <LowerThird
+                tone="attention"
+                kicker="Lance · Defesa"
+                title="Deu errado"
+                detail="Você fechou tarde: M. Rocha passou e ainda levou você para fora."
+                icon={<TriangleAlert size={20} aria-hidden className="shrink-0 text-gold-400" />}
+                wrap
+              />
+              <LowerThird
+                kicker="Rádio · engenheiro"
+                title="A janela de parada abriu: voltas 18 a 21."
+                icon={<Headset size={18} aria-hidden className="shrink-0 text-ink-200" />}
+                compact
+              />
+            </div>
+          </div>
           <p className="text-xs text-ink-400">
-            Fundo translúcido e sombra, para a pista continuar aparecendo. O lugar da tarja na tela de corrida já existe; os lances decisivos que a preenchem
-            são da Fase 4.
+            Fundo translúcido e sombra, para a pista continuar aparecendo. Na corrida, a tarja mostra o desfecho de cada lance decisivo (com `wrap`, a frase
+            quebra em duas linhas) e o rádio do engenheiro (`compact`: uma frase em texto corrido). Verde com o visto quando dá certo; âmbar com o triângulo
+            quando dá errado. Nada de vermelho para "ruim".
+          </p>
+        </Section>
+
+        <Section title="Tarja de decisão (lance decisivo)" wide>
+          <div data-overlay-ok className="relative overflow-hidden bg-[#13231b] pt-16 shadow-frame">
+            <div aria-hidden className="absolute inset-0 bg-[repeating-linear-gradient(110deg,#1b3326_0_40px,#16291f_40px_80px)]" />
+            <DecisionBar
+              label="Lance decisivo: Largada (exemplo do catálogo)"
+              kicker="Largada · volta 1"
+              title="As luzes vão apagar. Como você larga?"
+              className="relative"
+              detail={
+                option ? (
+                  <span>
+                    <b className="font-semibold text-ink-100">Se der certo:</b> ganha uma posição, sem risco de toque.{' '}
+                    <b className="font-semibold text-ink-100">Se der errado:</b> abre demais e perde tempo.{' '}
+                    <b className="font-semibold text-ink-100">Pesa na chance:</b> Piloto <Delta value={6} format={(v) => String(Math.round(v))} /> Pista{' '}
+                    <Delta value={-4} format={(v) => String(Math.round(v))} />
+                  </span>
+                ) : (
+                  <span className="text-ink-300">Toque numa opção para ver o que se ganha, o que se perde e o que pesa na chance.</span>
+                )
+              }
+              actions={
+                <>
+                  <Button onClick={() => setOption(null)}>Deixar com o piloto</Button>
+                  <Button variant="primary" disabled={!option}>
+                    Confirmar
+                  </Button>
+                </>
+              }
+            >
+              <div role="radiogroup" aria-label="Opções do lance (exemplo)" className="grid min-w-0 gap-2 md:grid-cols-3">
+                <ChanceOption label="Arriscar por dentro" chance={0.31} risk={2} selected={option === 'dentro'} onSelect={() => setOption('dentro')} />
+                <ChanceOption label="Ir por fora" chance={0.58} risk={1} selected={option === 'fora'} onSelect={() => setOption('fora')} />
+                <ChanceOption
+                  label="Segurar a posição"
+                  chance={0.84}
+                  risk={0}
+                  selected={option === 'segurar'}
+                  onSelect={() => setOption('segurar')}
+                  badgeLabel="escolha do piloto"
+                  seal={
+                    <Chip size="sm" icon={<UserRound size={12} aria-hidden className="shrink-0" />} className="shadow-ring">
+                      Piloto
+                    </Chip>
+                  }
+                />
+              </div>
+            </DecisionBar>
+          </div>
+          <p className="text-xs text-ink-400">
+            A pergunta que para a corrida, sem tempo limite: rótulo, pergunta, opções, o detalhe da opção escolhida e as ações (a principal embaixo, à direita).
+            Cada opção mostra a chance em número e em barra e, embaixo, o tamanho do prejuízo se der errado, com ícone: perder pouco é verde, perder posição é
+            neutro e poder abandonar é âmbar. Tocar seleciona; "Confirmar" envia. O selo marca a opção que o piloto escolheria.
           </p>
         </Section>
       </div>

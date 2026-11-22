@@ -4,6 +4,7 @@
  * comportam de forma coerente com o próprio perfil.
  */
 import type { DriverAttributes, PracticeProgram, QualifyingApproach, RaceMode, SessionWeather, Track, TrainingFocus } from '@/domain/schemas';
+import { TYRE_CURVE } from '@/config/balance';
 import { TRAINING_GROUPS } from '../career/training';
 
 export function chooseAiPracticeProgram(a: DriverAttributes, track: Track): PracticeProgram {
@@ -27,6 +28,12 @@ export function chooseAiQualifyingApproach(a: DriverAttributes, weather: Session
 export interface RaceSituation {
   lapsRemaining: number;
   tyreWear: number;
+  /** Desgaste em que o composto em uso cai do penhasco. */
+  tyreCliff: number;
+  /** Desgaste previsto no fim do stint (na próxima parada ou na bandeirada), em ritmo equilibrado. */
+  projectedWear: number;
+  /** Voltas até o fim do stint. */
+  stintLapsLeft: number;
   /** Distância para o kart da frente, em segundos (null se for o líder). */
   gapAhead: number | null;
   /** Distância para o kart de trás, em segundos (null se for o último). */
@@ -34,8 +41,10 @@ export interface RaceSituation {
 }
 
 export function chooseAiRaceMode(a: DriverAttributes, s: RaceSituation): RaceMode {
-  // Pneu no fim com muita corrida pela frente: poupar.
-  if (s.tyreWear > 0.72 && s.lapsRemaining > 3) return 'conservative';
+  // Pneu no limite (perto do penhasco) com muita corrida pela frente: poupar.
+  if (s.tyreWear > s.tyreCliff - TYRE_CURVE.LIMIT_MARGIN && s.lapsRemaining > 3) return 'conservative';
+  // O pneu não chega ao fim do stint nesse ritmo: poupar desde já, para não cair do penhasco.
+  if (s.projectedWear > s.tyreCliff && s.stintLapsLeft > 3) return 'conservative';
   // Reta final com alguém ao alcance: atacar.
   if (s.lapsRemaining <= 4 && s.gapAhead !== null && s.gapAhead < 0.8) return 'aggressive';
   // Sozinho na pista: administrar o resultado.

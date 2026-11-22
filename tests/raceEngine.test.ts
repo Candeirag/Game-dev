@@ -15,7 +15,7 @@ import {
   stepRaceLap,
   type RaceSimState,
 } from '@/engine';
-import { fuelPenalty, tyreCliffPenalty, tyreConditionEffect } from '@/engine/simulation/performance';
+import { fuelPenalty, tyreCliff, tyreConditionEffect, tyrePaceLoss } from '@/engine/simulation/performance';
 import { simulateQualifying } from '@/engine/simulation/qualifying';
 import { DRY, NEUTRAL_MODIFIERS, WET, raceSetup } from './raceSetup';
 
@@ -55,9 +55,10 @@ describe('pneus, combustível e clima', () => {
   });
 
   it('o penhasco do pneu e o peso do combustível deixam a volta mais lenta', () => {
-    expect(tyreCliffPenalty('medium', 0.7)).toBe(0);
-    expect(tyreCliffPenalty('medium', 0.95)).toBeGreaterThan(0.01);
-    expect(tyreCliffPenalty('kart', 0.95)).toBe(0);
+    // Antes do penhasco a perda é pequena; depois dele, passa de 1% da volta. Desde a Fase 4 o kart também tem penhasco.
+    expect(tyrePaceLoss('medium', 0.7)).toBeLessThan(0.006);
+    expect(tyrePaceLoss('medium', 0.95) - tyrePaceLoss('medium', tyreCliff('medium'))).toBeGreaterThan(0.01);
+    expect(tyrePaceLoss('kart', 0.95) - tyrePaceLoss('kart', tyreCliff('kart'))).toBeGreaterThan(0.01);
     expect(fuelPenalty(60, 60)).toBeCloseTo(RACE.FUEL_FULL_TANK_PENALTY, 6);
     expect(fuelPenalty(0, 60)).toBe(0);
   });
@@ -209,9 +210,12 @@ describe('corrida de F1', () => {
   });
 
   it('atrás do safety car ninguém ultrapassa na pista e o pelotão se reagrupa', () => {
-    const start = runUntil(f1.start(1), f1, (s) => s.neutralization.type === 'sc');
+    // Semente em que o safety car entra com a corrida já espalhada (volta 9). Entrando nas primeiras
+    // voltas, o pelotão ainda está mais junto do que a fila atrás do safety car e não há o que reagrupar.
+    const start = runUntil(f1.start(4), f1, (s) => s.neutralization.type === 'sc');
     expect(start.neutralization.type).toBe('sc');
     const spreadBefore = start.cars.filter((c) => c.status === 'running').slice(-1)[0]!.totalTime - start.cars[0]!.totalTime;
+    expect(spreadBefore).toBeGreaterThan(30);
     let s = start;
     let scLaps = 0;
     while (s.neutralization.type === 'sc' && !isRaceFinished(s)) {
@@ -244,7 +248,7 @@ describe('corrida de F1', () => {
   });
 
   it('bandeira vermelha: reagrupa, repara e relarga parado; no fim da prova, encerra', () => {
-    const restarted = runUntil(f1.start(2), f1, (s) => s.restart === 'standing');
+    const restarted = runUntil(f1.start(1), f1, (s) => s.restart === 'standing');
     expect(restarted.restart).toBe('standing');
     expect(restarted.redFlags).toBe(1);
     const running = restarted.cars.filter((c) => c.status === 'running');
@@ -253,7 +257,7 @@ describe('corrida de F1', () => {
     const after = stepRaceLap(restarted, f1.ctx, AUTO);
     expect(after.events.some((e) => e.type === 'restart' && e.lap === after.currentLap)).toBe(true);
 
-    const ended = simulateRemainingRace(f1.start(281), f1.ctx, AUTO);
+    const ended = simulateRemainingRace(f1.start(251), f1.ctx, AUTO);
     expect(ended.endedEarly).toBe(true);
     expect(ended.currentLap).toBeLessThan(ended.totalLaps);
     expect(ended.currentLap / ended.totalLaps).toBeGreaterThanOrEqual(RACE.RED_FLAG_END_PROGRESS);
@@ -261,8 +265,10 @@ describe('corrida de F1', () => {
   });
 
   it('ordem de equipe: obedecer troca as posições; ignorar fica registrado', () => {
-    const pending = runUntil(f1.start(2), f1, (s) => s.pendingTeamOrder !== null);
+    const pending = runUntil(f1.start(3), f1, (s) => s.pendingTeamOrder !== null);
     expect(pending.pendingTeamOrder).not.toBeNull();
+    // Uma pergunta por volta: com a ordem de equipe pendente, não há lance decisivo à espera.
+    expect(pending.pendingMoment).toBeNull();
     const favoured = pending.pendingTeamOrder!.favouredDriverId;
     const index = (s: RaceSimState, id: string) => s.cars.findIndex((c) => c.driverId === id);
     expect(index(pending, f1.playerId)).toBe(index(pending, favoured) - 1);

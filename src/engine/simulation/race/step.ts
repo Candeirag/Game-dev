@@ -11,7 +11,8 @@
  * e probabilidades, mas nunca embaralham a sorte dos outros.
  *
  * Ordem de cada volta:
- * 0. Clima da volta e resposta a uma ordem de equipe pendente.
+ * 0. Clima da volta, resposta a uma ordem de equipe pendente e resolução do
+ *    lance decisivo pendente (Fase 4; ver moments.ts).
  * 1. Cada carro: modo de pilotagem, decisão de box, tempo de volta em pista
  *    livre (ritmo, pneus, combustível, dano, condição do piloto), incidentes,
  *    parada, desgaste e consumo.
@@ -21,7 +22,9 @@
  * 4. Direção de prova: safety car, safety car virtual ou bandeira vermelha
  *    conforme os incidentes da volta; relargadas.
  * 5. Ordens de equipe para a volta seguinte.
+ * 6. Rádio do engenheiro e lance decisivo da volta seguinte (só para o jogador).
  */
+import { RACE_CONTACT, RACE_MOMENTS, TYRE_CURVE } from '@/config/balance';
 import type { DnfReason, Driver, RaceEvent, RaceMode, SessionWeather, Team, TyreCompound } from '@/domain/schemas';
 import { raceLaps, referenceLapTime } from '@/data/tracks';
 import { chooseAiRaceMode } from '../../ai/decisions';
@@ -29,17 +32,17 @@ import { createRng, gaussian, hashSeed } from '../../rng';
 import { RACE, RACE_MODE_EFFECTS, SIM, TYRES } from '../constants';
 import {
   conditionEffects,
-  damagePenalty,
   errorProbability,
   expectedLapTime,
-  fuelPenalty,
   lapNoiseSigma,
   mechanicalFailureProbability,
-  tyreCliffPenalty,
-  tyreConditionEffect,
+  tyreCliff,
   tyreWearPerLap,
   type ConditionEffects,
 } from '../performance';
+import { momentRecord, resolveMoment, upcomingMoment, type MomentFacts } from './moments';
+import { activeCarry, paceModifier, tyreGripEffect } from './pace';
+import { engineerRadio } from './radio';
 import { bestCompoundFor, buildStrategyOptions, chooseAiStrategy, clonePlan, decidePit } from './strategy';
 import {
   neutralRaceProfile,
@@ -52,6 +55,7 @@ import {
   type RaceSimState,
   type TeamOrderRecord,
 } from './types';
+import { driverName, lerp, need, rivalryBetween, round3, seconds1, sigmoid } from './util';
 import { buildWetnessProfile, conditionFor } from './weatherProfile';
 
 /** Tempo extra fixo da volta de largada (saída parada), igual para todos. */
@@ -60,20 +64,6 @@ const START_LAP_EXTRA = 1.5;
 const ORDER_GAP = 0.1;
 /** Perda de tempo a partir da qual o carro é só ultrapassado, sem disputa (rodada, parada). */
 const COMPROMISED_LOSS = 2.5;
-
-const round3 = (v: number) => Math.round(v * 1000) / 1000;
-const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
-const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
-
-function need<T>(value: T | undefined, what: string): T {
-  if (value === undefined) throw new Error(`Dado ausente na simulação: ${what}`);
-  return value;
-}
-
-function driverName(ctx: RaceContext, id: string): string {
-  const d = ctx.drivers[id];
-  return d ? `${d.firstName.charAt(0)}. ${d.lastName}` : id;
-}
 
 /** Monta o estado inicial da corrida a partir do grid. */
 export function createRaceSim(grid: readonly GridSlot[], ctx: RaceContext, weather: SessionWeather, seed: number, playerDriverId: string): RaceSimState {
@@ -116,7 +106,7 @@ export function createRaceSim(grid: readonly GridSlot[], ctx: RaceContext, weath
     };
   });
 
-  return {
+  const state: RaceSimState = {
     seed,
     trackId: track.id,
     categoryId: category.id,
@@ -137,7 +127,13 @@ export function createRaceSim(grid: readonly GridSlot[], ctx: RaceContext, weath
     safetyCars: 0,
     virtualSafetyCars: 0,
     redFlags: 0,
+    pendingMoment: null,
+    moments: [],
+    carry: null,
+    radio: [],
   };
+  // O primeiro lance é a largada (se o jogador está no grid).
+  return { ...state, pendingMoment: upcomingMoment(state, ctx) };
 }
 
 export function isRaceFinished(state: RaceSimState): boolean {
@@ -189,6 +185,14 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
 
   let running = state.cars.filter((c) => c.status === 'running');
   const retiredBefore = state.cars.filter((c) => c.status === 'dnf');
+
+  // Lance decisivo desta volta (só o jogador tem): a escolha dele ou, sem ela, a do estilo do piloto.
+  const lm = resolveMoment(state, ctx, input, lap);
+  const facts: MomentFacts | null = lm
+    ? { outcome: lm.success ? 'won' : 'lost', contact: false, rivalRetired: false, escaped: false, penaltySeconds: 0 }
+    : null;
+  // Efeito de lance em vigor nesta volta: o que começa agora ou o que vinha de voltas anteriores.
+  const carryNow = activeCarry(lm?.carry ?? null, lap) ?? activeCarry(state.carry, lap);
 
   if (lap > 1 && conditionFor(previousWetness) !== weather.condition) {
     const text =
@@ -243,13 +247,30 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     const profile = profileOf(car.driverId);
     const ahead = running[index - 1];
     const behind = running[index + 1];
+    const myMoment = isPlayer ? lm : null;
+    const carry = isPlayer ? carryNow : null;
+    // O lance pode remarcar a parada (esticar o stint, ficar na pista na chuva).
+    if (myMoment?.plan) car = { ...car, plan: myMoment.plan };
 
     // Modo de pilotagem. Com combustível no limite, a IA (e o piloto automático) poupam.
+    // A IA olha o pneu até o fim do stint: a próxima parada marcada ou a bandeirada.
+    const plannedStop = car.plan[0]?.lap;
+    const stintLapsLeft = rules.pitStops && plannedStop !== undefined && plannedStop >= lap ? plannedStop - lap + 1 : lapsRemaining;
+    const balancedWear = tyreWearPerLap(
+      a,
+      track,
+      weather,
+      TYRES[car.tyre.compound].wear * tyreGripEffect(car, wetness).wear * profile.tyreWear,
+      car.modifiers.tyreWearFactor,
+    );
     let mode: RaceMode = isPlayer
       ? input.mode
       : chooseAiRaceMode(a, {
           lapsRemaining,
           tyreWear: car.tyre.wear,
+          tyreCliff: tyreCliff(car.tyre.compound),
+          projectedWear: car.tyre.wear + balancedWear * stintLapsLeft,
+          stintLapsLeft,
           gapAhead: ahead ? car.totalTime - ahead.totalTime : null,
           gapBehind: behind ? behind.totalTime - car.totalTime : null,
         });
@@ -279,17 +300,23 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     const needsSecondCompound = rules.mandatoryTwoCompounds && new Set(usedDry).size < 2 && usedDry.length === car.compoundsUsed.length;
     const canPit = rules.pitStops && lap > 1 && lapsRemaining > 1;
     const freeChange = state.restart === 'standing' && lap > 1 && isPlayer && !!input.pit;
-    if (canPit && !freeChange) {
+    if (myMoment?.pit && canPit) {
+      // Parada pedida pelo lance (undercut, ou trocar o pneu quando a chuva começa).
+      pitCompound = myMoment.pit;
+    } else if (canPit && !freeChange) {
       if (automatic) {
         // Pilotos de boa leitura reagem à pista desta volta; os demais, à da volta anterior.
         const decisionWetness = a.racecraft >= 75 ? wetness : previousWetness;
-        pitCompound = decidePit(car, rules, {
-          lap,
-          totalLaps: state.totalLaps,
-          wetness: decisionWetness,
-          neutralized: neutral !== 'none',
-          needsSecondCompound,
-        });
+        // Enquanto vale um lance de ficar na pista, o engenheiro não chama para os boxes.
+        if (!carry?.holdPit) {
+          pitCompound = decidePit(car, rules, {
+            lap,
+            totalLaps: state.totalLaps,
+            wetness: decisionWetness,
+            neutralized: neutral !== 'none',
+            needsSecondCompound,
+          });
+        }
       } else if (input.pit) {
         pitCompound = input.pit;
       } else {
@@ -303,19 +330,9 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     }
 
     // Tempo de volta em pista livre.
-    const tyreCond = tyreConditionEffect(car.tyre.compound, wetness);
+    const tyreCond = tyreGripEffect(car, wetness, carry?.grip ?? 1);
     let lapTime: number;
     if (neutral === 'none') {
-      const paceModifier =
-        fx.pace +
-        TYRES[car.tyre.compound].pace +
-        cond.pace +
-        tyreCond.pace +
-        tyreCliffPenalty(car.tyre.compound, car.tyre.wear) +
-        (rules.fuel ? fuelPenalty(car.fuel, state.totalLaps) : 0) +
-        damagePenalty(car.damage) +
-        profile.pace +
-        profile.wetPace * wetness;
       lapTime = expectedLapTime({
         attributes: a,
         car: team.car,
@@ -323,11 +340,14 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         weather,
         setupScore: car.modifiers.setupScore,
         tyreWear: car.tyre.wear,
-        paceModifier,
+        compound: car.tyre.compound,
+        paceModifier: paceModifier({ car, mode, cond, profile, wetness, rules, totalLaps: state.totalLaps, carry }),
         lapTimeFactor: category.lapTimeFactor,
         carFactor: category.carFactor,
       });
       lapTime *= 1 + noise * lapNoiseSigma(a, weather, progress, profile.fatigue) * cond.noise;
+      // Lance: tempo ganho ou perdido na volta. Rodada e batida têm a sua própria perda, mais abaixo.
+      if (myMoment && (myMoment.incident === 'none' || myMoment.incident === 'contact')) lapTime += myMoment.time;
     } else {
       lapTime = reference * (neutral === 'vsc' ? RACE.VSC_LAP_FACTOR : RACE.SC_CATCHUP_FACTOR);
     }
@@ -359,6 +379,27 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       retired = 'mechanical';
       incidents.push('mechanical');
       events.push({ lap, type: 'dnf', driverId: car.driverId, message: `${who} abandona com problema mecânico.` });
+    } else if (myMoment?.incident === 'crash' && neutral === 'none') {
+      // Lance errado: batida. O sorteio da lesão é o do lance, não o da volta.
+      retired = 'crash';
+      incidents.push('crash');
+      const injured = myMoment.rolls.injury < injuryChance(ctx) * profile.injury;
+      car = { ...car, injured, errors: car.errors + 1, damageTotal: car.damageTotal + 1 };
+      if (facts) facts.outcome = 'retired';
+      events.push({
+        lap,
+        type: 'dnf',
+        driverId: car.driverId,
+        message: `${who} bate e está fora da corrida.${injured ? ' O piloto é levado ao centro médico.' : ''}`,
+      });
+    } else if (myMoment?.incident === 'spin' && neutral === 'none') {
+      // Lance errado: rodada.
+      incidentLoss = lerp(SIM.SPIN_LOSS, myMoment.rolls.spinLoss);
+      incidents.push('spin');
+      car = { ...car, errors: car.errors + 1 };
+      if (facts) facts.outcome = 'spin';
+      events.push({ lap, type: 'spin', driverId: car.driverId, message: `${who} roda e perde ${incidentLoss.toFixed(1)}s.` });
+      lapTime += incidentLoss;
     } else if (
       neutral === 'none' &&
       errorRoll <
@@ -368,7 +409,8 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
           tyreCond.error *
           profile.error *
           Math.max(0, 1 + profile.wetError * wetness) *
-          (lastLap ? profile.lastLapError : 1)
+          (lastLap ? profile.lastLapError : 1) *
+          (myMoment?.error ?? 1)
     ) {
       const severity = wetness >= 0.5 ? SIM.ERROR_SEVERITY_WET : SIM.ERROR_SEVERITY_DRY;
       car = { ...car, errors: car.errors + 1 };
@@ -416,14 +458,19 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       pitted = true;
       const laneFactor = neutral === 'sc' ? RACE.PIT_LOSS_FACTOR_SC : neutral === 'vsc' ? RACE.PIT_LOSS_FACTOR_VSC : 1;
       let service = RACE.PIT_SERVICE + (100 - team.crew) * RACE.PIT_SERVICE_PER_CREW_POINT + pitNoise * 0.4;
-      if (slowStopRoll < RACE.PIT_SLOW_STOP_CHANCE * (1 - team.crew / 100)) service += lerp(RACE.PIT_SLOW_STOP_LOSS, slowStopLoss);
+      // Parada pedida por um lance: quando dá certo, sai limpa (sem pit stop lento nem punição de box).
+      const momentStop = myMoment?.pit === pitCompound ? myMoment : null;
+      if (!momentStop?.cleanStop && slowStopRoll < RACE.PIT_SLOW_STOP_CHANCE * (1 - team.crew / 100)) service += lerp(RACE.PIT_SLOW_STOP_LOSS, slowStopLoss);
+      if (momentStop) service = Math.max(RACE.PIT_SERVICE * RACE_MOMENTS.PIT.BEST_SERVICE, service + momentStop.pitService);
       const repairing = car.damage > 0.05;
       if (repairing) service += RACE.PIT_REPAIR_TIME;
       pitLoss = rules.pitLaneLoss * laneFactor + service;
       const next = car.plan[0];
       const consumesPlan = next !== undefined && (next.compound === pitCompound || next.lap - lap <= 10);
       let penaltySeconds = car.penaltySeconds;
-      if (speedingRoll < RACE.PIT_SPEEDING_CHANCE * (1.5 - a.focus / 100)) {
+      if (momentStop?.cleanStop) {
+        // Parada limpa: sem excesso de velocidade nem liberação insegura.
+      } else if (speedingRoll < RACE.PIT_SPEEDING_CHANCE * (1.5 - a.focus / 100)) {
         penaltySeconds += RACE.PIT_PENALTY;
         events.push({ lap, type: 'penalty', driverId: car.driverId, message: `${who} excede a velocidade no pit lane: ${RACE.PIT_PENALTY}s de punição.` });
       } else if (unsafeRoll < RACE.UNSAFE_RELEASE_CHANCE * (1.5 - team.crew / 100)) {
@@ -447,12 +494,12 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       };
     } else if (!retired) {
       // Desgaste e idade do pneu (só para quem não trocou nesta volta).
-      const wearScale = neutral === 'none' ? fx.tyreWear : 0.3;
+      const wearScale = neutral === 'none' ? fx.tyreWear : TYRE_CURVE.NEUTRALIZED_WEAR;
       const wear = tyreWearPerLap(
         a,
         track,
         weather,
-        wearScale * TYRES[car.tyre.compound].wear * tyreCond.wear * profile.tyreWear,
+        wearScale * TYRES[car.tyre.compound].wear * tyreCond.wear * profile.tyreWear * (myMoment?.wear ?? 1) * (carry?.wear ?? 1),
         car.modifiers.tyreWearFactor,
       );
       car = { ...car, tyre: { ...car.tyre, wear: Math.min(1, car.tyre.wear + wear), age: car.tyre.age + 1 } };
@@ -496,6 +543,105 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     pittedTeams.add(w.car.teamId);
   }
 
+  // Lance: o que acontece com o rival (erro sob pressão, toque).
+  if (lm && facts) {
+    const mine = work.find((w) => w.car.driverId === state.playerDriverId);
+    const rival = lm.moment.rivalId ? work.find((w) => w.car.driverId === lm.moment.rivalId) : undefined;
+    if (mine && rival && !mine.retired && !rival.retired) {
+      const player = name(mine.car.driverId);
+      const other = name(rival.car.driverId);
+      if (lm.rivalTime > 0) {
+        rival.paceLap += lm.rivalTime;
+        rival.newTotal += lm.rivalTime;
+        if (lm.moment.kind === 'attack') {
+          rival.car = { ...rival.car, errors: rival.car.errors + 1 };
+          events.push({
+            lap,
+            type: 'error',
+            driverId: rival.car.driverId,
+            otherDriverId: mine.car.driverId,
+            message: `${other} erra sob pressão de ${player} e perde ${seconds1(lm.rivalTime)}s.`,
+          });
+        }
+      }
+      if (lm.incident === 'contact') {
+        incidents.push('collision');
+        facts.contact = true;
+        const atFault = lm.rolls.fault < RACE_MOMENTS.CONTACT.FAULT;
+        if (lm.rolls.dnf < RACE_MOMENTS.CONTACT.DNF_SHARE) {
+          const victim = lm.rolls.victim < RACE_CONTACT.DNF_ATTACKER_SHARE ? mine : rival;
+          const survivor = victim === mine ? rival : mine;
+          victim.retired = 'collision';
+          const injured = lm.rolls.injury < injuryChance(ctx) * victim.profile.injury;
+          victim.car = { ...victim.car, injured, damageTotal: victim.car.damageTotal + 1 };
+          survivor.car = {
+            ...survivor.car,
+            damage: survivor.car.damage + RACE_CONTACT.DNF_SURVIVOR_DAMAGE,
+            damageTotal: survivor.car.damageTotal + RACE_CONTACT.DNF_SURVIVOR_DAMAGE,
+          };
+          if (victim === mine) facts.outcome = 'retired';
+          else {
+            facts.outcome = 'touch';
+            facts.rivalRetired = true;
+          }
+          events.push({
+            lap,
+            type: 'dnf',
+            driverId: victim.car.driverId,
+            otherDriverId: survivor.car.driverId,
+            message: `Toque entre ${player} e ${other}! ${name(victim.car.driverId)} está fora.${injured ? ' O piloto é levado ao centro médico.' : ''}`,
+          });
+          if (atFault && victim === rival) {
+            facts.penaltySeconds = RACE.COLLISION_DNF_PENALTY;
+            mine.car = {
+              ...mine.car,
+              penaltySeconds: mine.car.penaltySeconds + RACE.COLLISION_DNF_PENALTY,
+              penaltyPoints: mine.car.penaltyPoints + 2,
+              gridDropNext: mine.car.gridDropNext + RACE.COLLISION_DNF_GRID_DROP,
+            };
+            events.push({
+              lap,
+              type: 'penalty',
+              driverId: mine.car.driverId,
+              otherDriverId: rival.car.driverId,
+              message: `${player} é punido por causar o acidente: ${RACE.COLLISION_DNF_PENALTY}s e ${RACE.COLLISION_DNF_GRID_DROP} posições no próximo grid.`,
+            });
+          }
+        } else {
+          const mineDamage = lerp(RACE_MOMENTS.CONTACT.PLAYER_DAMAGE, lm.rolls.playerDamage);
+          const rivalDamage = lerp(RACE_MOMENTS.CONTACT.RIVAL_DAMAGE, lm.rolls.rivalDamage);
+          // O tempo perdido no toque substitui o do lance errado, já somado à volta.
+          const extra = RACE_MOMENTS.CONTACT.PLAYER_TIME - Math.max(0, lm.time);
+          mine.paceLap += extra;
+          mine.newTotal += extra;
+          rival.paceLap += RACE_MOMENTS.CONTACT.RIVAL_TIME;
+          rival.newTotal += RACE_MOMENTS.CONTACT.RIVAL_TIME;
+          mine.car = { ...mine.car, damage: mine.car.damage + mineDamage, damageTotal: mine.car.damageTotal + mineDamage };
+          rival.car = { ...rival.car, damage: rival.car.damage + rivalDamage, damageTotal: rival.car.damageTotal + rivalDamage };
+          facts.outcome = 'touch';
+          events.push({
+            lap,
+            type: 'collision',
+            driverId: mine.car.driverId,
+            otherDriverId: rival.car.driverId,
+            message: `${player} toca em ${other}. Os dois perdem tempo e saem com danos.`,
+          });
+          if (atFault) {
+            facts.penaltySeconds = RACE.COLLISION_PENALTY;
+            mine.car = { ...mine.car, penaltySeconds: mine.car.penaltySeconds + RACE.COLLISION_PENALTY, penaltyPoints: mine.car.penaltyPoints + 1 };
+            events.push({
+              lap,
+              type: 'penalty',
+              driverId: mine.car.driverId,
+              otherDriverId: rival.car.driverId,
+              message: `${player} recebe ${RACE.COLLISION_PENALTY}s por causar o toque.`,
+            });
+          }
+        }
+      }
+    }
+  }
+
   /* ---------- 2. Resolução de posições ---------- */
   let resolved: LapWork[] = [];
   const retiredNow: LapWork[] = [];
@@ -526,6 +672,9 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
   } else {
     const difficulty =
       track.overtakingDifficulty * (standingStart ? SIM.FIRST_LAP_DIFFICULTY_FACTOR : state.restart === 'rolling' ? RACE.RESTART_DIFFICULTY_FACTOR : 1);
+    // Lance: uma ultrapassagem garantida do jogador e uma posição cedida por ele, uma vez cada.
+    let passLeft = lm?.pass === true;
+    let yieldLeft = lm?.yieldTo === true;
 
     for (const w of work) {
       if (w.retired) {
@@ -537,6 +686,14 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
       let passes = 0;
       while (idx > 0) {
         const ahead = need(resolved[idx - 1], 'carro à frente');
+        const attacking = lm !== null && w.car.driverId === state.playerDriverId;
+        const defending = lm !== null && ahead.car.driverId === state.playerDriverId;
+        // Lance que deu certo: o jogador alcança o carro da frente se ele estiver ao alcance.
+        const takes = attacking && passLeft && !w.compromised && !ahead.compromised && w.newTotal < ahead.newTotal + SIM.MIN_GAP + RACE_MOMENTS.REACH;
+        // Lance em que o jogador cede (ou não segura): o rival do lance o alcança; outro carro só passa se já chegou.
+        const reach = lm !== null && w.car.driverId === lm.moment.rivalId ? RACE_MOMENTS.REACH : 0;
+        const given = defending && yieldLeft && !w.compromised && !ahead.compromised && w.newTotal < ahead.newTotal + SIM.MIN_GAP + reach;
+        if (takes || given) w.newTotal = Math.min(w.newTotal, ahead.newTotal + SIM.MIN_GAP - 0.01);
         if (w.newTotal >= ahead.newTotal + SIM.MIN_GAP) break; // pista livre
 
         if (ahead.compromised) {
@@ -546,6 +703,39 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
           resolved[idx] = ahead;
           idx--;
           continue;
+        }
+
+        const attacker = name(w.car.driverId);
+        const defender = name(ahead.car.driverId);
+        const overtake = () => {
+          ahead.newTotal = Math.max(ahead.newTotal + SIM.DEFENDED_PASS_LOSS, w.newTotal + SIM.MIN_GAP);
+          resolved[idx - 1] = w;
+          resolved[idx] = ahead;
+          w.car = { ...w.car, overtakes: w.car.overtakes + 1 };
+          events.push({
+            lap,
+            type: 'overtake',
+            driverId: w.car.driverId,
+            otherDriverId: ahead.car.driverId,
+            message: `${attacker} ultrapassa ${defender} e assume a ${idx}ª posição.`,
+          });
+          idx--;
+          passes++;
+        };
+        if (takes || given) {
+          // Decidido pelo lance, sem sorteio.
+          // O passe do lance vale até o jogador passar o rival: se o rival passou outro carro nesta
+          // volta, o carro que ficou entre os dois não gasta o passe.
+          const rivalId = lm?.moment.rivalId ?? null;
+          if (takes) passLeft = rivalId !== null && resolved.slice(0, idx - 1).some((x) => x.car.driverId === rivalId);
+          else yieldLeft = false;
+          overtake();
+          continue;
+        }
+        if (defending && lm?.hold) {
+          // O jogador fechou a porta: quem vem atrás fica atrás, sem toque.
+          w.newTotal = Math.max(w.newTotal, ahead.newTotal + SIM.MIN_GAP + SIM.FAILED_PASS_LOSS);
+          break;
         }
 
         const paceAdvantage = ahead.paceLap - w.paceLap;
@@ -578,24 +768,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
           w.profile.attack +
           w.profile.duel -
           ahead.profile.duel +
-          (lastLap ? w.profile.lastLapDuel - ahead.profile.lastLapDuel : 0);
-        const attacker = name(w.car.driverId);
-        const defender = name(ahead.car.driverId);
+          (lastLap ? w.profile.lastLapDuel - ahead.profile.lastLapDuel : 0) +
+          // Lance: quem largou bem ataca melhor nesta volta; quem garantiu a posição defende melhor.
+          (attacking ? (lm?.attack ?? 0) : 0) -
+          (defending ? (lm?.defend ?? 0) : 0);
 
         if (successRoll < sigmoid(logit)) {
-          ahead.newTotal = Math.max(ahead.newTotal + SIM.DEFENDED_PASS_LOSS, w.newTotal + SIM.MIN_GAP);
-          resolved[idx - 1] = w;
-          resolved[idx] = ahead;
-          w.car = { ...w.car, overtakes: w.car.overtakes + 1 };
-          events.push({
-            lap,
-            type: 'overtake',
-            driverId: w.car.driverId,
-            otherDriverId: ahead.car.driverId,
-            message: `${attacker} ultrapassa ${defender} e assume a ${idx}ª posição.`,
-          });
-          idx--;
-          passes++;
+          overtake();
           continue;
         }
 
@@ -603,17 +782,25 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
         // rivalidade entre os dois; cai com a leitura de corrida do atacante.
         const rivalry = rivalryBetween(ctx, state.playerDriverId, w.car.driverId, ahead.car.driverId);
         const collisionChance =
-          SIM.COLLISION_ON_FAILED_PASS * attackFx.collision * (1.2 - w.driver.attributes.racecraft / 100) * (1 + rivalry / 100) * w.profile.collision;
+          SIM.COLLISION_ON_FAILED_PASS *
+          attackFx.collision *
+          (RACE_CONTACT.RACECRAFT_BASE - w.driver.attributes.racecraft / 100) *
+          (1 + rivalry / 100) *
+          w.profile.collision;
         if (collisionRoll < collisionChance) {
           incidents.push('collision');
           const attackerAtFault = faultRoll < RACE.COLLISION_FAULT_CHANCE;
           if (collisionDnfRoll < SIM.COLLISION_DNF_SHARE) {
-            const victim = victimRoll < 0.6 ? w : ahead;
+            const victim = victimRoll < RACE_CONTACT.DNF_ATTACKER_SHARE ? w : ahead;
             const other = victim === w ? ahead : w;
             victim.retired = 'collision';
             const injured = injuryRoll < injuryChance(ctx) * victim.profile.injury;
             victim.car = { ...victim.car, injured, damageTotal: victim.car.damageTotal + 1 };
-            other.car = { ...other.car, damage: other.car.damage + 0.2, damageTotal: other.car.damageTotal + 0.2 };
+            other.car = {
+              ...other.car,
+              damage: other.car.damage + RACE_CONTACT.DNF_SURVIVOR_DAMAGE,
+              damageTotal: other.car.damageTotal + RACE_CONTACT.DNF_SURVIVOR_DAMAGE,
+            };
             events.push({
               lap,
               type: 'dnf',
@@ -648,8 +835,8 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
           }
           const dmgA = lerp(RACE.DAMAGE_COLLISION_ATTACKER, attackerDamage);
           const dmgD = lerp(RACE.DAMAGE_COLLISION_DEFENDER, defenderDamage);
-          w.newTotal += 2.0;
-          ahead.newTotal += 0.8;
+          w.newTotal += RACE_CONTACT.TIME_LOSS_ATTACKER;
+          ahead.newTotal += RACE_CONTACT.TIME_LOSS_DEFENDER;
           w.car = { ...w.car, damage: w.car.damage + dmgA, damageTotal: w.car.damageTotal + dmgA };
           ahead.car = { ...ahead.car, damage: ahead.car.damage + dmgD, damageTotal: ahead.car.damageTotal + dmgD };
           events.push({
@@ -683,6 +870,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     }
   }
   resolved = resolved.filter((w) => !w.retired);
+  // Lance de ataque que deu certo, mas o rival terminou a volta à frente (abriu mais que o alcance do lance).
+  if (lm?.pass && facts && lm.moment.rivalId) {
+    const order = resolved.map((w) => w.car.driverId);
+    const mineAt = order.indexOf(state.playerDriverId);
+    const rivalAt = order.indexOf(lm.moment.rivalId);
+    facts.escaped = mineAt >= 0 && rivalAt >= 0 && rivalAt < mineAt;
+  }
 
   /* ---------- 3. Atualização dos carros ---------- */
   let fastestLap = state.fastestLap;
@@ -858,7 +1052,11 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     if (winner) events.push({ lap, type: 'finish', driverId: winner.driverId, message: 'Bandeirada! Fim de corrida.' });
   }
 
-  return {
+  /* ---------- 6. Lances e rádio do engenheiro ---------- */
+  const playerRunning = runningCars.some((c) => c.driverId === state.playerDriverId);
+  // O efeito de lance segue valendo enquanto durar e o jogador estiver na pista.
+  const carried = lm?.carry ?? state.carry;
+  const next: RaceSimState = {
     ...state,
     currentLap: lap,
     weather: state.weather,
@@ -874,7 +1072,13 @@ export function stepRaceLap(state: RaceSimState, ctx: RaceContext, input: Player
     safetyCars,
     virtualSafetyCars,
     redFlags,
+    pendingMoment: null,
+    moments: lm && facts ? [...state.moments, momentRecord(lm, ctx, facts)] : state.moments,
+    carry: carried && playerRunning && carried.untilLap > lap ? carried : null,
   };
+  const radio = engineerRadio(state, next, ctx);
+  const withRadio: RaceSimState = radio ? { ...next, radio: [...state.radio, radio] } : next;
+  return { ...withRadio, pendingMoment: upcomingMoment(withRadio, ctx) };
 }
 
 /** Troca de posições entre companheiros: o carro em `index` cede a posição ao seguinte. */
@@ -893,17 +1097,11 @@ function injuryChance(ctx: RaceContext): number {
   return ctx.category.tier >= 7 ? RACE.INJURY_CHANCE.f1 : RACE.INJURY_CHANCE.formula;
 }
 
-function rivalryBetween(ctx: RaceContext, playerId: string, a: string, b: string): number {
-  if (!ctx.rivalries) return 0;
-  if (a === playerId) return ctx.rivalries[b] ?? 0;
-  if (b === playerId) return ctx.rivalries[a] ?? 0;
-  return 0;
-}
-
 /** Simula todas as voltas restantes. Com `auto`, o engenheiro cuida de paradas e combustível. */
 export function simulateRemainingRace(state: RaceSimState, ctx: RaceContext, input: PlayerRaceInput): RaceSimState {
   let current = state;
-  while (!isRaceFinished(current)) current = stepRaceLap(current, ctx, { ...input, pit: null });
+  // Sem resposta a lance: daqui em diante o piloto decide pelo próprio estilo.
+  while (!isRaceFinished(current)) current = stepRaceLap(current, ctx, { ...input, pit: null, moment: null });
   return current;
 }
 

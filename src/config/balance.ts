@@ -30,6 +30,9 @@ export const HISTORY_LIMITS = {
   // Temporadas guardadas para os gráficos de tendência (atributos e caixa). 60 cobre duas
   // gerações inteiras de uma dinastia e pesa menos de 20 kB no save.
   SEASON_TREND: 60,
+  // Toques em lances decisivos guardados em `relations.rivalryLog` (Fase 4), para a Fase 5 usar.
+  // 40 cobrem várias temporadas de um piloto brigador e pesam menos de 5 kB no save.
+  RIVALRY_LOG: 40,
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -325,6 +328,288 @@ export const SIDE_JOBS = {
   instructor: { perRound: 800, training: 0.85, damageDiscount: 0 },
   // Ajudante de mecânico: paga menos, o treino rende 20% menos, mas o conserto depois de batida sai 30% mais barato.
   mechanic: { perRound: 600, training: 0.8, damageDiscount: 0.3 },
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Corrida com lances e pneus (Fase 4)                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Curva de desgaste dos pneus. O desgaste (0 = novo, 1 = na lona) continua somando um tanto por
+ * volta (`SIM.TYRE_WEAR_PER_LAP`, vezes a pista, o piloto, o ritmo e o `wear` do composto em
+ * `TYRES`). Esta tabela diz quanto tempo de volta o pneu perde em cada ponto da vida, em fração
+ * do tempo de volta (0,01 = 1%, perto de 0,9 s numa volta de 90 s):
+ *
+ *   perda = fade × min(1, desgaste / FADE_BY)                      perde pouco no começo
+ *         + plateau × (desgaste − FADE_BY) / (cliff − FADE_BY)     estabiliza: sobe devagar
+ *         + drop × (desgaste − cliff) / (1 − cliff)                cai do penhasco
+ *
+ * Referência (pista de desgaste médio, piloto médio, ritmo equilibrado): o médio chega ao penhasco
+ * em 25 voltas, o macio em 13 e o duro em 40. Passado o penhasco, cada volta custa perto de 1,2 s
+ * a mais que a anterior com o médio, 1,6 s com o macio e 1 s com o duro (numa volta de 90 s). Antes
+ * dele, a perda total fica em torno de 0,5% da volta: o pneu "estabiliza". No kart, quem anda no
+ * ritmo equilibrado chega ao fim de uma corrida de 22 voltas com 70% de desgaste; no agressivo
+ * desde a largada, passa do penhasco (80%) duas voltas antes da bandeirada.
+ */
+export const TYRE_CURVE = {
+  // Desgaste até onde vai a perda do começo (o pico de aderência do pneu novo).
+  FADE_BY: 0.1,
+  COMPOUNDS: {
+    // Kart: não há troca, mas o pneu acaba. Quem anda agressivo no começo cai do penhasco no fim.
+    kart: { fade: 0.001, plateau: 0.004, cliff: 0.8, drop: 0.06 },
+    // Macio: o mais rápido (ver `TYRES`), penhasco cedo e íngreme.
+    soft: { fade: 0.002, plateau: 0.005, cliff: 0.72, drop: 0.09 },
+    medium: { fade: 0.0015, plateau: 0.0045, cliff: 0.8, drop: 0.08 },
+    // Duro: lento e durável; penhasco tarde e menos brusco.
+    hard: { fade: 0.001, plateau: 0.004, cliff: 0.88, drop: 0.06 },
+    intermediate: { fade: 0.0015, plateau: 0.005, cliff: 0.78, drop: 0.07 },
+    wet: { fade: 0.0015, plateau: 0.005, cliff: 0.82, drop: 0.07 },
+  },
+  // Gestão de pneus do piloto: com 0, desgasta 30% mais que o piloto médio; com 100, 30% menos.
+  MANAGEMENT_WORST: 1.3,
+  MANAGEMENT_RANGE: 0.6,
+  // Atrás do safety car (ou sob o virtual) o pneu quase não gasta.
+  NEUTRALIZED_WEAR: 0.3,
+  // Estados mostrados na tela (texto + cor): "novo" até FADE_BY; "bom" até esta fração do caminho
+  // até o penhasco; "no limite" a esta distância do penhasco; "acabado" dali em diante.
+  GOOD_UNTIL: 0.6,
+  LIMIT_MARGIN: 0.08,
+  // A IA (e o engenheiro automático) passa a poupar quando o pneu entra no limite e para nos boxes
+  // assim que ele passa do penhasco, se ainda faltarem estas voltas: com menos que isso, a parada
+  // (perto de 25 s) custa mais do que arrastar o pneu acabado até a bandeirada.
+  PIT_PAST_CLIFF: 0,
+  PIT_MIN_LAPS_LEFT: 6,
+  // Janela ideal de parada: as últimas voltas antes do penhasco.
+  PIT_WINDOW_LAPS: 4,
+  // Estratégias que deixariam mais que esta fração da corrida depois do penhasco são descartadas.
+  STRATEGY_MIN_LIFE: 0.95,
+} as const;
+
+/**
+ * Toque entre dois carros: o que acontece depois do contato. Vale para as disputas de sempre e
+ * para os lances decisivos. Estes números estavam soltos em `step.ts` e vieram para cá na Fase 4.
+ */
+export const RACE_CONTACT = {
+  // Tempo perdido por quem ataca e por quem defende num toque sem abandono, em segundos.
+  TIME_LOSS_ATTACKER: 2.0,
+  TIME_LOSS_DEFENDER: 0.8,
+  // Num toque com abandono: chance de o abandono ser de quem atacava, e o dano de quem segue.
+  DNF_ATTACKER_SHARE: 0.6,
+  DNF_SURVIVOR_DAMAGE: 0.2,
+  // A chance de toque cai com a leitura de corrida: multiplica por (1,2 − leitura/100).
+  RACECRAFT_BASE: 1.2,
+} as const;
+
+/**
+ * Lances decisivos: a corrida pausa de 2 a 4 vezes e o jogador escolhe. Só o piloto do jogador tem
+ * lances. Cada opção tem uma chance de dar certo, `sigmoid(logit)`, limitada a CHANCE_MIN–CHANCE_MAX.
+ * O logit soma a base da opção (abaixo) com termos de atributo, equipamento, pneus, clima e do
+ * perfil de nascença; `s(x) = (x − nível do grid da categoria) / SKILL_SCALE`.
+ *
+ * Em OPTIONS, por opção:
+ * - risk: 0 = segura, 1 = moderada, 2 = arriscada (a tela vibra em alerta ao confirmar).
+ * - base: logit de partida. sigmoid(0) = 50%; +1 leva a 73%; −1, a 27%.
+ * - win / lose: o que acontece na volta do lance quando dá certo ou errado:
+ *     time    segundos somados à volta do jogador (negativo = ganho)
+ *     attack  soma ao logit das disputas em que o jogador ataca nesta volta
+ *     defend  tira do logit das disputas em que o jogador defende nesta volta
+ *     error   multiplica a chance de erro do jogador nesta volta
+ *     wear    multiplica o desgaste do jogador nesta volta
+ *     rival   segundos somados à volta do rival (ele erra ou tira o pé)
+ * - crash / spin / contact (só em lose): de cada erro, a parte que vira abandono, rodada ou toque
+ *   no rival; o resto é só o tempo perdido. O toque ainda passa pelos multiplicadores de sempre
+ *   (leitura de corrida, rivalidade, esquentado ou piloto limpo).
+ * - sure: a opção não tem como dar errado (ceder a posição); a chance é 100% e a base não conta.
+ * Nas opções de parada (`rain.pit` e `pit.undercut`), `time` é o que muda no serviço dos boxes.
+ */
+export const RACE_MOMENTS = {
+  // Uma corrida completa tem de 2 a 4 lances. A largada conta; a última volta fecha a conta
+  // quando faltar lance para o mínimo.
+  MIN_PER_RACE: 2,
+  MAX_PER_RACE: 4,
+  // Ataques e defesas somados, no máximo, e voltas de intervalo entre dois lances de disputa.
+  MAX_DUELS: 2,
+  // O intervalo é esta fração da corrida, com este mínimo de voltas (conta da largada também: não
+  // há disputa nas primeiras voltas, com o pelotão ainda embolado). Nem na penúltima volta.
+  COOLDOWN_SHARE: 0.3,
+  COOLDOWN_LAPS: 4,
+  // Distância (s) para o carro da frente que abre o lance de ataque, e para o de trás que abre a defesa.
+  ATTACK_GAP: 0.5,
+  DEFENSE_GAP: 0.5,
+  // A defesa só abre se o carro de trás for mais rápido por pelo menos isto (s por volta).
+  DEFENSE_PACE_EDGE: 0.05,
+  // Última volta: o lance abre com um carro a até isto (s), à frente ou atrás. O "tudo ou nada" mira
+  // o carro da frente se ele estiver a até LAST_LAP_REACH.
+  LAST_LAP_GAP: 0.6,
+  LAST_LAP_REACH: 1.2,
+  // Um ataque que deu certo alcança o rival se ele estiver a até isto no fim da volta (s).
+  REACH: 1.5,
+  // Vantagem de ritmo levada em conta nas chances, limitada a esta faixa (s por volta).
+  PACE_EDGE_RANGE: [-0.4, 0.8],
+  CHANCE_MIN: 0.05,
+  CHANCE_MAX: 0.97,
+  // Pontos de atributo que valem 1 no logit dos termos de habilidade.
+  SKILL_SCALE: 15,
+  OPTIONS: {
+    start: {
+      // Por dentro: ganha até duas posições na primeira curva; errando, perde tempo e pode tocar.
+      inside: { risk: 2, base: -0.2, win: { time: -0.45, attack: 1.5 }, lose: { time: 0.2 }, crash: 0.01, spin: 0, contact: 0.16 },
+      // Por fora: ganho menor, sem toque.
+      outside: { risk: 1, base: 0.5, win: { time: -0.3, attack: 0.8 }, lose: { time: 0.2 }, crash: 0, spin: 0, contact: 0 },
+      // Segurar: defende a posição; no pior caso, patina um pouco.
+      hold: { risk: 0, base: 2, win: { time: -0.05, defend: 1.5, error: 0.5 }, lose: { time: 0.15 }, crash: 0, spin: 0, contact: 0 },
+    },
+    attack: {
+      // Mergulhar na freada: passa já; errando, perde a linha e pode tocar no rival.
+      dive: { risk: 2, base: 0.6, win: { time: -0.2 }, lose: { time: 0.25 }, crash: 0.015, spin: 0.05, contact: 0.18 },
+      // Esperar o erro: não custa nada (e poupa pneu); a chance depende do rival.
+      wait: { risk: 0, base: 0, win: { rival: 1.4 }, lose: { wear: 0.85 }, crash: 0, spin: 0, contact: 0 },
+      // Vácuo: depende da reta e do motor; errando, só perde um pouco de tempo.
+      slipstream: { risk: 1, base: 0.3, win: {}, lose: { time: 0.3, wear: 1.15 }, crash: 0, spin: 0, contact: 0 },
+    },
+    defense: {
+      // Fechar a porta: segura a posição; errando, perde a posição e pode haver toque e punição.
+      block: { risk: 2, base: 0.3, win: { rival: 0.3 }, lose: { time: 0.2 }, crash: 0.01, spin: 0.03, contact: 0.22 },
+      // Ceder: perde a posição sem perder tempo nem pneu.
+      yield: { risk: 0, base: 0, sure: true, win: { time: -0.25, wear: 0.8 }, lose: {}, crash: 0, spin: 0, contact: 0 },
+    },
+    rain: {
+      // Parar já: pneu certo antes dos outros; o risco é só a parada sair lenta.
+      pit: { risk: 0, base: 2.2, win: { time: -0.5 }, lose: { time: 3.5 }, crash: 0, spin: 0, contact: 0 },
+      // Ficar na pista com pneu de seco: ganha tempo e posição se segurar o carro.
+      stay: { risk: 2, base: 0.3, win: { error: 0.4 }, lose: { time: 1.5 }, crash: 0.08, spin: 0.4, contact: 0 },
+    },
+    lastLap: {
+      // Tudo ou nada: passa o rival (ou crava a volta); errando, pode rodar, tocar ou bater.
+      allIn: { risk: 2, base: 0.5, win: { time: -0.35 }, lose: { time: 0.3 }, crash: 0.02, spin: 0.06, contact: 0.14 },
+      // Garantir os pontos: leva o carro até a bandeirada defendendo a posição.
+      secure: { risk: 0, base: 2.6, win: { time: 0.1, defend: 1.2, error: 0.3 }, lose: { time: 0.4 }, crash: 0, spin: 0, contact: 0 },
+    },
+    pit: {
+      // Undercut: parada limpa e voltas de saída voando; errando, a parada sai lenta.
+      undercut: { risk: 1, base: 0, win: { time: -0.4 }, lose: { time: 2.5 }, crash: 0, spin: 0, contact: 0 },
+      // Overcut: mais voltas com pista livre; errando, o pneu cai do penhasco antes da parada.
+      overcut: { risk: 1, base: -0.6, win: {}, lose: {}, crash: 0, spin: 0, contact: 0 },
+    },
+  },
+  START: {
+    // Peso da experiência + concentração (a mesma dupla da reação na largada) e da ultrapassagem.
+    SKILL: 0.6,
+    OVERTAKING: 0.4,
+    DEFENDING: 0.3,
+    // Reflexo e largador nato (perfil): 30% a menos de dispersão valem 0,45 no logit; 0,25 s de
+    // ganho na largada valem 0,5.
+    REACTION: 1.5,
+    GAIN: 2,
+    // Pista molhada atrapalha a largada de quem não sabe andar na chuva.
+    WET: 1.2,
+  },
+  ATTACK: {
+    // Esperar o erro: chance-base e o que soma a ela.
+    WAIT_BASE: 0.06,
+    WAIT_PER_CONSISTENCY: 0.003,
+    WAIT_PER_FOCUS: 0.002,
+    WAIT_TYRE_LIMIT: 0.07,
+    WAIT_TYRE_GONE: 0.15,
+    WAIT_WET: 0.25,
+    WAIT_PER_RACECRAFT: 0.003,
+    WAIT_MAX: 0.6,
+    // Vácuo: peso da sensibilidade da pista a motor (0,5 é neutro: numa pista de retas, 0,65, o vácuo
+    // rende mais que o mergulho; numa travada, 0,35, bem menos) e da diferença de motor.
+    SLIP_POWER: 4,
+    SLIP_ENGINE: 0.04,
+  },
+  RAIN: {
+    // Parar: cada ponto de equipe de box acima de 75 soma isto ao logit.
+    PIT_PER_CREW: 0.03,
+    // Ficar: pesos da nota de chuva e da leitura de corrida; quanto pesa a umidade que vem aí; e o
+    // perfil de nascença (gênio na chuva: erro −30% e ritmo −0,15% por unidade de umidade).
+    WET_SKILL: 0.9,
+    RACECRAFT: 0.3,
+    SEVERITY: 2.5,
+    PROFILE_ERROR: 1.5,
+    PROFILE_PACE: 300,
+    // Dando certo, por estas voltas o pneu de seco perde só esta fração do que perderia na água.
+    STAY_LAPS: 2,
+    STAY_GRIP: 0.35,
+  },
+  LAST_LAP: {
+    // Sem rival ao alcance, "tudo ou nada" é uma volta no limite: pesos de velocidade e consistência.
+    PACE: 0.5,
+    CONSISTENCY: 0.5,
+    // Sem rival ao alcance, o ganho é em fração da volta (0,8%: 0,4 s num kartódromo, 0,7 s num
+    // autódromo), e o piloto ataca melhor quem alcançar.
+    SOLO_GAIN: 0.008,
+    SOLO_ATTACK: 1,
+    // Garantir: peso da consistência e do erro de última volta do perfil (frieza).
+    SECURE_CONSISTENCY: 0.5,
+    SECURE_PROFILE: 2,
+  },
+  PIT: {
+    // A pergunta aparece quando a parada planejada está a até estas voltas.
+    LEAD_LAPS: 2,
+    // Undercut: peso da equipe de box (acima de 75), da velocidade do piloto e do pneu gasto
+    // (acima de 50% de desgaste, o pneu novo rende mais).
+    CREW: 0.05,
+    PACE: 0.3,
+    WORN: 2,
+    // A parada mais rápida que um lance consegue, como fração do serviço perfeito (`RACE.PIT_SERVICE`).
+    BEST_SERVICE: 0.8,
+    // Dando certo: estas voltas de saída mais rápidas (fração da volta).
+    OUT_LAPS: 2,
+    OUT_LAP_PACE: -0.0025,
+    // Overcut: voltas a mais na pista; cada volta de folga até o penhasco vale isto no logit.
+    STRETCH_LAPS: 3,
+    MARGIN: 0.35,
+    TYRE_MANAGEMENT: 0.5,
+    PROFILE_WEAR: 3,
+    // Dando certo: pneu poupado e pista livre. Dando errado: o pneu acaba antes da hora.
+    STRETCH_WEAR: 0.75,
+    STRETCH_PACE: -0.0015,
+    STRETCH_FAIL_PACE: 0.005,
+  },
+  CONTACT: {
+    // Dano do jogador e do rival num toque de lance, e o tempo que cada um perde (s). É um toque de
+    // disputa lado a lado, mais leve que a batida de quem erra a freada sozinho (`RACE_CONTACT`).
+    PLAYER_DAMAGE: [0.1, 0.3],
+    RIVAL_DAMAGE: [0.05, 0.2],
+    PLAYER_TIME: 1,
+    RIVAL_TIME: 0.5,
+    // De cada toque, a parte que tira alguém da corrida.
+    DNF_SHARE: 0.12,
+    // Chance de os comissários culparem o jogador (5 s e 1 ponto; com abandono do rival, a punição maior).
+    FAULT: 0.4,
+  },
+  STYLE: {
+    // Estilo do piloto, de 0 (cauteloso) a 100 (agressivo): 50 mais estes pesos.
+    ATTACK_VS_DEFENCE: 0.4,
+    PACE_VS_CONSISTENCY: 0.3,
+    CONFIDENCE: 0.2,
+    // Esquentado (toque ×1,4) soma 16; piloto limpo (×0,7) tira 12.
+    COLLISION: 40,
+    // O ritmo escolhido pelo jogador também vale: agressivo soma, conservador tira.
+    MODE: 12,
+    // Faixas do rótulo: até aqui cauteloso; daqui em diante agressivo.
+    CAUTIOUS_BELOW: 40,
+    AGGRESSIVE_FROM: 60,
+    // Chance mínima para o piloto aceitar uma opção arriscada [cauteloso, agressivo] e uma moderada.
+    RISKY_MIN_CHANCE: [0.75, 0.45],
+    MODERATE_MIN_CHANCE: [0.55, 0.3],
+  },
+} as const;
+
+/** Rádio do engenheiro: quando ele fala (uma mensagem por volta, no máximo). */
+export const ENGINEER_RADIO = {
+  // Rival a até isto (s) que parou nesta volta: "dá para tentar o undercut".
+  RIVAL_PIT_GAP: 3,
+  // Carro de trás chegando: a até isto (s) e tirando pelo menos isto por volta.
+  CLOSING_GAP: 2,
+  CLOSING_RATE: 0.3,
+  // Esse aviso só vale a partir desta volta e não se repete antes de passarem estas voltas.
+  CLOSING_FROM_LAP: 3,
+  CLOSING_REPEAT_LAPS: 4,
+  // Aviso de chuva: quando faltam estas voltas para a previsão.
+  RAIN_WARNING_LAPS: 2,
 } as const;
 
 /**

@@ -6,6 +6,11 @@
  * (pela loja) e em que ritmo mostrar o que ele já calculou. As decisões do
  * jogador (ritmo, parada, ordem de equipe) continuam valendo para a próxima
  * volta que o motor simular, como no modo de cronometragem.
+ *
+ * Lance decisivo (Fase 4): enquanto o motor espera a resposta do jogador a um
+ * lance, o relógio para no ponto mais recente já simulado, sem tempo limite. A
+ * volta seguinte só é pedida depois da resposta, que vai pela loja
+ * (`answerMoment`); aqui o gancho só espera.
  */
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { lapInfoAt, type RaceTimeline } from '@/engine';
@@ -13,13 +18,22 @@ import { readPreference, writePreference } from '@/persistence/preferences';
 import { useGameStore } from '@/store/gameStore';
 
 /**
- * Duração de uma volta de referência na tela, em 1×. Num kartódromo são 24 s. Num autódromo de
- * traçado real o caminho desenhado é bem mais longo; a volta dura mais (até 40 s) para os carros
- * não cruzarem a tela depressa demais. As velocidades 2×, 4× e 8× dividem esse tempo.
+ * Ritmo da transmissão. A corrida roda sozinha e só para nos lances decisivos, então ela inteira
+ * tem de caber em poucos minutos: em 1×, as voltas somam no máximo RACE_SECONDS na tela (uma
+ * corrida de kart de 22 voltas dá 7,5 s por volta; uma do topo, de 60, dá 2,75 s). Corridas curtas
+ * não esticam além do ritmo natural da pista (24 s por volta num kartódromo; até 40 s num
+ * autódromo de traçado real, que é mais longo no desenho), e nenhuma volta dura menos que
+ * MIN_LAP_SECONDS. As velocidades 2×, 4× e 8× dividem esse tempo.
+ *
+ * Com as luzes de largada e os desfechos dos lances, uma corrida jogada em 1× fica abaixo de
+ * 4 minutos em qualquer pista de qualquer categoria (tests/pacing.test.ts confere a conta).
  */
 export const LAP_SECONDS = 24;
-export function lapSecondsFor(circuitLength: number): number {
-  return Math.min(40, Math.max(LAP_SECONDS, circuitLength / 170));
+export const RACE_SECONDS = 165;
+export const MIN_LAP_SECONDS = 2.4;
+export function lapSecondsFor(circuitLength: number, totalLaps: number): number {
+  const natural = Math.min(40, Math.max(LAP_SECONDS, circuitLength / 170));
+  return Math.max(MIN_LAP_SECONDS, Math.min(natural, RACE_SECONDS / Math.max(1, totalLaps)));
 }
 export const SPEEDS = [1, 2, 4, 8] as const;
 /** Tempo de corrida que a imagem continua rodando depois que o último carro termina (fração da volta). */
@@ -27,8 +41,24 @@ const TAIL = 0.05;
 /** Duração de cada luz de largada e da espera antes de apagarem, em segundos reais (em 1×). */
 const LIGHT_STEP = 0.55;
 const LIGHT_HOLD = 0.75;
+/** Quanto tempo o desfecho de um lance fica na tarja, em segundos reais (ver `RaceBroadcast`). */
+export const MOMENT_RESULT_SECONDS = 4;
 
-export type PlaybackPhase = 'grid' | 'lights' | 'racing' | 'paused' | 'order' | 'suspended' | 'finished';
+/**
+ * Tempo de tela de uma corrida inteira, em segundos reais: as luzes de largada mais todas as voltas
+ * no ritmo da velocidade dada. Não conta o tempo que o jogador leva pensando em cada lance (não há
+ * limite) nem bandeira vermelha. É a conta do critério "uma corrida leva menos de 4 minutos".
+ */
+export function raceScreenSeconds(circuitLength: number, totalLaps: number, speed = 1): number {
+  const lights = (5 * LIGHT_STEP + LIGHT_HOLD) / Math.sqrt(speed);
+  return lights + (totalLaps * (1 + TAIL / totalLaps) * lapSecondsFor(circuitLength, totalLaps)) / speed;
+}
+
+/** Tempo que uma mensagem de rádio do engenheiro fica na faixa, em segundos reais. */
+export const RADIO_SECONDS = 5;
+
+/** `order` e `moment`: a imagem chegou ao ponto em que o motor espera uma resposta do jogador. */
+export type PlaybackPhase = 'grid' | 'lights' | 'racing' | 'paused' | 'order' | 'moment' | 'suspended' | 'finished';
 
 export interface RacePlayback {
   /** Tempo de corrida, atualizado a cada quadro (o canvas lê daqui). */
@@ -43,6 +73,11 @@ export interface RacePlayback {
   /** A imagem está atrás do ponto mais recente já simulado (revendo a corrida). */
   behindLive: boolean;
   toggle(): void;
+  /**
+   * Põe a corrida para andar, se estiver parada: é o que acontece quando o jogador responde a um
+   * lance (na largada, as luzes acendem). Não faz nada se ela já está andando.
+   */
+  start(): void;
   setSpeed(speed: number): void;
   /** Volta a mostrar a corrida desde a largada, sem simular nada de novo. */
   restart(): void;
@@ -83,7 +118,7 @@ export function useRacePlayback(): RacePlayback {
   const [playing, setPlayingState] = useState(false);
   const [speed, setSpeedState] = useState(() => speedRef.current);
   const [lights, setLights] = useState<number | null>(null);
-  const [waitingOrder, setWaitingOrder] = useState(false);
+  const [waiting, setWaiting] = useState<'order' | 'moment' | null>(null);
   const timeline = useGameStore((s) => s.raceTimeline);
 
   const setPlaying = useCallback((value: boolean) => {
@@ -124,8 +159,8 @@ export function useRacePlayback(): RacePlayback {
         }
       }
 
-      let target = timeRef.current + dt * (tl.referenceLap / lapSecondsFor(tl.circuitLength)) * speedRef.current;
-      let waiting = false;
+      let target = timeRef.current + dt * (tl.referenceLap / lapSecondsFor(tl.circuitLength, tl.totalLaps)) * speedRef.current;
+      let waitingFor: 'order' | 'moment' | null = null;
 
       // Bandeira vermelha: a imagem para no instante da bandeira e espera o jogador relargar.
       const suspension = openSuspension(tl);
@@ -138,10 +173,10 @@ export function useRacePlayback(): RacePlayback {
 
       while (target > tl.horizon && !tl.finished) {
         const race = useGameStore.getState().liveRace;
-        if (!race || race.pendingTeamOrder) {
-          // O motor só simula a próxima volta depois da resposta à ordem de equipe.
+        if (!race || race.pendingTeamOrder || race.pendingMoment) {
+          // O motor só simula a próxima volta depois da resposta à ordem de equipe ou ao lance decisivo.
           target = tl.horizon;
-          waiting = race?.pendingTeamOrder != null;
+          waitingFor = race?.pendingTeamOrder ? 'order' : race?.pendingMoment ? 'moment' : null;
           break;
         }
         useGameStore.getState().stepRace();
@@ -160,7 +195,7 @@ export function useRacePlayback(): RacePlayback {
           break;
         }
       }
-      setWaitingOrder(waiting);
+      setWaiting(waitingFor);
 
       if (tl.finished && target >= endOfBroadcast(tl)) {
         target = endOfBroadcast(tl);
@@ -189,13 +224,21 @@ export function useRacePlayback(): RacePlayback {
   }, []);
 
   const toggle = useCallback(() => {
-    const tl = useGameStore.getState().raceTimeline;
+    const { raceTimeline: tl, liveRace } = useGameStore.getState();
     if (!tl) return;
+    // Com um lance à espera de resposta, a corrida só anda pela resposta (ver `start`).
+    if (!playingRef.current && !tl.finished && liveRace?.pendingMoment && timeRef.current >= tl.horizon - 1e-6) return;
     // Depois do fim, "play" revê a corrida desde a largada.
     if (!playingRef.current && tl.finished && timeRef.current >= endOfBroadcast(tl) - 1e-6) jump(0);
     if (!playingRef.current) armLights();
     setPlaying(!playingRef.current);
   }, [armLights, jump, setPlaying]);
+
+  const start = useCallback(() => {
+    if (playingRef.current) return;
+    armLights();
+    setPlaying(true);
+  }, [armLights, setPlaying]);
 
   const setSpeed = useCallback((value: number) => {
     speedRef.current = value;
@@ -247,7 +290,7 @@ export function useRacePlayback(): RacePlayback {
     setLights(null);
     const now = timeRef.current;
     if (now >= tl.horizon - 1e-6 && !tl.finished) {
-      if (store.liveRace?.pendingTeamOrder) return;
+      if (store.liveRace?.pendingTeamOrder || store.liveRace?.pendingMoment) return;
       store.stepRace();
       tl = useGameStore.getState().raceTimeline ?? tl;
     }
@@ -275,8 +318,8 @@ export function useRacePlayback(): RacePlayback {
         ? 'lights'
         : suspension && time >= suspension.time - 1e-6
           ? 'suspended'
-          : waitingOrder && playing
-            ? 'order'
+          : waiting !== null && playing
+            ? waiting
             : playing
               ? 'racing'
               : time === 0
@@ -292,6 +335,7 @@ export function useRacePlayback(): RacePlayback {
     lights,
     behindLive: timeline ? time < (timeline.finished ? endOfBroadcast(timeline) : timeline.horizon) - timeline.referenceLap * 1.5 : false,
     toggle,
+    start,
     setSpeed,
     restart,
     goLive,

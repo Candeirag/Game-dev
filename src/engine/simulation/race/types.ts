@@ -5,7 +5,19 @@
  * (pista, regras da categoria, pilotos e equipes) e um RaceSimState, e devolve
  * o próximo estado. Tudo é dado simples e serializável.
  */
-import type { DnfReason, Driver, RaceEvent, RaceMode, SessionWeather, Team, Track, TyreCompound, WeekendModifiers } from '@/domain/schemas';
+import type {
+  DnfReason,
+  Driver,
+  MomentKind,
+  MomentRecord,
+  RaceEvent,
+  RaceMode,
+  SessionWeather,
+  Team,
+  Track,
+  TyreCompound,
+  WeekendModifiers,
+} from '@/domain/schemas';
 import type { CategoryDefinition } from '@/data/categories';
 
 export interface PlannedStop {
@@ -66,6 +78,77 @@ export interface WeatherForecast {
   aroundLap: number | null;
 }
 
+/* ---------------- Lances decisivos (Fase 4) ---------------- */
+
+/** O que pesou na chance de uma opção, para a tela explicar o número. */
+export type MomentFactorKey = 'driver' | 'rival' | 'car' | 'crew' | 'tyres' | 'track' | 'weather' | 'form' | 'profile';
+
+export interface MomentFactor {
+  key: MomentFactorKey;
+  /** Quanto este fator mexe na chance, em pontos percentuais (positivo = ajuda). */
+  points: number;
+}
+
+export interface MomentOption {
+  /** Id da opção (as chaves de RACE_MOMENTS.OPTIONS[lance]). */
+  id: string;
+  label: string;
+  /** Chance de dar certo, de 0 a 1. A mesma que resolve o lance. */
+  chance: number;
+  /** 0 = segura, 1 = moderada, 2 = arriscada. */
+  risk: 0 | 1 | 2;
+  /** O que se ganha se der certo e o que se perde se der errado, em texto curto. */
+  gain: string;
+  loss: string;
+  factors: MomentFactor[];
+}
+
+/** Um lance decisivo à espera da escolha do jogador. Vale para a volta `lap` (a próxima). */
+export interface RaceMoment {
+  kind: MomentKind;
+  lap: number;
+  /** Rival do lance (o carro da frente no ataque, o de trás na defesa), se houver. */
+  rivalId: string | null;
+  title: string;
+  question: string;
+  options: MomentOption[];
+  /** Lance de parada: os compostos que podem ser colocados e o sugerido pelo engenheiro. */
+  compounds?: TyreCompound[];
+  suggestedCompound?: TyreCompound;
+}
+
+/** Resposta do jogador a um lance. Sem resposta, o piloto decide pelo próprio estilo. */
+export interface MomentChoice {
+  option: string;
+  /** Composto a colocar, no lance de parada. */
+  compound?: TyreCompound;
+}
+
+/**
+ * Efeito de um lance que dura mais de uma volta (ficar na pista na chuva, voltas de saída do
+ * undercut, esticar o stint). Vale da volta `fromLap` à `untilLap`, só para o carro do jogador.
+ */
+export interface MomentCarry {
+  fromLap: number;
+  untilLap: number;
+  /** Fração somada ao tempo de volta (negativo = mais rápido). */
+  pace: number;
+  /** Multiplica a perda (ritmo e erro) de estar com o pneu errado para a pista. 1 = sem efeito. */
+  grip: number;
+  /** Multiplica o desgaste. */
+  wear: number;
+  /** O engenheiro não chama para os boxes enquanto durar (o jogador ainda pode pedir a parada). */
+  holdPit: boolean;
+}
+
+/** Mensagem do engenheiro para o jogador. Não vai para o save: só existe durante a corrida. */
+export interface RadioMessage {
+  lap: number;
+  /** Assunto da mensagem (uma por volta, no máximo). */
+  topic: 'tyresLimit' | 'tyresGone' | 'rivalPitted' | 'rain' | 'closing' | 'pitWindow';
+  message: string;
+}
+
 export interface RaceSimState {
   seed: number;
   trackId: string;
@@ -94,6 +177,14 @@ export interface RaceSimState {
   safetyCars: number;
   virtualSafetyCars: number;
   redFlags: number;
+  /** Lance decisivo aguardando a escolha do jogador para a próxima volta. */
+  pendingMoment: RaceMoment | null;
+  /** Lances já resolvidos nesta corrida, na ordem. */
+  moments: MomentRecord[];
+  /** Efeito de lance ainda em vigor para o carro do jogador. */
+  carry: MomentCarry | null;
+  /** Rádio do engenheiro para o jogador (não vai para o resultado). */
+  radio: RadioMessage[];
 }
 
 /**
@@ -180,6 +271,11 @@ export interface PlayerRaceInput {
    * seguindo as mesmas regras da IA. Usado em "simular até o fim".
    */
   auto?: boolean;
+  /**
+   * Resposta ao lance decisivo pendente. Sem ela, o piloto decide pelo próprio estilo: é o que
+   * acontece em "simular até o fim" e quando o jogador entrega o lance ao piloto.
+   */
+  moment?: MomentChoice | null;
 }
 
 export interface GridSlot {

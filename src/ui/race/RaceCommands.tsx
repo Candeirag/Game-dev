@@ -8,6 +8,7 @@ import { useGameStore } from '@/store/gameStore';
 import { feedback } from '../feedback/feedback';
 import { Button, Card, cx, TyreBadge, tyreName } from '@/ui/kit';
 import { useCareerView } from '../hooks/useCareer';
+import { PlayerTyrePanel, type ShownTyre } from './TyrePanel';
 
 export function TeamOrderDialog({ race }: { race: RaceSimState }) {
   const { drivers } = useCareerView();
@@ -15,7 +16,7 @@ export function TeamOrderDialog({ race }: { race: RaceSimState }) {
   if (!race.pendingTeamOrder) return null;
   const favoured = drivers[race.pendingTeamOrder.favouredDriverId];
   return (
-    <div role="alertdialog" aria-label="Ordem de equipe" className="bg-ink-950/95 p-3 shadow-[inset_0_0_0_1px_var(--color-gold-400)]">
+    <div role="alertdialog" aria-label="Ordem de equipe" className="bg-ink-950/95 p-2 shadow-[inset_0_0_0_1px_var(--color-gold-400)]">
       <div className="font-display text-lg font-bold uppercase leading-none text-gold-400">Ordem de equipe</div>
       <p className="mt-1 text-xs leading-snug text-ink-100">
         A equipe pede que você deixe <b>{favoured ? fullName(favoured) : 'o companheiro'}</b> passar. Obedecer aumenta a confiança da equipe e melhora a relação
@@ -33,8 +34,12 @@ export function TeamOrderDialog({ race }: { race: RaceSimState }) {
   );
 }
 
-/** Boxes e estratégia. `bare` tira o cartão em volta, para caber na aba da transmissão. */
-export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; bare?: boolean }) {
+/**
+ * Boxes e estratégia. `bare` tira o cartão em volta, para caber na aba da transmissão. `tyre` é o
+ * pneu do jogador como está na tela: com ele, o painel de pneus (desgaste, penhasco, tempos de volta
+ * e a janela ideal de parada) vem logo depois do pedido de parada.
+ */
+export function PitStrategyCard({ race, bare = false, tyre = null }: { race: RaceSimState; bare?: boolean; tyre?: ShownTyre | null }) {
   const { player, category } = useCareerView();
   const pitRequest = useGameStore((s) => s.pitRequest);
   const skipPlannedStop = useGameStore((s) => s.skipPlannedStop);
@@ -92,7 +97,9 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
       )}
       {/* Logo abaixo dos botões: com o engenheiro ligado eles ficam desativados, e o interruptor que os libera fica à vista. */}
       {bare && <div className="mt-2">{engineer}</div>}
-      <p className="mt-3 text-sm text-ink-300">
+      {/* Os pneus como estão na tela: quanto falta para o penhasco e a janela ideal de parada. */}
+      {tyre && <PlayerTyrePanel tyre={tyre} className="mt-2 border-t border-ink-700 pt-2" />}
+      <p className="mt-2 text-sm text-ink-300">
         {nextStop ? (
           <>
             Próxima parada planejada: <b className="text-ink-100">volta {nextStop.lap}</b>, pneu {tyreName(nextStop.compound)}.
@@ -122,7 +129,7 @@ export function PitStrategyCard({ race, bare = false }: { race: RaceSimState; ba
       </p>
     </>
   );
-  if (bare) return <div className="p-3">{content}</div>;
+  if (bare) return <div className="p-2">{content}</div>;
   return (
     <Card title="Boxes e estratégia" action={engineer}>
       {content}

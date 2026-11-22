@@ -18,7 +18,8 @@ Um simulador de carreira de automobilismo: o jogador vive a trajetória de um pi
 Entre etapas:    decisões pendentes (eventos) → treino (foco e intensidade) →
                  finanças e investimentos → mensagens
 Fim de semana:   treino livre (programa) → classificação (abordagem) →
-                 estratégia de pneus → corrida (ritmo, boxes, ordens de equipe)
+                 estratégia de pneus → corrida (roda sozinha e pausa em 2 a 4 lances
+                 decisivos; ritmo, boxes e ordens de equipe continuam à mão)
 Após a etapa:    pontos → dinheiro → condição → licença → relações →
                  patrocinadores → evolução → interesse das equipes → eventos
 Fim de temporada: reputação e licença → contas do ano (patrimônio e imposto) →
@@ -105,7 +106,7 @@ A média de reflexo, físico, inteligência e frieza soma 0,1 ponto de potencial
 | Piloto limpo         | Esquentado             | no primeiro toque                                                  | toques nas disputas ×0,7 (ou ×1,4, com ataque mais forte)       |
 | Brilha nas estreias  | Nervoso em estreias    | na estreia                                                         | ritmo e erros na primeira corrida numa categoria ou equipe nova |
 
-Na Fase 4, os mesmos traços entram nas chances dos lances decisivos. O herdeiro de uma dinastia e as carreiras de saves anteriores não têm nascimento sorteado.
+Os mesmos traços entram nas chances dos lances decisivos (Fase 4; ver "Lances decisivos"): o gênio na chuva vê chances melhores com a pista molhada, o largador nato na largada, o poupador de pneus no overcut, a frieza na última volta, e o esquentado toca mais quando um lance dá errado. A chuva que chega no meio da corrida também revela o gênio na chuva (ou o medo de chuva). O herdeiro de uma dinastia e as carreiras de saves anteriores não têm nascimento sorteado.
 
 ## Piloto
 
@@ -170,25 +171,84 @@ Qualidade do acerto: `0,2 + retorno do piloto × 0,35 + bônus do programa + ru�
 - **Abordagem:** segura (+0,08%, metade do risco), equilibrada, ou ataque total (−0,10%, risco × 2,2). O risco em volta lançada é 4 vezes o de corrida.
 - **Punições de grid** herdadas da corrida anterior ou de investigações deslocam o punido para trás.
 
-### Estratégia de pneus (categorias com boxes)
+### Pneus
 
-| Composto      | Ritmo                                | Desgaste | Dura até o "penhasco" |
-| ------------- | ------------------------------------ | -------- | --------------------- |
-| Macio         | −0,6%                                | × 1,7    | ≈15 voltas            |
-| Médio         | referência                           | × 1,0    | ≈26 voltas            |
-| Duro          | +0,5%                                | × 0,68   | ≈37 voltas            |
-| Intermediário | ideal com pista de 15% a 65% molhada | × 1,0    |                       |
-| Chuva         | ideal acima de 50%                   | × 0,8    |                       |
+Cada composto tem o seu comportamento. O desgaste (0% = novo) soma um tanto por volta; o que muda de composto para composto é a velocidade, o quanto gasta e onde fica o **penhasco**:
 
-Além de 80% de desgaste, o pneu perde 8% por unidade de desgaste extra. Pneu errado custa caro: pneu de seco com 30% de umidade perde 6% da volta e multiplica os erros. Antes da largada, o motor lista as estratégias viáveis com a perda estimada (desgaste, ritmo do composto e tempo de box); no Grand Prix Mundial, uma e duas paradas ficam próximas, e a escolha depende da pista e do piloto. Na Fórmula Elite e no Grand Prix Mundial, quem não usa dois compostos em corrida seca leva 30 s.
+| Composto      | Ritmo                                | Desgaste | Penhasco | Voltas até o penhasco | Depois do penhasco, a cada volta |
+| ------------- | ------------------------------------ | -------- | -------- | --------------------- | -------------------------------- |
+| Macio         | −0,6%                                | × 1,7    | 72%      | ≈13                   | +1,6 s                           |
+| Médio         | referência                           | × 1,0    | 80%      | ≈25                   | +1,2 s                           |
+| Duro          | +0,5%                                | × 0,68   | 88%      | ≈40                   | +1,0 s                           |
+| Intermediário | ideal com pista de 15% a 65% molhada | × 1,0    | 78%      |                       |                                  |
+| Chuva         | ideal acima de 50%                   | × 0,8    | 82%      |                       |                                  |
+| Kart          | pneu único, sem troca                | × 1,0    | 80%      | ≈25                   | +0,6 s                           |
+
+(Voltas em pista de desgaste médio, piloto médio e ritmo equilibrado; segundos numa volta de 90 s, e de 50 s no kart.)
+
+O desgaste não é linear no tempo de volta. A curva tem três trechos (`TYRE_CURVE`, em `src/config/balance.ts`):
+
+```
+perda = fade × min(1, desgaste / 10%)                          perde pouco no começo (0,1% a 0,2% da volta)
+      + platô × (desgaste − 10%) / (penhasco − 10%)            estabiliza: sobe devagar (mais 0,4% a 0,5%)
+      + queda × (desgaste − penhasco) / (100% − penhasco)      cai do penhasco (6% a 9% com o pneu na lona)
+```
+
+- **Na tela**, o pneu do jogador aparece com o desgaste em %, uma palavra e uma cor (novo, bom, gasto, no limite, acabado), o gráfico pequeno dos tempos de volta e a **janela ideal de parada**: as quatro últimas voltas antes do penhasco.
+- **Quem poupa, dura mais.** A gestão de pneus muda o desgaste em até 30% para cada lado; o poupador de pneus gasta 12% a menos e o gastador, 14% a mais; o ritmo conservador gasta 20% a menos e o agressivo, 25% a mais. Tudo isso aparece na janela de parada.
+- **No kart não há parada, mas o desgaste vale.** No ritmo equilibrado, o pneu chega ao fim de uma corrida de 22 voltas com cerca de 70% de desgaste. Andando no agressivo desde a largada, passa do penhasco duas voltas antes da bandeirada; numa pista abrasiva, bem antes.
+- **A IA cuida do pneu**: poupa quando o pneu entra no limite e quando a conta do stint não fecha, e para assim que ele passa do penhasco (se ainda faltam seis voltas ou mais).
+- **Pneu errado custa caro**: pneu de seco com 30% de umidade perde 6% da volta e multiplica os erros.
+- **Estratégia.** Antes da largada, o motor lista as estratégias viáveis com a perda estimada (curva de desgaste, ritmo do composto e tempo de box); no Grand Prix Mundial, uma e duas paradas ficam próximas, e a escolha depende da pista e do piloto. Na Fórmula Elite e no Grand Prix Mundial, quem não usa dois compostos em corrida seca leva 30 s: a regra não mudou.
 
 ### Corrida
 
-O jogador assiste à corrida na pista (1×, 2×, 4×, 8×, ou avançando volta por volta) e decide:
+A corrida roda sozinha na pista (1×, 2×, 4×, 8×, ou avançando volta por volta) e pausa nos **lances decisivos**, de 2 a 4 por corrida, sem tempo limite. Entre um lance e outro, o jogador ainda mexe em:
 
 - **Ritmo:** conservador (+0,25%, erros × 0,6, pneus × 0,8, combustível × 0,93), equilibrado, ou agressivo (−0,15%, erros × 1,5, pneus × 1,25, combustível × 1,06, mais ataque e mais risco de toque).
 - **Boxes:** as paradas planejadas acontecem sozinhas; o jogador pode parar a qualquer volta com o composto que quiser, cancelar a parada planejada ou ligar o engenheiro automático.
 - **Ordens de equipe:** quando chega uma, a corrida para e espera a resposta.
+
+**Simular direto** ("Simular até o fim") continua existindo: aí o piloto decide todos os lances pelo próprio estilo.
+
+### Lances decisivos
+
+O lance aparece na tarja inferior, como na TV, com a pergunta, as opções, a chance de cada uma dar certo e o que se ganha ou se perde, com a pista visível atrás. Só o piloto do jogador tem lances.
+
+| Lance               | Quando aparece                                                            | Opção                    | Risco     | Dando certo                                                    | Dando errado                                                        |
+| ------------------- | ------------------------------------------------------------------------- | ------------------------ | --------- | -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Largada**         | sempre, antes da volta 1                                                  | Arriscar por dentro      | arriscado | ganha 0,45 s e ataca melhor na volta 1 (até 2 posições)        | perde 0,2 s; pode tocar no vizinho de grid (e ser punido) ou bater  |
+|                     |                                                                           | Ir por fora              | moderado  | ganha 0,3 s e ataca um pouco melhor                            | perde 0,2 s                                                         |
+|                     |                                                                           | Segurar a posição        | seguro    | defende melhor e erra a metade na volta 1                      | perde 0,15 s                                                        |
+| **Ataque**          | colado no carro da frente (até 0,5 s)                                     | Mergulhar na freada      | arriscado | passa o rival nesta volta                                      | perde 0,25 s; pode rodar, tocar no rival ou bater                   |
+|                     |                                                                           | Esperar o erro do rival  | seguro    | o rival erra (1,4 s) e abre a porta                            | nada: segue atrás e poupa pneu                                      |
+|                     |                                                                           | Usar o vácuo             | moderado  | passa na reta, sem toque                                       | perde 0,3 s e gasta um pouco mais de pneu                           |
+| **Defesa**          | carro mais rápido colado atrás (até 0,5 s)                                | Fechar a porta           | arriscado | segura a posição nesta volta                                   | perde a posição e 0,2 s; pode haver toque e punição, rodada, batida |
+|                     |                                                                           | Ceder para não bater     | seguro    | entrega a posição sem perder tempo, poupando o pneu            | não tem como dar errado                                             |
+| **Chuva começando** | a pista passa de seca a úmida (categorias com clima variável)             | Parar para trocar o pneu | seguro    | parada limpa, meio segundo mais rápida, com o pneu de chuva    | a parada sai 3,5 s mais lenta                                       |
+|                     |                                                                           | Arriscar na pista        | arriscado | por 2 voltas o pneu de seco perde só 35% do que perderia       | perde 1,5 s; roda (40% dos erros) ou bate (8%)                      |
+| **Última volta**    | com um carro a até 0,6 s (ou sempre, se a corrida teve menos de 2 lances) | Tudo ou nada             | arriscado | passa o carro da frente (até 1,2 s) ou faz uma volta no limite | perde 0,3 s; pode rodar, tocar ou bater                             |
+|                     |                                                                           | Garantir os pontos       | seguro    | defende melhor e quase não erra                                | um erro pequeno (0,4 s)                                             |
+| **Parada**          | a até 2 voltas da parada planejada (só nas categorias com boxes, no seco) | Parar agora (undercut)   | moderado  | parada limpa e 2 voltas de saída 0,25% mais rápidas            | a parada sai 2,5 s mais lenta                                       |
+|                     |                                                                           | Esticar (overcut)        | moderado  | 3 voltas a mais com 25% menos desgaste e pista livre           | 3 voltas 0,5% mais lentas até a parada                              |
+
+Na tela, a coluna "Risco" aparece como o tamanho do prejuízo, logo abaixo da chance: "Se errar: perde pouco" (seguro), "Se errar: perde posição" (moderado) ou "Se errar: pode abandonar" (arriscado). A opção que não tem como dar errado mostra "Sem risco".
+
+Na parada o jogador também escolhe o composto (respeitando a regra dos dois compostos).
+
+- **A chance** é `sigmoide(base da opção + termos)`, limitada a 5%–97%, e é a mesma conta que resolve o lance. Entram: os atributos do piloto em relação ao nível do grid da categoria (e, nas disputas, os do rival), a vantagem de ritmo em pista livre (pneus, composto, dano, combustível), a dificuldade de ultrapassar e a sensibilidade a motor da pista, a diferença de motor, a equipe de box, a confiança, a umidade da pista com a nota de chuva de cada um, e os talentos e defeitos de nascença. "Esperar o erro" depende só do rival: consistência, concentração, pneus dele no limite e chuva. A tela mostra os fatores que mais pesam, em pontos percentuais.
+- **Errar tem consequência.** Além do tempo perdido, parte dos erros vira rodada, toque no rival ou batida. O toque de um lance custa 1 s e dano ao jogador e 0,5 s ao rival; em 40% deles os comissários punem o jogador (5 s e 1 ponto; se o rival abandonou, 10 s, 2 pontos e 3 posições no próximo grid); 12% tiram alguém da corrida. A chance de toque cai com a leitura de corrida e sobe com a rivalidade e com o temperamento (esquentado × 1,4; piloto limpo × 0,7).
+- **Rivalidade.** Todo toque soma à rivalidade com o outro piloto (+15; +25 com abandono), como nas disputas de sempre. O toque num lance fica registrado no save (com quem, quando, em que lance, e se a rivalidade nasceu ali), para a Fase 5 usar; quando a rivalidade é nova, o piloto recebe a mensagem "Rivalidade nova".
+- **Orçamento.** A largada sempre. No meio da corrida, no máximo dois lances de ataque ou defesa, com um intervalo de 30% da corrida entre dois lances (pelo menos 4 voltas, contadas também da largada); chuva e parada, uma vez cada. A última volta fecha a conta, inclusive numa relargada. Nunca mais de quatro, nunca dois na mesma volta, e nenhum atrás do safety car ou junto de uma ordem de equipe: uma corrida que termina atrás do safety car pode ficar só com o lance da largada (no simulador, 10 de 7.206 corridas completas).
+- **Ataque que dá certo.** O jogador passa o rival do lance naquela volta, mesmo que o rival tenha acabado de ultrapassar outro carro (aí o jogador passa os dois). Só não passa se o rival abrir mais de 1,5 s na volta; a tarja diz isso.
+- **Estilo do piloto.** Vai de 0 (cauteloso) a 100 (agressivo): `50 + 0,4 × (ultrapassagem − defesa) + 0,3 × (velocidade − consistência) + 0,2 × (confiança − 50)`, mais 16 para o esquentado, menos 12 para o piloto limpo, e ±12 pelo ritmo de corrida escolhido. Quando o jogador não decide (simular direto ou "Deixar com o piloto"), o piloto pega a opção mais ousada cuja chance o estilo aceita: a arriscada com 75% (cauteloso) a 45% (agressivo) de chance; a moderada com 55% a 30%. Não há sorteio na escolha.
+- **Sorte.** O desfecho de cada lance tem um sorteio próprio, que não mexe na sorte dos outros carros: a mesma semente e as mesmas escolhas dão a mesma corrida.
+
+Calibragem (`npm run calibrate`, as mesmas 2.160 corridas disputadas com quatro posturas): ler os números e arriscar com 60% de chance ou mais rende 5,4 pontos por corrida; ficar sempre na opção segura, 5,3; o estilo do piloto, 5,3; arriscar sempre, 4,6, com 7% de abandonos contra 4%. Arriscar compensa quando a chance é alta, e a chance sobe com a qualidade do piloto: na opção arriscada, o acerto vai de 29% (piloto mais de 8 pontos abaixo do grid) a mais de 50% (8 pontos acima).
+
+### Rádio do engenheiro
+
+Uma faixa curta, só para o carro do jogador, no máximo uma mensagem por volta e nada disso vai para o save: pneu acabado ("O pneu acabou: já perdemos 0,4 s por volta, e vai piorar."), pneu no limite com a janela de parada ("Traseiro esquerdo no limite. Janela de parada: voltas 35 a 38."), rival próximo que parou ("… parou. Dá para tentar o undercut."), chuva prevista para daqui a duas voltas, janela de parada aberta e carro de trás encostando. O pneu citado é o mais exigido de cada pista; o modelo tem um desgaste só por carro.
 
 ### Transmissão da corrida
 
@@ -197,8 +257,8 @@ A corrida é mostrada num circuito visto de cima. O que se vê é a simulação,
 - **Circuitos.** Os 14 autódromos (usados da Fórmula Júnior ao Grand Prix Mundial) reproduzem o traçado da pista real que inspira cada um, com nome fictício: curvas, retas e proporções reais, sentido da corrida, posição da largada e boxes do lado de dentro. O Circuito do Oito cruza a si mesmo num viaduto. As duas retas mais longas são marcadas como zonas de ultrapassagem (marcação visual; a disputa em si continua sendo a do motor). Dos 20 kartódromos, 19 reproduzem o traçado de um kartódromo real (dados do OpenStreetMap), também com nome fictício e na cidade do kartódromo de referência. No Brasil: Vale do Sol (Granja Viana, Cotia), Lagoa Azul (Londrina), Vale dos Sinos (Velopark, Nova Santa Rita), Planalto (Brasília), Represas (Interlagos, São Paulo), Litoral Norte (Joinville), Triângulo (Uberlândia), Pampas (Tarumã, Viamão), Cerrado Paulista (Birigui) e Guanabara (Guapimirim). No mundial: Lonato, Genk, Le Mans, Zuera, Wackersdorf, Kristianstad, PF International (com a ponte), Portimão e Franciacorta. O Circuito do Oásis (Al Ain) não tem traçado mapeado e continua com um traçado próprio, sempre o mesmo, gerado a partir das características da pista. Nos kartódromos reais os boxes ficam do lado da reta em que há espaço (quase sempre o de fora), e não há zonas de ultrapassagem marcadas. Em todos há zebras nas curvas, brita ou asfalto de escape do lado de fora, pit lane com os boxes das equipes, linha de chegada, grid, setores, arquibancadas e árvores.
 - **Veículos.** Cada categoria tem o seu, e o tamanho cresce a cada degrau: kart 4 tempos de chassi tubular (Kart Regional), kart 125 cc carenado (Kart Nacional), kart 125 cc com câmbio, radiador e carenagem larga (Kart Internacional), Monoposto Júnior (compacto, asas simples), Monoposto Sprint (asa dianteira de três elementos, barbatana), Monoposto Elite (asa traseira larga, pneus traseiros largos) e Monoposto Grand Prix (efeito solo, asa de quatro elementos, assoalho largo). A pintura é a cor da equipe com um desenho de contraste; nos karts, o macacão do piloto também leva a cor da equipe. O capacete tem a cor do piloto e o carro leva o número dele. É só aparência: desempenho e regras de cada categoria não mudam.
 - **Movimento.** Cada carro cruza a linha no tempo que o motor calculou. Dentro da volta, todos seguem o mesmo perfil de velocidade do circuito (freiam para as curvas, aceleram nas retas); quem faz a volta mais rápida anda mais depressa em todos os pontos. A ultrapassagem acontece onde as duas trajetórias se cruzam, com os carros lado a lado.
-- **Ritmo da reprodução.** Em 1×, uma volta de referência dura 24 segundos na tela num kartódromo e de 24 a 40 segundos num autódromo (quanto mais longo o circuito, mais longa a volta na tela); em 8×, um oitavo disso. O relógio da corrida, as diferenças e a velocidade em km/h são os reais.
-- **Decisões.** O motor simula a volta seguinte quando o líder termina a atual. Ritmo e pedido de parada valem para a próxima volta a ser simulada; a tela diz qual é ("Entrar nos boxes no fim da volta N").
+- **Ritmo da reprodução.** A corrida inteira cabe em até 165 segundos de tela em 1× (uma corrida de kart de 22 voltas dá 7,5 s por volta; uma do Grand Prix Mundial, de 60, 2,75 s), sem nunca passar do ritmo natural da pista (24 s por volta num kartódromo, até 40 s num autódromo) nem ficar abaixo de 2,4 s por volta; em 8×, um oitavo disso. Com as luzes da largada e os desfechos dos lances, uma corrida jogada leva menos de 4 minutos em qualquer pista. O relógio da corrida, as diferenças e a velocidade em km/h são os reais.
+- **Decisões.** O motor simula a volta seguinte quando o líder termina a atual. Ritmo e pedido de parada valem para a próxima volta a ser simulada; a tela diz qual é ("Entrar nos boxes no fim da volta N"). O lance decisivo vale para a volta seguinte inteira: a corrida espera a resposta parada nesse instante, e o desfecho aparece na tarja quando a volta é mostrada.
 - **Eventos.** Largada parada com cinco luzes; parada com o carro entrando no pit lane e parando no box da equipe pelo tempo do serviço; rodada (o carro gira e perde o tempo que perdeu); abandono (o carro sai da pista e é recolhido); safety car à frente do líder com o pelotão em fila única; bandeira vermelha (a corrida para, os carros voltam ao grid e há relargada parada, com troca de pneus livre); chuva e pista molhada.
 - **Comandos à mão.** Enquanto a corrida do jogador está valendo, uma barra fixa no rodapé traz os três ritmos de pilotagem, pausar ou continuar, a velocidade (1× a 8×) e a posição e a volta do piloto; some na bandeirada. São os mesmos comandos dos cartões da tela, que continuam lá com as explicações e a estratégia de boxes.
 - **Corrida interrompida.** Se a página é recarregada durante a prova, a tela do fim de semana oferece continuar da volta que estava na tela ou ir direto ao resultado. A corrida é refeita com os comandos que o jogador já tinha dado; o que faltava, no caso de "Ver resultado", fica com o engenheiro automático.
@@ -216,7 +276,7 @@ base   = referência da pista × fator da categoria × (1 + 9% × umidade)
 perdas = (100 − nota do piloto) × 0,022%
        + (100 − nota do carro)  × 0,014% × peso do carro na categoria
        − acerto × 0,7%
-       + 1,4% × desgaste² + penhasco + composto + pneu errado
+       + curva do pneu (ver Pneus) + composto + pneu errado
        + combustível + dano + modo + fase do piloto
 volta  = base × (1 + perdas) × (1 + N(0,1) × σ)
 ```
@@ -542,6 +602,18 @@ Com o nascimento, as 50 carreiras da linha de base nascem diferentes (aptidões,
 | Excelente (talento 8) | 70% (62%)                    | 1,14 (0,80)          | 1,10 (0,86)                      | -                        |
 
 Mais carreiras chegam ao topo porque os nascimentos espalham os pilotos: a média das aptidões continua 50, mas os bem-nascidos vão mais longe do que os mal-nascidos ficam para trás. As temporadas sem vaga sobem porque a família ajuda menos e por menos tempo. Com o robô mediano, a nascença alta chega em média ao degrau 5,4 (19% ao topo, 1,6 temporada sem vaga) e a baixa ao 4,5 (0% ao topo, 3,9 sem vaga); com 200 sementes, 5,35 contra 4,45.
+
+### Fase 4: corrida com lances e pneus
+
+A curva de pneus vale para todos os carros e os lances, só para o piloto do jogador; o robô do simulador não responde aos lances, então o estilo do piloto decide por ele. Os relatórios completos estão em `docs/simulador/fase-4*.txt`; a seção 9 de cada um mede os lances (quantos por corrida, acerto por tipo e por faixa de qualidade do piloto).
+
+| Robô                  | Chegam ao Grand Prix Mundial | Títulos por carreira | Temporadas sem vaga por carreira | Lances por corrida completa | Chance na opção arriscada (faixa baixa → alta) | Lances arriscados vencidos por corrida (baixa → alta) |
+| --------------------- | ---------------------------- | -------------------- | -------------------------------- | --------------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| Mediano (talento 0)   | 8% (Fase 3: 8%)              | 0,34 (0,38)          | 0,42 (0,60)                      | 3,36                        | 40% → 54%                                      | 0,42 → 0,97                                           |
+| Bom (talento 4)       | 38% (24%)                    | 0,58 (0,40)          | 0,50 (0,42)                      | 3,32                        | 43% → 56%                                      | 0,51 → 1,06                                           |
+| Excelente (talento 8) | 74% (58%)                    | 1,12 (0,74)          | 0,20 (0,26)                      | 3,23                        | 46% → 59%                                      | 0,57 → 1,16                                           |
+
+As faixas são terços das corridas pela vantagem do piloto sobre o grid (nota geral menos o nível da categoria). Piloto melhor vê chances maiores e vence mais lances arriscados; por isso os lances pesam mais para quem joga bem: com talento 0 o topo fica onde estava, e com talento 4 e 8 mais carreiras chegam lá e ganham títulos (perto do que era na Fase 2, antes de a economia apertar). A "taxa de acerto geral" quase não muda entre as faixas (56% a 63%), porque o estilo do piloto escolhe opções seguras quando a chance é baixa. No padrão, 54% das corridas completas têm 4 lances, 28% têm 3 e 18% têm 2; 10 de 7.206 terminam atrás do safety car e ficam só com o da largada. Cada carreira ganha em média 3 rivalidades novas em 15 temporadas, e há menos de 1 toque a cada 100 lances.
 
 ## Limitações conhecidas e próximos passos
 

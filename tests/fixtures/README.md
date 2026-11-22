@@ -24,5 +24,6 @@ mesmo envelope que o jogo exporta, com checksum.
 | `v5`  | Fase 1 da grande atualização | As mesmas situações da `v4`, com o retrato das temporadas (`seasonTrend`). Sem nascimento: abrem com `birth: null`. |
 | `v6`  | Fase 2 da grande atualização | As mesmas situações, agora com nascimento sorteado, e `nascimento-mudanca-pendente`: estreante nascido no interior depois da segunda etapa, com a mudança para São Paulo pendente e o traço de estreia revelado. |
 | `v7`  | Fase 3 da grande atualização | As mesmas situações da `v6`, com o polo em que o piloto mora, o investidor, a vaquinha, o trabalho paralelo e a conta das temporadas sem porta, já sob a economia nova (vaga de aluguel paga, viagens, equipamento, patrocinadores em escada). |
+| `v8`  | Fase 4 da grande atualização | As mesmas situações da `v7`, com os lances decisivos de cada corrida (`race.moments`) e o registro dos toques que criaram rivalidade (`relations.rivalryLog`), já sob a curva de pneus nova. Nesses o robô não responde aos lances (o piloto decide pelo estilo). E `lances-com-toque-e-rivalidade`: estreante que respondeu a todos os lances da primeira etapa pela opção mais arriscada e tocou num rival (a rivalidade nasce ali), e na segunda etapa deixou o piloto decidir. |
 
 Os arquivos `fase0-*` e os da `v4` em diante estão sem indentação, para pesarem menos. Abrem do mesmo jeito.

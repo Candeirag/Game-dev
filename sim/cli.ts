@@ -3,10 +3,14 @@ import { accessSync, constants, statSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { counted } from '@/domain/text';
 import { CAREER_SCHEMA_VERSION } from '@/domain/schemas';
+import type { MomentPolicy } from './policy';
 import { formatReport } from './report';
 import { DEFAULT_SIM_OPTIONS, type SimOptions, type SimResult, runSimulation } from './run';
 
-export interface CliOptions extends SimOptions {
+/** As políticas de lances que `--moments` aceita, na ordem em que a ajuda as mostra. */
+const MOMENT_POLICIES: readonly MomentPolicy[] = ['style', 'safe', 'bold'];
+
+export interface CliOptions extends Required<SimOptions> {
   /** Escreve os dados completos (uma linha por temporada de cada carreira) em JSON, no lugar do relatório. */
   json: boolean;
   /** Arquivo em que o relatório (ou o JSON) também é gravado. */
@@ -22,6 +26,9 @@ Uso: npm run sim -- [opções]
   --seasons N      temporadas por carreira (padrão: ${DEFAULT_SIM_OPTIONS.seasons})
   --first-seed N   semente da primeira carreira (padrão: ${DEFAULT_SIM_OPTIONS.firstSeed})
   --talent N       bônus de talento do piloto, de 0 a 12 (padrão: ${DEFAULT_SIM_OPTIONS.talent}; 4 = bom jogador, 8 = excelente)
+  --moments P      como o robô responde aos lances decisivos: ${MOMENT_POLICIES.join(', ')} (padrão: ${DEFAULT_SIM_OPTIONS.moments};
+                   style = não responde, o estilo do piloto decide; safe = sempre a opção
+                   mais segura; bold = sempre a mais arriscada)
   --json           escreve os dados completos em JSON, no lugar do relatório
   --out ARQUIVO    grava também a saída neste arquivo
   --help           mostra esta ajuda
@@ -67,6 +74,11 @@ export function parseArgs(argv: readonly string[]): CliOptions {
       // Só algarismos: "0x2", "1e0" e " 5" não são o que parecem.
       if (!/^\d+$/.test(text) || number < min || number > max) throw new Error(`${name} precisa ser um número inteiro de ${min} a ${max} (veio "${text}").`);
       options[key] = number;
+    } else if (name === '--moments') {
+      const text = value();
+      const policy = MOMENT_POLICIES.find((p) => p === text);
+      if (!policy) throw new Error(`${name} precisa ser ${MOMENT_POLICIES.slice(0, -1).join(', ')} ou ${MOMENT_POLICIES.at(-1)} (veio "${text}").`);
+      options.moments = policy;
     } else if (name === '--json') options.json = true;
     else if (name === '--out') options.out = value();
     else if (name === '--help' || name === '-h') options.help = true;

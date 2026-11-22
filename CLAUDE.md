@@ -92,8 +92,9 @@ O Playwright usa o Chromium. Em uma máquina nova: `npx playwright install chrom
 Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
 
 Simulador: `npm run sim -- --seeds 50 --seasons 15` (o padrão; cerca de 25 s). Outras opções:
-`--first-seed N`, `--talent N` (0 = o robô puro; 4 = bom jogador; 8 = excelente), `--json`,
-`--out arquivo`, `--help`. O relatório vai para a saída padrão e não tem data nem duração: com
+`--first-seed N`, `--talent N` (0 = o robô puro; 4 = bom jogador; 8 = excelente),
+`--moments style|safe|bold` (como o robô responde aos lances; o padrão, `style`, deixa o estilo do
+piloto decidir), `--json`, `--out arquivo`, `--help`. O relatório vai para a saída padrão e não tem data nem duração: com
 os mesmos argumentos e o mesmo código, sai sempre igual.
 
 ## O que não pode mudar sem querer
@@ -106,7 +107,7 @@ os mesmos argumentos e o mesmo código, sai sempre igual.
 - **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
   estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
   (`tests/names.test.ts` trava a lista).
-- **Saves.** Os de `tests/fixtures/` (versões 1 a 7) têm de continuar abrindo e jogáveis. Os
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 8) têm de continuar abrindo e jogáveis. Os
   das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
@@ -132,6 +133,20 @@ simulador, que só usam a API pública do motor).
   `SPONSOR_LADDER`, `ACADEMY_DOOR`, `INVESTOR`, `CROWDFUND`, `SIDE_JOBS`); preços das vagas em
   `src/data/categories.ts`. Regra de ouro: sempre existe uma saída; `tests/economy.test.ts` e a
   seção 8 do simulador conferem que ninguém fica mais de duas temporadas sem porta.
+- Corrida com lances e pneus (Fase 4): os lances decisivos (largada, ataque, defesa, chuva, última
+  volta, parada) em `src/engine/simulation/race/moments.ts`; o rádio do engenheiro em `radio.ts`; o
+  ritmo em pista livre em `pace.ts`; a curva de desgaste em `performance.ts` (`tyrePaceLoss`,
+  `tyreState`) e a janela de parada em `strategy.ts` (`pitWindow`). Números em `balance.ts`
+  (`TYRE_CURVE`, `RACE_MOMENTS`, `RACE_CONTACT`, `ENGINEER_RADIO`); textos em
+  `src/data/raceMoments.ts`. Três regras que não podem quebrar: o motor nunca espera a resposta (sem
+  `PlayerRaceInput.moment`, o piloto decide pelo estilo: é o "simular até o fim", o robô e os
+  testes; quem pausa é a interface, por `answerMoment` na store); a chance mostrada é a mesma que
+  resolve o lance; e o desfecho tem sorteio próprio (`'moment'`), que não mexe na sorte dos outros
+  carros. Só o piloto do jogador tem lances. Vão para o save os lances de cada corrida
+  (`race.moments`) e o registro dos toques que criam rivalidade (`relations.rivalryLog`, para a
+  Fase 5); o rádio não vai. Testes: `tests/tyres.test.ts`, `tests/moments.test.ts`,
+  `tests/pacing.test.ts` e a seção 9 do simulador; a calibragem dos lances está em
+  `tests/calibration/moments.calib.ts` (`npm run calibrate`).
 - Toda aleatoriedade vem de `src/engine/rng.ts`, com semente (regra 4).
 - Dinheiro só por `src/domain/money.ts` (motor: `money(career, valor)`; interface:
   `formatMoney`). Plurais por `src/domain/text.ts`. Nome de categoria em frase só por

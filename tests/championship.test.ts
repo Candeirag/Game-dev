@@ -69,6 +69,7 @@ function round(n: number, results: [string, string, number, number][]): RoundRec
       virtualSafetyCars: 0,
       redFlags: 0,
       teamOrders: [],
+      moments: [],
       entries: results.map(([d, t, pos, grid]) => ({ ...entry(d, t, pos, grid), points: pointsFor(entry(d, t, pos, grid), null) })),
     },
   };

@@ -55,13 +55,24 @@ interface FrameStats {
   widest: number;
 }
 
+/** Duração de uma volta de referência na tela, em segundos, em 1× (o ritmo da transmissão). */
+const lapSeconds = (race: ReturnType<typeof fieldRace>) => lapSecondsFor(race.timeline.circuitLength, race.timeline.totalLaps);
+
+/**
+ * Passo médio: quanto um carro anda de um quadro para o outro, em unidades de mundo, na velocidade
+ * dada. É a régua dos saltos. Desde a Fase 4 a corrida inteira cabe em menos de três minutos, então
+ * o passo depende do número de voltas (um kart de 22 voltas anda 12,6 unidades por quadro em 1×; um
+ * carro do topo, em 55 voltas, 32) e um limite fixo em unidades deixou de fazer sentido.
+ */
+const stride = (race: ReturnType<typeof fieldRace>, speed: number) => (race.circuit.length / (lapSeconds(race) * 60)) * speed;
+
 /** Reproduz um trecho da corrida a 60 quadros por segundo, na velocidade dada. */
 function play(race: ReturnType<typeof fieldRace>, from: number, to: number, speed: number): FrameStats {
   const { timeline, circuit } = race;
   const memory = createSceneMemory();
   const size = vehicleFor(timeline.categoryId);
   const dt = 1 / 60;
-  const rate = (timeline.referenceLap / lapSecondsFor(timeline.circuitLength)) * speed;
+  const rate = (timeline.referenceLap / lapSeconds(race)) * speed;
   const restarts = timeline.suspensions.filter((s) => !s.final).map((s) => s.time);
   const stats: FrameStats = { frames: 0, worstJump: 0, pairs: 0, overlapping: 0, widest: 0 };
   let previous = new Map<string, { x: number; y: number }>();
@@ -97,31 +108,44 @@ describe('formação dos carros na pista', () => {
   it('largada e primeiras voltas de kart: sem saltos, sem sobreposição, todos dentro da pista', () => {
     const race = fieldRace('kart-regional', 'vale-do-sol', 11);
     const stats = play(race, 0, race.timeline.laps[2]!.end, 1);
-    expect(stats.frames).toBeGreaterThan(3000);
-    // Em 1×, a volta dura 24 s: um carro anda cerca de 1,5 unidade por quadro (2 nas retas).
-    expect(stats.worstJump).toBeLessThan(4.5);
+    // Três voltas inteiras, a 60 quadros por segundo (7,5 s por volta numa corrida de 22).
+    expect(stats.frames).toBeGreaterThan(3 * lapSeconds(race) * 60 * 0.95);
+    // Sem saltos: nas retas o carro anda 1,4 passo médio por quadro; mais que 1,6 seria um pulo na tela.
+    expect(stats.worstJump).toBeLessThan(stride(race, 1) * 1.6);
     expect(stats.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('kart-regional').width / 2);
     // Com 20 karts em 5 segundos de pista, a formação em duas filas quase elimina a sobreposição.
     expect(stats.overlapping / stats.pairs).toBeLessThan(0.004);
   });
 
+  // Corrida molhada do topo, com safety car e duas bandeiras vermelhas com relargada. Ninguém para
+  // nos boxes em bandeira verde nesta corrida: a saída dos boxes é o caso do `it.todo` mais abaixo.
+  const wetRace = () => fieldRace('f1', 'suzuka', 147, 1);
+
   it('F1 com chuva, safety car e relargada: a imagem continua contínua em 1× e em 8×', () => {
-    const race = fieldRace('f1', 'suzuka', 41, 1);
+    const race = wetRace();
     expect(race.final.safetyCars).toBeGreaterThan(0);
     expect(race.final.redFlags).toBeGreaterThan(0);
-    const slow = play(race, 0, race.timeline.laps[3]!.end, 1);
-    expect(slow.worstJump).toBeLessThan(5);
-    expect(slow.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('f1').width / 2);
-    expect(slow.overlapping / slow.pairs).toBeLessThan(0.006);
+    expect(race.timeline.suspensions.some((s) => !s.final)).toBe(true);
+    const inside = CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('f1').width / 2;
+    // Largada e primeiras voltas, com o pelotão ainda junto.
+    const opening = play(race, 0, race.timeline.laps[3]!.end, 1);
+    expect(opening.worstJump).toBeLessThan(stride(race, 1) * 1.8);
+    expect(opening.widest).toBeLessThanOrEqual(inside);
+    expect(opening.overlapping / opening.pairs).toBeLessThan(0.006);
+    // A corrida inteira em 1×: safety car, bandeiras vermelhas e relargadas.
+    const slow = play(race, 0, race.timeline.endTime!, 1);
+    expect(slow.frames).toBeGreaterThan(5000);
+    expect(slow.worstJump).toBeLessThan(stride(race, 1) * 1.8);
+    expect(slow.widest).toBeLessThanOrEqual(inside);
     // Em 8× cada quadro avança oito vezes mais; o limite de deslocamento cresce na mesma proporção.
     const fast = play(race, 0, race.timeline.endTime!, 8);
-    expect(fast.frames).toBeGreaterThan(5000);
-    expect(fast.worstJump).toBeLessThan(5 * 8);
-    expect(fast.widest).toBeLessThanOrEqual(CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('f1').width / 2);
+    expect(fast.frames).toBeGreaterThan((race.timeline.totalLaps * lapSeconds(race) * 60 * 0.95) / 8);
+    expect(fast.worstJump).toBeLessThan(stride(race, 8) * 1.8);
+    expect(fast.widest).toBeLessThanOrEqual(inside);
   });
 
   it('atrás do safety car os carros ficam em fila única', () => {
-    const race = fieldRace('f1', 'suzuka', 41, 1);
+    const race = wetRace();
     const sc = race.timeline.laps.find((l) => l.flag === 'sc' && race.timeline.laps[l.lap - 2]?.flag === 'sc');
     expect(sc).toBeDefined();
     const memory = createSceneMemory();
@@ -140,6 +164,17 @@ describe('formação dos carros na pista', () => {
       expect(gap, `fila ${i}`).toBeGreaterThanOrEqual(vehicleFor('f1').length * 1.02);
       expect(Math.abs(queue[i]!.lateral - queue[i - 1]!.lateral), `fila ${i}`).toBeLessThan(vehicleFor('f1').width);
     }
+  });
+
+  // No ritmo da Fase 4 a rampa de saída dos boxes (38 unidades) passa em pouco mais de um quadro (o
+  // carro anda 32 por quadro em 1×): o último quadro "no pit lane" pega o carro ainda longe do eixo.
+  // A cena o traz para a borda da pista antes de seguir para a linha de corrida, em vez de desenhá-lo
+  // fora do asfalto por vários quadros. Corrida seca com paradas em bandeira verde.
+  it('saindo dos boxes no ritmo da transmissão, o carro volta à pista sem ser desenhado fora do asfalto', () => {
+    const race = fieldRace('f1', 'suzuka', 3);
+    expect(race.final.cars.some((c) => c.pitStops > 0)).toBe(true);
+    const inside = CIRCUIT.TRACK_WIDTH / 2 - vehicleFor('f1').width / 2;
+    for (const speed of [1, 8]) expect(play(race, 0, race.timeline.endTime!, speed).widest, `${speed}×`).toBeLessThanOrEqual(inside + 1e-9);
   });
 
   it('a sigla do piloto usa só letras', () => {

@@ -75,6 +75,18 @@ const RECIPES: Readonly<Record<string, () => CareerState>> = {
     }
     throw new Error('Nenhuma semente com nascimento no interior e traço de estreia.');
   },
+  /**
+   * Lances decisivos (Fase 4): estreante que respondeu a todos os lances da primeira etapa pela opção
+   * mais arriscada e tocou num rival (a rivalidade nasce ali e vai para o registro), e na segunda
+   * etapa não respondeu a nenhum: o piloto decidiu pelo estilo.
+   */
+  'lances-com-toque-e-rivalidade': () => {
+    for (let seed = 1; seed < 500; seed++) {
+      const c = playRound(newCareer(seed), { moments: 'bold' });
+      if (c.relations.rivalryLog.some((touch) => touch.fresh)) return playRound(c);
+    }
+    throw new Error('Nenhuma semente com toque num lance da primeira etapa.');
+  },
 };
 
 function executiveMidSeason(): CareerState {
@@ -174,5 +186,23 @@ describe('saves de exemplo', () => {
     const handover = importCareer(readFileSync(`${CURRENT}/sucessao-pendente.json`, 'utf8'));
     expect(handover.succession).toMatchObject({ cause: 'handover' });
     expect(handover.succession?.heirs.length).toBeGreaterThan(0);
+  });
+
+  it('e os lances decisivos: respondidos pelo jogador, decididos pelo estilo e um toque que criou rivalidade', () => {
+    const career = importCareer(readFileSync(`${CURRENT}/lances-com-toque-e-rivalidade.json`, 'utf8'));
+    const [answered, byStyle] = career.rounds.map((round) => round.race.moments);
+    expect(answered!.length).toBeGreaterThan(0);
+    expect(answered!.every((moment) => !moment.auto)).toBe(true);
+    expect(byStyle!.length).toBeGreaterThan(0);
+    expect(byStyle!.every((moment) => moment.auto)).toBe(true);
+    const touch = answered!.find((moment) => moment.contact);
+    expect(touch?.rivalId).toBeDefined();
+    expect(career.relations.rivalryLog[0]).toMatchObject({ driverId: touch!.rivalId, season: 1, round: 1, lap: touch!.lap, kind: touch!.kind, fresh: true });
+    expect(career.relations.rivalries[touch!.rivalId!]).toBeGreaterThan(0);
+    // Nos outros saves o robô não responde aos lances: as corridas que o piloto disputou têm os do estilo.
+    const atTheGrid = importCareer(readFileSync(`${CURRENT}/kart-na-largada.json`, 'utf8'));
+    const driven = atTheGrid.rounds.flatMap((round) => round.race.moments);
+    expect(driven.length).toBeGreaterThan(0);
+    expect(driven.every((moment) => moment.auto)).toBe(true);
   });
 });

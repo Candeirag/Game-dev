@@ -35,7 +35,7 @@ import { partnerMoraleEffect } from '../dynasty/family';
 import { hasPersonalProperty, settleAssetsRound } from '../economy/assets';
 import { post, settleRound } from './economy';
 import { economyTrainingFactor } from './hubs';
-import { BIRTH } from '@/config/balance';
+import { BIRTH, HISTORY_LIMITS } from '@/config/balance';
 import { birthTrainingFactor, interiorWeighs, sponsorSatisfactionBonus } from '../birth/effects';
 import { moveEventFor } from '../birth/move';
 import { revealTraits } from '../birth/reveal';
@@ -211,7 +211,31 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
       }
     }
   }
-  career = { ...career, relations: { teamTrust: clamp(teamTrust), teammate: clamp(teammate), rivalries } };
+  // Fase 4: um toque num lance decisivo fica registrado (com quem, quando, em que lance), para a
+  // Fase 5 usar. A intensidade já subiu acima, pelo evento de toque; aqui só se guarda a origem.
+  const rivalryLog = [...career.relations.rivalryLog];
+  for (const moment of record.race.moments) {
+    if (!moment.contact || !moment.rivalId) continue;
+    const retired = record.race.events.some(
+      (e) => e.type === 'dnf' && e.lap === moment.lap && e.otherDriverId !== undefined && (e.driverId === player.id || e.otherDriverId === player.id),
+    );
+    const fresh = (career.relations.rivalries[moment.rivalId] ?? 0) <= 0;
+    rivalryLog.push({ driverId: moment.rivalId, season, round, lap: moment.lap, kind: moment.kind, retired, fresh });
+    if (fresh) {
+      const rival = career.drivers.find((d) => d.id === moment.rivalId);
+      if (rival)
+        msg(
+          `rival-${rival.id}`,
+          'race',
+          `Rivalidade nova: ${fullName(rival)}`,
+          `O toque na volta ${moment.lap} não foi esquecido. Daqui em diante, as disputas com ${fullName(rival)} ficam mais tensas e um novo toque é mais provável.`,
+        );
+    }
+  }
+  career = {
+    ...career,
+    relations: { teamTrust: clamp(teamTrust), teammate: clamp(teammate), rivalries, rivalryLog: rivalryLog.slice(-HISTORY_LIMITS.RIVALRY_LOG) },
+  };
 
   /* 5. Patrocinadores */
   const position = me?.position ?? standings.length;

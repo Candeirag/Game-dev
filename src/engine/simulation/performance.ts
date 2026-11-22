@@ -3,6 +3,7 @@
  * volta, chance de erro e desgaste de pneus. São funções puras, sem sorte; o
  * ruído é aplicado por quem chama, usando o RNG da sessão.
  */
+import { TYRE_CURVE } from '@/config/balance';
 import type { CarPerformance, Condition, DriverAttributes, Injury, SessionWeather, Track, TyreCompound } from '@/domain/schemas';
 import { CONDITION, RACE, SIM, TYRES } from './constants';
 
@@ -40,6 +41,8 @@ export interface LapContext {
   setupScore: number;
   /** Desgaste atual dos pneus, de 0 a 1. */
   tyreWear: number;
+  /** Composto em uso (define a curva de desgaste). Sem ele, vale a curva do médio. */
+  compound?: TyreCompound;
   /** Ajuste percentual do modo ou da abordagem (negativo = mais rápido). */
   paceModifier: number;
 }
@@ -50,7 +53,7 @@ export function expectedLapTime(ctx: LapContext): number {
   const driverLoss = (100 - driverPaceRating(ctx.attributes, ctx.weather)) * SIM.DRIVER_RATING_TIME_FACTOR;
   const kartLoss = (100 - carRating(ctx.car, ctx.track)) * SIM.KART_RATING_TIME_FACTOR * (ctx.carFactor ?? 1);
   const setupGain = clamp(ctx.setupScore, 0, 1) * SIM.SETUP_MAX_GAIN;
-  const tyreLoss = SIM.TYRE_WEAR_TIME_PENALTY * clamp(ctx.tyreWear, 0, 1) ** 2;
+  const tyreLoss = tyrePaceLoss(ctx.compound ?? 'medium', ctx.tyreWear);
   return base * (1 + driverLoss + kartLoss - setupGain + tyreLoss + ctx.paceModifier);
 }
 
@@ -80,13 +83,47 @@ export function mechanicalFailureProbability(car: CarPerformance): number {
 }
 
 /**
- * Desgaste de pneu por volta. Uma boa gestão (100) desgasta 30% menos que o
+ * Quanto o piloto gasta de pneu: uma boa gestão (100) desgasta 30% menos que o
  * piloto médio; uma gestão ruim (0) desgasta 30% mais.
  */
+export function tyreManagementFactor(a: DriverAttributes): number {
+  return TYRE_CURVE.MANAGEMENT_WORST - (a.tyreManagement / 100) * TYRE_CURVE.MANAGEMENT_RANGE;
+}
+
+/** Desgaste de pneu por volta (o acumulado vai de 0, novo, a 1, na lona). */
 export function tyreWearPerLap(a: DriverAttributes, track: Track, weather: SessionWeather, modeMultiplier: number, weekendFactor: number): number {
-  const skillFactor = 1.3 - (a.tyreManagement / 100) * 0.6;
   const wetFactor = 1 - (1 - SIM.WET_TYRE_WEAR_MULTIPLIER) * weather.wetness;
-  return SIM.TYRE_WEAR_PER_LAP * track.tyreWear * skillFactor * wetFactor * modeMultiplier * weekendFactor;
+  return SIM.TYRE_WEAR_PER_LAP * track.tyreWear * tyreManagementFactor(a) * wetFactor * modeMultiplier * weekendFactor;
+}
+
+/** Desgaste a partir do qual o composto "cai do penhasco". */
+export function tyreCliff(compound: TyreCompound): number {
+  return TYRE_CURVE.COMPOUNDS[compound].cliff;
+}
+
+/**
+ * Perda de ritmo do pneu, em fração do tempo de volta, no ponto da vida em que ele está. A curva
+ * tem três trechos: o pneu novo perde o pico de aderência logo nas primeiras voltas (pouco), fica
+ * quase estável por quase toda a vida e, passado o penhasco do composto, perde segundos por volta.
+ */
+export function tyrePaceLoss(compound: TyreCompound, wear: number): number {
+  const curve = TYRE_CURVE.COMPOUNDS[compound];
+  const w = clamp(wear, 0, 1);
+  const fade = curve.fade * Math.min(1, w / TYRE_CURVE.FADE_BY);
+  const plateau = curve.plateau * clamp((w - TYRE_CURVE.FADE_BY) / (curve.cliff - TYRE_CURVE.FADE_BY), 0, 1);
+  const drop = curve.drop * (Math.max(0, w - curve.cliff) / (1 - curve.cliff));
+  return fade + plateau + drop;
+}
+
+/** Estado do pneu para a tela e para o rádio: sempre texto junto da cor. */
+export type TyreState = 'new' | 'good' | 'worn' | 'limit' | 'gone';
+
+export function tyreState(compound: TyreCompound, wear: number): TyreState {
+  const cliff = tyreCliff(compound);
+  if (wear >= cliff) return 'gone';
+  if (wear >= cliff - TYRE_CURVE.LIMIT_MARGIN) return 'limit';
+  if (wear < TYRE_CURVE.FADE_BY) return 'new';
+  return wear < cliff * TYRE_CURVE.GOOD_UNTIL ? 'good' : 'worn';
 }
 
 /** Nota geral do piloto (0 a 100), usada só para exibição e para decisões da IA. */
@@ -159,12 +196,6 @@ export function tyreConditionEffect(compound: TyreCompound, wetness: number): { 
   }
   const dryness = Math.max(0, 0.5 - wetness);
   return { pace: dryness * 0.09, error: 1, wear: 1 + dryness * 3 };
-}
-
-/** Perda extra de um pneu além do penhasco (não se aplica ao kart, que não troca pneus). */
-export function tyreCliffPenalty(compound: TyreCompound, wear: number): number {
-  if (compound === 'kart') return 0;
-  return Math.max(0, wear - RACE.TYRE_CLIFF) * RACE.TYRE_CLIFF_PENALTY;
 }
 
 /** Perda pelo peso do combustível: proporcional ao que resta no tanque. */

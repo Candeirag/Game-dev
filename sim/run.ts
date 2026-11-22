@@ -7,12 +7,13 @@
  * último resultado. Por isso o relatório de duas execuções com os mesmos argumentos é idêntico,
  * e uma diferença entre duas versões do código é sempre efeito do código.
  */
-import type { CareerState, CategoryId, Offer } from '@/domain/schemas';
+import { MOMENT_KINDS, type CareerState, type CategoryId, type MomentKind, type MomentOutcome, type MomentRecord, type Offer } from '@/domain/schemas';
+import { RACE_MOMENTS } from '@/config/balance';
 import { BIRTH_TRAITS } from '@/data/birth';
 import { CATEGORIES, getCategory } from '@/data/categories';
 import type { PlayerBackground } from '@/data/rules';
 import * as engine from '@/engine';
-import { botOffseason, botTraining, playRound, resolvePending, withTalent, type BotDoor, type Choices } from './policy';
+import { botOffseason, botTraining, playRound, resolvePending, withTalent, type BotDoor, type Choices, type MomentPolicy, type RaceWatch } from './policy';
 
 /** Data fixa de criação das carreiras: o relógio não entra na simulação. */
 const CREATED_AT = '2027-01-01T00:00:00.000Z';
@@ -25,14 +26,20 @@ export interface SimOptions {
   firstSeed: number;
   /** Bônus de talento do piloto (0 = o robô puro; ver `withTalent`). */
   talent: number;
+  /**
+   * Como o robô responde aos lances decisivos (Fase 4). Sem valor, vale 'style': ele não responde e
+   * o estilo do piloto decide, como em "simular até o fim". 'safe' e 'bold' servem para comparar.
+   */
+  moments?: MomentPolicy;
 }
 
-export const DEFAULT_SIM_OPTIONS: SimOptions = { seeds: 50, seasons: 15, firstSeed: 1, talent: 0 };
+export const DEFAULT_SIM_OPTIONS: Required<SimOptions> = { seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style' };
 
 /**
  * A política simples do simulador, num lugar só: treino de acerto, classificação e corrida
  * equilibradas (com o engenheiro automático), primeira opção em cada evento, a melhor proposta
- * que der para aceitar no fim do ano e o treino escolhido por `botTraining`.
+ * que der para aceitar no fim do ano e o treino escolhido por `botTraining`. Os lances decisivos
+ * (Fase 4) ficam com o estilo do piloto, a não ser que `SimOptions.moments` peça outra política.
  */
 export const SIM_CHOICES: Choices = { program: 'setup', approach: 'balanced', mode: 'balanced', eventChoice: 0 };
 
@@ -103,6 +110,38 @@ export interface SeasonSample {
   investorShare: number;
   sideJob: boolean;
   academy: boolean;
+  /** Lances decisivos (Fase 4): uma linha por corrida em que o piloto largou, na ordem das etapas. */
+  races: RaceSample[];
+  /** Rivalidades que nasceram nesta temporada de um toque num lance (`relations.rivalryLog`, com `fresh`). */
+  freshRivalries: number;
+}
+
+/** Um lance do piloto: a opção escolhida, o que a tela mostrava e como terminou. */
+export interface MomentSample {
+  kind: MomentKind;
+  option: string;
+  /** Risco da opção escolhida: 0 = segura, 1 = moderada, 2 = arriscada. */
+  risk: 0 | 1 | 2;
+  /** Chance de dar certo mostrada na opção escolhida, de 0 a 1. */
+  chance: number;
+  /** Chance mostrada na opção arriscada do lance, escolhida ou não (null se o lance não oferecia uma). */
+  riskyChance: number | null;
+  success: boolean;
+  outcome: MomentOutcome;
+  /** Houve toque com o rival (é o que cria rivalidade). */
+  contact: boolean;
+  /** O lance rendeu punição em tempo. */
+  penalized: boolean;
+}
+
+/** Os lances de uma corrida, com a qualidade do piloto na hora em que ela foi disputada. */
+export interface RaceSample {
+  round: number;
+  /** Vantagem sobre o grid: a nota geral do piloto na corrida menos o nível médio dos pilotos da categoria. */
+  edge: number;
+  /** Corrida completa: o piloto recebeu a bandeirada e a prova não foi encerrada antes por bandeira vermelha. */
+  completed: boolean;
+  moments: MomentSample[];
 }
 
 export interface CareerProfile {
@@ -166,7 +205,51 @@ function seatMarket(career: CareerState): { made: number; acceptable: number; ca
   return { made: offers.length, acceptable: 0, cause: onlyMoney ? 'money' : 'requirements' };
 }
 
-function sampleSeason(career: CareerState, index: number, seat: SeatOrigin, noSeatCause: NoSeatCause | null, door: BotDoor | 'initial'): SeasonSample {
+/**
+ * Acompanha as corridas de uma temporada e guarda os lances de cada uma. O registro do resultado
+ * (`race.moments`) diz a opção escolhida; a chance da opção arriscada, escolhida ou não, vem do
+ * lance como foi oferecido. Só lê: a corrida é a mesma com ou sem ele.
+ */
+function watchMoments(races: RaceSample[]): RaceWatch {
+  let moments: MomentSample[] = [];
+  return {
+    onMoment(moment, record: MomentRecord) {
+      const chosen = moment.options.find((o) => o.id === record.option);
+      const risky = moment.options.find((o) => o.risk === 2);
+      moments.push({
+        kind: record.kind,
+        option: record.option,
+        risk: chosen?.risk ?? 0,
+        chance: record.chance,
+        riskyChance: risky ? risky.chance : null,
+        success: record.success,
+        outcome: record.outcome,
+        contact: record.contact,
+        penalized: record.penaltySeconds > 0,
+      });
+    },
+    onRace(race, career) {
+      const player = engine.getPlayer(career);
+      const car = race.cars.find((c) => c.driverId === player.id);
+      races.push({
+        round: career.nextRoundIndex + 1,
+        edge: engine.overallRating(player.attributes) - getCategory(career.categoryId).field.driverLevel,
+        completed: !race.endedEarly && car?.status === 'running',
+        moments,
+      });
+      moments = [];
+    },
+  };
+}
+
+function sampleSeason(
+  career: CareerState,
+  index: number,
+  seat: SeatOrigin,
+  noSeatCause: NoSeatCause | null,
+  door: BotDoor | 'initial',
+  races: RaceSample[],
+): SeasonSample {
   const offseason = career.offseason;
   if (!offseason) throw new Error('Temporada sem fechamento.');
   const player = engine.getPlayer(career);
@@ -198,6 +281,8 @@ function sampleSeason(career: CareerState, index: number, seat: SeatOrigin, noSe
     investorShare: career.investor?.share ?? 0,
     sideJob: career.sideJob !== 'none',
     academy: career.academy !== null,
+    races,
+    freshRivalries: career.relations.rivalryLog.filter((r) => r.season === career.season && r.fresh).length,
   };
 }
 
@@ -213,8 +298,9 @@ function birthSample(career: CareerState): BirthSample {
 }
 
 /** Joga uma carreira com o robô e devolve uma linha por temporada disputada. */
-export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons' | 'talent'>): CareerSample {
+export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons' | 'talent' | 'moments'>): CareerSample {
   const profile = profileForSeed(seed);
+  const choices: Choices = { ...SIM_CHOICES, moments: options.moments ?? DEFAULT_SIM_OPTIONS.moments };
   const seasons: SeasonSample[] = [];
   let index = 1;
   let birth: BirthSample | null = null;
@@ -226,14 +312,16 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
     let door: BotDoor | 'initial' = 'initial';
     for (; index <= options.seasons; index++) {
       career = botTraining(career);
-      while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, SIM_CHOICES);
+      const races: RaceSample[] = [];
+      const watch = watchMoments(races);
+      while (career.nextRoundIndex < career.calendar.length && !career.succession) career = playRound(career, choices, watch);
       // Um acidente fatal no meio do ano encerra a amostra sem contar a temporada incompleta.
       if (!career.offseason) return { seed, profile, birth, seasons, ended: 'succession' };
       // As decisões que a última etapa deixou pendentes são resolvidas aqui, depois do fechamento
       // do ano (que acontece ao concluir a última etapa) e antes de medir o caixa e de escolher a
       // proposta, como faz o jogador.
-      if (!career.succession) career = resolvePending(career, SIM_CHOICES.eventChoice);
-      seasons.push(sampleSeason(career, index, seat, cause, door));
+      if (!career.succession) career = resolvePending(career, choices.eventChoice);
+      seasons.push(sampleSeason(career, index, seat, cause, door, races));
       // Quem jogou todas as temporadas pedidas completou a carreira, mesmo que a sucessão venha no último fechamento.
       if (index === options.seasons) break;
       if (career.succession) return { seed, profile, birth, seasons, ended: 'succession' };
@@ -349,6 +437,76 @@ export interface SimSummary {
   byOrigin: BirthGroupStats[];
   /** Economia e portas (Fase 3). */
   doors: DoorStats;
+  /** Lances decisivos (Fase 4). */
+  moments: MomentStats;
+}
+
+/** Quantos lances têm as corridas completas de um grupo (a regra é de 2 a 4 por corrida). */
+export interface MomentCountStats {
+  /** Corridas em que o piloto largou, e as que ele completou. */
+  races: number;
+  completeRaces: number;
+  /** Lances por corrida completa, em média. */
+  perRace: number;
+  /** Corridas completas com 2, 3 e 4 lances, e as que ficaram fora dessa faixa. */
+  two: number;
+  three: number;
+  four: number;
+  other: number;
+}
+
+/** Uma opção de um tipo de lance: quantas vezes foi escolhida e no que deu. */
+export interface MomentOptionStats {
+  kind: MomentKind;
+  option: string;
+  /** Risco da opção na tabela do jogo: 0 = segura, 1 = moderada, 2 = arriscada. */
+  risk: 0 | 1 | 2;
+  times: number;
+  /** Fração das vezes em que deu certo, e a chance que a tela mostrava, em média. */
+  successShare: number;
+  averageChance: number;
+  spins: number;
+  /** Toques com o rival (um toque que acaba em abandono conta aqui e em `retired`). */
+  contacts: number;
+  retired: number;
+  penalized: number;
+}
+
+/** As corridas de uma faixa de qualidade do piloto (terços pela vantagem sobre o grid). */
+export interface MomentEdgeStats {
+  group: 'low' | 'mid' | 'high';
+  races: number;
+  averageEdge: number;
+  minEdge: number;
+  maxEdge: number;
+  moments: number;
+  /** Lances que ofereciam uma opção arriscada, e a chance média mostrada nela (escolhida ou não). */
+  riskyOffered: number;
+  riskyChance: number;
+  /** Fração desses lances em que o piloto escolheu a opção arriscada. */
+  riskyTakenShare: number;
+  /** Fração de todos os lances da faixa que deram certo. */
+  successShare: number;
+  /** Lances arriscados vencidos, por corrida. */
+  riskyWonPerRace: number;
+  /** Lances vencidos menos lances perdidos, por corrida (o registro não diz posições ganhas). */
+  balancePerRace: number;
+}
+
+export interface MomentStats {
+  /** Todos os lances de todas as corridas (completas ou não). */
+  moments: number;
+  all: MomentCountStats;
+  byCategory: (MomentCountStats & { categoryId: CategoryId })[];
+  /** Todas as opções de todos os tipos de lance, na ordem do jogo (inclusive as nunca escolhidas). */
+  byOption: MomentOptionStats[];
+  /** Três grupos de corridas do mesmo tamanho, pela vantagem do piloto sobre o grid na hora da corrida. */
+  byEdge: MomentEdgeStats[];
+  /** Rivalidades novas (nascidas de um toque num lance), no total e por carreira. */
+  freshRivalries: number;
+  freshRivalriesPerCareer: number;
+  /** Toques em lances a cada 100 lances. */
+  contactsPer100: number;
 }
 
 /** Como as carreiras de um grupo pagaram a entrada num degrau. */
@@ -475,6 +633,85 @@ function doorStats(samples: readonly CareerSample[]): DoorStats {
 
 const sum = (values: readonly number[]) => values.reduce((total, value) => total + value, 0);
 const mean = (values: readonly number[]) => (values.length ? sum(values) / values.length : 0);
+
+function momentCounts(races: readonly RaceSample[]): MomentCountStats {
+  const complete = races.filter((r) => r.completed).map((r) => r.moments.length);
+  const two = complete.filter((n) => n === 2).length;
+  const three = complete.filter((n) => n === 3).length;
+  const four = complete.filter((n) => n === 4).length;
+  return { races: races.length, completeRaces: complete.length, perRace: mean(complete), two, three, four, other: complete.length - two - three - four };
+}
+
+/**
+ * Três grupos de corridas do mesmo tamanho (o do meio fica com a sobra) pela vantagem do piloto
+ * sobre o grid; no empate, vale a ordem em que as corridas foram disputadas (semente, temporada, etapa).
+ */
+export function edgeTerciles(races: readonly RaceSample[]): [RaceSample[], RaceSample[], RaceSample[]] {
+  const sorted = races.map((race, order) => ({ race, order })).sort((a, b) => a.race.edge - b.race.edge || a.order - b.order);
+  const third = Math.floor(sorted.length / 3);
+  const pick = (from: number, to: number) => sorted.slice(from, to).map((row) => row.race);
+  return [pick(0, third), pick(third, sorted.length - third), pick(sorted.length - third, sorted.length)];
+}
+
+function edgeGroup(group: MomentEdgeStats['group'], races: readonly RaceSample[]): MomentEdgeStats | null {
+  if (races.length === 0) return null;
+  const edges = races.map((r) => r.edge);
+  const moments = races.flatMap((r) => r.moments);
+  const offered = moments.filter((m) => m.riskyChance !== null);
+  const riskyWon = moments.filter((m) => m.risk === 2 && m.success).length;
+  const won = moments.filter((m) => m.success).length;
+  return {
+    group,
+    races: races.length,
+    averageEdge: mean(edges),
+    minEdge: Math.min(...edges),
+    maxEdge: Math.max(...edges),
+    moments: moments.length,
+    riskyOffered: offered.length,
+    riskyChance: mean(offered.map((m) => m.riskyChance ?? 0)),
+    riskyTakenShare: offered.length ? offered.filter((m) => m.risk === 2).length / offered.length : 0,
+    successShare: moments.length ? won / moments.length : 0,
+    riskyWonPerRace: riskyWon / races.length,
+    balancePerRace: (won - (moments.length - won)) / races.length,
+  };
+}
+
+function momentStats(samples: readonly CareerSample[]): MomentStats {
+  const seasons = samples.flatMap((c) => c.seasons);
+  const races = seasons.flatMap((s) => s.races);
+  const moments = races.flatMap((r) => r.moments);
+  const freshRivalries = sum(seasons.map((s) => s.freshRivalries));
+  const terciles = edgeTerciles(races);
+  return {
+    moments: moments.length,
+    all: momentCounts(races),
+    byCategory: CATEGORIES.flatMap((category) => {
+      const rows = seasons.filter((s) => s.categoryId === category.id).flatMap((s) => s.races);
+      return rows.length === 0 ? [] : [{ categoryId: category.id, ...momentCounts(rows) }];
+    }),
+    byOption: MOMENT_KINDS.flatMap((kind) =>
+      Object.entries<{ risk: 0 | 1 | 2 }>(RACE_MOMENTS.OPTIONS[kind]).map(([option, rule]): MomentOptionStats => {
+        const rows = moments.filter((m) => m.kind === kind && m.option === option);
+        return {
+          kind,
+          option,
+          risk: rule.risk,
+          times: rows.length,
+          successShare: rows.length ? rows.filter((m) => m.success).length / rows.length : 0,
+          averageChance: mean(rows.map((m) => m.chance)),
+          spins: rows.filter((m) => m.outcome === 'spin').length,
+          contacts: rows.filter((m) => m.contact).length,
+          retired: rows.filter((m) => m.outcome === 'retired').length,
+          penalized: rows.filter((m) => m.penalized).length,
+        };
+      }),
+    ),
+    byEdge: (['low', 'mid', 'high'] as const).map((group, i) => edgeGroup(group, terciles[i] ?? [])).filter((row): row is MomentEdgeStats => row !== null),
+    freshRivalries,
+    freshRivalriesPerCareer: samples.length ? freshRivalries / samples.length : 0,
+    contactsPer100: moments.length ? (moments.filter((m) => m.contact).length / moments.length) * 100 : 0,
+  };
+}
 
 /** Percentil pelo método do posto mais próximo (0,5 = mediana). */
 export function percentile(values: readonly number[], fraction: number): number {
@@ -645,6 +882,7 @@ export function summarize(samples: readonly CareerSample[], options: SimOptions)
       ),
     ].filter((row): row is BirthGroupStats => row !== null),
     doors: doorStats(samples),
+    moments: momentStats(samples),
   };
 }
 

@@ -289,6 +289,41 @@ export const RaceEntryResultSchema = z.object({
 });
 export type RaceEntryResult = z.infer<typeof RaceEntryResultSchema>;
 
+/* ---------------- Lances decisivos (Fase 4 da grande atualização) ---------------- */
+
+export const MOMENT_KINDS = ['start', 'attack', 'defense', 'rain', 'lastLap', 'pit'] as const;
+export const MomentKindSchema = z.enum(MOMENT_KINDS);
+export type MomentKind = z.infer<typeof MomentKindSchema>;
+
+/** Como o lance terminou: deu certo, só perdeu tempo, rodou, tocou no rival ou abandonou. */
+export const MOMENT_OUTCOMES = ['won', 'lost', 'spin', 'touch', 'retired'] as const;
+export const MomentOutcomeSchema = z.enum(MOMENT_OUTCOMES);
+export type MomentOutcome = z.infer<typeof MomentOutcomeSchema>;
+
+/** Um lance decisivo já resolvido, como fica no resultado da corrida. */
+export const MomentRecordSchema = z.object({
+  /** Volta em que o lance aconteceu. */
+  lap: z.number().int().min(1),
+  kind: MomentKindSchema,
+  /** Opção escolhida (os ids estão em RACE_MOMENTS.OPTIONS, em src/config/balance.ts). */
+  option: z.string(),
+  /** Chance de dar certo que a opção mostrava, de 0 a 1. */
+  chance: z.number().min(0).max(1),
+  success: z.boolean(),
+  /** Decidido pelo estilo do piloto (simular direto), e não pelo jogador. */
+  auto: z.boolean(),
+  /** Rival do lance, quando havia um. */
+  rivalId: z.string().optional(),
+  outcome: MomentOutcomeSchema,
+  /** Houve toque com o rival (é o que cria rivalidade). */
+  contact: z.boolean(),
+  /** Segundos de punição recebidos por causa do lance. */
+  penaltySeconds: z.number().min(0),
+  /** Texto pronto para exibição (gerado pela simulação, não pela UI). */
+  message: z.string(),
+});
+export type MomentRecord = z.infer<typeof MomentRecordSchema>;
+
 export const RaceResultSchema = z.object({
   weather: SessionWeatherSchema,
   totalLaps: z.number().int().min(1),
@@ -301,6 +336,8 @@ export const RaceResultSchema = z.object({
   redFlags: z.number().int().min(0),
   /** Ordens de equipe dadas durante a corrida. */
   teamOrders: z.array(z.object({ lap: z.number().int(), teamId: z.string(), askedDriverId: z.string(), favouredDriverId: z.string(), obeyed: z.boolean() })),
+  /** Lances decisivos do jogador nesta corrida, na ordem (vazio se ele não correu). */
+  moments: z.array(MomentRecordSchema),
 });
 export type RaceResult = z.infer<typeof RaceResultSchema>;
 
@@ -646,6 +683,24 @@ export type License = z.infer<typeof LicenseSchema>;
 
 /* ---------------- Relações ---------------- */
 
+/**
+ * Um toque num lance decisivo, guardado para a Fase 5 usar: com quem foi, quando, em que lance e
+ * se criou uma rivalidade nova. A intensidade que o motor lê continua em `rivalries`.
+ */
+export const RivalryRecordSchema = z.object({
+  driverId: z.string(),
+  season: z.number().int().min(1),
+  round: z.number().int().min(1),
+  lap: z.number().int().min(1),
+  /** O lance em que o toque aconteceu. */
+  kind: MomentKindSchema,
+  /** Alguém abandonou por causa do toque. */
+  retired: z.boolean(),
+  /** O piloto não era rival antes desta etapa: a rivalidade nasceu aqui. */
+  fresh: z.boolean(),
+});
+export type RivalryRecord = z.infer<typeof RivalryRecordSchema>;
+
 export const RelationsSchema = z.object({
   /** Confiança da equipe no jogador. */
   teamTrust: RatingSchema,
@@ -653,6 +708,8 @@ export const RelationsSchema = z.object({
   teammate: RatingSchema,
   /** Intensidade da rivalidade com outros pilotos (id → 0 a 100). */
   rivalries: z.record(z.string(), z.number().min(0).max(100)),
+  /** Toques em lances decisivos que criaram ou reacenderam rivalidades (os mais recentes por último). */
+  rivalryLog: z.array(RivalryRecordSchema),
 });
 export type Relations = z.infer<typeof RelationsSchema>;
 
@@ -1155,8 +1212,11 @@ export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
  * Versão 6 (Fase 2): o nascimento sorteado do piloto (`birth`) e o efeito `relocate` (mudança do
  * interior para a capital). Saves antigos ficam com `birth: null`: carreira começada antes dos
  * nascimentos, sem nenhum efeito de nascença.
+ * Versão 7 (Fase 3): polo, investidor, vaquinha, trabalho paralelo e a conta das temporadas sem porta.
+ * Versão 8 (Fase 4): os lances decisivos de cada corrida (`race.moments`) e o registro dos toques
+ * em lances que criaram rivalidade (`relations.rivalryLog`). Saves antigos ficam com as duas listas vazias.
  */
-export const CAREER_SCHEMA_VERSION = 7;
+export const CAREER_SCHEMA_VERSION = 8;
 
 /* ---------------- Nascimento (Fase 2 da grande atualização) ---------------- */
 

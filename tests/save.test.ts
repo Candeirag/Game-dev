@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CAREER_SCHEMA_VERSION, CareerStateSchema } from '@/domain/schemas';
+import { CAREER_SCHEMA_VERSION, CareerStateSchema, type CareerState } from '@/domain/schemas';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { IndexedDbStorage, LocalStorageAdapter, MemoryStorage } from '@/persistence/storage';
 import {
@@ -464,8 +464,8 @@ describe('migração da versão 3 para a 4', () => {
       data = migrateStep(data, data.schemaVersion as number);
       seen.push(data.schemaVersion);
     }
-    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
   });
 });
@@ -539,6 +539,108 @@ describe('migração da versão 6 para a 7 (economia e polos)', () => {
       noDoorSeasons: 0,
     });
     expect(validateCareerIntegrity(career)).toEqual([]);
+  });
+});
+
+describe('migração da versão 7 para a 8 (lances decisivos e registro de rivalidade)', () => {
+  const files = readdirSync('tests/fixtures/v7').filter((name) => name.endsWith('.json'));
+  type Loose = Record<string, unknown>;
+  type StoredRound = { race: Loose };
+  type StoredSeason = { rounds: StoredRound[] };
+  /** O save da versão 7 como está no arquivo, só com os campos que a migração toca tipados. */
+  type V7 = Loose & { relations: Loose; rounds: StoredRound[]; history: StoredSeason[]; executiveOffseason: (Loose & { summary: StoredSeason }) | null };
+  const read = (name: string) => (JSON.parse(readFileSync(`tests/fixtures/v7/${name}`, 'utf8')) as { career: V7 }).career;
+  /** As etapas com a lista de lances vazia em cada corrida: é só isso que a migração acrescenta a elas. */
+  const withMoments = (rounds: StoredRound[]) => rounds.map((round) => ({ ...round, race: { ...round.race, moments: [] } }));
+  /** Todos os lugares do save em que um resultado de corrida fica guardado. */
+  const storedRaces = (career: CareerState) => [
+    ...career.rounds,
+    ...career.history.flatMap((season) => season.rounds),
+    ...(career.executiveOffseason?.summary.rounds ?? []),
+  ];
+
+  it('os saves da versão 7 têm corridas guardadas nos três lugares: etapas do ano, histórico e balanço do dirigente', () => {
+    const careers = files.map(read);
+    expect(careers.some((c) => c.rounds.length > 0)).toBe(true);
+    expect(careers.some((c) => c.history.some((season) => season.rounds.length > 0))).toBe(true);
+    expect(careers.some((c) => (c.executiveOffseason?.summary.rounds.length ?? 0) > 0)).toBe(true);
+  });
+
+  it.each(files)('%s: só acrescenta a lista de lances a cada corrida guardada e o registro de rivalidade, e sobe a versão', (name) => {
+    const before = read(name);
+    expect(before.schemaVersion).toBe(7);
+    expect('rivalryLog' in before.relations).toBe(false);
+    const stored = [...before.rounds, ...before.history.flatMap((season) => season.rounds), ...(before.executiveOffseason?.summary.rounds ?? [])];
+    expect(stored.some((round) => 'moments' in round.race)).toBe(false);
+    const after = migrateStep(before, 7);
+    expect(after).toEqual({
+      ...before,
+      schemaVersion: 8,
+      relations: { ...before.relations, rivalryLog: [] },
+      rounds: withMoments(before.rounds),
+      history: before.history.map((season) => ({ ...season, rounds: withMoments(season.rounds) })),
+      executiveOffseason: before.executiveOffseason && {
+        ...before.executiveOffseason,
+        summary: { ...before.executiveOffseason.summary, rounds: withMoments(before.executiveOffseason.summary.rounds) },
+      },
+    });
+    // Rodar de novo sobre o resultado não muda nada.
+    expect(migrateStep({ ...after, schemaVersion: 7 }, 7)).toEqual(after);
+  });
+
+  it.each(files)('%s: abre na versão atual, com todas as corridas guardadas sem lances e sem registro de rivalidade', (name) => {
+    const before = read(name);
+    const career = importCareer(readFileSync(`tests/fixtures/v7/${name}`, 'utf8'));
+    expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
+    expect(storedRaces(career).every((round) => round.race.moments.length === 0)).toBe(true);
+    // Nenhuma corrida se perde no caminho, e as rivalidades que o save trazia continuam as mesmas.
+    expect(storedRaces(career)).toHaveLength(
+      before.rounds.length + before.history.reduce((sum, season) => sum + season.rounds.length, 0) + (before.executiveOffseason?.summary.rounds.length ?? 0),
+    );
+    expect(career.relations).toEqual({ ...before.relations, rivalryLog: [] });
+    expect(validateCareerIntegrity(career)).toEqual([]);
+  });
+
+  // Carreira jogada já na versão 8: na primeira etapa o robô responde a todos os lances pela opção
+  // mais arriscada (e toca num rival); na segunda não responde, e o piloto decide pelo estilo.
+  const played = playRound(playRound(newCareer(42), { moments: 'bold' }));
+
+  it('uma carreira jogada na versão 8 tem lances respondidos e decididos pelo estilo, e um toque no registro', () => {
+    const [answered, byStyle] = played.rounds.map((round) => round.race.moments);
+    expect(answered!.length).toBeGreaterThan(0);
+    expect(answered!.every((moment) => !moment.auto)).toBe(true);
+    expect(byStyle!.length).toBeGreaterThan(0);
+    expect(byStyle!.every((moment) => moment.auto)).toBe(true);
+    const touch = answered!.find((moment) => moment.contact);
+    expect(touch).toBeDefined();
+    expect(played.relations.rivalryLog).toEqual([
+      { driverId: touch!.rivalId, season: 1, round: 1, lap: touch!.lap, kind: touch!.kind, retired: touch!.outcome === 'retired', fresh: true },
+    ]);
+    expect(played.relations.rivalries[touch!.rivalId!]).toBeGreaterThan(0);
+  });
+
+  it('lances e registro já gravados (save da versão 8 relido) passam intactos pela migração', () => {
+    const raw = { ...(JSON.parse(JSON.stringify(played)) as Loose), schemaVersion: 7 };
+    const after = migrateStep(raw, 7) as unknown as CareerState;
+    expect(after.rounds).toEqual(played.rounds);
+    expect(after.relations).toEqual(played.relations);
+  });
+
+  it('uma carreira da versão 8 exporta e reimporta igual: os campos novos sobrevivem ao schema', async () => {
+    expect(validateCareerIntegrity(played)).toEqual([]);
+    expect(CareerStateSchema.parse(JSON.parse(JSON.stringify(played)))).toEqual(played);
+    const back = importCareer(exportCareer(played, NOW));
+    expect(back).toEqual({ ...played, updatedAt: NOW });
+    expect(back.rounds.map((round) => round.race.moments)).toEqual(played.rounds.map((round) => round.race.moments));
+    expect(back.relations.rivalryLog).toEqual(played.relations.rivalryLog);
+    // E pelo armazenamento do aparelho também, com a carreira ainda jogável depois.
+    const storage = new MemoryStorage();
+    await saveCareer(storage, 'slot1', played, NOW);
+    const { career: loaded } = await loadCareer(storage, 'slot1');
+    expect(loaded).toEqual({ ...played, updatedAt: NOW });
+    const next = playRound(loaded);
+    expect(validateCareerIntegrity(next)).toEqual([]);
+    expect(next.relations.rivalryLog.slice(0, 1)).toEqual(played.relations.rivalryLog);
   });
 });
 
