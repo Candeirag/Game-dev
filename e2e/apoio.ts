@@ -28,6 +28,9 @@ export const SAVES = {
   antigoDirigente: 'tests/fixtures/v3/fase0-dirigente-dono-de-equipe.json',
   /** Save da versão 6: nascido no interior, com a mudança para São Paulo pendente e um traço revelado. */
   nascimento: 'tests/fixtures/v6/nascimento-mudanca-pendente.json',
+  /** Saves da versão 9 (Fase 5): o rival do kart de volta nas fórmulas, com o cartão do reencontro pendente; e um cartão com escolha de traço. */
+  historiaRival: 'tests/fixtures/v9/historia-rival-do-kart-nas-formulas.json',
+  escolhaDeTraco: 'tests/fixtures/v9/cartao-com-escolha-de-traco.json',
 } as const;
 
 /** Nomes de marcas reais que saves antigos traziam por extenso e que não podem aparecer em tela nenhuma. */

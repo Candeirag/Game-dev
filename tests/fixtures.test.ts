@@ -89,8 +89,8 @@ const RECIPES: Readonly<Record<string, () => CareerState>> = {
   },
   /**
    * Eventos encadeados (Fase 5): o rival que nasceu no kart (cadeia "Velho conhecido") voltou ao grid
-   * das fórmulas, e a memória guarda a pessoa, a cadeia no meio e os textos já vistos. Parado na
-   * primeira etapa nas fórmulas, com os cartões dela pendentes.
+   * das fórmulas, e a memória guarda a pessoa, a cadeia no meio e os textos já vistos. Parado no
+   * começo da primeira temporada nas fórmulas, com o cartão do reencontro pendente.
    */
   'historia-rival-do-kart-nas-formulas': () => {
     for (let seed = 1; seed < 400; seed++) {
@@ -102,7 +102,12 @@ const RECIPES: Readonly<Record<string, () => CareerState>> = {
         if (getCategory(c.categoryId).vehicle !== 'formula') continue;
         const rival = c.story.people.find((p) => p.key === 'rival-kart');
         const chain = c.story.chains.find((x) => x.id === 'velho-conhecido');
-        if (rival && chain?.status === 'active' && c.drivers.some((d) => d.id === rival.driverId)) return playRound(c);
+        if (!rival || chain?.status !== 'active' || !c.drivers.some((d) => d.id === rival.driverId)) break;
+        // Algumas etapas até o reencontro com o rival sair: o save fica com o cartão da cadeia pendente.
+        for (let round = 0; round < 4; round++) {
+          c = playRound(c);
+          if (c.pendingEvents.some((e) => e.chain?.id === 'velho-conhecido')) return c;
+        }
         break;
       }
     }
@@ -246,6 +251,7 @@ describe('saves de exemplo', () => {
     expect(getCategory(rival!.metCategoryId).vehicle).toBe('kart');
     expect(career.drivers.some((d) => d.id === rival!.driverId)).toBe(true);
     expect(career.story.chains.find((c) => c.id === 'velho-conhecido')?.steps.length).toBeGreaterThan(0);
+    expect(career.pendingEvents.some((e) => e.chain?.id === 'velho-conhecido' && e.speaker)).toBe(true);
     expect(career.story.seen.length).toBeGreaterThan(10);
     const trait = importCareer(readFileSync(`${CURRENT}/cartao-com-escolha-de-traco.json`, 'utf8'));
     expect(trait.pendingEvents.some((e) => e.choices.some((c) => c.unlock))).toBe(true);
