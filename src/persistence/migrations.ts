@@ -38,8 +38,12 @@
  * que criaram rivalidade (`relations.rivalryLog`). Um save antigo fica com as
  * duas listas vazias. Ver migrateV7.ts.
  *
+ * Versão 8 → 9 (Fase 5 da grande atualização): entra `story`, a memória das
+ * histórias (textos já mostrados, marcas, pessoas e cadeias). Um save antigo
+ * começa com a memória vazia. Ver migrateV8.ts.
+ *
  * Como acrescentar a próxima versão (a migração é encadeada: um save da
- * versão 1 passa por 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → … até a atual):
+ * versão 1 passa por 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → … até a atual):
  * 1. suba CAREER_SCHEMA_VERSION em src/domain/schemas.ts e ajuste o schema;
  * 2. escreva `migrateVN` (N = a versão de origem) num arquivo próprio,
  *    `migrateVN.ts`, só com dados: recebe o save da versão N e devolve o da
@@ -72,6 +76,7 @@ import { migrateV4 } from './migrateV4';
 import { migrateV5 } from './migrateV5';
 import { migrateV6 } from './migrateV6';
 import { migrateV7 } from './migrateV7';
+import { migrateV8 } from './migrateV8';
 
 type Loose = Record<string, unknown>;
 type Migration = (data: Loose) => Loose;
@@ -288,6 +293,7 @@ export const MIGRATIONS: Readonly<Record<number, Migration>> = {
   5: migrateV5,
   6: migrateV6,
   7: migrateV7,
+  8: migrateV8,
 };
 
 /** Um único degrau da cadeia: da versão `from` para a `from + 1`. Serve para testar cada migração isolada. */

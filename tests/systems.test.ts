@@ -7,7 +7,8 @@ import { validateCareerIntegrity } from '@/persistence/integrity';
 import {
   CONTRACT_RULES,
   ECONOMY,
-  EVENT_DEFINITIONS,
+  STORY_CHAINS,
+  STORY_EVENT_CATALOG,
   buildSponsor,
   canAcceptOffer,
   categoryRequirements,
@@ -376,8 +377,8 @@ describe('eventos', () => {
       }
     }
     expect(seen.size).toBeGreaterThanOrEqual(6);
-    expect(new Set(EVENT_DEFINITIONS.map((d) => d.category)).size).toBe(8);
-    expect(new Set(EVENT_DEFINITIONS.map((d) => d.id)).size).toBe(EVENT_DEFINITIONS.length);
+    // As cinco categorias da Fase 5 aparecem no catálogo (a validação completa está em storyEvents.test.ts).
+    expect(new Set([...STORY_EVENT_CATALOG.map((d) => d.category), ...STORY_CHAINS.flatMap((c) => c.steps.map((s) => s.category))]).size).toBe(5);
   });
 
   it('eventos pendentes bloqueiam o fim de semana até serem resolvidos', () => {

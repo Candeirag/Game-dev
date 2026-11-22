@@ -120,6 +120,12 @@ export const EVENT_CATEGORY_LABELS: Record<import('./schemas').EventCategory, st
   unexpected: 'Inesperado',
   family: 'Família',
   management: 'Gestão',
+  // Fase 5: as cinco categorias dos cartões encadeados.
+  track: 'Pista',
+  career: 'Carreira',
+  money: 'Dinheiro',
+  health: 'Saúde',
+  personal: 'Vida pessoal',
 };
 
 export const OFFER_KIND_LABELS: Record<import('./schemas').Offer['kind'], string> = {

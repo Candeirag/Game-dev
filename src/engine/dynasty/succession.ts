@@ -40,7 +40,8 @@ import { pushMessages } from '../career/inbox';
 import { updateMarketInterest } from '../career/market';
 import { archiveSeason, trimHistory } from '../career/offseason';
 import { familyDriverIds, fullName, getPlayer } from '../career/selectors';
-import { instantiateEvent } from '../events/engine';
+import { addSeasonStartStoryEvents } from '../story/select';
+import { emptyStory } from '../story/memory';
 import {
   buildExecutiveOffseason,
   buildJobOffers,
@@ -402,6 +403,8 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
       executiveLog: [],
       license: { history: heirRacing?.license ?? [], penaltyPoints: 0, banRounds: 0 },
       relations: { teamTrust: 50, teammate: 50, rivalries: {}, rivalryLog: [] },
+      // A memória das histórias é do personagem: o herdeiro começa a dele (Fase 5).
+      story: emptyStory(base.id),
       family,
       dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(base.id, option.name, option.age, state.year)] },
     };
@@ -532,6 +535,8 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     noDoorSeasons: 0,
     license: { history: heirRacing.license, penaltyPoints: 0, banRounds: 0 },
     relations: { teamTrust: 50, teammate: 50, rivalries: {}, rivalryLog: [] },
+    // A memória das histórias é do personagem: o herdeiro começa a dele (Fase 5).
+    story: emptyStory(player.id),
     marketInterest: {},
     pendingEvents: [],
     offseason: null,
@@ -544,8 +549,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     dynasty: { ...state.dynasty, generation, lineage: [...lineage, newEntry(player.id, fullName(player), player.age, nextYear)] },
   };
   next = { ...next, marketInterest: updateMarketInterest(next, 1) };
-  const sponsorOffer = instantiateEvent(next, 'sponsor-offer', 0);
-  if (sponsorOffer) next = { ...next, pendingEvents: [sponsorOffer] };
+  next = addSeasonStartStoryEvents(next);
   const message: InboxMessage = {
     id: `s${nextSeason}-heir-g${generation}`,
     date,

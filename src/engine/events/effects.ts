@@ -13,6 +13,7 @@ import { enterAcademy } from '../career/paths';
 import { getPlayer } from '../career/selectors';
 import { relocate } from '../birth/move';
 import { setKartFunding, startChildCareer } from '../dynasty/family';
+import { advanceChain, changeAttitude, personJoinsTeam, setFlag, setFollow, updateStory, upsertPerson } from '../story/memory';
 
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
 
@@ -173,6 +174,20 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
     }
     case 'relocate':
       return relocate(career);
+
+    /* ---------------- Memória das histórias (Fase 5) ---------------- */
+    case 'storyFlag':
+      return updateStory(career, setFlag(effect.flag, effect.set, career.season));
+    case 'storyPerson':
+      return updateStory(career, upsertPerson(effect.person));
+    case 'storyAttitude':
+      return updateStory(career, changeAttitude(effect.key, effect.value));
+    case 'storyJoinTeam':
+      return updateStory(career, personJoinsTeam(effect.key, effect.org, effect.teamKey));
+    case 'storyFollow':
+      return updateStory(career, setFollow(effect.key, effect.follow));
+    case 'storyChain':
+      return updateStory(career, advanceChain(effect.chainId, effect.step, effect.choice, effect.next, effect.notBefore, { season: career.season, round }));
   }
 }
 

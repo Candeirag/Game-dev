@@ -9,7 +9,7 @@ import { test } from 'vitest';
 import { CareerStateSchema, type CareerState, type RoundRecord } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
 import { applyRoundEffects } from '@/engine/career/roundEffects';
-import { generateEvents } from '@/engine/events/engine';
+import { addRoundStoryEvents } from '@/engine/story/select';
 import { createRng, hashSeed } from '@/engine/rng';
 import { checksumOf } from '@/persistence/checksum';
 import { validateCareerIntegrity } from '@/persistence/integrity';
@@ -153,8 +153,8 @@ test('medições de referência', () => {
     ms(() => applyRoundEffects(withResult, record, {}), 20),
   );
   log(
-    '  generateEvents',
-    ms(() => generateEvents(withResult, record, record.round), 50),
+    '  addRoundStoryEvents',
+    ms(() => addRoundStoryEvents(withResult, record, record.round), 50),
   );
   log(
     'generateOffers',

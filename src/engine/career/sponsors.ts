@@ -10,9 +10,10 @@
  * grandes só para quem tem título e visibilidade. E a meta é para valer: o patrocinador que não
  * vê o piloto na posição combinada ao fim da temporada rompe o contrato (`renewSponsors`).
  */
-import { ACADEMY_DOOR, SPONSOR_LADDER } from '@/config/balance';
+import { ACADEMY_DOOR, SPONSOR_LADDER, SPONSOR_PROFILE_RULES } from '@/config/balance';
 import type { CareerState, RaceEntryResult, Sponsor } from '@/domain/schemas';
 import { categoryByTier, getCategory, type CategoryDefinition } from '@/data/categories';
+import { sponsorProfile } from '@/data/events';
 import { createRng, hashSeed } from '../rng';
 import { sponsorValueFactor } from '../birth/effects';
 import { ECONOMY } from './economy';
@@ -129,6 +130,10 @@ export function buildSponsor(career: CareerState, tier: 1 | 2 | 3, seed: number)
  * (1,2 ponto por posição, de −3 a +5) e soma a exposição da corrida (vitória +6,
  * pódio +4) ou o desgaste (acidente por erro próprio ou punição: −2). `charisma` é o que o
  * carisma de nascença soma ou tira (ver `sponsorSatisfactionBonus`).
+ *
+ * Desde a Fase 5, a personalidade do patrocinador pesa: o paciente e o fiel sentem menos a queda;
+ * o exigente e o impulsivo, mais; o vaidoso comemora mais a alta (SPONSOR_PROFILE_RULES). Os
+ * patrocinadores de antes da Fase 5 não têm personalidade e seguem a conta de sempre.
  */
 export function satisfactionAfterRound(sponsor: Sponsor, championshipPosition: number, entry: RaceEntryResult | null, charisma = 0): number {
   if (sponsor.tier === 0) return sponsor.satisfaction;
@@ -137,7 +142,15 @@ export function satisfactionAfterRound(sponsor: Sponsor, championshipPosition: n
   else if (entry?.status === 'finished' && entry.position <= 3) delta += 4;
   if (entry && (entry.dnfReason === 'crash' || entry.penaltySeconds > 0)) delta -= 2;
   if (!entry) delta -= 1;
+  if (sponsor.personality) delta *= delta < 0 ? SPONSOR_PROFILE_RULES.PATIENCE[sponsor.personality] : SPONSOR_PROFILE_RULES.ENTHUSIASM[sponsor.personality];
   return Math.round(Math.min(100, Math.max(0, sponsor.satisfaction + delta)) * 10) / 10;
+}
+
+/** Meta de um contrato novo: a do porte, com a folga ou o aperto do perfil (Fase 5). */
+export function freshTarget(sponsor: Sponsor): number {
+  const base = SPONSOR_RULES.TIER_TARGET[sponsor.tier] ?? sponsor.targetPosition;
+  const profile = sponsor.profileId ? sponsorProfile(sponsor.profileId) : undefined;
+  return Math.max(1, base + (profile ? SPONSOR_PROFILE_RULES.TARGET_SHIFT[profile.demand] : 0));
 }
 
 /** Valor anual de um patrocinador em outra categoria, mantendo o seu porte e a sua generosidade relativa. */
@@ -181,7 +194,7 @@ export function renewSponsors(
       kept.push(rebase(s, current, next));
     } else if (s.tier > 0 && s.satisfaction >= SPONSOR_RULES.RENEW_THRESHOLD) {
       // Contrato novo, meta do porte de novo (o desconto de estreante só volta se o piloto subir outra vez).
-      const fresh = { ...s, targetPosition: SPONSOR_RULES.TIER_TARGET[s.tier] ?? s.targetPosition };
+      const fresh = { ...s, targetPosition: freshTarget(s) };
       const renewedSponsor = { ...rebase(fresh, current, next), endSeason: season + 1 };
       kept.push(renewedSponsor);
       renewed.push(renewedSponsor);

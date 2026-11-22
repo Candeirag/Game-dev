@@ -21,7 +21,8 @@ import { NEUTRAL_CONDITION } from '@/data/drivers';
 import { TEAM_TARGETS, initialTeams } from '@/data/teams';
 import { chooseAiTrainingFocus } from '../ai/decisions';
 import { computeDriverStandings, computeTeamStandings } from '../championship/standings';
-import { instantiateEvent } from '../events/engine';
+import { addSeasonStartStoryEvents } from '../story/select';
+import { storyFollowers } from '../story/followers';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { buildCategoryField, rankTeams, teamStrength } from '../world/generation';
 import { canAcceptOffer, contractFromOffer, generateOffers, negotiate, releaseFeeFor, type NegotiationDemand } from './contracts';
@@ -417,8 +418,12 @@ function enterCategory(
 ): { teams: Team[]; drivers: Driver[]; news: string[] } {
   const current = getCategory(career.categoryId);
   const player = getPlayer(career);
-  const rivals = next.tier > current.tier ? promotedRivals(career, next) : [];
-  const usedNames = new Set([fullName(player), ...rivals.map(fullName)]);
+  const promoted = next.tier > current.tier ? promotedRivals(career, next) : [];
+  const usedNames = new Set([fullName(player), ...promoted.map(fullName)]);
+  // Fase 5: o rival que uma história marcou para acompanhar a carreira sobe junto (ou volta).
+  const followers = next.tier > current.tier ? storyFollowers(career, next, nextSeason, new Set(promoted.map((d) => d.id)), usedNames) : [];
+  const rivals = [...promoted, ...followers];
+  for (const d of followers) usedNames.add(fullName(d));
   const field = buildCategoryField(next.id, career.seed, nextSeason, usedNames);
   let drivers = field.drivers.filter((d) => !(d.teamId === offer.teamId && d.role === role));
   const news: string[] = [];
@@ -585,16 +590,18 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
       rivalryLog: career.relations.rivalryLog,
     },
     marketInterest: {},
-    pendingEvents: [],
+    // Os cartões das histórias que ficaram sem resposta passam para o ano novo (Fase 5): o texto já
+    // está na memória e não pode sumir sem ser lido. Os do catálogo antigo, de saves anteriores, saem.
+    pendingEvents: career.pendingEvents.filter((e) => e.storyKey !== undefined),
     offseason: null,
     history: trimHistory([...career.history, summary], familyDriverIds(career)),
     seasonTrend: recordSeasonTrend(career),
   };
   state = { ...state, marketInterest: updateMarketInterest(state, 1) };
 
-  // Começo de temporada: um patrocinador pode se apresentar.
-  const sponsorOffer = instantiateEvent(state, 'sponsor-offer', 0);
-  if (sponsorOffer) state = { ...state, pendingEvents: [sponsorOffer] };
+  // Começo de temporada: um patrocinador pode se apresentar, e um cartão de pré-temporada ou um passo
+  // de cadeia agendado para a virada do ano (Fase 5).
+  state = addSeasonStartStoryEvents(state);
 
   const kindText = changingCategory
     ? next.tier > getCategory(career.categoryId).tier

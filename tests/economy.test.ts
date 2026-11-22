@@ -13,7 +13,7 @@ import { CATEGORIES, getCategory } from '@/data/categories';
 import { CATEGORY_HUB, HUBS, RENTAL_CATEGORY } from '@/data/hubs';
 import { closeSeasonFinance, emptyFinance, payInvestor, settleRound } from '@/engine/career/economy';
 import { applyEffects } from '@/engine/events/effects';
-import { instantiateEvent } from '@/engine/events/engine';
+import { storyCardFor } from '@/engine/story/select';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { importCareer } from '@/persistence/saveService';
 import { MIGRATIONS, migrateStep } from '@/persistence/migrations';
@@ -605,8 +605,8 @@ describe('evento "A equipe pede um aporte extra"', () => {
   const season = playRound(playRound(newCareer(42)));
   const withCash = (cash: number): CareerState => ({ ...season, pendingEvents: [], eventLog: [], finance: emptyFinance(cash) });
   const payment = (career: CareerState) => {
-    const event = instantiateEvent(career, 'contract-seat-increase', 3);
-    const pay = event?.choices.find((c) => c.id === 'pay');
+    const event = storyCardFor(career, null, 3, 'aporte-extra');
+    const pay = event?.choices.find((c) => c.id === 'pagar');
     const effect = pay?.outcomes[0]?.effects.find((e) => e.type === 'cash');
     return { event, pay, amount: effect && effect.type === 'cash' ? -effect.value : 0, effect };
   };
@@ -618,14 +618,13 @@ describe('evento "A equipe pede um aporte extra"', () => {
     // Com pouco caixa, é limitado a 20% dele.
     const tight = payment(withCash(5_000));
     expect(tight.amount).toBe(5_000 * TEAM_CASH_CALL.MAX_CASH_SHARE);
-    expect(tight.event?.body).toContain('o seu caixa não aguenta mais que isso');
   });
 
   it('a quem não tem caixa, a equipe não pede dinheiro: sobra recusar ou parcelar', () => {
     for (const cash of [0, -73_000, 1_000]) {
       const { event, pay } = payment(withCash(cash));
       expect(pay, `caixa ${cash}`).toBeUndefined();
-      expect(event?.choices.map((c) => c.id)).toEqual(['refuse', 'split']);
+      expect(event?.choices.map((c) => c.id)).toEqual(['recusar', 'parcelar']);
     }
   });
 
