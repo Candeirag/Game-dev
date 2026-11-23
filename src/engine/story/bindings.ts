@@ -122,8 +122,9 @@ export function resolveNeeds(ctx: StoryContext, needs: readonly StoryNeed[] | un
         break;
       }
       case 'leader': {
-        const top = driverStandings(career).find((s) => s.driverId !== ctx.player.id);
-        const d = career.rounds.length > 0 ? driver(ctx, top?.driverId) : undefined;
+        // O líder é outro piloto: se quem lidera é o jogador, o cartão não sai.
+        const top = driverStandings(career)[0];
+        const d = career.rounds.length > 0 && top?.driverId !== ctx.player.id ? driver(ctx, top?.driverId) : undefined;
         if (!d) return null;
         out.leader = d;
         break;

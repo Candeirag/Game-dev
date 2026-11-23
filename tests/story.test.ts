@@ -19,7 +19,8 @@ import { moveEventFor } from '@/engine/birth/move';
 import { familySeasonEvents } from '@/engine/dynasty/familyEvents';
 import { storyFollowers } from '@/engine/story/followers';
 import { emptyStory, markSeen, storyOf } from '@/engine/story/memory';
-import { addRoundStoryEvents, addSeasonStartStoryEvents, storyCardFor } from '@/engine/story/select';
+import { addRoundStoryEvents, addSeasonStartStoryEvents, carriedOverCards, storyCardFor } from '@/engine/story/select';
+import { applyEffects } from '@/engine/events/effects';
 import { exportCareer, importCareer } from '@/persistence/saveService';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { NOW, botCareer, newCareer, playCareer, playRound, resolvePending } from './helpers';
@@ -369,5 +370,86 @@ describe('mudança para São Paulo e eventos de família: cada vez, um texto nov
     expect(again.storyKey).not.toBe(first.storyKey);
     expect(again.title).not.toBe(first.title);
     expect(again.choices.map((c) => c.label)).not.toEqual(first.choices.map((c) => c.label));
+  });
+});
+
+describe('correções da revisão', () => {
+  it('cartão que passa para a temporada nova perde os efeitos presos ao campeonato que acabou', () => {
+    const card: PendingEvent = {
+      id: 's1-r10-x',
+      definitionId: 'story:x',
+      category: 'track',
+      season: 1,
+      round: 10,
+      title: 'T',
+      body: 'B',
+      storyKey: 'x#0',
+      choices: [
+        {
+          id: 'a',
+          label: 'A',
+          description: '',
+          outcomes: [
+            {
+              probability: 1,
+              text: 'O',
+              effects: [
+                { type: 'pointsAdjustment', driverId: 'player', points: -10, reason: 'Etapa 10' },
+                { type: 'gridPenalty', driverId: 'player', places: 3 },
+                { type: 'stat', stat: 'morale', value: 3 },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const old: PendingEvent = { ...card, id: 'velho', storyKey: undefined };
+    const carried = carriedOverCards([card, old]);
+    expect(carried.map((e) => e.id)).toEqual(['s1-r10-x']);
+    expect(carried[0]!.choices[0]!.outcomes[0]!.effects).toEqual([{ type: 'stat', stat: 'morale', value: 3 }]);
+  });
+
+  it('assinar respeita as cotas: com tudo ocupado, o novo só entra no lugar de um menor', () => {
+    const base = newCareer(3);
+    const s = (id: string, tier: number, perSeason: number): Sponsor => ({
+      id,
+      name: id,
+      tier,
+      perSeason,
+      podiumBonus: 0,
+      endSeason: 2,
+      satisfaction: 60,
+      targetPosition: 10,
+    });
+    const full = { ...base, sponsors: [s('a', 1, 5_000), s('b', 2, 30_000), s('c', 2, 40_000)] };
+    const sameTier = applyEffects(full, [{ type: 'addSponsor', sponsor: s('d', 1, 9_000) }], 1);
+    expect(sameTier.sponsors.map((x) => x.id)).toEqual(['a', 'b', 'c']);
+    const bigger = applyEffects(full, [{ type: 'addSponsor', sponsor: s('e', 3, 90_000) }], 1);
+    expect(bigger.sponsors.map((x) => x.id)).toEqual(['b', 'c', 'e']);
+    const free = applyEffects({ ...base, sponsors: [s('a', 1, 5_000)] }, [{ type: 'addSponsor', sponsor: s('f', 1, 6_000) }], 1);
+    expect(free.sponsors.map((x) => x.id)).toEqual(['a', 'f']);
+  });
+
+  it('a lista do que mudou mostra o que mudou de fato: rivalidade no teto não sobe, e o divórcio mostra o dinheiro', () => {
+    const base = newCareer(3);
+    const rival = base.drivers.find((d) => !d.isPlayer)!;
+    const capped = { ...base, relations: { ...base.relations, rivalries: { [rival.id]: 100 } } };
+    const effects = [{ type: 'rivalry' as const, driverId: rival.id, value: 15 }];
+    expect(describeEffects(capped, applyEffects(capped, effects, 1), effects)).toEqual([]);
+    const partner = {
+      firstName: 'Lia',
+      lastName: 'Souza',
+      age: 30,
+      background: 'health' as const,
+      talent: 60,
+      relationship: 20,
+      married: true,
+      sinceSeason: 1,
+    };
+    const married = { ...base, family: { ...base.family, partner }, finance: { ...base.finance, cash: 100_000 } };
+    const divorce = [{ type: 'divorce' as const, share: 0.5 }];
+    const views = describeEffects(married, applyEffects(married, divorce, 1), divorce);
+    expect(views.some((v) => v.kind === 'cash' && v.value < 0)).toBe(true);
+    expect(views.some((v) => v.kind === 'note' && v.text.includes('Lia'))).toBe(true);
   });
 });

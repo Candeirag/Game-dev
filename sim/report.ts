@@ -45,7 +45,8 @@ function unlockLabel(unlock: UnlockSample): { name: string; kind: string } {
     return { name: trait?.name ?? unlock.id, kind: trait?.kind === 'defect' ? 'Defeito' : 'Talento' };
   }
   const aptitude = APTITUDE_ORDER.find((key) => key === unlock.id);
-  return { name: aptitude ? APTITUDE_INFO[aptitude].label : unlock.id, kind: 'Aptidão' };
+  const name = aptitude ? APTITUDE_INFO[aptitude].label : unlock.id;
+  return { name: unlock.level === 'low' ? `${name} (baixa)` : name, kind: 'Aptidão' };
 }
 
 /** O simulador cria pilotos brasileiros; a moeda é só apresentação e não muda os números. */
@@ -348,8 +349,8 @@ export function formatReport(summary: SimSummary): string {
   const repeatLine = (scope: string, texts: number, withRepeats: number) =>
     `Textos repetidos na mesma carreira, ${scope}: ${texts} (em ${withRepeats} de ${careers}).`;
   out.push(
-    `Cartões da Fase 5: ${events.cards} (${events.all.rounds ? decimal(events.all.perRound, 2) : '-'} por etapa disputada; ${events.all.starts ? decimal(events.all.perStart, 2) : '-'} no começo de cada temporada, da segunda em diante). Eventos de família e mudança: ${events.others}.`,
-    `Etapas disputadas: ${events.all.rounds}. Sem nenhum cartão: ${events.all.zero}. Com mais de 3: ${events.all.more}.`,
+    `Cartões da Fase 5: ${events.cards} (${events.all.rounds ? decimal(events.all.perRound, 2) : '-'} por etapa; ${events.all.starts ? decimal(events.all.perStart, 2) : '-'} no começo de cada temporada, da segunda em diante). Eventos de família e mudança: ${events.others}.`,
+    `Etapas (com e sem o piloto na pista): ${events.all.rounds}. Sem nenhum cartão: ${events.all.zero}. Com mais de 3: ${events.all.more}.`,
     '',
     ...table(
       ['Cartões por etapa', 'Etapas', 'Média', 'Com 0', 'Com 1', 'Com 2', 'Com 3', 'Mais de 3', 'No começo do ano'],

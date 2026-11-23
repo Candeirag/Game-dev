@@ -88,7 +88,8 @@ function eventCandidates(ctx: StoryContext, taken: ReadonlySet<string>): Candida
     if (build) out.push({ id: spec.id, category: spec.category, weight: weightOf(spec, spec.frequency), build });
   }
   // Passos iniciais de cadeias que ainda não aconteceram com este personagem.
-  if (busyChains(ctx) < STORY_EVENTS.MAX_ACTIVE_CHAINS) {
+  const startedThisRound = [...taken].filter((k) => k.startsWith('chain:') && !findChain(story, k.slice('chain:'.length))).length;
+  if (busyChains(ctx) + startedThisRound < STORY_EVENTS.MAX_ACTIVE_CHAINS) {
     for (const chain of STORY_CHAINS) {
       if (findChain(story, chain.id) || taken.has(`chain:${chain.id}`)) continue;
       const spec = chain.steps.find((s) => s.id === chain.start);
@@ -201,6 +202,24 @@ export function addSeasonStartStoryEvents(career: CareerState): CareerState {
   const ctx = buildContext(career, null, 0);
   const offer = canOfferSponsor(ctx) ? 1 : 0;
   return generate(career, null, 0, offer + STORY_EVENTS.SEASON_START_CARDS, rng, { sponsorFirst: true });
+}
+
+/**
+ * Cartões das histórias que ficaram sem resposta na virada do ano. Eles passam para a temporada nova
+ * (o texto já está na memória e não pode sumir sem ser lido), mas sem os efeitos presos ao campeonato
+ * que acabou: pontos tirados ou devolvidos numa etapa dele e punição de grid. Os cartões do catálogo
+ * antigo, de saves anteriores à Fase 5, saem como saíam.
+ */
+export function carriedOverCards(pending: readonly PendingEvent[]): PendingEvent[] {
+  return pending
+    .filter((e) => e.storyKey !== undefined)
+    .map((e) => ({
+      ...e,
+      choices: e.choices.map((c) => ({
+        ...c,
+        outcomes: c.outcomes.map((o) => ({ ...o, effects: o.effects.filter((x) => x.type !== 'pointsAdjustment' && x.type !== 'gridPenalty') })),
+      })),
+    }));
 }
 
 /**

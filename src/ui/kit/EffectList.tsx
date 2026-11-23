@@ -22,6 +22,7 @@ import {
   Handshake,
   Heart,
   HeartHandshake,
+  Home,
   LogOut,
   type LucideIcon,
   Receipt,
@@ -53,6 +54,14 @@ const STAT: Record<StatKind, { label: string; icon: LucideIcon }> = {
   reputation: { label: 'Reputação', icon: Star },
   teamTrust: { label: 'Confiança da equipe', icon: Users },
   teammateRelation: { label: 'Relação com o companheiro', icon: UserRound },
+};
+
+/** Ícone das notas de família, gestão, mudança e academia. */
+const NOTE_ICON: Record<Extract<StoryEffectView, { kind: 'note' }>['topic'], LucideIcon> = {
+  family: Users,
+  team: Building2,
+  move: Home,
+  academy: GraduationCap,
 };
 
 const money = (value: number) => <Delta value={value} format={(v) => formatMoney(v)} />;
@@ -140,11 +149,7 @@ export function effectRowProps(effect: StoryEffectView): EffectRowProps {
     case 'seatCost':
       return { icon: Receipt, label: 'Custo anual da vaga', delta: <Delta value={effect.value} format={(v) => formatMoney(v)} goodWhen="down" /> };
     case 'releaseFee':
-      return {
-        icon: Receipt,
-        label: 'Multa para sair do contrato',
-        delta: <Delta value={(effect.factor - 1) * 100} format={whole} suffix="%" goodWhen="down" />,
-      };
+      return { icon: Receipt, label: 'Multa para sair do contrato', delta: <Delta value={effect.value} format={(v) => formatMoney(v)} goodWhen="down" /> };
     case 'relationship':
       return { icon: Heart, label: 'Relacionamento', delta: <Delta value={effect.value} /> };
     case 'academy':
@@ -159,6 +164,12 @@ export function effectRowProps(effect: StoryEffectView): EffectRowProps {
       return { icon: Building2, label: `${effect.name} agora trabalha na equipe ${effect.team}` };
     case 'chain':
       return { icon: BookOpen, label: effect.ends ? 'Fim da história' : 'A história continua' };
+    case 'note':
+      return {
+        icon: NOTE_ICON[effect.topic],
+        label: effect.text,
+        delta: effect.value === undefined ? undefined : effect.money ? money(effect.value) : <Delta value={effect.value} />,
+      };
     default: {
       const unknown: never = effect;
       return unknown;

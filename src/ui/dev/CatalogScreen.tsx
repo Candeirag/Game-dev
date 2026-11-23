@@ -188,7 +188,7 @@ const ALL_EFFECTS: StoryEffectView[] = [
   { kind: 'injury', description: 'Punho torcido', rounds: 2, serious: false },
   { kind: 'car', value: -1.5 },
   { kind: 'seatCost', value: 960 },
-  { kind: 'releaseFee', factor: 1.25 },
+  { kind: 'releaseFee', value: 4500 },
   { kind: 'relationship', value: 8 },
   { kind: 'academy', name: 'Academia Vortex Racing' },
   { kind: 'remember', name: 'Marta Ribeiro', role: 'chefe de equipe' },
@@ -197,6 +197,9 @@ const ALL_EFFECTS: StoryEffectView[] = [
   { kind: 'joinsTeam', name: 'Marta Ribeiro', team: 'Vortex Racing' },
   { kind: 'chain', ends: false },
   { kind: 'chain', ends: true },
+  { kind: 'note', topic: 'family', text: 'Nasce Lia Ribeiro' },
+  { kind: 'note', topic: 'team', text: 'Caixa da equipe', value: -120_000, money: true },
+  { kind: 'note', topic: 'move', text: 'Mudança para São Paulo: acabam as viagens do interior' },
 ];
 
 /** O chip de categoria do cartão, com o ícone de cada uma. */

@@ -52,7 +52,7 @@ function choiceAvailable(ctx: StoryContext, choice: StoryChoice, b: StoryBinding
 function unlockOf(choice: StoryChoice): EventChoice['unlock'] {
   for (const c of choice.requires ?? []) {
     if (c.c === 'trait') return { kind: 'trait', id: c.trait };
-    if (c.c === 'aptitude') return { kind: 'aptitude', id: c.aptitude };
+    if (c.c === 'aptitude') return { kind: 'aptitude', id: c.aptitude, level: c.level };
   }
   return undefined;
 }

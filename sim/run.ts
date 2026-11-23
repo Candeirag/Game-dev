@@ -975,7 +975,7 @@ function eventCounts(seasons: readonly SeasonSample[]): EventCountStats {
   };
 }
 
-const unlockKey = (unlock: UnlockSample) => `${unlock.kind}:${unlock.id}`;
+const unlockKey = (unlock: UnlockSample) => `${unlock.kind}:${unlock.id}${unlock.level === 'low' ? ':baixa' : ''}`;
 
 /**
  * Escolhas do catálogo liberadas por cada traço ou aptidão. Vale a primeira condição de traço ou
@@ -987,7 +987,11 @@ function catalogUnlocks(): Map<string, number> {
     for (const choice of spec.choices) {
       const condition = choice.requires?.find((c) => c.c === 'trait' || c.c === 'aptitude');
       const unlock: UnlockSample | null =
-        condition?.c === 'trait' ? { kind: 'trait', id: condition.trait } : condition?.c === 'aptitude' ? { kind: 'aptitude', id: condition.aptitude } : null;
+        condition?.c === 'trait'
+          ? { kind: 'trait', id: condition.trait }
+          : condition?.c === 'aptitude'
+            ? { kind: 'aptitude', id: condition.aptitude, level: condition.level }
+            : null;
       if (unlock) out.set(unlockKey(unlock), (out.get(unlockKey(unlock)) ?? 0) + 1);
     }
   return out;
@@ -1027,7 +1031,10 @@ function eventStats(samples: readonly CareerSample[], seasonsAsked: number): Eve
   const offered = events.flatMap((e) => e.unlocks);
   const unlockOrder: UnlockSample[] = [
     ...Object.values(BIRTH_TRAITS).map((t): UnlockSample => ({ kind: 'trait', id: t.id })),
-    ...APTITUDE_ORDER.map((id): UnlockSample => ({ kind: 'aptitude', id })),
+    ...APTITUDE_ORDER.flatMap((id): UnlockSample[] => [
+      { kind: 'aptitude', id, level: 'high' },
+      { kind: 'aptitude', id, level: 'low' },
+    ]),
     ...offered,
   ].filter((u, i, list) => list.findIndex((v) => unlockKey(v) === unlockKey(u)) === i);
 

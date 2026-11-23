@@ -655,20 +655,32 @@ describe('migração da versão 8 para a 9 (memória das histórias)', () => {
     expect(files.map(read).some((c) => Array.isArray(c.pendingEvents) && c.pendingEvents.length > 0)).toBe(true);
   });
 
-  it.each(files)('%s: só acrescenta a memória vazia do personagem atual e sobe a versão', (name) => {
+  it.each(files)('%s: só acrescenta a memória do personagem atual e sobe a versão', (name) => {
     const before = read(name);
     expect(before.schemaVersion).toBe(8);
     expect('story' in before).toBe(false);
-    const after = migrateStep(before, 8);
-    expect(after).toEqual({ ...before, schemaVersion: 9, story: { driverId: before.playerDriverId, seen: [], flags: [], people: [], chains: [] } });
+    const after = migrateStep(before, 8) as Loose & { story: { seen: { key: string }[] } };
+    expect(after).toEqual({
+      ...before,
+      schemaVersion: 9,
+      story: { driverId: before.playerDriverId, seen: after.story.seen, flags: [], people: [], chains: [] },
+    });
+    // Só entram como vistos os eventos que continuam depois da Fase 5 (família e mudança), na ordem.
+    for (const s of after.story.seen) expect(s.key).toMatch(/^(birth-move|family-(partner|wedding|crisis|child|kart|career))#\d+$/);
     // Rodar de novo sobre o resultado não muda nada.
     expect(migrateStep({ ...after, schemaVersion: 8 }, 8)).toEqual(after);
+  });
+
+  it('a mudança para São Paulo que o save já mostrou entra como vista: a próxima pergunta sai com outro texto', () => {
+    const before = read('nascimento-mudanca-pendente.json');
+    const after = migrateStep(before, 8) as Loose & { story: { seen: { key: string }[] } };
+    expect(after.story.seen.map((s) => s.key)).toEqual(['birth-move#0']);
   });
 
   it.each(files)('%s: abre na versão atual, íntegro, e os cartões antigos pendentes continuam resolvíveis', (name) => {
     const career = importCareer(readFileSync(`tests/fixtures/v8/${name}`, 'utf8'));
     expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
-    expect(career.story).toEqual({ driverId: career.playerDriverId, seen: [], flags: [], people: [], chains: [] });
+    expect(career.story).toMatchObject({ driverId: career.playerDriverId, flags: [], people: [], chains: [] });
     expect(validateCareerIntegrity(career)).toEqual([]);
     let c = career;
     while (c.pendingEvents.length > 0) {

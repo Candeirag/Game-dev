@@ -731,6 +731,10 @@ export const SPONSOR_PROFILE_RULES = {
   ENTHUSIASM: { patient: 1, demanding: 0.8, vain: 1.4, discreet: 0.8, loyal: 1.1, impulsive: 1.3 },
   // Satisfação de um patrocinador que acaba de assinar (a mesma de antes da Fase 5).
   START_SATISFACTION: 60,
+  // O valor de cada proposta varia até 10% para cima ou para baixo (faixa de 20%), e metade dos
+  // contratos vale por mais uma temporada (as mesmas contas de antes da Fase 5).
+  VALUE_VARIATION: 0.2,
+  EXTRA_SEASON_CHANCE: 0.5,
   // Pechinchar: o valor sobe isto e a meta aperta tantas posições, se o patrocinador topar.
   HAGGLE_VALUE: 1.2,
   HAGGLE_TARGET: -1,

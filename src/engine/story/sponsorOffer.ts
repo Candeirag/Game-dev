@@ -53,9 +53,11 @@ export function sponsorOfferCard(ctx: StoryContext, seed: number): { event: Pend
   if (!profile) return null;
   const { career } = ctx;
   const sponsor = sponsorFromProfile(ctx, profile, hashSeed(seed, 'sponsor', profile.id));
+  const haggled = Math.round((sponsor.perSeason * SPONSOR_PROFILE_RULES.HAGGLE_VALUE) / 100) * 100;
   const better = {
     ...sponsor,
-    perSeason: Math.round((sponsor.perSeason * SPONSOR_PROFILE_RULES.HAGGLE_VALUE) / 100) * 100,
+    perSeason: haggled,
+    podiumBonus: Math.round(haggled * SPONSOR_RULES.PODIUM_BONUS_SHARE),
     targetPosition: Math.max(1, sponsor.targetPosition + SPONSOR_PROFILE_RULES.HAGGLE_TARGET),
   };
   const replaced = slot.replaces ? career.sponsors.find((s) => s.id === slot.replaces) : undefined;
@@ -68,7 +70,7 @@ export function sponsorOfferCard(ctx: StoryContext, seed: number): { event: Pend
     ate: String(career.year + (sponsor.endSeason - career.season)),
   };
   const r = (text: string) => renderText(text, ctx, { persons: {} }, extras);
-  const note = replaced ? `Para assinar, ${replaced.name} sai.` : '';
+  const note = replaced ? `${profile.name} entra no lugar de ${replaced.name}.` : '';
   const p = profile.pitch;
   return {
     key: sponsorKey(profile),

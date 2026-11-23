@@ -11,6 +11,7 @@ import { FAMILY } from '@/data/family';
 import { netWorth, post } from '../career/economy';
 import { enterAcademy } from '../career/paths';
 import { getPlayer } from '../career/selectors';
+import { commercialSponsors, maxSponsors } from '../career/sponsors';
 import { relocate } from '../birth/move';
 import { setKartFunding, startChildCareer } from '../dynasty/family';
 import { advanceChain, changeAttitude, personJoinsTeam, setFlag, setFollow, updateStory, upsertPerson } from '../story/memory';
@@ -51,8 +52,18 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
           s.tier > 0 && (effect.sponsorId === null || s.id === effect.sponsorId) ? { ...s, satisfaction: clamp(s.satisfaction + effect.value) } : s,
         ),
       };
-    case 'addSponsor':
-      return career.sponsors.some((s) => s.id === effect.sponsor.id) ? career : { ...career, sponsors: [...career.sponsors, effect.sponsor] };
+    case 'addSponsor': {
+      if (career.sponsors.some((s) => s.id === effect.sponsor.id)) return career;
+      // As cotas valem também na hora de assinar (duas propostas podem estar abertas ao mesmo tempo, e a
+      // academia cobra exclusividade): com tudo ocupado, o novo só entra no lugar de um menor; senão, desiste.
+      const commercial = commercialSponsors(career.sponsors);
+      if (effect.sponsor.tier > 0 && commercial.length >= maxSponsors(career)) {
+        const weakest = [...commercial].sort((a, b) => a.tier - b.tier || a.perSeason - b.perSeason)[0];
+        if (!weakest || weakest.tier >= effect.sponsor.tier) return career;
+        return { ...career, sponsors: [...career.sponsors.filter((s) => s.id !== weakest.id), effect.sponsor] };
+      }
+      return { ...career, sponsors: [...career.sponsors, effect.sponsor] };
+    }
     case 'removeSponsor':
       return { ...career, sponsors: career.sponsors.filter((s) => s.id !== effect.sponsorId) };
     case 'penaltyPoints':

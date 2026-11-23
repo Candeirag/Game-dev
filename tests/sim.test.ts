@@ -813,9 +813,9 @@ describe('eventos nos agregados (Fase 5)', () => {
   it('o relatório mostra esses números, e sem carreira nenhuma não inventa número', () => {
     const text = formatReport(summary);
     expect(text).toContain(
-      'Cartões da Fase 5: 16 (1,56 por etapa disputada; 2,00 no começo de cada temporada, da segunda em diante). Eventos de família e mudança: 3.',
+      'Cartões da Fase 5: 16 (1,56 por etapa; 2,00 no começo de cada temporada, da segunda em diante). Eventos de família e mudança: 3.',
     );
-    expect(text).toContain('Etapas disputadas: 9. Sem nenhum cartão: 2. Com mais de 3: 1.');
+    expect(text).toContain('Etapas (com e sem o piloto na pista): 9. Sem nenhum cartão: 2. Com mais de 3: 1.');
     expect(text).toMatch(/Todas as temporadas +9 +1,56 +22% +33% +22% +11% +11% +2,00/);
     expect(text).toMatch(/Temporada 1 +7 +1,43 +29% +29% +29% +0% +14% +-\n/);
     expect(text).toMatch(/Temporada 2 +2 +2,00 +0% +50% +0% +50% +0% +2,00/);
@@ -853,7 +853,7 @@ describe('eventos nos agregados (Fase 5)', () => {
     expect(empty.chains.every((c) => c.started === 0 && c.done === 0)).toBe(true);
     expect(empty.byUnlock.every((u) => u.times === 0 && u.careers === 0)).toBe(true);
     const section = formatReport(summarize([], SMALL)).split('10. EVENTOS')[1] ?? '';
-    expect(section).toContain('Cartões da Fase 5: 0 (- por etapa disputada; - no começo de cada temporada, da segunda em diante).');
+    expect(section).toContain('Cartões da Fase 5: 0 (- por etapa; - no começo de cada temporada, da segunda em diante).');
     expect(section).toContain('Textos repetidos na mesma carreira, só nos cartões da Fase 5: 0 (em 0 de 0 carreiras).');
     expect(section).toMatch(/Pista +0 +-/);
     expect(section).not.toMatch(/NaN|undefined|Infinity/);
@@ -953,10 +953,11 @@ describe('eventos em carreiras de verdade (Fase 5)', () => {
 });
 
 describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
-  // A semente 38 chega ao fim da segunda temporada em 20º, com proposta de equipe e sem caixa para
+  // A semente 11 chega ao fim da segunda temporada em 20º, com proposta de equipe e sem caixa para
   // bancá-la, e nenhuma porta se abre: nem academia, nem vaquinha, nem investidor. (Até a Fase 3 o
-  // exemplo era a semente 11; com a curva de pneus e os lances da Fase 4 as corridas dela mudaram.)
-  const sample = simulateCareer(38, { seasons: 3, talent: 0 });
+  // exemplo era a semente 11; na Fase 4, com a curva de pneus e os lances, foi a 38; na Fase 5, os
+  // eventos mudaram o dinheiro da 38, e a 11 voltou a mostrar o caso.)
+  const sample = simulateCareer(11, { seasons: 3, talent: 0 });
 
   it('a temporada seguinte é disputada pela vaga de aluguel, com o motivo "dinheiro"', () => {
     expect(sample.seasons[2]).toMatchObject({ season: 3, seat: 'fallback', noSeatCause: 'money', door: 'none' });
@@ -965,7 +966,7 @@ describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
     expect(sample.seasons[1]?.offers).toBe(0);
     expect(sample.seasons[1]?.doorOpen).toBe(false);
     expect(sample.seasons[1]?.position).toBe(20);
-    expect(summarize([sample], { seeds: 1, seasons: 3, firstSeed: 38, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
+    expect(summarize([sample], { seeds: 1, seasons: 3, firstSeed: 11, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
   });
 });
 

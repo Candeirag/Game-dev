@@ -87,20 +87,20 @@ export function personSnapshot(ctx: StoryContext, b: StoryBindings, effect: Extr
 export function sponsorFromProfile(ctx: StoryContext, profile: SponsorProfile, seed: number): Sponsor {
   const rng = createRng(seed);
   const category = getCategory(ctx.career.categoryId);
-  const variation = 0.9 + rng.next() * 0.2;
+  const variation = 1 - SPONSOR_PROFILE_RULES.VALUE_VARIATION / 2 + rng.next() * SPONSOR_PROFILE_RULES.VALUE_VARIATION;
   const share = SPONSOR_RULES.TIER_SHARE[profile.tier] ?? 0;
   const perSeason =
     Math.round(
       (sponsorBaseFor(profile.tier, category) * share * SPONSOR_PROFILE_RULES.VALUE[profile.value] * variation * sponsorValueFactor(ctx.career)) / 100,
     ) * 100;
-  const target = (SPONSOR_RULES.TIER_TARGET[profile.tier] ?? 15) + SPONSOR_PROFILE_RULES.TARGET_SHIFT[profile.demand];
+  const target = (SPONSOR_RULES.TIER_TARGET[profile.tier] ?? Math.max(...SPONSOR_RULES.TIER_TARGET)) + SPONSOR_PROFILE_RULES.TARGET_SHIFT[profile.demand];
   return {
     id: `sponsor-${profile.id}`,
     name: profile.name,
     tier: profile.tier,
     perSeason,
     podiumBonus: Math.round(perSeason * SPONSOR_RULES.PODIUM_BONUS_SHARE),
-    endSeason: ctx.career.season + (rng.next() < 0.5 ? 0 : 1),
+    endSeason: ctx.career.season + (rng.next() < SPONSOR_PROFILE_RULES.EXTRA_SEASON_CHANCE ? 0 : 1),
     satisfaction: SPONSOR_PROFILE_RULES.START_SATISFACTION,
     targetPosition: Math.max(1, target),
     profileId: profile.id,

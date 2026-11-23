@@ -1073,7 +1073,7 @@ export const EventChoiceSchema = z.object({
   description: z.string(),
   outcomes: z.array(EventOutcomeSchema).min(1),
   /** Fase 5: a escolha existe por causa de um traço de nascença ou de uma aptidão (a tela mostra qual). */
-  unlock: z.object({ kind: z.enum(['trait', 'aptitude']), id: z.string() }).optional(),
+  unlock: z.object({ kind: z.enum(['trait', 'aptitude']), id: z.string(), level: z.enum(['high', 'low']).optional() }).optional(),
 });
 export type EventChoice = z.infer<typeof EventChoiceSchema>;
 

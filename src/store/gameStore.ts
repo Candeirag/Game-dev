@@ -530,6 +530,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     },
 
     startWeekend(options) {
+      // Um desfecho que ficou aberto não sobrevive ao fim de semana: depois da corrida, a vez é dos cartões novos.
+      set({ lastOutcome: null });
       apply((c) => engine.startWeekend(c, options), { save: true });
     },
 

@@ -21,7 +21,7 @@ import { NEUTRAL_CONDITION } from '@/data/drivers';
 import { TEAM_TARGETS, initialTeams } from '@/data/teams';
 import { chooseAiTrainingFocus } from '../ai/decisions';
 import { computeDriverStandings, computeTeamStandings } from '../championship/standings';
-import { addSeasonStartStoryEvents } from '../story/select';
+import { addSeasonStartStoryEvents, carriedOverCards } from '../story/select';
 import { storyFollowers } from '../story/followers';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { buildCategoryField, rankTeams, teamStrength } from '../world/generation';
@@ -590,9 +590,9 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
       rivalryLog: career.relations.rivalryLog,
     },
     marketInterest: {},
-    // Os cartões das histórias que ficaram sem resposta passam para o ano novo (Fase 5): o texto já
-    // está na memória e não pode sumir sem ser lido. Os do catálogo antigo, de saves anteriores, saem.
-    pendingEvents: career.pendingEvents.filter((e) => e.storyKey !== undefined),
+    // Os cartões das histórias que ficaram sem resposta passam para o ano novo (Fase 5), sem os
+    // efeitos presos ao campeonato que acabou (`carriedOverCards`).
+    pendingEvents: carriedOverCards(career.pendingEvents),
     offseason: null,
     history: trimHistory([...career.history, summary], familyDriverIds(career)),
     seasonTrend: recordSeasonTrend(career),
