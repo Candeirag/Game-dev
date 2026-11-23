@@ -555,13 +555,13 @@ Desde a Fase 5, os eventos são **cartões rápidos**: uma situação curta, dua
 - **De 1 a 3 cartões por etapa**, inclusive nas etapas em que o piloto não corre. A média é de 1,4. O começo da temporada traz a proposta de patrocínio (se o piloto atrai uma) e um cartão de pré-temporada ou um passo de cadeia agendado para a virada.
 - O sorteio escolhe primeiro a categoria e depois o evento:
 
-  | Categoria    | Peso | Do que trata                                                                                  |
-  | ------------ | ---- | --------------------------------------------------------------------------------------------- |
-  | Pista        | 40   | toques, comissários, punições, largadas, peça nova, vistoria técnica, acerto, pneus, chuva     |
-  | Carreira     | 24   | imprensa, rivais, companheiro, chefe de equipe, propostas, academias                           |
-  | Dinheiro     | 16   | dívidas, investimentos, golpes, patrocinador cobrando, aportes, propostas de patrocínio        |
-  | Saúde        | 12   | lesões, virose, treino físico, sono, calor, cabeça                                             |
-  | Vida pessoal | 8    | escola, família, amizades, namoro, filhos, saudade de casa                                     |
+  | Categoria    | Peso | Do que trata                                                                               |
+  | ------------ | ---- | ------------------------------------------------------------------------------------------ |
+  | Pista        | 40   | toques, comissários, punições, largadas, peça nova, vistoria técnica, acerto, pneus, chuva |
+  | Carreira     | 24   | imprensa, rivais, companheiro, chefe de equipe, propostas, academias                       |
+  | Dinheiro     | 16   | dívidas, investimentos, golpes, patrocinador cobrando, aportes, propostas de patrocínio    |
+  | Saúde        | 12   | lesões, virose, treino físico, sono, calor, cabeça                                         |
+  | Vida pessoal | 8    | escola, família, amizades, namoro, filhos, saudade de casa                                 |
 
   Dentro da categoria, pesam a frequência do evento (rara, normal ou comum) e o que acabou de acontecer: o evento que reage à etapa (um toque, uma vitória, um abandono) pesa três vezes mais. O mesmo evento só volta, com outro texto, depois de algumas etapas.
 
@@ -578,12 +578,14 @@ Nenhum perfil volta na mesma carreira. Os eventos de família e a mudança para 
 ### Encadeados, com memória
 
 A memória (`story`, no save) guarda:
+
 - os textos já vistos;
 - as **marcas** deixadas pelas escolhas;
 - as **pessoas** lembradas: nome, papel, o que pensam do piloto (de −100 a 100), onde e quando ele as conheceu e a idade que ele tinha;
 - as **cadeias** em andamento: o próximo passo e a partir de quando ele pode sair.
 
 Uma cadeia começa como um evento comum. Cada desfecho diz qual é o passo seguinte e o prazo (a etapa seguinte, algumas etapas, a próxima temporada, ou "quando a condição valer"). Um passo só sai com o prazo vencido e a condição valendo. No máximo um passo de cadeia sai por etapa, e no máximo quatro cadeias ocupam espaço ao mesmo tempo; a cadeia que espera algo de longo prazo, como chegar ao topo, não ocupa. Algumas cadeias atravessam categorias:
+
 - **o chefe de equipe do kart** com quem você brigou reaparece como diretor de uma equipe nas fórmulas e mexe no interesse dela por você;
 - **a padaria** que patrocinou você aos 15 anos pede retribuição quando você chega ao topo;
 - **o rival do kart**, inclusive o nascido de um toque num lance decisivo, acompanha a carreira: quando você sobe de categoria, ele entra no grid junto. Se ainda estava no grid, vem como está; se tinha sumido, volta com o mesmo nome e o nível de um piloto do meio do grid.
@@ -593,6 +595,7 @@ A lista completa das cadeias está no PR da Fase 5 e em `src/data/events/cadeias
 ### Talentos e defeitos
 
 Algumas escolhas só aparecem com um traço de nascença **já revelado** ou com uma aptidão alta (ou baixa), e a tela mostra qual:
+
 - o esquentado ganha "partir para cima";
 - o piloto limpo explica a manobra com calma aos comissários;
 - o gênio da chuva, o poupador de pneus, o corpo de ferro e os outros traços também têm as suas;

@@ -260,6 +260,7 @@ Um cartão nasce assim:
 O cartão pendente guarda tudo pronto, e resolver não consulta os dados.
 
 A memória (`career.story`, `memory.ts`) é do personagem, e a sucessão começa uma nova:
+
 - `seen`: as variantes já mostradas. Não tem corte, e é ela que impede a repetição;
 - `flags`: as marcas;
 - `people`: pessoas com nome, papel, atitude, onde e quando foram conhecidas e, para os pilotos, o id e a idade;
@@ -272,6 +273,7 @@ O rival que acompanha a carreira (`follow`) entra no grid quando o jogador sobe 
 Os patrocinadores têm perfil e personalidade. A personalidade multiplica a queda e a alta da satisfação (`SPONSOR_PROFILE_RULES.PATIENCE` e `ENTHUSIASM`), e a renovação volta à meta do perfil (`freshTarget`). Os eventos de família (`src/data/familyTexts.ts`) e a mudança para São Paulo usam a mesma memória: cada vez que aparecem, um texto novo; acabadas as variantes, não aparecem mais.
 
 Sorteios com nome próprio:
+
 - `story-round`: quantos cartões e quais;
 - `story-team`: a "outra equipe" de um cartão;
 - `story-person`: o nome de uma pessoa nova;
