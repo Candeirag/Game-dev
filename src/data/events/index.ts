@@ -15,6 +15,7 @@ import { SPONSOR_PROFILES } from './patrocinadores';
 import { HEALTH_EVENTS } from './saude';
 import { TRACK_EVENTS } from './pista';
 import { TRACK_TECH_EVENTS } from './pista-tecnica';
+import { TOP_EVENTS } from './topo';
 import { PERSONAL_EVENTS } from './vida';
 
 export { STORY_FIRST_NAMES, STORY_LAST_NAMES } from './pessoas';
@@ -28,6 +29,7 @@ export const STORY_EVENT_CATALOG: readonly StoryEventSpec[] = [
   ...MONEY_EVENTS,
   ...HEALTH_EVENTS,
   ...PERSONAL_EVENTS,
+  ...TOP_EVENTS,
 ];
 
 /** Cadeias de eventos com memória. */

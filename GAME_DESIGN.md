@@ -661,13 +661,13 @@ O robô escolhe sempre a primeira opção de cada cartão, a "natural": segue a 
 
 | Robô                  | Chegam ao Grand Prix Mundial | Títulos por carreira | Temporadas sem vaga por carreira | Cartões por etapa | Etapas sem cartão | Cadeias começadas / concluídas por carreira | Textos repetidos |
 | --------------------- | ---------------------------- | -------------------- | -------------------------------- | ----------------- | ----------------- | ------------------------------------------- | ---------------- |
-| Mediano (talento 0)   | 12% (Fase 4: 8%)             | 0,24 (0,34)          | 0,52 (0,42)                      | 1,42              | 2 de 7.658        | 6,96 / 5,36                                 | 0                |
-| Bom (talento 4)       | 44% (38%)                    | 0,48 (0,58)          | 0,42 (0,50)                      | 1,41              | 5 de 7.910        | 6,48 / 5,42                                 | 0                |
-| Excelente (talento 8) | 74% (74%)                    | 1,24 (1,12)          | 0,22 (0,20)                      | 1,40              | 79 de 8.286       | 5,96 / 5,30                                 | 0                |
+| Mediano (talento 0)   | 16% (Fase 4: 8%)             | 0,22 (0,34)          | 0,50 (0,42)                      | 1,42              | 2 de 7.672        | 6,92 / 5,40                                 | 0                |
+| Bom (talento 4)       | 46% (38%)                    | 0,56 (0,58)          | 0,46 (0,50)                      | 1,42              | 0 de 7.902        | 6,38 / 5,30                                 | 0                |
+| Excelente (talento 8) | 72% (74%)                    | 1,18 (1,12)          | 0,16 (0,20)                      | 1,42              | 0 de 8.280        | 5,90 / 5,14                                 | 0                |
 
 - Em 150 carreiras de 15 temporadas, nenhuma repetiu texto, nem nos cartões nem nos eventos de família e na mudança para São Paulo.
 - Cartões por etapa: 65% das etapas têm 1, 28% têm 2 e 7% têm 3.
-- Divisão por categoria: pista 34%, carreira 24%, dinheiro 20%, saúde 12% e vida pessoal 9%.
+- Divisão por categoria: pista 35%, carreira 24%, dinheiro 20%, saúde 12% e vida pessoal 9%.
 - Cada carreira recebe cerca de 9 propostas de patrocínio, de perfis sempre diferentes.
 
 **A economia ficou mais apertada no começo.** No robô mediano:

@@ -60,6 +60,7 @@ const NOT_BALANCE = new Set([
   'MONEY_EVENTS',
   'HEALTH_EVENTS',
   'PERSONAL_EVENTS',
+  'TOP_EVENTS',
   'CHAINS_A',
   'CHAINS_B',
   'CHAINS_C',
