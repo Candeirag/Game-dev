@@ -453,3 +453,17 @@ describe('correções da revisão', () => {
     expect(views.some((v) => v.kind === 'note' && v.text.includes('Lia'))).toBe(true);
   });
 });
+
+describe('o rival nascido num lance da Fase 4', () => {
+  it('conta como o rival na hora: a cadeia "Velho conhecido" pode começar mesmo com a rivalidade ainda pequena', () => {
+    const { career, record } = playedRound(9);
+    const rival = career.drivers.find((d) => !d.isPlayer && d.teamId)!;
+    const touch = { driverId: rival.id, season: career.season, round: record.round, lap: 3, kind: 'attack' as const, retired: false, fresh: true };
+    const small = { ...career, relations: { ...career.relations, rivalries: { [rival.id]: 15 }, rivalryLog: [touch] } };
+    const card = storyCardFor(small, record, record.round, 'chain:velho-conhecido:rixa');
+    expect(card?.title).toContain(rival.lastName);
+    // Sem o toque desta etapa, 15 pontos de rivalidade não bastam.
+    const old = { ...small, relations: { ...small.relations, rivalryLog: [] } };
+    expect(storyCardFor(old, record, record.round, 'chain:velho-conhecido:rixa')).toBeNull();
+  });
+});

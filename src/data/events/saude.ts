@@ -840,7 +840,7 @@ export const HEALTH_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'A insônia que voltou com tudo',
-        body: 'Você acorda às três da manhã repassando a curva onde errou no domingo. Já é a quarta noite seguida, e o engenheiro comentou que a sua voz no rádio anda tensa.',
+        body: 'Você acorda às três da manhã repassando a curva onde errou no domingo. Já é a quarta noite seguida, e o chefe da equipe comentou que a sua voz anda tensa nas reuniões.',
         choices: {
           psicologo: {
             label: 'Pedir à equipe o contato de quem cuida da mente',
@@ -850,7 +850,7 @@ export const HEALTH_EVENTS: readonly StoryEventSpec[] = [
             label: 'Tomar um chá e fingir que está tudo bem',
             outcomes: [
               'O chá e o cansaço vencem a insônia, e você chega à pista mais leve do que esperava.',
-              'Fingir não funciona: a tensão aparece no rádio, na largada e no humor do box.',
+              'Fingir não funciona: a tensão aparece nas reuniões, na largada e no humor do box.',
             ],
           },
           'sangue-frio': {

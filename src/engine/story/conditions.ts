@@ -10,7 +10,7 @@ import { AGE_STAGES, STORY_CASH_LEVELS } from '@/domain/storyEvents';
 import { SPONSOR_RULES, commercialSponsors, maxSponsors } from '../career/sponsors';
 import { teamKey } from '../career/selectors';
 import type { StoryContext } from './context';
-import { seasonPart } from './context';
+import { freshRivalryThisRound, seasonPart } from './context';
 import { findPerson, hasFlag } from './memory';
 
 export function ageStage(age: number): AgeStage {
@@ -68,8 +68,14 @@ export function interestedTeam(ctx: StoryContext): { teamId: string; key: string
   return best;
 }
 
-/** O maior rival no grid atual (com equipe), se a rivalidade passa do mínimo. */
+/**
+ * O rival do momento: quem acabou de virar rival num toque de lance decisivo nesta etapa (Fase 4),
+ * mesmo que a rivalidade ainda seja pequena; senão, o maior rival no grid atual (com equipe), se a
+ * rivalidade passa do mínimo.
+ */
 export function topRivalId(ctx: StoryContext): string | null {
+  const fresh = freshRivalryThisRound(ctx.career, ctx.round);
+  if (fresh && ctx.career.drivers.some((d) => d.id === fresh && d.teamId && !d.isPlayer)) return fresh;
   let best: [string, number] | null = null;
   for (const [id, value] of Object.entries(ctx.career.relations.rivalries)) {
     if (value < STORY_EVENTS.RIVAL_MIN || !ctx.career.drivers.some((d) => d.id === id && d.teamId && !d.isPlayer)) continue;
