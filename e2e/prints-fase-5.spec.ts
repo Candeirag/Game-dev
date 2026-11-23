@@ -35,8 +35,21 @@ const cartao = (page: Page): Locator =>
     .last();
 const desfecho = (page: Page): Locator => page.getByRole('region', { name: /^Desfecho:/ });
 
+/** Rola até o elemento ficar logo abaixo do cabeçalho fixo (o alto do cartão aparece inteiro). */
 async function noAlto(alvo: Locator): Promise<void> {
-  await alvo.evaluate((elemento) => elemento.scrollIntoView({ block: 'start', behavior: 'instant' }));
+  await alvo.evaluate((elemento) => {
+    const header = [...document.querySelectorAll('header')].find((h) => getComputedStyle(h).position === 'sticky');
+    const margem = (header?.getBoundingClientRect().bottom ?? 0) + 8;
+    window.scrollBy({ top: elemento.getBoundingClientRect().top - margem, behavior: 'instant' });
+  });
+}
+
+/** Abre o save e fecha o aviso de importação, que cobriria o cartão no print. */
+async function abrir(page: Page, arquivo: string): Promise<void> {
+  await abrirSave(page, arquivo);
+  const aviso = page.getByRole('button', { name: 'Fechar aviso' });
+  await aviso.waitFor({ timeout: 3_000 }).catch(() => undefined);
+  if (await aviso.count()) await aviso.click();
 }
 
 /** Resolve os cartões até aparecer um que satisfaça `ok` (pela primeira escolha), e devolve-o. */
@@ -61,7 +74,7 @@ for (const formato of [
     test.use({ viewport: { width: formato.width, height: formato.height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
     test('cartão com escolha liberada por traço e o desfecho com o que mudou', async ({ page }) => {
-      await abrirSave(page, SAVES.escolhaDeTraco);
+      await abrir(page, SAVES.escolhaDeTraco);
       const card = await ateOCartao(
         page,
         async (c) =>
@@ -77,7 +90,7 @@ for (const formato of [
     });
 
     test('passo de cadeia: o rival do kart de volta nas fórmulas, com quem fala e a memória', async ({ page }) => {
-      await abrirSave(page, SAVES.historiaRival);
+      await abrir(page, SAVES.historiaRival);
       const card = await ateOCartao(page, async (c) => (await c.getByText('Velho conhecido').count()) > 0);
       await noAlto(card);
       await fotografar(page, `${formato.prefixo}03-passo-de-cadeia-com-quem-fala`);
