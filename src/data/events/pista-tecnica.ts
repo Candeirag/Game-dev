@@ -170,27 +170,27 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'Seu carro foi lacrado para vistoria',
-        body: 'Mal acaba a corrida em {pista} e os fiscais lacram o seu carro para a vistoria técnica. Os {pontos} da etapa ficam pendurados até a medição sair.',
+        body: 'Mal acaba a corrida em {pista} e os fiscais lacram o seu carro para a vistoria técnica. Até a medição sair, a etapa vale {pontos} só no papel.',
         choices: {
           acompanhar: {
             label: 'Acompanhar a vistoria ao lado do fiscal',
             outcomes: [
-              'Tudo dentro do regulamento. O fiscal ainda elogia a organização do box.',
+              'Tudo dentro do regulamento. O fiscal ainda elogia a organização da equipe.',
               'Uma peça passa do limite por um fio. Os pontos vão embora, mas o paddock nota a sua postura.',
             ],
           },
           contestar: {
             label: 'Mandar a equipe contestar o método de medição',
             outcomes: [
-              'O recurso cola: a medição é refeita e o carro passa. A equipe comemora como se fosse outra vitória.',
+              'O recurso cola: a medição é refeita e o carro passa. A equipe comemora como se fosse uma vitória.',
               'O recurso afunda, a taxa de protesto fica com a federação e os pontos somem do mesmo jeito.',
             ],
           },
         },
       },
       {
-        title: 'Fiscais rondando o seu box',
-        body: 'Os comissários técnicos querem desmontar parte do seu equipamento antes de homologar o resultado. Estão em jogo os {pontos} que você acabou de somar.',
+        title: 'Desmontagem antes da homologação',
+        body: 'Os comissários técnicos querem desmontar parte do seu equipamento antes de homologar a etapa. O resultado que rendeu {pontos} depende disso.',
         choices: {
           acompanhar: {
             label: 'Entregar as ferramentas e deixar os fiscais trabalharem',
@@ -210,7 +210,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Pesagem extra no fim da tarde',
-        body: 'Um fiscal pede para pesar de novo o seu carro, desta vez com você dentro. A balança decide se os {pontos} de hoje continuam na tabela.',
+        body: 'Um fiscal pede para pesar de novo o seu carro, desta vez com você dentro. A balança decide se você leva {pontos} para casa.',
         choices: {
           acompanhar: {
             label: 'Subir na balança sem reclamar',
@@ -230,7 +230,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Combustível na mira dos fiscais',
-        body: 'Os fiscais recolheram uma amostra do combustível do seu tanque logo depois da bandeirada. Se a análise der errado, os {pontos} conquistados em {pista} vão para o lixo.',
+        body: 'Os fiscais recolheram uma amostra do combustível do seu tanque logo depois da bandeirada. Se a análise der errado, o resultado em {pista} deixa de render {pontos}.',
         choices: {
           acompanhar: {
             label: 'Acompanhar a coleta e assinar o termo',
@@ -284,7 +284,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Fiscal na porta do box',
+        title: 'Conferência de peças antes do treino',
         body: 'Antes do primeiro treino, um fiscal técnico aparece com uma prancheta e uma lista de peças para conferir no seu carro. A sessão começa em meia hora.',
         choices: {
           abrir: {
@@ -299,7 +299,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'O lacre que parecia frouxo',
-        body: 'A direção técnica sorteou o seu box para conferir os lacres do motor. O chefe dos mecânicos coça a cabeça: um dos lacres parece frouxo.',
+        body: 'A direção técnica sorteou o seu motor para conferir os lacres. O chefe dos mecânicos coça a cabeça: um dos lacres parece frouxo.',
         choices: {
           abrir: {
             label: 'Chamar o fiscal e mostrar o lacre frouxo',
@@ -436,7 +436,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Teste às cegas no treino livre',
-        body: 'A engenheira de pista quer mandar você para a pista sem contar o que mudou no acerto. Assim, diz ela, a sua opinião sai sem vício.',
+        body: 'A engenheira da equipe quer mandar você para a pista sem contar o que mudou no acerto. Assim, diz ela, a sua opinião sai sem vício.',
         choices: {
           testar: {
             label: 'Aceitar guiar sem saber o que mudou',
@@ -654,10 +654,10 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'O dilúvio de domingo',
-        body: 'Choveu do começo ao fim. Uns rodaram, outros abandonaram, e você terminou com o macacão encharcado e muita coisa para contar à engenharia.',
+        body: 'Choveu do começo ao fim. Uns rodaram, outros abandonaram, e você terminou com o macacão encharcado e muita coisa para contar à equipe.',
         choices: {
           rever: {
-            label: 'Ficar no box anotando cada poça da pista',
+            label: 'Ficar até tarde anotando cada poça da pista',
             outcomes: ['Você anota onde a água empoçava e por onde passava o traçado mais seco. Na próxima chuva, vai saber.'],
           },
           secar: {
@@ -668,7 +668,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
             label: 'Pedir aos mecânicos um acerto de chuva só seu',
             outcomes: [
               'Os mecânicos topam: quem anda assim no molhado merece um acerto sob medida.',
-              'O pedido atrapalha o trabalho do box, e o chefe pede menos estrelismo.',
+              'O pedido bagunça a rotina da oficina, e o chefe pede menos estrelismo.',
             ],
           },
         },
@@ -688,7 +688,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
           chover: {
             label: 'Dizer aos jornalistas que reza por chuva toda semana',
             outcomes: [
-              'A manchete do dia é sua: quem reza por chuva. Os rivais passam a olhar para o céu.',
+              'A frase vira a manchete do dia, e os rivais passam a olhar para o céu.',
               'A manchete pega mal dentro da equipe, que prefere vencer no seco também.',
             ],
           },
@@ -769,8 +769,8 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
         body: 'O radar mostra uma frente fria chegando junto com a próxima corrida. No grupo da equipe, já tem mecânico separando os pneus de chuva.',
         choices: {
           treinar: {
-            label: 'Treinar no kartódromo com a pista molhada',
-            outcomes: ['Molhar a pista do kartódromo custa uma taxa extra, mas cada volta ensina alguma coisa.'],
+            label: 'Alugar uma pista e treinar com o asfalto molhado',
+            outcomes: ['Molhar a pista alugada custa uma taxa extra, mas cada volta ensina alguma coisa.'],
           },
           ignorar: {
             label: 'Dizer que chuva é igual para todo mundo',
@@ -812,7 +812,10 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
     id: 'quebra-na-corrida',
     category: 'track',
     frequency: 'common',
-    when: [{ c: 'race', tag: 'mechanical' }],
+    when: [
+      { c: 'race', tag: 'mechanical' },
+      { c: 'notRace', tag: 'contact' },
+    ],
     choices: [
       {
         id: 'apoiar',
@@ -852,7 +855,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
             odds: 'sure',
             effects: [
               { e: 'car', size: 1 },
-              { e: 'cash', size: -1, cap: true },
+              { e: 'cash', size: -2, cap: true },
             ],
           },
         ],
@@ -861,7 +864,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'A quebra que ninguém viu chegando',
-        body: 'O carro morreu em {pista} sem aviso, bem quando você brigava por posição. No box, os mecânicos olham para o chão.',
+        body: 'O carro morreu em {pista} sem aviso, bem quando você brigava por posição. Os mecânicos olham para o chão.',
         choices: {
           apoiar: {
             label: 'Consolar os mecânicos e cobrar só em particular',
@@ -1126,7 +1129,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
           },
           folga: {
             label: 'Economizar a inscrição e passar o dia longe da pista',
-            outcomes: ['Um dia longe dos boxes recarrega as energias. A equipe preferia você no teste.'],
+            outcomes: ['Um dia longe do barulho dos motores recarrega as energias. A equipe preferia você no teste.'],
           },
           dobrar: {
             label: 'Fazer a inscrição e pagar sessões extras à tarde',
@@ -1321,7 +1324,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'O gráfico que não perdoa',
-        body: 'O engenheiro sobrepôs a sua melhor volta em {pista} à mais rápida da corrida. Na saída das curvas, a sua linha de acelerador parece um serrote.',
+        body: 'O engenheiro sobrepôs a sua melhor volta em {pista} à melhor volta do vencedor. Na saída das curvas, a sua linha de acelerador parece um serrote.',
         choices: {
           aceitar: {
             label: 'Admitir que hesita no acelerador e treinar isso',
@@ -1652,7 +1655,7 @@ export const TRACK_TECH_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'Horas contadas no túnel de vento',
-        body: 'A equipe conseguiu horas no túnel de vento para testar uma carroceria nova. O chefe pergunta se você quer passar a semana na fábrica acompanhando os ensaios.',
+        body: 'A equipe conseguiu horas no túnel de vento para testar um pacote aerodinâmico novo. O chefe pergunta se você quer passar a semana na fábrica acompanhando os ensaios.',
         choices: {
           fabrica: {
             label: 'Passar a semana na fábrica acompanhando os ensaios',

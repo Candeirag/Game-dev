@@ -43,7 +43,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             label: 'Dizer que não tem de onde tirar',
             outcomes: [
               'A equipe aperta o cinto e segue como dá, mas o clima esfria.',
-              'Sem dinheiro, as peças novas ficam na prateleira do fornecedor e o carro perde rendimento.',
+              'Sem dinheiro, as peças novas ficam na prateleira do fornecedor e o equipamento perde rendimento.',
             ],
           },
           parcelar: {
@@ -119,7 +119,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: '{patrocinador} quer explicações',
-        body: 'O gerente de marketing da {patrocinador} liga no domingo à noite. Os resultados não aparecem, o logo não aparece na TV e a diretoria fala em rescindir.',
+        body: 'Domingo à noite, liga o gerente de marketing do patrocinador {patrocinador}. Os resultados não vêm, o logo não aparece na TV e a diretoria fala em rescindir.',
         choices: {
           prometer: { label: 'Prometer uma reação nas próximas etapas', outcomes: ['Ele aceita esperar, mas deixa claro que é a última conversa amigável.'] },
           acoes: {
@@ -127,17 +127,17 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['A agenda mata o seu descanso, mas a diretoria sai satisfeita das fotos.'],
           },
           encerrar: {
-            label: 'Encerrar o contrato antes que ele encerre',
-            outcomes: ['Você tira um peso das costas, e o paddock comenta que você saiu antes de ser demitido.'],
+            label: 'Romper antes que o patrocinador rompa',
+            outcomes: ['Você tira um peso das costas, e o paddock comenta que você pulou fora antes da demissão.'],
           },
         },
       },
       {
-        title: 'Reunião marcada na sede da {patrocinador}',
-        body: 'A {patrocinador} convoca você para uma reunião às oito da manhã. Na mesa, um gráfico com a sua posição no campeonato e uma linha vermelha bem acima dela.',
+        title: 'Convocação às oito da manhã',
+        body: '{patrocinador} convoca você para uma reunião na sede, logo cedo. Na mesa, um gráfico com a sua posição no campeonato e uma linha vermelha bem acima dela.',
         choices: {
           prometer: {
-            label: 'Olhar o gráfico e garantir que a linha vai ser alcançada',
+            label: 'Garantir que a linha do gráfico vai ser alcançada',
             outcomes: ['Os diretores anotam a promessa em ata. Agora é com você.'],
           },
           acoes: {
@@ -220,7 +220,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             label: 'Deixar o celular no silencioso até a corrida',
             outcomes: [
               'O banco espera, e você corre com a cabeça só na pista.',
-              'O gerente descobre o número da equipe e liga para o box. O chefe não gosta nada.',
+              'O gerente descobre o telefone da equipe e liga para lá. O chefe não gosta nada.',
             ],
           },
         },
@@ -241,7 +241,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             label: 'Jogar o envelope na gaveta e ir treinar',
             outcomes: [
               'A gaveta segura o problema por mais um tempo, e o treino rende.',
-              'A cobrança chega também ao escritório da {equipe}, e o assunto vira fofoca no box.',
+              'A cobrança chega também ao escritório da {equipe}, e o assunto vira fofoca na oficina.',
             ],
           },
         },
@@ -596,25 +596,25 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Ações de uma fábrica de borracha do interior',
-        body: 'Um engenheiro da {equipe} jura que uma pequena fábrica de borracha do interior vai fechar um contrato grande e que as ações vão disparar. Ele já comprou. Você pode entrar também.',
+        body: 'Um mecânico da {equipe} jura que uma pequena fábrica de borracha do interior vai fechar um contrato grande e que as ações vão disparar. Ele já comprou. Você pode entrar também.',
         choices: {
           pouco: {
             label: 'Comprar umas poucas ações para acompanhar',
             outcomes: [
-              'O contrato sai e as ações sobem. O engenheiro ganha fama de vidente no box.',
-              'O contrato não sai, e as ações caem até o engenheiro parar de falar no assunto.',
+              'O contrato sai e as ações sobem. O mecânico ganha fama de vidente na oficina.',
+              'O contrato não sai, e as ações caem até o mecânico parar de falar no assunto.',
             ],
           },
           tudo: {
-            label: 'Seguir o palpite do engenheiro com força',
+            label: 'Seguir o palpite do mecânico com força',
             outcomes: [
               'As ações disparam como prometido. Você paga a pizza da equipe na sexta-feira.',
-              'As ações afundam junto com a fábrica. O engenheiro evita o seu olhar por semanas.',
+              'As ações afundam junto com a fábrica. O mecânico evita o seu olhar por semanas.',
             ],
           },
           recusar: {
             label: 'Dizer que prefere investir só no próprio acerto',
-            outcomes: ['O engenheiro dá de ombros e volta para a telemetria. Você fica com a dúvida e com o dinheiro.'],
+            outcomes: ['O mecânico dá de ombros e volta para o motor. Você fica com a dúvida e com o dinheiro.'],
           },
         },
       },
@@ -697,7 +697,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'O imóvel que o chefe da equipe indicou',
-        body: 'O chefe da {equipe} conta, entre um café e outro, que um prédio novo vai vender salas perto da fábrica. Quem compra na planta, garante ele, aluga fácil depois.',
+        body: 'O chefe da {equipe} conta, entre um café e outro, que um prédio novo vai vender salas perto da sede, e jura que quem compra na planta aluga fácil depois.',
         choices: {
           comprar: {
             label: 'Fechar a compra de uma sala na planta',
@@ -760,7 +760,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'O aluguel do imóvel não caiu na conta',
-        body: 'O aluguel do seu imóvel não caiu na conta este mês. Quem alugou pede mais um mês de prazo e jura que o movimento vai voltar.',
+        body: 'Este mês, o extrato chega sem o depósito do aluguel. Quem alugou pede mais um mês de prazo e jura que o movimento vai voltar.',
         choices: {
           paciencia: {
             label: 'Dar o prazo e manter o contrato',
@@ -803,6 +803,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     frequency: 'normal',
     when: [
       { c: 'cash', atLeast: 'tight' },
+      { c: 'age', from: 'young' },
       { c: 'noFlag', flag: 'dinheiro-entrou-na-piramide' },
     ],
     choices: [
@@ -1072,8 +1073,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Agente com contatos na Europa',
-        body: 'Um agente de sotaque carregado diz ter levado vários brasileiros às fórmulas europeias. Para pôr você na carteira, cobra só uma taxa de avaliação. Nenhum dos nomes que ele cita aparece numa busca.',
+        title: 'Agente com contatos no mundo inteiro',
+        body: 'Um agente de sotaque carregado diz ter levado vários brasileiros às equipes mais fortes do mundo. Para pôr você na carteira, cobra só uma taxa de avaliação. Nenhum dos nomes que ele cita aparece numa busca.',
         choices: {
           checar: {
             label: 'Pedir o contato de um piloto que ele agenciou',
@@ -1101,7 +1102,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         choices: {
           checar: {
             label: 'Levantar e pedir tudo por escrito antes de depositar',
-            outcomes: ['A recepcionista conta que a sala é alugada por hora. A vaga não existe, e a história rende risadas e respeito no box.'],
+            outcomes: ['A recepcionista conta que a sala é alugada por hora. A vaga não existe, e a história rende risadas e respeito no paddock.'],
           },
           pagar: {
             label: 'Depositar a reserva para não perder a chance',
@@ -1161,7 +1162,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Transferência urgente pedida pelo box',
+        title: 'Pedido urgente com a foto do mecânico',
         body: 'Um número desconhecido, com a foto do chefe dos mecânicos, pede uma transferência na hora: o fornecedor só libera os pneus da corrida com pagamento hoje. A mensagem tem erros de digitação.',
         choices: {
           confirmar: {
@@ -1169,7 +1170,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['Ele nunca trocou de número. O susto passa, e a equipe gosta de saber que você desconfiou.'],
           },
           transferir: {
-            label: 'Transferir logo para não atrasar o box',
+            label: 'Transferir logo para não atrasar a equipe',
             outcomes: [
               'Era ele mesmo, com o celular novo. Os pneus chegam a tempo, e a equipe agradece a rapidez.',
               'O número some depois da transferência. O chefe dos mecânicos nunca pediu nada.',
@@ -1369,8 +1370,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Notificação extrajudicial da {patrocinador}',
-        body: 'O departamento jurídico da {patrocinador} manda uma notificação de quatro páginas: cláusulas de exposição descumpridas, logo pequeno demais no macacão e um prazo curto para corrigir tudo.',
+        title: 'Notificação extrajudicial do patrocinador',
+        body: 'O jurídico do patrocinador {patrocinador} manda uma notificação de quatro páginas: cláusulas de exposição descumpridas, logo pequeno demais no macacão e um prazo curto para corrigir tudo.',
         choices: {
           cumprir: {
             label: 'Cumprir cada item da notificação, por menor que seja',
@@ -1391,7 +1392,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Um e-mail cheio de cláusulas em negrito',
-        body: 'O e-mail da {patrocinador} vem com cópia para três advogados. Cita a cláusula de desempenho, a de imagem e a de exclusividade, sempre em negrito, e termina pedindo “providências imediatas”.',
+        body: '{patrocinador} manda um e-mail com cópia para três advogados. Cita a cláusula de desempenho, a de imagem e a de exclusividade, sempre em negrito, e termina pedindo “providências imediatas”.',
         choices: {
           cumprir: {
             label: 'Responder com um plano de providências, item por item',
@@ -1411,8 +1412,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Reunião com o jurídico da {patrocinador}',
-        body: 'Na sala de reuniões da {patrocinador} não há ninguém do marketing, só duas advogadas e um advogado com o contrato marcado em amarelo. O assunto é a meta de resultados, que ficou para trás.',
+        title: 'Reunião com o jurídico do patrocinador',
+        body: 'Na sala de reuniões do patrocinador {patrocinador}, não há ninguém do marketing, só duas advogadas e um advogado com o contrato marcado em amarelo. O assunto é a meta de resultados, que ficou para trás.',
         choices: {
           cumprir: {
             label: 'Assinar um aditivo com novas obrigações de imagem',
@@ -1422,7 +1423,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             label: 'Pedir tempo e levar o contrato ao seu advogado',
             outcomes: [
               'O seu advogado encontra uma brecha. O contrato fica, mas ninguém mais sorri nas reuniões.',
-              'Enquanto o seu advogado estuda o caso, a {patrocinador} rescinde. A consulta ainda precisa ser paga.',
+              'Enquanto o seu advogado estuda o caso, {patrocinador} rescinde. A consulta ainda precisa ser paga.',
             ],
           },
           distrato: {
@@ -1476,8 +1477,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'O dono da {patrocinador} liga de madrugada',
-        body: 'Uma da manhã, o celular toca. É o dono da {patrocinador}, falando alto, depois de ver a corrida no bar: quer saber para que serve o dinheiro dele e ameaça tirar tudo amanhã cedo.',
+        title: '{patrocinador}: o dono liga de madrugada',
+        body: 'Uma da manhã, o celular toca. É o dono da empresa que patrocina você, falando alto e com barulho de bar ao fundo: quer saber para que serve o dinheiro dele e ameaça tirar tudo amanhã cedo.',
         choices: {
           acalmar: {
             label: 'Ouvir tudo e convidar para um almoço na semana',
@@ -1497,19 +1498,19 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'O dono da {patrocinador} invade o box',
-        body: 'Sem credencial e sem aviso, o dono da {patrocinador} aparece no box na hora do treino e cobra resultados na frente dos mecânicos. Ele investiu, diz, e quer ver o retorno agora.',
+        title: '{patrocinador}: o dono invade o treino',
+        body: 'Sem credencial e sem aviso, o dono da empresa aparece na área da equipe na hora do treino e cobra resultados na frente dos mecânicos. Ele investiu, diz, e quer ver o retorno agora.',
         choices: {
           acalmar: {
-            label: 'Levar o homem para o motorhome e explicar o plano',
-            outcomes: ['Com um café na mão, ele se acalma e até pede foto. Você volta ao carro com a cabeça quente.'],
+            label: 'Levar o homem para um canto e explicar o plano',
+            outcomes: ['Com um café na mão, ele se acalma e até pede foto. Você volta à pista com a cabeça quente.'],
           },
           encerrar: {
             label: 'Pedir que ele se retire e procure outro piloto',
-            outcomes: ['Ele sai batendo a porta do box e cumpre a promessa: o adesivo sai do carro na mesma semana. Os mecânicos aplaudem baixinho.'],
+            outcomes: ['Ele sai pisando duro e cumpre a promessa: o adesivo sai do macacão na mesma semana. Os mecânicos aplaudem baixinho.'],
           },
           gritar: {
-            label: 'Encarar o homem e devolver a bronca na frente de todos',
+            label: 'Encarar o homem e devolver a bronca em público',
             outcomes: [
               'Ele recua, pede desculpas e dobra a aposta em você. Os mecânicos não acreditam.',
               'A discussão termina com o contrato rasgado em cima da bancada e um vídeo que roda o paddock.',
@@ -1518,8 +1519,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Áudios furiosos da {patrocinador}',
-        body: 'Seis áudios seguidos do dono da {patrocinador}, cada um mais alto que o outro. No último, ele promete trocar você por um piloto mais jovem e mais barato até o fim do mês.',
+        title: '{patrocinador}: áudios em sequência',
+        body: 'Seis áudios seguidos do dono da empresa, cada um mais alto que o outro. No último, ele promete trocar você por um piloto mais jovem e mais barato até o fim do mês.',
         choices: {
           acalmar: {
             label: 'Responder com calma e convidar para a próxima corrida',
@@ -1585,8 +1586,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'A {patrocinador} parou de responder',
-        body: 'Nenhuma resposta da {patrocinador} há semanas. Os convites para as corridas voltam sem confirmação, e quem cuidava da conta saiu da empresa sem avisar.',
+        title: '{patrocinador} parou de responder',
+        body: 'Há semanas, nenhuma resposta do patrocinador. Os convites para as corridas voltam sem confirmação, e quem cuidava da conta saiu da empresa sem avisar.',
         choices: {
           relatorio: {
             label: 'Mandar um relatório caprichado com fotos e audiência',
@@ -1600,14 +1601,14 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             ],
           },
           liberar: {
-            label: 'Mandar uma mensagem liberando o espaço no carro',
-            outcomes: ['A {patrocinador} agradece em uma linha. O espaço vazio no carro traz menos compromissos e mais tempo de pista.'],
+            label: 'Mandar uma mensagem liberando o espaço no macacão',
+            outcomes: ['{patrocinador} agradece em uma linha. O espaço vazio no macacão traz menos compromissos e mais tempo de pista.'],
           },
         },
       },
       {
-        title: 'O logo menor no pedido da {patrocinador}',
-        body: 'Um e-mail seco da {patrocinador} pede que o logo diminua no carro e suma do capacete na próxima etapa. Ninguém explica o motivo, ninguém atende o telefone.',
+        title: '{patrocinador} quer o logo menor',
+        body: 'Um e-mail seco do patrocinador pede que o logo diminua no macacão e suma do capacete na próxima etapa. Ninguém explica o motivo, ninguém atende o telefone.',
         choices: {
           relatorio: {
             label: 'Responder com números de exposição e um plano',
@@ -1617,7 +1618,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
             label: 'Ir até a empresa e pedir uma conversa franca',
             outcomes: [
               'A conversa franca destrava tudo: era só um diretor novo querendo cortar custos. Ele sai convencido.',
-              'O segurança não deixa você passar da catraca. A história chega à {patrocinador} como insistência.',
+              'O segurança não deixa você passar da catraca. A história chega à diretoria como insistência.',
             ],
           },
           liberar: {
@@ -1627,8 +1628,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Silêncio constrangedor na festa da {patrocinador}',
-        body: 'Na confraternização da {patrocinador}, ninguém da diretoria vem falar com você, e a sua foto sumiu do painel da entrada. O recado está dado, mesmo sem palavras.',
+        title: 'Silêncio constrangedor na festa do patrocinador',
+        body: 'Na confraternização do patrocinador {patrocinador}, ninguém da diretoria vem falar com você, e a sua foto sumiu do painel da entrada. O recado está dado, mesmo sem palavras.',
         choices: {
           relatorio: {
             label: 'Mandar no dia seguinte um resumo da temporada com fotos',
@@ -1696,8 +1697,8 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'A {patrocinador} quer você numa loja',
-        body: 'Feliz com a temporada, a {patrocinador} quer você numa tarde de autógrafos na loja principal, com carro exposto e fila de clientes. A data cai no meio da semana de corrida.',
+        title: '{patrocinador} quer você numa loja',
+        body: 'Satisfeito com a parceria, o patrocinador {patrocinador} quer você numa tarde de autógrafos na loja principal, com o seu macacão exposto e fila de clientes. A data cai no meio da semana de corrida.',
         choices: {
           topar: {
             label: 'Topar a tarde de autógrafos, mesmo na semana da corrida',
@@ -1709,13 +1710,13 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           },
           show: {
             label: 'Transformar a sessão de autógrafos num show para a fila',
-            outcomes: ['Você narra corridas de carrinho com as crianças da fila. O vídeo vira campanha da {patrocinador}.'],
+            outcomes: ['Você narra corridas de carrinho com as crianças da fila. O vídeo vira campanha publicitária do patrocinador.'],
           },
         },
       },
       {
-        title: 'Gravação de comercial com a {patrocinador}',
-        body: 'A {patrocinador} gostou tanto dos resultados que quer gravar um comercial com você. São dois dias de estúdio, figurino e texto decorado, logo antes da próxima corrida.',
+        title: '{patrocinador} prepara um comercial',
+        body: 'O patrocinador quer você no comercial novo da marca. São dois dias de estúdio, figurino e texto decorado, logo antes da próxima corrida.',
         choices: {
           topar: {
             label: 'Encarar os dois dias de estúdio',
@@ -1727,13 +1728,13 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           },
           show: {
             label: 'Improvisar o roteiro e fazer o estúdio inteiro rir',
-            outcomes: ['O diretor joga o roteiro fora e grava o improviso. A {patrocinador} manda flores ao box no dia da estreia.'],
+            outcomes: ['O diretor joga o roteiro fora e grava o improviso. O patrocinador manda flores para a equipe no dia da estreia.'],
           },
         },
       },
       {
         title: 'Convite para a convenção de vendas',
-        body: 'A {patrocinador} quer você no palco da convenção anual de vendedores, contando como é correr {categoria:em}. São mil pessoas, um microfone e um dia inteiro longe do treino.',
+        body: '{patrocinador} quer você no palco da convenção anual de vendedores, contando como é correr {categoria:em}. São mil pessoas, um microfone e um dia inteiro longe do treino.',
         choices: {
           topar: {
             label: 'Subir ao palco e contar a sua história',
@@ -1741,11 +1742,11 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           },
           adiar: {
             label: 'Mandar um vídeo gravado no lugar da presença',
-            outcomes: ['O vídeo passa no telão, sem o mesmo efeito. A {patrocinador} entende, mas anota a ausência.'],
+            outcomes: ['O vídeo passa no telão, sem o mesmo efeito. O patrocinador entende, mas anota a ausência.'],
           },
           show: {
             label: 'Levar o capacete e transformar a palestra num espetáculo',
-            outcomes: ['A plateia sobe ao palco para tirar foto com o capacete. A diretoria da {patrocinador} já pede bis para o ano que vem.'],
+            outcomes: ['A plateia sobe ao palco para tirar foto com o capacete. A diretoria do patrocinador já pede bis para o ano que vem.'],
           },
         },
       },
@@ -1890,7 +1891,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           esperar: {
             label: 'Esperar a liberação sem pagar nada',
             outcomes: [
-              'O fiscal muda de turno, e o colega dele libera a caixa sem taxa nenhuma. Sorte de principiante.',
+              'O fiscal muda de turno, e o colega dele libera a caixa sem taxa nenhuma. Sorte pura.',
               'A caixa só sai na segunda-feira. Você corre com macacão emprestado, e a equipe não esconde a irritação.',
             ],
           },
@@ -1902,7 +1903,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         choices: {
           pagar: {
             label: 'Pagar o excesso e embarcar com tudo',
-            outcomes: ['Tudo embarca, e você chega ao autódromo com o equipamento completo. O engenheiro nota e aprova.'],
+            outcomes: ['Tudo embarca, e você chega ao autódromo com o equipamento completo. O chefe da equipe nota e aprova.'],
           },
           esperar: {
             label: 'Levar só o essencial e despachar o resto depois',
@@ -2005,7 +2006,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           },
           dividir: {
             label: 'Mudar para o quartinho em cima da oficina da equipe',
-            outcomes: ['O quartinho cheira a gasolina e acorda com o compressor, mas os mecânicos viram a sua segunda família.'],
+            outcomes: ['O quartinho cheira a gasolina e tem o compressor como despertador, mas os mecânicos viram a sua segunda família.'],
           },
         },
       },
@@ -2137,7 +2138,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Um cliente grande quer você no fim de semana',
+        title: 'Cliente grande quer o seu fim de semana',
         body: 'No trabalho paralelo, um cliente grande pede atendimento exclusivo no único fim de semana livre da agenda. O dinheiro ajudaria. O descanso e o treino, nem tanto.',
         choices: {
           treinar: {
@@ -2249,7 +2250,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
     id: 'premio-inesperado',
     category: 'money',
     frequency: 'rare',
-    when: [],
+    when: [{ c: 'careerSeason', min: 2 }],
     choices: [
       {
         id: 'guardar',
@@ -2287,7 +2288,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           },
           repartir: {
             label: 'Dividir o prêmio com os mecânicos da {equipe}',
-            outcomes: ['Os mecânicos ganham um churrasco e um envelope cada. Na etapa seguinte, o carro vem impecável.'],
+            outcomes: ['Os mecânicos ganham um churrasco e um envelope cada. Na etapa seguinte, o equipamento vem impecável.'],
           },
         },
       },
@@ -2301,12 +2302,12 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           },
           repartir: {
             label: 'Dedicar o prêmio à equipe e dividir tudo',
-            outcomes: ['A equipe ouve a dedicatória ao vivo e comemora no box. O dinheiro vira jantar e lembrança.'],
+            outcomes: ['A equipe ouve a dedicatória ao vivo e comemora na oficina. O dinheiro vira jantar e lembrança.'],
           },
         },
       },
       {
-        title: 'Um prêmio esquecido de anos atrás',
+        title: 'O prêmio de estreante que nunca chegou',
         body: 'A organização de um torneio antigo descobre que nunca pagou o seu prêmio de estreante. Pede desculpas e marca a entrega numa festa com os patrocinadores dela.',
         choices: {
           guardar: {
@@ -2315,7 +2316,7 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
           },
           repartir: {
             label: 'Repassar o prêmio aos mecânicos que trabalham com você hoje',
-            outcomes: ['Os mecânicos da {equipe} recebem o dinheiro com surpresa. A história do prêmio atrasado vira piada interna no box.'],
+            outcomes: ['Os mecânicos da {equipe} recebem o dinheiro com surpresa. A história do prêmio atrasado vira piada interna na oficina.'],
           },
         },
       },
@@ -2493,11 +2494,11 @@ export const MONEY_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Um furo chamuscado no macacão',
-        body: 'Um encosto no escapamento quente deixou um buraco chamuscado na perna do seu macacão. Remendo não passa na vistoria, dizem os mais velhos do box.',
+        body: 'Um encosto no escapamento quente deixou um buraco chamuscado na perna do seu macacão. Remendo não passa na vistoria, dizem os veteranos da equipe.',
         choices: {
           comprar: {
             label: 'Comprar um macacão novo antes da próxima etapa',
-            outcomes: ['O macacão novo veste como uma segunda pele. Você entra no carro sem pensar em fogo.'],
+            outcomes: ['O macacão novo veste como uma segunda pele. Você volta à pista sem pensar em fogo.'],
           },
           arriscar: {
             label: 'Costurar um remendo caprichado e seguir',

@@ -66,7 +66,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         choices: {
           equipe: {
             label: 'Dividir o troféu com os mecânicos',
-            outcomes: ['Os mecânicos ouvem a resposta pelo rádio do caminhão e comemoram como se tivessem pilotado.'],
+            outcomes: ['Os mecânicos ouvem a resposta pela transmissão, no caminhão da equipe, e comemoram como se tivessem pilotado.'],
           },
           provocar: {
             label: 'Avisar que isso é só o começo',
@@ -86,7 +86,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         body: 'O champanhe ainda escorre do macacão quando o assessor puxa você para a coletiva. Há câmeras de canais que nunca tinham aparecido.',
         choices: {
           equipe: {
-            label: 'Agradecer ao time pelo carro que entregou',
+            label: 'Agradecer ao time pelo equipamento que entregou',
             outcomes: ['O chefe de equipe aparece na foto com você e manda imprimir o recorte do jornal.'],
           },
           provocar: {
@@ -127,7 +127,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'Olheiros da {academia}',
-        body: 'Gente da {equipeTopo} acompanhou a sua temporada e convida você para um dia de avaliação. Quem entra na academia tem a vaga paga, mas aceita um patrocinador pessoal só, nada de investidor nem vaquinha, e precisa terminar cada temporada entre os {meta} primeiros. Chance estimada de aprovação: {chance}.',
+        body: 'Gente da {equipeTopo} acompanhou a sua temporada e convida você para uma avaliação. Na academia, a vaga é paga, mas só vale um patrocinador pessoal, sem investidor nem vaquinha, e é preciso terminar cada temporada entre os {meta} primeiros. Chance de aprovação: {chance}.',
         choices: {
           avaliacao: {
             label: 'Fazer a avaliação',
@@ -218,7 +218,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'Champanhe, mas não o do topo',
-        body: 'Você subiu ao pódio em {pista}, só que não no degrau mais alto. Na sala de imprensa, o repórter vai direto ao ponto: faltou carro ou faltou piloto?',
+        body: 'Você subiu ao pódio em {pista}, só que não no degrau mais alto. Na sala de imprensa, o repórter vai direto ao ponto: faltou equipamento ou faltou piloto?',
         choices: {
           reconhecer: {
             label: 'Admitir que o vencedor foi mais rápido hoje',
@@ -248,8 +248,8 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           prometer: {
             label: 'Avisar que daqui para a frente ninguém segura você',
             outcomes: [
-              'A frase abre o telejornal da noite, e o box inteiro entra no clima da virada.',
-              'A frase abre o telejornal, e os rivais recortam o trecho para colar na parede do box deles.',
+              'A frase abre o telejornal da noite, e a equipe inteira entra no clima da virada.',
+              'A frase abre o telejornal, e os rivais recortam o trecho para colar na parede da oficina deles.',
             ],
           },
           carisma: {
@@ -259,8 +259,8 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Podcast ao vivo no motorhome',
-        body: 'Um podcast de automobilismo transmite direto do paddock e chama você para comentar o pódio. O apresentador provoca: quem chega em segundo é só o primeiro dos perdedores?',
+        title: 'Podcast ao vivo, microfone aberto',
+        body: 'Um podcast de automobilismo transmite direto do paddock e chama você para comentar o pódio. O apresentador provoca: pódio sem vitória é prêmio de consolação?',
         choices: {
           reconhecer: {
             label: 'Responder que perder para quem foi melhor faz parte',
@@ -269,7 +269,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           prometer: {
             label: 'Devolver que a próxima vitória vai ser dedicada a ele',
             outcomes: [
-              'O apresentador ri, a audiência dispara e você sai do motorhome com a sensação de que pode tudo.',
+              'O apresentador ri, a audiência dispara e você sai do estúdio improvisado com a sensação de que pode tudo.',
               'A resposta soa arrogante fora de contexto, e o corte que circula não ajuda nada.',
             ],
           },
@@ -288,7 +288,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['A capa sai bonita e sóbria. Na padaria do bairro, comentam que falta um pouco de sangue nos olhos.'],
           },
           prometer: {
-            label: 'Prometer à cidade a primeira vitória ainda neste ano',
+            label: 'Prometer à cidade uma vitória ainda neste ano',
             outcomes: [
               'A cidade compra a promessa, e as mensagens de apoio dos vizinhos enchem o seu telefone.',
               'A manchete sai em letras enormes e vira cobrança em cada esquina do bairro.',
@@ -360,10 +360,10 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         choices: {
           proteger: {
             label: 'Assumir a culpa pela equipe, mesmo sem ter certeza',
-            outcomes: ['O box agradece em silêncio. Você engole a frustração e vai dormir com ela.'],
+            outcomes: ['A equipe agradece em silêncio. Você engole a frustração e vai dormir com ela.'],
           },
           desabafar: {
-            label: 'Contar com franqueza o que sentiu no carro',
+            label: 'Contar com franqueza o que sentiu na pista',
             outcomes: [
               'A sinceridade cai bem: o público vê alguém que sente a corrida de verdade.',
               'A franqueza soa como acusação à equipe, e os patrocinadores pedem mais cuidado nas palavras.',
@@ -376,12 +376,12 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Microfone na saída do box',
-        body: 'Você nem tirou a balaclava e já tem um repórter perguntando se o fim de semana em {pista} foi jogado fora. Atrás dele, o engenheiro faz sinal para você medir as palavras.',
+        title: 'Um repórter no caminho de volta',
+        body: 'Você nem tirou a balaclava e já tem um repórter perguntando se o fim de semana em {pista} foi jogado fora. Atrás dele, o chefe de equipe faz sinal para você medir as palavras.',
         choices: {
           proteger: {
             label: 'Dizer que a equipe acertou e o azar foi seu',
-            outcomes: ['O engenheiro faz um joinha discreto. Por dentro, a raiva continua sem ter para onde ir.'],
+            outcomes: ['O chefe faz um joinha discreto. Por dentro, a raiva continua sem ter para onde ir.'],
           },
           desabafar: {
             label: 'Falar que o fim de semana inteiro foi um desastre',
@@ -506,7 +506,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           blindar: {
             label: 'Cancelar as entrevistas até a fase virar',
             outcomes: [
-              'Longe dos microfones, você treina em paz e volta a sentir o carro.',
+              'Longe dos microfones, você treina em paz e volta a sentir o volante.',
               'O silêncio é lido como fuga, e os patrocinadores reclamam da falta de exposição.',
             ],
           },
@@ -527,7 +527,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           blindar: {
             label: 'Pedir à equipe que recuse todos os pedidos',
             outcomes: [
-              'Sem barulho por perto, você se concentra só no carro, e o rendimento começa a voltar.',
+              'Sem barulho por perto, você se concentra só na pilotagem, e o rendimento começa a voltar.',
               'O colunista escreve uma segunda coluna sobre o seu sumiço, ainda mais dura que a primeira.',
             ],
           },
@@ -735,7 +735,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         choices: {
           cumprir: {
             label: 'Parar e responder o básico, sem floreio',
-            outcomes: ['A resposta protocolar agrada a assessoria e os patrocinadores. Você chega ao motorhome com a paciência no fim.'],
+            outcomes: ['A resposta protocolar agrada a assessoria e os patrocinadores. Você chega à equipe com a paciência no fim.'],
           },
           escapar: {
             label: 'Seguir andando e fingir que não ouviu',
@@ -773,7 +773,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'A pergunta sobre o seu futuro',
-        body: 'Na saída do box, uma jornalista de televisão pergunta, com o microfone já ligado, se a {equipe} ainda confia em você depois de mais uma corrida sem pontos.',
+        body: 'Na saída da pista, uma jornalista de televisão pergunta, com o microfone já ligado, se a {equipe} ainda confia em você depois de mais uma corrida sem pontos.',
         choices: {
           cumprir: {
             label: 'Responder que a confiança é mútua e encerrar ali',
@@ -852,7 +852,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: '{rival} posta uma indireta',
-        body: 'Depois do fim de semana, {rival} publica um vídeo dele ultrapassando alguém e escreve: "tem gente que só anda rápido no simulador". Ninguém precisa de legenda para saber de quem ele fala.',
+        body: 'No meio da semana, {rival} publica um vídeo dele ultrapassando alguém e escreve: "tem gente que só anda rápido no simulador". Ninguém precisa de legenda para saber de quem ele fala.',
         choices: {
           ignorar: {
             label: 'Não responder e deixar a provocação morrer sozinha',
@@ -967,7 +967,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             odds: 'rest',
             effects: [
               { e: 'stat', stat: 'confidence', size: -2 },
-              { e: 'cash', size: -1, cap: true },
+              { e: 'cash', size: -2, cap: true },
             ],
           },
         ],
@@ -1178,7 +1178,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             ],
           },
           partir: {
-            label: 'Cobrar dele, na frente de todos, as fechadas da temporada',
+            label: 'Cobrar dele, na frente de todos, as fechadas de sempre',
             outcomes: [
               'A sala inteira presta atenção, e ele acaba pedindo desculpas para encerrar o assunto.',
               'A cobrança vira gritaria, a companhia aérea intervém, e um site de fofoca publica tudo.',
@@ -1246,12 +1246,12 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Conversas nos corredores da fábrica',
+        title: 'Conversas nos corredores da oficina',
         body: 'Os mecânicos comentam que {companheiro} almoça toda semana com o chefe e anda pedindo prioridade nas peças novas. Na {equipe}, quem não aparece, desaparece.',
         choices: {
           'ficar-fora': {
-            label: 'Ignorar a politicagem e focar no carro',
-            outcomes: ['Você roda mais no simulador e melhora. A chefia, porém, nota que você quase não aparece na fábrica.'],
+            label: 'Ignorar a politicagem e focar na pilotagem',
+            outcomes: ['Você roda mais no simulador e melhora. A chefia, porém, nota que você quase não aparece na oficina.'],
           },
           confrontar: {
             label: 'Levar o assunto direto para a reunião técnica',
@@ -1261,29 +1261,29 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             ],
           },
           'jogar-junto': {
-            label: 'Pagar o churrasco da turma do box na sexta',
+            label: 'Pagar o churrasco da turma da oficina na sexta',
             outcomes: ['O churrasco conquista os mecânicos e pesa no seu bolso. {companheiro} percebe a jogada e não gosta nada.'],
           },
         },
       },
       {
         title: 'A reunião sem o seu nome na lista',
-        body: 'Você descobre por acaso que {companheiro} e os engenheiros fizeram uma reunião sobre o acerto do carro novo. O seu nome não estava na lista de convidados.',
+        body: 'Você descobre por acaso que {companheiro} e os mecânicos fizeram uma reunião sobre o acerto da próxima etapa. O seu nome não estava na lista de convidados.',
         choices: {
           'ficar-fora': {
-            label: 'Deixar para lá e trabalhar com o seu engenheiro',
-            outcomes: ['Você e o seu engenheiro acham um acerto próprio que funciona. A diretoria estranha você não reclamar.'],
+            label: 'Deixar para lá e trabalhar com o seu mecânico',
+            outcomes: ['Você e o seu mecânico acham um acerto próprio que funciona. A diretoria estranha o seu silêncio.'],
           },
           confrontar: {
             label: 'Exigir participar de todas as reuniões técnicas',
             outcomes: [
               'O pedido é atendido na hora. O chefe deixa claro que ninguém decide nada sem os dois pilotos.',
-              'O pedido soa como chilique, e {companheiro} ainda comenta pelo box que é ciúme seu.',
+              'O pedido soa como chilique, e {companheiro} ainda comenta pela equipe que é ciúme seu.',
             ],
           },
           'jogar-junto': {
-            label: 'Marcar a sua própria reunião, com pizza para os engenheiros',
-            outcomes: ['As pizzas abrem portas: os engenheiros passam a ouvir você. {companheiro} acha que você pegou pesado.'],
+            label: 'Marcar a sua própria reunião, com pizza para os mecânicos',
+            outcomes: ['As pizzas abrem portas: os mecânicos passam a ouvir você. {companheiro} acha que você pegou pesado.'],
           },
         },
       },
@@ -1314,7 +1314,10 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     id: 'ordem-de-equipe-no-radio',
     category: 'career',
     frequency: 'normal',
-    when: [{ c: 'race', tag: 'behindTeammate' }],
+    when: [
+      { c: 'tier', min: 4 },
+      { c: 'race', tag: 'behindTeammate' },
+    ],
     needs: ['teammate'],
     choices: [
       {
@@ -1429,7 +1432,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             label: 'Exigir que, na próxima, a ordem valha para os dois',
             outcomes: [
               'O acordo fica por escrito. Daqui para a frente, quem estiver mais rápido passa, seja quem for.',
-              'O chefe diz que não vai prometer nada, e você sai da sala com a sensação de ser o segundo da fila.',
+              'O chefe diz que não vai prometer nada, e você sai da sala com a sensação de que a fila tem dono, e não é você.',
             ],
           },
           expor: {
@@ -1508,7 +1511,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             label: 'Exigir um vídeo só seu, por justiça',
             outcomes: [
               'O vídeo sai caprichado, e os patrocinadores adoram aparecer ao seu lado.',
-              'O pedido chega aos ouvidos de {companheiro}, que espalha pelo box que a sua vaidade não cabe no caminhão.',
+              'O pedido chega aos ouvidos de {companheiro}, que espalha pela equipe que a sua vaidade não cabe no caminhão.',
             ],
           },
           ceder: {
@@ -1519,7 +1522,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Um só lugar no evento do patrocinador',
-        body: 'O principal patrocinador da {equipe} quer um piloto no lançamento do produto novo, e {companheiro} já se ofereceu. Mesmo com você à frente dele no domingo.',
+        body: 'O principal patrocinador da {equipe} quer um piloto no lançamento do produto novo, e {companheiro} já se ofereceu, como se o domingo não tivesse acontecido.',
         choices: {
           dividir: {
             label: 'Propor que os dois façam o evento juntos',
@@ -1550,11 +1553,11 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             label: 'Ligar para a redação e defender a sua vez',
             outcomes: [
               'A capa é sua, e os patrocinadores encomendam cem exemplares para distribuir aos clientes.',
-              'A redação conta a {companheiro} sobre o telefonema, e a briga vira assunto até na fábrica.',
+              'A redação conta a {companheiro} sobre o telefonema, e a briga vira assunto até na oficina.',
             ],
           },
           ceder: {
-            label: 'Deixar a capa para ele e cuidar do carro',
+            label: 'Deixar a capa para ele e cuidar do acerto',
             outcomes: ['Você usa o tempo para estudar a telemetria e ganha ritmo. Os patrocinadores queriam a capa.'],
           },
         },
@@ -1628,9 +1631,9 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['O chefe concede o prazo, mas o tom da conversa acompanha você até em casa.'],
           },
           'apontar-carro': {
-            label: 'Dizer que o problema está no carro, não no volante',
+            label: 'Dizer que o problema é o equipamento, não a pilotagem',
             outcomes: [
-              'O chefe manda revisar o carro inteiro, e os engenheiros acham uma peça trabalhando errado.',
+              'O chefe manda revisar o equipamento inteiro, e os mecânicos acham uma peça trabalhando errado.',
               'O chefe não aceita a desculpa. Você sai da sala com a razão, talvez, mas sem o apoio da chefia.',
             ],
           },
@@ -1649,10 +1652,10 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['A promessa acalma a sala, mas o peso dela fica no seu peito até a largada seguinte.'],
           },
           'apontar-carro': {
-            label: 'Mostrar na telemetria onde o carro perde tempo',
+            label: 'Mostrar nos dados onde o equipamento perde tempo',
             outcomes: [
-              'Os dados convencem: a fábrica manda uma atualização que estava parada no almoxarifado.',
-              'Os engenheiros contestam cada gráfico, e a reunião termina com todo mundo de braços cruzados.',
+              'Os dados convencem: a equipe libera uma atualização que estava parada no almoxarifado.',
+              'A equipe técnica contesta cada gráfico, e a reunião termina com todo mundo de braços cruzados.',
             ],
           },
           'treino-extra': {
@@ -1662,18 +1665,18 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Recado curto pelo engenheiro',
-        body: 'O chefe não veio falar com você depois da corrida. Mandou recado pelo engenheiro: quer resultado já, porque tem gente batendo na porta pedindo a sua vaga.',
+        title: 'Recado curto pelo mecânico-chefe',
+        body: 'O chefe não veio falar com você depois da corrida. Mandou recado pelo mecânico-chefe: quer resultado já, porque tem gente batendo na porta pedindo a sua vaga.',
         choices: {
           'pedir-tempo': {
-            label: 'Responder pelo mesmo engenheiro que o resultado vem',
+            label: 'Responder pelo mesmo mecânico que o resultado vem',
             outcomes: ['O recado volta, e o chefe se dá por satisfeito. Já você passa a semana inteira com a frase na cabeça.'],
           },
           'apontar-carro': {
             label: 'Mandar de volta a lista de peças que nunca chegaram',
             outcomes: [
               'A lista surte efeito: as peças aparecem na etapa seguinte, com um pedido de desculpas atrasado.',
-              'O chefe lê a lista como afronta e passa a semana sem cumprimentar você no box.',
+              'O chefe lê a lista como afronta e passa a semana sem cumprimentar você na pista.',
             ],
           },
           'treino-extra': {
@@ -1737,23 +1740,23 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Tapinha nas costas na garagem',
-        body: 'Você largou lá atrás em {pista} e foi ganhando posição atrás de posição. O chefe da {equipe} atravessa a garagem só para dizer que foi a melhor corrida da sua vida.',
+        title: 'Tapinha nas costas depois da bandeirada',
+        body: 'Você largou lá atrás em {pista} e foi ganhando posição atrás de posição. O chefe da {equipe} atravessa o paddock só para dizer que foi a melhor corrida da sua vida.',
         choices: {
           'merito-do-carro': {
-            label: 'Dizer que o carro é que estava perfeito',
-            outcomes: ['O chefe sai repetindo a frase para os engenheiros, cheio de orgulho do time. Você fica se perguntando se não se diminuiu demais.'],
+            label: 'Dizer que o equipamento é que estava perfeito',
+            outcomes: ['O chefe sai repetindo a frase para os mecânicos, cheio de orgulho do time. Você fica se perguntando se não se diminuiu demais.'],
           },
           'pedir-pecas': {
             label: 'Aproveitar o bom humor para pedir peças novas',
             outcomes: [
-              'O chefe ri da cara de pau e libera o assoalho novo que estava guardado para a outra temporada.',
+              'O chefe ri da cara de pau e libera o chassi novo que estava guardado para a outra temporada.',
               'O chefe fecha a cara: elogio não é cheque em branco. O clima bom dura pouco.',
             ],
           },
           'festa-do-box': {
             label: 'Levar os mecânicos para comemorar numa churrascaria',
-            outcomes: ['A noite de churrascaria entra para a história do box. A conta, para a sua fatura.'],
+            outcomes: ['A noite de churrascaria entra para a história da equipe. A conta, para a sua fatura.'],
           },
         },
       },
@@ -1762,19 +1765,19 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         body: 'No grupo de mensagens da {equipe}, o chefe manda um áudio de dois minutos só sobre as suas ultrapassagens em {pista}. Os mecânicos respondem com aplausos e figurinhas.',
         choices: {
           'merito-do-carro': {
-            label: 'Responder que o mérito é de quem montou o carro',
-            outcomes: ['O grupo explode em comemorações, e o box se sente dono da corrida. O elogio, que era seu, se dilui.'],
+            label: 'Responder que o mérito é de quem preparou o equipamento',
+            outcomes: ['O grupo explode em comemorações, e a oficina se sente dona da corrida. O elogio, que era seu, se dilui.'],
           },
           'pedir-pecas': {
             label: 'Responder no privado pedindo o motor mais novo',
             outcomes: [
               'O chefe responde com um "fechado". O motor novo estreia na próxima etapa.',
-              'O chefe visualiza e não responde. No dia seguinte, o tom no box é mais frio.',
+              'O chefe visualiza e não responde. No dia seguinte, o tom na oficina é mais frio.',
             ],
           },
           'festa-do-box': {
-            label: 'Encomendar pizza para a turma toda na fábrica',
-            outcomes: ['A pizzaria atrasa, o refrigerante esquenta, e mesmo assim é a melhor segunda-feira do ano no box.'],
+            label: 'Encomendar pizza para a turma toda na oficina',
+            outcomes: ['A pizzaria atrasa, o refrigerante esquenta, e mesmo assim é a melhor segunda-feira do ano na oficina.'],
           },
         },
       },
@@ -1783,8 +1786,8 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         body: 'Em entrevista ao canal oficial, o chefe da {equipe} diz que a sua recuperação em {pista} foi coisa de piloto grande. A frase chega ao seu telefone antes de você tirar o macacão.',
         choices: {
           'merito-do-carro': {
-            label: 'Devolver o elogio: sem o carro, nada feito',
-            outcomes: ['A troca de gentilezas agrada a fábrica inteira. A sua confiança, curiosamente, não acompanha.'],
+            label: 'Devolver o elogio: sem a equipe, nada feito',
+            outcomes: ['A troca de gentilezas agrada a oficina inteira. A sua confiança, curiosamente, não acompanha.'],
           },
           'pedir-pecas': {
             label: 'Propor ao chefe um teste com peças novas',
@@ -1794,7 +1797,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             ],
           },
           'festa-do-box': {
-            label: 'Mandar uma caixa de doces de {cidade} para a fábrica',
+            label: 'Mandar uma caixa de doces de {cidade} para a oficina',
             outcomes: ['Os doces somem em dez minutos, e os mecânicos passam a chamar você pelo nome da sua cidade.'],
           },
         },
@@ -1853,8 +1856,8 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'A bronca que o box inteiro ouviu',
-        body: 'O carro voltou de {pista} no guincho, e o chefe da {equipe} não esperou a porta do caminhão fechar. A bronca é alta, e os mecânicos fingem que não estão ouvindo.',
+        title: 'A bronca que a equipe inteira ouviu',
+        body: 'O equipamento voltou de {pista} em pedaços, e o chefe da {equipe} não esperou a porta do caminhão fechar. A bronca é alta, e os mecânicos fingem que não estão ouvindo.',
         choices: {
           ouvir: {
             label: 'Ouvir até o fim, sem interromper',
@@ -1864,7 +1867,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             label: 'Lembrar quantos pontos você já trouxe para a equipe',
             outcomes: [
               'O chefe para, pensa e baixa o tom. Você sai de cabeça erguida, mas a chefia não esquece.',
-              'A discussão piora tudo. Agora o box inteiro sabe que o clima entre vocês azedou.',
+              'A discussão piora tudo. Agora a equipe inteira sabe que o clima entre vocês azedou.',
             ],
           },
           'pagar-conserto': {
@@ -2016,12 +2019,12 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         },
       },
       {
-        title: 'Visita guiada à fábrica rival',
-        body: 'A {equipeInteressada} convida você para conhecer a fábrica num dia sem treino, com direito a almoço com os engenheiros. A conversa sobre o futuro viria depois da sobremesa.',
+        title: 'Visita guiada à sede da rival',
+        body: 'A {equipeInteressada} convida você para conhecer a sede num dia sem treino, com direito a almoço com a equipe técnica. A conversa sobre o futuro viria depois da sobremesa.',
         choices: {
           'ouvir-proposta': {
-            label: 'Aceitar o convite e conhecer a fábrica',
-            outcomes: ['A fábrica impressiona, e você impressiona a fábrica. Uma foto sua no estacionamento deles chega à sua equipe.'],
+            label: 'Aceitar o convite e conhecer a sede',
+            outcomes: ['A estrutura impressiona, e você impressiona os anfitriões. Uma foto sua no estacionamento deles chega à sua equipe.'],
           },
           'contar-ao-chefe': {
             label: 'Recusar a visita e contar tudo à {equipe}',
@@ -2086,8 +2089,8 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Cartão de visita no box',
-        body: 'Um agente de pilotos bem vestido deixa um cartão no seu box. Diz que cuida de contratos, patrocínio e imprensa, e que já conversou sobre você com gente da {outraEquipe}.',
+        title: 'Cartão de visita no paddock',
+        body: 'Um agente de pilotos bem vestido deixa um cartão com a sua equipe. Diz que cuida de contratos, patrocínio e imprensa, e que já conversou sobre você com gente da {outraEquipe}.',
         choices: {
           contratar: {
             label: 'Contratar o agente e deixar o mercado com ele',
@@ -2215,7 +2218,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           },
           adiar: {
             label: 'Pedir que esperem a fase melhorar para fazer festa',
-            outcomes: ['O pedido é entendido, e você se concentra no carro. Mas a turma murcha um pouco, e você sente.'],
+            outcomes: ['O pedido é entendido, e você se concentra no treino. Mas a turma murcha um pouco, e você sente.'],
           },
           visitar: {
             label: 'Passar um domingo inteiro com a turma do fã-clube',
@@ -2239,17 +2242,17 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['Ela entende e espera. Você ganha tempo para treinar, mas fica a sensação de ter decepcionado alguém.'],
           },
           visitar: {
-            label: 'Convidar a dona da página para um dia no box',
+            label: 'Convidar a dona da página para conhecer os bastidores',
             outcomes: [
-              'O dia no box rende uma reportagem linda, e os patrocinadores pedem para compartilhar.',
-              'A visita é ótima, mas toma o dia de treino inteiro, e o acerto do carro fica pela metade.',
+              'O dia nos bastidores rende uma reportagem linda, e os patrocinadores pedem para compartilhar.',
+              'A visita é ótima, mas toma o dia de treino inteiro, e o acerto fica pela metade.',
             ],
           },
         },
       },
       {
         title: 'Faixa na arquibancada de {pista}',
-        body: 'Lá no alto da arquibancada, uma faixa enorme com o seu nome e o desenho do seu capacete. Depois da corrida, os autores da faixa esperam na grade pedindo um minuto.',
+        body: 'Lá no alto da arquibancada, uma faixa enorme com o seu nome e o desenho do seu capacete. No fim do dia, os autores da faixa esperam na grade pedindo um minuto.',
         choices: {
           apoiar: {
             label: 'Pagar o almoço da turma e tirar foto com todos',
@@ -2262,8 +2265,8 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           visitar: {
             label: 'Passar a tarde com eles do outro lado da grade',
             outcomes: [
-              'A cena aparece na transmissão, e o paddock comenta o carinho. Os patrocinadores adoram.',
-              'A tarde é linda, mas a conversa com os engenheiros fica para depois, e o acerto sai incompleto.',
+              'A cena roda nas redes, e o paddock comenta o carinho. Os patrocinadores adoram.',
+              'A tarde é linda, mas a conversa com os mecânicos fica para depois, e o acerto sai incompleto.',
             ],
           },
         },
@@ -2348,7 +2351,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['As fotos com os artistas rodam as revistas, e o cachê ajuda nas contas. A semana de preparação vira semana de festa.'],
           },
           recusar: {
-            label: 'Agradecer o convite e ficar na fábrica treinando',
+            label: 'Agradecer o convite e ficar treinando com a equipe',
             outcomes: ['O treino rende. Os patrocinadores, porém, reclamam de mais uma vitrine perdida.'],
           },
           encarar: {
@@ -2453,7 +2456,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             ],
           },
           palco: {
-            label: 'Encarar a estreia na TV como quem larga na pole',
+            label: 'Encarar a estreia no programa como quem larga na pole',
             outcomes: ['Luz, câmera e você em casa. O apresentador pede uma segunda visita, e os patrocinadores querem o vídeo inteiro.'],
           },
         },
@@ -2542,8 +2545,8 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Uma lenda das antigas no seu box',
-        body: '{pessoa:car-mentor-veterano}, ex-piloto que brilhou décadas atrás, aparece no seu box depois do treino. Viu você andar e oferece, sem cobrar nada, conversas semanais sobre pilotagem.',
+        title: 'Uma lenda das antigas no paddock',
+        body: '{pessoa:car-mentor-veterano}, ex-piloto que brilhou décadas atrás, procura você no paddock depois do treino. Viu você andar e oferece, sem cobrar nada, conversas semanais sobre pilotagem.',
         choices: {
           'aceitar-mentoria': {
             label: 'Aceitar as conversas semanais',
@@ -2717,9 +2720,9 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['A foto rende uma postagem simpática sobre você. Mas fica a sensação de que dava para ter feito mais.'],
           },
           'levar-ao-box': {
-            label: 'Convidar para conhecer o box na próxima etapa',
+            label: 'Convidar para conhecer a equipe na próxima etapa',
             outcomes: [
-              '{primeiro:car-jovem-aprendiz} passa o dia no box de olhos arregalados e posta tudo. A equipe não adora ter visita no meio do trabalho.',
+              '{primeiro:car-jovem-aprendiz} passa o dia com a equipe, de olhos arregalados, e posta tudo. Os mecânicos não adoram ter visita no meio do trabalho.',
             ],
           },
         },
@@ -2737,7 +2740,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['O texto vira print e circula nos grupos de kart, com elogios a você. Mesmo assim, a resposta parece pouca.'],
           },
           'levar-ao-box': {
-            label: 'Convidar para ver uma corrida de dentro do box',
+            label: 'Convidar para ver uma corrida dos bastidores',
             outcomes: ['A visita vira o dia mais feliz da vida de {primeiro:car-jovem-aprendiz}. O chefe da equipe torce o nariz para o crachá extra.'],
           },
         },
@@ -2755,7 +2758,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
             outcomes: ['A frase é boa, e alguém filma. O vídeo agrada, mas o olhar decepcionado da última fila fica com você.'],
           },
           'levar-ao-box': {
-            label: 'Oferecer uma visita ao box da {equipe}',
+            label: 'Oferecer uma visita aos bastidores da {equipe}',
             outcomes: ['A visita vira a melhor história da escola de {primeiro:car-jovem-aprendiz}. Na {equipe}, a chefia pede menos visitas.'],
           },
         },
@@ -2911,12 +2914,12 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
         body: 'Na parede da {equipe}, alguém escreveu a meta da temporada num quadro branco, em letras grandes. Faltam poucas corridas, e todo mundo passa pelo quadro olhando para você.',
         choices: {
           'foco-total': {
-            label: 'Mudar para perto da fábrica até o fim da temporada',
-            outcomes: ['Morar ao lado da fábrica rende horas extras de simulador. A saudade de casa vem junto.'],
+            label: 'Mudar para perto da equipe até o fim da temporada',
+            outcomes: ['Morar ao lado da oficina rende horas extras de treino. A saudade de casa vem junto.'],
           },
           aliviar: {
             label: 'Apagar o quadro e pedir confiança no trabalho',
-            outcomes: ['O gesto alivia o box inteiro e o seu peito também. Sem a cobrança à vista, o ritmo dos treinos afrouxa.'],
+            outcomes: ['O gesto alivia a equipe inteira e o seu peito também. Sem a cobrança à vista, o ritmo dos treinos afrouxa.'],
           },
           'assumir-pressao': {
             label: 'Escrever o seu nome embaixo da meta, com caneta permanente',
@@ -2937,7 +2940,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           },
           aliviar: {
             label: 'Passar uns dias em {cidade} com a família',
-            outcomes: ['A comida de casa e as conversas de sempre devolvem a leveza. Na volta, o carro parece um pouco estranho.'],
+            outcomes: ['A comida de casa e as conversas de sempre devolvem a leveza. Na volta, o volante parece um pouco estranho.'],
           },
           'assumir-pressao': {
             label: 'Responder a todos que o resultado vem, e com sobra',
