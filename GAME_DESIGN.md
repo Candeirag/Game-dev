@@ -655,6 +655,30 @@ A curva de pneus vale para todos os carros e os lances, só para o piloto do jog
 
 As faixas são terços das corridas pela vantagem do piloto sobre o grid (nota geral menos o nível da categoria). Piloto melhor vê chances maiores e vence mais lances arriscados; por isso os lances pesam mais para quem joga bem: com talento 0 o topo fica onde estava, e com talento 4 e 8 mais carreiras chegam lá e ganham títulos (perto do que era na Fase 2, antes de a economia apertar). A "taxa de acerto geral" quase não muda entre as faixas (56% a 63%), porque o estilo do piloto escolhe opções seguras quando a chance é baixa. No padrão, 54% das corridas completas têm 4 lances, 28% têm 3 e 18% têm 2; 10 de 7.206 terminam atrás do safety car e ficam só com o da largada. Cada carreira ganha em média 3 rivalidades novas em 15 temporadas, e há menos de 1 toque a cada 100 lances.
 
+### Fase 5: eventos encadeados
+
+O robô escolhe sempre a primeira opção de cada cartão, a "natural": segue a cadeia e assina com o patrocinador. Os relatórios completos estão em `docs/simulador/fase-5*.txt`, e a seção 10 de cada um mede os eventos.
+
+| Robô                  | Chegam ao Grand Prix Mundial | Títulos por carreira | Temporadas sem vaga por carreira | Cartões por etapa | Etapas sem cartão | Cadeias começadas / concluídas por carreira | Textos repetidos |
+| --------------------- | ---------------------------- | -------------------- | -------------------------------- | ----------------- | ----------------- | ------------------------------------------- | ---------------- |
+| Mediano (talento 0)   | 12% (Fase 4: 8%)             | 0,24 (0,34)          | 0,52 (0,42)                      | 1,42              | 2 de 7.658        | 6,96 / 5,36                                 | 0                |
+| Bom (talento 4)       | 44% (38%)                    | 0,48 (0,58)          | 0,42 (0,50)                      | 1,41              | 5 de 7.910        | 6,48 / 5,42                                 | 0                |
+| Excelente (talento 8) | 74% (74%)                    | 1,24 (1,12)          | 0,22 (0,20)                      | 1,40              | 79 de 8.286       | 5,96 / 5,30                                 | 0                |
+
+- Em 150 carreiras de 15 temporadas, nenhuma repetiu texto, nem nos cartões nem nos eventos de família e na mudança para São Paulo.
+- Cartões por etapa: 65% das etapas têm 1, 28% têm 2 e 7% têm 3.
+- Divisão por categoria: pista 34%, carreira 24%, dinheiro 20%, saúde 12% e vida pessoal 9%.
+- Cada carreira recebe cerca de 9 propostas de patrocínio, de perfis sempre diferentes.
+
+**A economia ficou mais apertada no começo.** No robô mediano:
+
+- o caixa mediano do primeiro ano cai de R$ 17,4 mil para R$ 13,7 mil;
+- as vagas pagas por investidor sobem de 128 para 206;
+- o investidor de último recurso aparece em 3 fechamentos (era 0);
+- a maior sequência sem porta chega ao limite de 2 temporadas.
+
+Diminuir o tamanho dos efeitos de dinheiro dos cartões quase não muda isso. O aperto vem da troca do catálogo, com menos propostas de patrocínio do que antes e patrocinadores de personalidade exigente ou impulsiva. É um ponto para a calibragem da Fase 8 (ver a pendência do investidor).
+
 ## Limitações conhecidas e próximos passos
 
 - Só uma categoria é simulada por vez: a do jogador ou a da equipe que ele dirige. As outras existem como equipes, propostas e participações.

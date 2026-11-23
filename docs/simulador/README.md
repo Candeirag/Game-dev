@@ -19,6 +19,9 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
 | `fase-4.txt` | `npm run sim -- --seeds 50 --seasons 15`, com a curva de pneus nova e os lances decisivos (seção 9 nova: lances por corrida, cada opção de cada lance, três faixas pela vantagem do piloto sobre o grid, rivalidades novas) |
 | `fase-4-talento-4.txt` | o mesmo, com `--talent 4` |
 | `fase-4-talento-8.txt` | o mesmo, com `--talent 8` |
+| `fase-5.txt` | `npm run sim -- --seeds 50 --seasons 15`, com os eventos encadeados (seção 10 nova: cartões por etapa e por temporada, categorias, cadeias começadas e concluídas, escolhas de traço e aptidão, propostas de patrocínio e textos repetidos por carreira) |
+| `fase-5-talento-4.txt` | o mesmo, com `--talent 4` |
+| `fase-5-talento-8.txt` | o mesmo, com `--talent 8` |
 
 ## Como usar numa fase
 
