@@ -86,3 +86,22 @@ aparece nas etapas em que o carro sofre dano (7, 8, 10 e 11): o estilo desse pil
 de dentro em oito das nove largadas, e a etapa 8 termina num abandono no lance da largada (dano
 total, 406 mil a menos no caixa numa etapa só). O lance da parada (`pit`) aparece em três das nove
 corridas.
+
+## Fase 5 (23/11/2026): eventos encadeados
+
+Os eventos mudaram de propósito, e com eles as carreiras. O arquivo foi regravado inteiro (65
+pontos, como antes). O que mudou:
+
+- **De 1 a 3 cartões por etapa, sorteados dos dados** (`src/data/events`), no lugar do catálogo
+  antigo (até dois "garantidos" e um sorteado com 45% de chance). O robô continua escolhendo
+  sempre a primeira opção, mas os cartões são outros e mexem em moral, confiança, dinheiro,
+  patrocínio e rivalidades de outro jeito.
+- **Patrocinadores por perfil**, com valor, meta e personalidade. A personalidade muda a satisfação
+  por etapa (`SPONSOR_PROFILE_RULES`).
+- **Estado novo da carreira.** A memória das histórias (`story`: textos vistos, marcas, pessoas e
+  cadeias) entra no hash, e os cartões pendentes ganharam `storyKey`, `chain` e `speaker`.
+
+A carreira A continua na semente `20260321`, no terceiro sorteio. Ela agora faz duas temporadas no
+kart regional (8º e 2º) e uma no kart nacional (2º), sobe para a Fórmula Júnior (11º) e volta ao
+kart nacional (5º). Antes eram duas na Fórmula Júnior. O caminho que o teste exige continua coberto
+(a Fórmula Elite vem da carreira C).

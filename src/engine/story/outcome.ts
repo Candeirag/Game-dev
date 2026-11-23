@@ -63,8 +63,8 @@ function sponsorMoodChange(before: CareerState, after: CareerState, sponsorId: s
   return pairs.length > 0 ? round1(pairs.reduce((sum, v) => sum + v, 0) / pairs.length) : 0;
 }
 
-const KART_FUNDING: Record<string, string> = { full: 'programa completo de kart', basic: 'kart de fim de semana', none: 'sem kart por enquanto' };
-const CAREER_SUPPORT: Record<string, string> = {
+const kartFundingText: Record<string, string> = { full: 'programa completo de kart', basic: 'kart de fim de semana', none: 'sem kart por enquanto' };
+const careerSupportText: Record<string, string> = {
   full: 'carreira bancada pela família',
   basic: 'metade da vaga paga pela família',
   none: 'carreira por conta própria',
@@ -222,10 +222,10 @@ export function describeEffects(before: CareerState, after: CareerState, effects
         });
         break;
       case 'childKart':
-        views.push({ kind: 'note', topic: 'family', text: `${childName(e.childId)}: ${KART_FUNDING[e.funding] ?? 'kart'}` });
+        views.push({ kind: 'note', topic: 'family', text: `${childName(e.childId)}: ${kartFundingText[e.funding] ?? 'kart'}` });
         break;
       case 'childCareer':
-        views.push({ kind: 'note', topic: 'family', text: `${childName(e.childId)} estreia no kart regional: ${CAREER_SUPPORT[e.support] ?? 'carreira'}` });
+        views.push({ kind: 'note', topic: 'family', text: `${childName(e.childId)} estreia no kart regional: ${careerSupportText[e.support] ?? 'carreira'}` });
         break;
       case 'relocate':
         if (after.birth?.movedSeason !== before.birth?.movedSeason)

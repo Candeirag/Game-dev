@@ -30,7 +30,7 @@ import {
   stockPrice,
   takeLoan,
 } from './engineApi';
-import { NOW, botCareer, botTraining, newCareer, pickBestOffer, playExecutiveRound, playLifeSeason, playRound, resolvePending } from './helpers';
+import { NOW, botCareer, botOffseason, botTraining, newCareer, pickBestOffer, playExecutiveRound, playLifeSeason, playRound, resolvePending } from './helpers';
 
 const ROOT = 'tests/fixtures';
 const CURRENT = `${ROOT}/v${CAREER_SCHEMA_VERSION}`;
@@ -98,7 +98,9 @@ const RECIPES: Readonly<Record<string, () => CareerState>> = {
       for (let season = 0; season < 10; season++) {
         c = botTraining(c);
         while (c.nextRoundIndex < c.calendar.length) c = playRound(c);
-        c = startNextSeason(resolvePending(c), pickBestOffer(c));
+        // A mesma política de fim de ano do simulador: decisões resolvidas primeiro, e a porta paga só se abrir algo melhor.
+        const next = botOffseason(resolvePending(c));
+        c = startNextSeason(next.career, next.offerId);
         if (getCategory(c.categoryId).vehicle !== 'formula') continue;
         const rival = c.story.people.find((p) => p.key === 'rival-kart');
         const chain = c.story.chains.find((x) => x.id === 'velho-conhecido');

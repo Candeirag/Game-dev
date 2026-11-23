@@ -25,6 +25,9 @@ import { exportCareer, importCareer } from '@/persistence/saveService';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { NOW, botCareer, newCareer, playCareer, playRound, resolvePending } from './helpers';
 
+/** Prazo dos testes que jogam carreiras de várias temporadas. */
+const LONG = 120_000;
+
 const isStory = (e: PendingEvent) => e.definitionId.startsWith('story:');
 
 /** Todos os textos de um cartão: título, corpo, rótulos e desfechos. */
@@ -87,44 +90,56 @@ function choose(career: CareerState, card: PendingEvent, choiceId: string) {
 }
 
 describe('sorteio dos cartões', () => {
-  it('de 1 a 3 cartões por etapa, nunca mais que um passo de cadeia, e a pista é a categoria mais comum', () => {
-    const perRound = new Map<string, PendingEvent[]>();
-    const byCategory = new Map<string, number>();
-    for (const seed of [3, 11, 19]) {
-      const { cards } = cardsSeen(seed, 6);
-      for (const card of cards.filter((c) => isStory(c) && c.round > 0)) {
-        const key = `${seed}/${card.season}/${card.round}`;
-        perRound.set(key, [...(perRound.get(key) ?? []), card]);
-        byCategory.set(card.category, (byCategory.get(card.category) ?? 0) + 1);
+  it(
+    'de 1 a 3 cartões por etapa, nunca mais que um passo de cadeia, e a pista é a categoria mais comum',
+    () => {
+      const perRound = new Map<string, PendingEvent[]>();
+      const byCategory = new Map<string, number>();
+      for (const seed of [3, 11, 19]) {
+        const { cards } = cardsSeen(seed, 6);
+        for (const card of cards.filter((c) => isStory(c) && c.round > 0)) {
+          const key = `${seed}/${card.season}/${card.round}`;
+          perRound.set(key, [...(perRound.get(key) ?? []), card]);
+          byCategory.set(card.category, (byCategory.get(card.category) ?? 0) + 1);
+        }
       }
-    }
-    for (const [key, cards] of perRound) {
-      expect(cards.length, key).toBeGreaterThanOrEqual(1);
-      expect(cards.length, key).toBeLessThanOrEqual(STORY_EVENTS.PER_ROUND.length);
-      expect(cards.filter((c) => c.chain && !c.storyKey?.endsWith(`${c.chain.id}:rixa#0`)).length, key).toBeLessThanOrEqual(
-        1 + STORY_EVENTS.MAX_CHAIN_STEPS_PER_ROUND,
-      );
-    }
-    const track = byCategory.get('track') ?? 0;
-    for (const [category, count] of byCategory) if (category !== 'track') expect(track, category).toBeGreaterThan(count);
-    expect(byCategory.get('personal') ?? 0).toBeLessThan(track / 2);
-  });
+      for (const [key, cards] of perRound) {
+        expect(cards.length, key).toBeGreaterThanOrEqual(1);
+        expect(cards.length, key).toBeLessThanOrEqual(STORY_EVENTS.PER_ROUND.length);
+        expect(cards.filter((c) => c.chain && !c.storyKey?.endsWith(`${c.chain.id}:rixa#0`)).length, key).toBeLessThanOrEqual(
+          1 + STORY_EVENTS.MAX_CHAIN_STEPS_PER_ROUND,
+        );
+      }
+      const track = byCategory.get('track') ?? 0;
+      for (const [category, count] of byCategory) if (category !== 'track') expect(track, category).toBeGreaterThan(count);
+      expect(byCategory.get('personal') ?? 0).toBeLessThan(track / 2);
+    },
+    LONG,
+  );
 
-  it('toda etapa disputada ganha pelo menos um cartão em 15 temporadas (o catálogo não seca)', () => {
-    for (const seed of [5, 23]) {
-      const { cards, career } = cardsSeen(seed, 15);
-      const rounds = new Set(cards.filter((c) => isStory(c) && c.round > 0).map((c) => `${c.season}/${c.round}`));
-      const played = career.history.reduce((sum, h) => sum + h.rounds.length, 0);
-      expect(rounds.size, `semente ${seed}`).toBeGreaterThanOrEqual(played - Math.ceil(played * 0.02));
-    }
-  });
+  it(
+    'toda etapa disputada ganha pelo menos um cartão em 15 temporadas (o catálogo não seca)',
+    () => {
+      for (const seed of [5, 23]) {
+        const { cards, career } = cardsSeen(seed, 15);
+        const rounds = new Set(cards.filter((c) => isStory(c) && c.round > 0).map((c) => `${c.season}/${c.round}`));
+        const played = career.history.reduce((sum, h) => sum + h.rounds.length, 0);
+        expect(rounds.size, `semente ${seed}`).toBeGreaterThanOrEqual(played - Math.ceil(played * 0.02));
+      }
+    },
+    LONG,
+  );
 
-  it('mesma semente e mesmas escolhas: os mesmos cartões e a mesma memória', () => {
-    const a = cardsSeen(31, 3);
-    const b = cardsSeen(31, 3);
-    expect(a.cards.map((c) => c.storyKey ?? c.id)).toEqual(b.cards.map((c) => c.storyKey ?? c.id));
-    expect(a.career.story).toEqual(b.career.story);
-  });
+  it(
+    'mesma semente e mesmas escolhas: os mesmos cartões e a mesma memória',
+    () => {
+      const a = cardsSeen(31, 3);
+      const b = cardsSeen(31, 3);
+      expect(a.cards.map((c) => c.storyKey ?? c.id)).toEqual(b.cards.map((c) => c.storyKey ?? c.id));
+      expect(a.career.story).toEqual(b.career.story);
+    },
+    LONG,
+  );
 
   it('os cartões só saem no modo piloto', () => {
     const { career, record } = playedRound();
@@ -135,36 +150,48 @@ describe('sorteio dos cartões', () => {
 });
 
 describe('nenhum texto se repete na carreira', () => {
-  it('15 temporadas: nenhuma variante sai duas vezes e nenhum texto de cartão se repete', () => {
-    for (const seed of [2, 14, 27, 40]) {
-      const { cards, career } = cardsSeen(seed, 15, seed % 2 === 0 ? 0 : 4);
-      const story = cards.filter(isStory);
-      const keys = story.map((c) => c.storyKey);
-      expect(new Set(keys).size, `semente ${seed}: variantes`).toBe(keys.length);
-      const texts = story.flatMap(textsOf);
-      const repeated = texts.filter((t, i) => texts.indexOf(t) !== i);
-      expect(repeated, `semente ${seed}: textos repetidos`).toEqual([]);
-      // A memória guarda tudo o que saiu, sem corte.
-      expect(storyOf(career).seen.length).toBeGreaterThanOrEqual(new Set(keys).size);
-    }
-  });
+  it(
+    '15 temporadas: nenhuma variante sai duas vezes e nenhum texto de cartão se repete',
+    () => {
+      for (const seed of [2, 14, 27, 40]) {
+        const { cards, career } = cardsSeen(seed, 15, seed % 2 === 0 ? 0 : 4);
+        const story = cards.filter(isStory);
+        const keys = story.map((c) => c.storyKey);
+        expect(new Set(keys).size, `semente ${seed}: variantes`).toBe(keys.length);
+        const texts = story.flatMap(textsOf);
+        const repeated = texts.filter((t, i) => texts.indexOf(t) !== i);
+        expect(repeated, `semente ${seed}: textos repetidos`).toEqual([]);
+        // A memória guarda tudo o que saiu, sem corte.
+        expect(storyOf(career).seen.length).toBeGreaterThanOrEqual(new Set(keys).size);
+      }
+    },
+    LONG,
+  );
 
-  it('cada perfil de patrocinador aparece no máximo uma vez por carreira', () => {
-    const { cards } = cardsSeen(8, 15, 4);
-    const offers = cards.filter((c) => c.definitionId.startsWith('story:sponsor:')).map((c) => c.definitionId);
-    expect(offers.length).toBeGreaterThan(0);
-    expect(new Set(offers).size).toBe(offers.length);
-  });
+  it(
+    'cada perfil de patrocinador aparece no máximo uma vez por carreira',
+    () => {
+      const { cards } = cardsSeen(8, 15, 4);
+      const offers = cards.filter((c) => c.definitionId.startsWith('story:sponsor:')).map((c) => c.definitionId);
+      expect(offers.length).toBeGreaterThan(0);
+      expect(new Set(offers).size).toBe(offers.length);
+    },
+    LONG,
+  );
 });
 
 describe('memória das histórias', () => {
-  it('vai para o save e volta igual', () => {
-    const { career } = cardsSeen(12, 3);
-    expect(storyOf(career).seen.length).toBeGreaterThan(0);
-    const back = importCareer(exportCareer(career, NOW));
-    expect(back.story).toEqual(career.story);
-    expect(validateCareerIntegrity(back)).toEqual([]);
-  });
+  it(
+    'vai para o save e volta igual',
+    () => {
+      const { career } = cardsSeen(12, 3);
+      expect(storyOf(career).seen.length).toBeGreaterThan(0);
+      const back = importCareer(exportCareer(career, NOW));
+      expect(back.story).toEqual(career.story);
+      expect(validateCareerIntegrity(back)).toEqual([]);
+    },
+    LONG,
+  );
 
   it('a cadeia anda pelos passos com prazo: o passo seguinte só sai quando o prazo vence e a condição vale', () => {
     const { career } = playedRound(9);
@@ -202,29 +229,33 @@ describe('memória das histórias', () => {
     expect(storyFollowers(released, f4, after.season + 1, new Set(), new Set())).toEqual([]);
   });
 
-  it('numa carreira real, o rival marcado está no grid da categoria nova depois da subida', () => {
-    let checked = 0;
-    for (const seed of [1, 4, 6, 9, 13, 17, 21, 25]) {
-      let prev: CareerState | null = null;
-      playCareer(botCareer(seed, 6), 8, {}, (c) => {
-        if (prev && getCategory(c.categoryId).tier > getCategory(prev.categoryId).tier) {
-          const person = storyOf(prev).people.find((p) => p.follows && p.driverId);
-          if (person?.driverId) {
-            const age = (person.age ?? 0) + (c.season - person.metSeason);
-            if (age <= getCategory(c.categoryId).field.maxAge) {
-              checked++;
-              expect(
-                c.drivers.some((d) => d.id === person.driverId),
-                `semente ${seed}, temporada ${c.season}`,
-              ).toBe(true);
+  it(
+    'numa carreira real, o rival marcado está no grid da categoria nova depois da subida',
+    () => {
+      let checked = 0;
+      for (const seed of [1, 4, 6, 9, 13, 17, 21, 25]) {
+        let prev: CareerState | null = null;
+        playCareer(botCareer(seed, 6), 8, {}, (c) => {
+          if (prev && getCategory(c.categoryId).tier > getCategory(prev.categoryId).tier) {
+            const person = storyOf(prev).people.find((p) => p.follows && p.driverId);
+            if (person?.driverId) {
+              const age = (person.age ?? 0) + (c.season - person.metSeason);
+              if (age <= getCategory(c.categoryId).field.maxAge) {
+                checked++;
+                expect(
+                  c.drivers.some((d) => d.id === person.driverId),
+                  `semente ${seed}, temporada ${c.season}`,
+                ).toBe(true);
+              }
             }
           }
-        }
-        prev = c;
-      });
-    }
-    expect(checked).toBeGreaterThan(0);
-  });
+          prev = c;
+        });
+      }
+      expect(checked).toBeGreaterThan(0);
+    },
+    LONG,
+  );
 
   it('a sucessão começa uma memória nova; a virada do ano mantém os cartões das histórias sem resposta', () => {
     expect(emptyStory('dyn-1')).toEqual({ driverId: 'dyn-1', seen: [], flags: [], people: [], chains: [] });
@@ -288,14 +319,18 @@ describe('patrocinadores com perfil', () => {
     expect(60 - patient).toBeCloseTo((60 - plain) * SPONSOR_PROFILE_RULES.PATIENCE.patient, 5);
   });
 
-  it('assinar uma proposta traz o patrocinador com perfil e personalidade', () => {
-    const { cards } = cardsSeen(8, 4, 4);
-    const offer = cards.find((c) => c.definitionId.startsWith('story:sponsor:'));
-    expect(offer).toBeDefined();
-    const sign = offer!.choices[0]!;
-    const added = sign.outcomes[0]!.effects.find((e) => e.type === 'addSponsor');
-    expect(added?.type === 'addSponsor' && added.sponsor.profileId && added.sponsor.personality).toBeTruthy();
-  });
+  it(
+    'assinar uma proposta traz o patrocinador com perfil e personalidade',
+    () => {
+      const { cards } = cardsSeen(8, 4, 4);
+      const offer = cards.find((c) => c.definitionId.startsWith('story:sponsor:'));
+      expect(offer).toBeDefined();
+      const sign = offer!.choices[0]!;
+      const added = sign.outcomes[0]!.effects.find((e) => e.type === 'addSponsor');
+      expect(added?.type === 'addSponsor' && added.sponsor.profileId && added.sponsor.personality).toBeTruthy();
+    },
+    LONG,
+  );
 });
 
 describe('efeito mostrado depois da escolha', () => {
@@ -317,19 +352,23 @@ describe('efeito mostrado depois da escolha', () => {
 });
 
 describe('cadeias', () => {
-  it('o robô, escolhendo sempre a primeira opção, começa e termina cadeias em 15 temporadas', () => {
-    const started = new Set<string>();
-    const done = new Set<string>();
-    for (const seed of [2, 14, 27, 40]) {
-      const { career } = cardsSeen(seed, 15, 4);
-      for (const c of storyOf(career).chains) {
-        started.add(c.id);
-        if (c.status === 'done') done.add(c.id);
+  it(
+    'o robô, escolhendo sempre a primeira opção, começa e termina cadeias em 15 temporadas',
+    () => {
+      const started = new Set<string>();
+      const done = new Set<string>();
+      for (const seed of [2, 14, 27, 40]) {
+        const { career } = cardsSeen(seed, 15, 4);
+        for (const c of storyOf(career).chains) {
+          started.add(c.id);
+          if (c.status === 'done') done.add(c.id);
+        }
       }
-    }
-    expect(started.size).toBeGreaterThanOrEqual(Math.min(5, STORY_CHAINS.length));
-    expect(done.size).toBeGreaterThanOrEqual(3);
-  });
+      expect(started.size).toBeGreaterThanOrEqual(Math.min(5, STORY_CHAINS.length));
+      expect(done.size).toBeGreaterThanOrEqual(3);
+    },
+    LONG,
+  );
 });
 
 describe('mudança para São Paulo e eventos de família: cada vez, um texto novo', () => {

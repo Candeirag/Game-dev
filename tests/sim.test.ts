@@ -812,9 +812,7 @@ describe('eventos nos agregados (Fase 5)', () => {
 
   it('o relatório mostra esses números, e sem carreira nenhuma não inventa número', () => {
     const text = formatReport(summary);
-    expect(text).toContain(
-      'Cartões da Fase 5: 16 (1,56 por etapa; 2,00 no começo de cada temporada, da segunda em diante). Eventos de família e mudança: 3.',
-    );
+    expect(text).toContain('Cartões da Fase 5: 16 (1,56 por etapa; 2,00 no começo de cada temporada, da segunda em diante). Eventos de família e mudança: 3.');
     expect(text).toContain('Etapas (com e sem o piloto na pista): 9. Sem nenhum cartão: 2. Com mais de 3: 1.');
     expect(text).toMatch(/Todas as temporadas +9 +1,56 +22% +33% +22% +11% +11% +2,00/);
     expect(text).toMatch(/Temporada 1 +7 +1,43 +29% +29% +29% +0% +14% +-\n/);
