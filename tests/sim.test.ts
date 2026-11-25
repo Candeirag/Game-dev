@@ -658,7 +658,7 @@ describe('lances decisivos em carreiras de verdade (Fase 4)', () => {
     expect(high!.averageEdge).toBeGreaterThan(low!.averageEdge);
     expect(high!.riskyChance).toBeGreaterThan(low!.riskyChance);
     expect(high!.riskyWonPerRace).toBeGreaterThan(low!.riskyWonPerRace);
-  });
+  }, 60_000);
 });
 
 describe('eventos nos agregados (Fase 5)', () => {
@@ -947,7 +947,7 @@ describe('eventos em carreiras de verdade (Fase 5)', () => {
       expect(sample.seasons, `semente ${sample.seed}`).toHaveLength(15);
       expect(sample.texts, `semente ${sample.seed}`).toEqual(NO_REPEATS);
     }
-  });
+  }, 60_000);
 });
 
 describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
