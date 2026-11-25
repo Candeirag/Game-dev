@@ -1,0 +1,280 @@
+APEX MOTORSPORT DYNASTY · SIMULADOR DE CARREIRAS
+50 carreiras (sementes 1 a 50), 15 temporadas cada: 750 temporadas disputadas
+Política: robô padrão (treino de acerto, classificação e corrida equilibradas, melhor proposta aceitável) · talento 4
+Idade média na estreia: 15,5 anos
+
+1. POSIÇÃO FINAL POR CATEGORIA
+
+Categoria                      Temporadas  Carreiras  Posição média  Mediana  Melhor  Entre os 3  Títulos
+-----------------------------  ----------  ---------  -------------  -------  ------  ----------  -------
+Campeonato Regional de Kart           182         50           11,2      12º      1º          6%        2
+Campeonato Brasileiro de Kart         124         50            7,2       7º      1º         22%        3
+Campeonato Mundial de Kart             65         29            8,5       8º      1º         11%        3
+Fórmula Júnior                        121         49            6,9       7º      1º         21%        5
+Fórmula Sprint                        115         49            8,0       8º      1º         18%        3
+Fórmula Elite                          85         40            8,3       9º      1º         19%        6
+Grand Prix Mundial                     58         23            6,3       6º      1º         22%        6
+
+2. CAIXA NO FIM DE CADA TEMPORADA
+
+Temporada  Carreiras   10% piores     Mediana  10% melhores  No vermelho  Patrimônio (mediana)
+---------  ---------  -----------  ----------  ------------  -----------  --------------------
+1                 50     R$ 4.400   R$ 14.200     R$ 21.720           0%             R$ 14.200
+2                 50       R$ 800   R$ 17.640     R$ 34.760           6%             R$ 17.640
+3                 50     R$ 2.850   R$ 22.752     R$ 62.566           8%             R$ 22.752
+4                 50     R$ 2.890   R$ 32.560     R$ 69.870           8%             R$ 32.560
+5                 50    −R$ 2.524   R$ 28.166     R$ 89.152          14%             R$ 28.166
+6                 50   −R$ 25.362   R$ 57.195    R$ 231 mil          12%             R$ 57.195
+7                 50     R$ 4.170   R$ 91.413    R$ 358 mil           8%             R$ 91.413
+8                 50   −R$ 69.743  R$ 220 mil    R$ 682 mil          12%            R$ 220 mil
+9                 50   −R$ 58.521  R$ 197 mil    R$ 799 mil          14%            R$ 197 mil
+10                50  −R$ 951 mil  R$ 397 mil    R$ 2,59 mi          14%            R$ 397 mil
+11                50  −R$ 1,36 mi  R$ 634 mil     R$ 3,2 mi          16%            R$ 634 mil
+12                50  −R$ 424 mil  R$ 822 mil    R$ 6,36 mi          22%            R$ 822 mil
+13                50  −R$ 598 mil  R$ 717 mil      R$ 10 mi          26%            R$ 717 mil
+14                50  −R$ 945 mil     R$ 1 mi   R$ 17,18 mi          18%               R$ 1 mi
+15                50  −R$ 868 mil  R$ 4,15 mi   R$ 22,07 mi          22%            R$ 4,15 mi
+
+Caixa: dinheiro na conta depois do fechamento do ano (impostos, juros e rendimentos já lançados).
+"10% piores" e "10% melhores" são os percentis 10 e 90; "no vermelho" é a parcela das carreiras com caixa negativo.
+
+3. IDADE AO CHEGAR A CADA DEGRAU
+
+Degrau  Categoria                      Chegaram  Das carreiras  Idade média  Mais novo  Mais velho  Temporada média
+------  -----------------------------  --------  -------------  -----------  ---------  ----------  ---------------
+     1  Campeonato Regional de Kart          50           100%         15,5         14          17              1,0
+     2  Campeonato Brasileiro de Kart        50           100%         19,0         16          24              4,5
+     3  Campeonato Mundial de Kart           29            58%         20,9         18          25              6,4
+     4  Fórmula Júnior                       49            98%         22,6         19          26              8,1
+     5  Fórmula Sprint                       49            98%         24,8         20          28             10,3
+     6  Fórmula Elite                        40            80%         26,4         21          31             11,8
+     7  Grand Prix Mundial                   23            46%         28,2         25          30             13,5
+
+Chegar é subir: conta a primeira temporada no degrau vindo de um degrau mais baixo (ou a estreia). Quem pula um
+degrau por um atalho e depois cai nele não entra na linha desse degrau.
+
+4. CARREIRAS QUE CHEGAM AO TOPO
+
+Chegaram ao Grand Prix Mundial: 23 de 50 carreiras (46%).
+Degrau mais alto alcançado: 1º 0 · 2º 0 · 3º 1 · 4º 0 · 5º 9 · 6º 17 · 7º 23.
+
+5. TÍTULOS POR CARREIRA
+
+Média de 0,56 por carreira (28 títulos no total; o máximo numa carreira foi 4).
+Carreiras sem título: 29 · com um: 16 · com dois: 4 · com três ou mais: 1.
+
+6. TEMPORADAS PARADAS, SEM VAGA
+
+Sem vaga: 23 temporadas (0,46 por carreira), em 17 de 50 carreiras (34%).
+  Por quê: em 0, nenhuma equipe fez proposta; em 18, havia proposta e faltou dinheiro para a vaga; em 0, faltou outro requisito.
+Desceu de degrau: 44 temporadas (0,88 por carreira), em 30 de 50 carreiras.
+Maior sequência no mesmo degrau: 4,4 temporadas, em média.
+Etapas sem correr (lesão ou suspensão): 0,01 por temporada.
+Carreiras interrompidas por sucessão (morte ou acidente): 0.
+
+"Sem vaga" é a temporada em que o piloto não tinha nenhuma proposta que pudesse aceitar e só correu pela rede de
+segurança: a vaga de aluguel na equipe mais fraca do degrau de baixo (ou do próprio degrau, para quem já está no
+primeiro). O jogo sempre oferece essa vaga: ninguém fica um ano inteiro sem correr. Desde a Fase 3 ela custa dinheiro.
+
+7. NASCIMENTO
+
+Grupo           Carreiras    Nota de nascença  Posição na estreia  Degrau mais alto  Monopostos  Topo  Títulos  Sem vaga
+--------------  ---------  ------------------  ------------------  ----------------  ----------  ----  -------  --------
+Nascença baixa         16  42,7 (36,2 a 46,8)                15,9              5,81         94%   25%     0,44      0,56
+Nascença média         18  50,2 (47,2 a 52,6)                15,3              6,33        100%   50%     0,39      0,39
+Nascença alta          16  57,4 (52,6 a 65,0)                14,3              6,50        100%   63%     0,88      0,44
+
+Grupo          Carreiras    Nota de nascença  Posição na estreia  Degrau mais alto  Monopostos  Topo  Títulos  Sem vaga
+-------------  ---------  ------------------  ------------------  ----------------  ----------  ----  -------  --------
+Capital               25  49,5 (36,8 a 61,4)                14,6              6,24        100%   44%     0,40      0,40
+Interior              25  50,7 (36,2 a 65,0)                15,8              6,20         96%   48%     0,72      0,52
+Dois talentos         33  51,5 (36,8 a 65,0)                14,5              6,48        100%   58%     0,73      0,45
+Dois defeitos         17  47,5 (36,2 a 56,0)                16,5              5,71         94%   24%     0,24      0,47
+
+Nota de nascença: a média das cinco aptidões de corpo e mente (reflexo, físico, inteligência, frieza e carisma; 50 é o
+piloto comum). As carreiras ficam em três grupos do mesmo tamanho pela nota. "Posição na estreia" é a posição média no
+campeonato da primeira temporada; "degrau mais alto", a média do degrau mais alto alcançado; "monopostos" e "topo", a
+parcela das carreiras que chegou ao 4º degrau e ao último; "títulos" e "sem vaga", por carreira. A segunda tabela separa
+quem nasceu na capital de quem nasceu no interior e quem nasceu com dois talentos de quem nasceu com dois defeitos.
+
+8. ECONOMIA E PORTAS
+
+Sem nenhuma porta: 21 temporadas, em 16 de 50 carreiras. Maior sequência numa carreira: 2 temporadas (o limite é 2).
+Investidor de último recurso: apareceu em 3 fechamentos.
+Vagas por porta: 472 com dinheiro próprio, patrocínio e bolsa · 0 pela academia · 7 com a vaquinha · 198 com investidor · 23 de aluguel.
+Carreiras que terminam com investidor: 47 de 50 carreiras (fatia média de 31%; a maior, 40%).
+Carreiras que passaram por uma academia: 2 de 50 carreiras. Temporadas com trabalho paralelo: 414.
+Patrocinadores que romperam por meta não cumprida: 3,72 por carreira.
+
+Posição final no kart  Temporadas  Resultado do ano (mediana)
+---------------------  ----------  --------------------------
+1º a 5º                        71                    R$ 7.692
+6º a 10º                      107                    R$ 6.564
+11º a 15º                      82                   −R$ 3.891
+16º a 20º                      46                   −R$ 4.350
+
+Resultado do ano por degrau    Temporadas  Do 1º ao 10º (mediana)  Do 11º em diante (mediana)
+-----------------------------  ----------  ----------------------  --------------------------
+Campeonato Regional de Kart           182                R$ 6.564                   −R$ 4.380
+Campeonato Brasileiro de Kart         124                R$ 7.692                   R$ 22.542
+Campeonato Mundial de Kart             65               R$ 86.684                   R$ 60.200
+Fórmula Júnior                        121               R$ 90.652                   R$ 18.693
+Fórmula Sprint                        115              R$ 287 mil                 −R$ 222 mil
+Fórmula Elite                          85              R$ 479 mil                 −R$ 255 mil
+Grand Prix Mundial                     58              R$ 5,11 mi                  R$ 3,85 mi
+
+Entrada na Fórmula Júnior  Chegaram  Das carreiras  Temporada média  Patrocínio e bolsa  Academia  Vaquinha  Investidor
+-------------------------  --------  -------------  ---------------  ------------------  --------  --------  ----------
+Todas as carreiras               49            98%              8,1                  33         0         3          13
+Nascença alta                    16           100%              7,7                   8         0         3           5
+Nascença média                   18           100%              7,9                  14         0         0           4
+Nascença baixa                   15            94%              8,7                  11         0         0           4
+
+"Porta" é uma vaga, fora a de aluguel, que o piloto consegue aceitar de algum jeito: com o que tem (dinheiro, patrocínio
+e bolsa), pela academia, com a vaquinha da cidade ou com um investidor. Depois de duas temporadas seguidas sem nenhuma,
+o investidor de último recurso aparece (e traz uma vaga, se nenhuma equipe fez proposta). "Resultado do ano" é a soma
+de tudo o que entrou e saiu na temporada (vaga, viagens, equipamento, aluguel, treino, patrocínios, apoio da família,
+impostos e juros; aportes de investidor e vaquinha entram no ano seguinte ao da assinatura): terminar mal tem de custar
+dinheiro. A última tabela mostra como cada grupo pagou a primeira temporada na Fórmula Júnior.
+
+9. LANCES DECISIVOS
+
+Lances: 25536 em 7895 corridas (7500 completas). Corridas completas fora da faixa de 2 a 4 lances: 16.
+Rivalidades novas: 141 (2,82 por carreira). Toques em lances: 0,7 a cada 100 lances.
+
+Lances por corrida completa    Corridas  Completas  Média  Com 2  Com 3  Com 4
+-----------------------------  --------  ---------  -----  -----  -----  -----
+Todas as categorias                7895       7500   3,30    19%    31%    50%
+Campeonato Regional de Kart        1817       1725   3,45    16%    23%    61%
+Campeonato Brasileiro de Kart      1240       1179   3,39    19%    22%    59%
+Campeonato Mundial de Kart          646        618   3,49    16%    19%    65%
+Fórmula Júnior                     1210       1162   3,12    24%    38%    37%
+Fórmula Sprint                     1150       1097   3,23    21%    35%    44%
+Fórmula Elite                      1020        955   3,29    16%    37%    46%
+Grand Prix Mundial                  812        764   3,05    24%    46%    29%
+
+Lance            Opção                     Risco      Vezes  Deu certo  Chance mostrada  Rodou  Tocou  Abandonou  Punido
+---------------  ------------------------  ---------  -----  ---------  ---------------  -----  -----  ---------  ------
+Largada          Arriscar por dentro       Arriscado   3317        68%              68%      0     70         19      29
+Largada          Ir por fora               Moderado    3680        60%              60%      0      0          0       0
+Largada          Segurar a posição         Seguro       898        78%              78%      0      0          0       0
+Ataque           Mergulhar na freada       Arriscado   2426        69%              69%     38     65         20      18
+Ataque           Esperar o erro do rival   Seguro      5954        16%              16%      0      0          0       0
+Ataque           Usar o vácuo              Moderado    2106        54%              52%      0      0          0       0
+Defesa           Fechar a porta            Arriscado    888        74%              73%      9     28          8       7
+Defesa           Ceder para não bater      Seguro       370       100%             100%      0      0          0       0
+Chuva começando  Parar para trocar o pneu  Seguro       210        90%              90%      0      0          0       0
+Chuva começando  Arriscar na pista         Arriscado     25        76%              64%      3      0          1       0
+Última volta     Tudo ou nada              Arriscado   1634        72%              73%     35     20         11      13
+Última volta     Garantir os pontos        Seguro      3059        92%              93%      0      0          0       0
+Parada           Parar agora (undercut)    Moderado     430        71%              69%      0      0          0       0
+Parada           Esticar (overcut)         Moderado     539        67%              70%      0      0          0       0
+
+Vantagem sobre o grid  Corridas   Pontos de vantagem  Lances  Chance na opção arriscada  Arriscou  Acerto geral  Arriscados vencidos  Saldo
+---------------------  --------  -------------------  ------  -------------------------  --------  ------------  -------------------  -----
+Baixa                      2631   +0,5 (−7,5 a +3,8)    8812                        42%       21%           55%                 0,47  +0,37
+Média                      2633   +5,3 (+3,8 a +6,6)    8488                        50%       34%           58%                 0,70  +0,54
+Alta                       2631  +8,3 (+6,6 a +15,7)    8236                        56%       47%           60%                 1,03  +0,65
+
+Só o piloto do jogador tem lances. O robô não responde a nenhum: quem escolhe a opção é o estilo do piloto, como em
+"simular até o fim". "Corrida completa" é a que o piloto termina sem a prova ser encerrada antes por bandeira vermelha:
+a regra é de 2 a 4 lances por corrida completa, e a largada sempre é um deles (a primeira linha diz quantas ficaram fora
+da faixa). Na segunda tabela, "deu certo" é a parcela das vezes em que a opção funcionou e "chance mostrada", a média da
+chance que a tela exibia nela: as duas têm de andar juntas. "Rodou", "tocou", "abandonou" e "punido" contam os lances
+errados que terminaram assim (o toque que tira o piloto da corrida conta em "tocou" e em "abandonou"). A terceira tabela
+separa as corridas em três grupos do mesmo tamanho pela vantagem do piloto sobre o grid na hora da corrida: a nota geral
+dele menos o nível médio dos pilotos da categoria. "Chance na opção arriscada" é a média da chance mostrada na opção
+arriscada dos lances que tinham uma, escolhida ou não; "arriscou", a parcela desses lances em que o piloto foi nela;
+"acerto geral", a parcela de todos os lances que deram certo; "arriscados vencidos", os lances arriscados que deram
+certo, por corrida; "saldo", os lances vencidos menos os perdidos, por corrida (o registro não diz quantas posições cada
+lance valeu). Piloto melhor tem de ver chances maiores e vencer mais lances arriscados. "Rivalidade nova" é o toque num
+lance com um piloto que ainda não era rival.
+
+10. EVENTOS
+
+Cartões da Fase 5: 12308 (1,42 por etapa; 1,59 no começo de cada temporada, da segunda em diante). Eventos de família e mudança: 199.
+Etapas (com e sem o piloto na pista): 7902. Sem nenhum cartão: 0. Com mais de 3: 0.
+
+Cartões por etapa    Etapas  Média  Com 0  Com 1  Com 2  Com 3  Mais de 3  No começo do ano
+-------------------  ------  -----  -----  -----  -----  -----  ---------  ----------------
+Todas as temporadas    7902   1,42     0%    65%    28%     7%         0%              1,59
+Temporada 1             500   1,39     0%    69%    24%     8%         0%                 -
+Temporada 2             500   1,45     0%    62%    30%     7%         0%              1,50
+Temporada 3             500   1,39     0%    67%    27%     6%         0%              1,70
+Temporada 4             500   1,41     0%    65%    28%     6%         0%              1,84
+Temporada 5             500   1,47     0%    61%    31%     8%         0%              1,88
+Temporada 6             500   1,43     0%    65%    28%     8%         0%              1,82
+Temporada 7             500   1,42     0%    64%    29%     7%         0%              1,76
+Temporada 8             502   1,44     0%    62%    31%     7%         0%              1,64
+Temporada 9             510   1,42     0%    65%    28%     7%         0%              1,56
+Temporada 10            518   1,40     0%    65%    29%     5%         0%              1,54
+Temporada 11            524   1,41     0%    67%    26%     7%         0%              1,44
+Temporada 12            560   1,42     0%    65%    28%     7%         0%              1,38
+Temporada 13            582   1,37     0%    67%    29%     4%         0%              1,36
+Temporada 14            594   1,42     0%    66%    27%     8%         0%              1,46
+Temporada 15            612   1,41     0%    65%    29%     6%         0%              1,36
+
+Categoria     Cartões  Parcela
+------------  -------  -------
+Pista            4444      36%
+Carreira         2992      24%
+Dinheiro         2372      19%
+Saúde            1447      12%
+Vida pessoal     1053       9%
+
+Cadeias por carreira: 6,38 começadas e 5,30 concluídas, em média.
+
+Cadeia                                      Id                         Começaram  Concluíram
+------------------------------------------  -------------------------  ---------  ----------
+Velho conhecido                             velho-conhecido                   22          12
+A bronca que ninguém esqueceu               chefe-nao-esquece                 46          45
+A padaria que acreditou primeiro            pao-da-vila                       23           8
+A coluna da Gazeta                          jornalista-do-kartodromo          49          48
+A oficina do primeiro kart                  mecanico-do-primeiro-kart         48          47
+O golpe da vaga                             golpe-da-vaga                     35          35
+Lesão no punho                              lesao-no-punho                     0           0
+Amizade de infância, dívida de adulto       amigo-de-infancia                 32          31
+Um rosto conhecido na sala dos comissários  comissario-de-olho                 9           8
+A peça que ninguém queria medir             peca-fora-da-medida               49          25
+O ano do vestibular                         vestibular                         6           6
+
+Escolhas de traço ou aptidão oferecidas: 913 (18,26 por carreira), em 50 de 50 carreiras.
+
+Traço ou aptidão        Tipo     Escolhas no catálogo  Oferecidas  Carreiras
+----------------------  -------  --------------------  ----------  ---------
+Gênio na chuva          Talento                     1          28         10
+Medo de chuva           Defeito                     1          30         10
+Largador nato           Talento                     1           6          3
+Poupador de pneus       Talento                     2          24          6
+Gastador de pneus       Defeito                     2          42         11
+Aprende rápido          Talento                     3          43          8
+Aprende devagar         Defeito                     1          16          6
+Rei da classificação    Talento                     2          78         15
+Trava na classificação  Defeito                     1          18          6
+Corpo de ferro          Talento                     6          39          9
+Frágil                  Defeito                     3          13          6
+Piloto limpo            Talento                     4          37         12
+Esquentado              Defeito                    12         116          8
+Brilha nas estreias     Talento                     2          61         13
+Nervoso em estreias     Defeito                     1          27          9
+Reflexo                 Aptidão                     2          21          5
+Físico                  Aptidão                     2          25          7
+Inteligência            Aptidão                     8          83         10
+Frieza                  Aptidão                     5          40          6
+Carisma                 Aptidão                    14         147          9
+Carisma (baixa)         Aptidão                     1          19          7
+
+Propostas de patrocínio: 478 (9,56 por carreira), de 42 perfis diferentes (o catálogo tem 42). Perfil repetido na mesma carreira: 0.
+
+Textos repetidos na mesma carreira, só nos cartões da Fase 5: 0 (em 0 de 50 carreiras).
+Textos repetidos na mesma carreira, em todos os eventos (com família e mudança): 0 (em 0 de 50 carreiras).
+
+Os cartões da Fase 5 são os eventos encadeados com memória: avulsos, passos de cadeia e propostas de patrocínio; os de
+família e a mudança ficam de fora das contas, menos na última linha de textos repetidos. Cada cartão conta quando
+aparece, antes da resposta do robô (que fica sempre com a primeira escolha). A regra é de 1 a 3 cartões por etapa: etapa
+sem cartão é catálogo sem texto novo para o momento, e uma temporada que perde cartões com o tempo mostra o catálogo se
+esgotando. "No começo do ano" é a média de cartões antes da primeira etapa, da segunda temporada em diante. Uma cadeia
+começa com o primeiro cartão dela e termina quando um desfecho a encerra. "Escolhas no catálogo" conta as escolhas que o
+traço ou a aptidão libera nos dados; "oferecidas", as vezes em que uma delas apareceu num cartão. "Texto repetido" é um
+título, corpo, rótulo de escolha ou desfecho que a mesma carreira viu mais de uma vez: o critério de aceite da fase é
+zero nos cartões da Fase 5, em 15 temporadas. Os exemplos mostram o começo do texto e de que eventos ele veio.

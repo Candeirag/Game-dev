@@ -4,10 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from '@/data/categories';
+import { SPONSOR_PROFILES, STORY_CHAINS } from '@/data/events';
 import { PLAYER_BACKGROUNDS, PLAYER_MAX_AGE, PLAYER_MIN_AGE } from '@/data/rules';
 import { ROOKIE_TEAM_IDS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
-import type { MomentRecord } from '@/domain/schemas';
+import type { MomentRecord, PendingEvent } from '@/domain/schemas';
 import type { RaceMoment } from '@/engine';
 import { HELP, parseArgs, runCli } from '../sim/cli';
 import { playRound } from '../sim/policy';
@@ -15,24 +16,31 @@ import { formatReport } from '../sim/report';
 import {
   type CareerSample,
   DEFAULT_SIM_OPTIONS,
+  type EventSample,
   birthTerciles,
   edgeTerciles,
+  emptyEventSample,
   type MomentSample,
   type RaceSample,
   SIM_CHOICES,
   SIM_POPULATION,
   type SeasonSample,
   type SimResult,
+  type TextRepeatSample,
   createSimCareer,
   percentile,
   profileForSeed,
   runSimulation,
   simulateCareer,
   summarize,
+  watchEvents,
 } from '../sim/run';
 
 const SMALL = { seeds: 4, seasons: 3, firstSeed: 11, talent: 0 };
 const small: SimResult = runSimulation(SMALL);
+/** Carreira montada à mão sem nenhum texto repetido. */
+const NO_REPEATS: TextRepeatSample = { story: 0, all: 0, repeated: [] };
+const total = (values: readonly number[]) => values.reduce((sum, value) => sum + value, 0);
 
 describe('argumentos da linha de comando', () => {
   it('sem argumentos, vale o padrão: 50 carreiras de 15 temporadas', () => {
@@ -207,6 +215,7 @@ describe('agregados de carreiras montadas à mão', () => {
     academy: false,
     races: [],
     freshRivalries: 0,
+    events: emptyEventSample(),
     ...extra,
   });
   const profile = { background: 'natural', age: 16, teamId: 'horizonte' } as const;
@@ -216,6 +225,7 @@ describe('agregados de carreiras montadas à mão', () => {
     profile,
     birth: { score: 60, region: 'capital', traitBalance: 1 },
     ended: 'completed',
+    texts: NO_REPEATS,
     seasons: [
       season(1, 1, { position: 1, title: true }),
       season(2, 1, { position: 2 }),
@@ -231,6 +241,7 @@ describe('agregados de carreiras montadas à mão', () => {
     profile: { ...profile, age: 14 },
     birth: { score: 40, region: 'interior', traitBalance: -1 },
     ended: 'succession',
+    texts: NO_REPEATS,
     seasons: [
       season(1, 1, { position: 20 }),
       season(2, 1, { seat: 'fallback', noSeatCause: 'no-offer', position: 3 }),
@@ -328,6 +339,7 @@ describe('portas nos agregados (Fase 3)', () => {
     birth: { score: 50, region: 'capital', traitBalance: 1 },
     seasons,
     ended: 'completed',
+    texts: NO_REPEATS,
   });
   const base = (number: number, extra: Partial<SeasonSample>): SeasonSample => ({
     season: number,
@@ -357,6 +369,7 @@ describe('portas nos agregados (Fase 3)', () => {
     academy: false,
     races: [],
     freshRivalries: 0,
+    events: emptyEventSample(),
     ...extra,
   });
   // Duas temporadas sem porta, o último recurso na terceira (não conta como "sem porta") e mais uma sem porta.
@@ -459,8 +472,10 @@ describe('lances decisivos nos agregados (Fase 4)', () => {
         academy: false,
         races,
         freshRivalries,
+        events: emptyEventSample(),
       },
     ],
+    texts: NO_REPEATS,
   });
   // No kart: uma corrida de 2 lances, uma de 3 (com um toque punido) e um abandono na largada, que não é corrida completa.
   const kart = career(
@@ -643,14 +658,304 @@ describe('lances decisivos em carreiras de verdade (Fase 4)', () => {
     expect(high!.averageEdge).toBeGreaterThan(low!.averageEdge);
     expect(high!.riskyChance).toBeGreaterThan(low!.riskyChance);
     expect(high!.riskyWonPerRace).toBeGreaterThan(low!.riskyWonPerRace);
+  }, 60_000);
+});
+
+describe('eventos nos agregados (Fase 5)', () => {
+  const chain = STORY_CHAINS[0]!;
+  const literal = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const events = (perRound: number[], extra: Partial<EventSample>): EventSample => ({ ...emptyEventSample(), perRound, ...extra });
+  const season = (number: number, sample: EventSample): SeasonSample => ({
+    season: number,
+    categoryId: 'kart-regional',
+    tier: 1,
+    age: 15 + number,
+    position: 10,
+    wins: 0,
+    podiums: 0,
+    title: false,
+    cash: 0,
+    netWorth: 0,
+    reputation: 5,
+    overall: 60,
+    roundsMissed: 0,
+    seat: number === 1 ? 'initial' : 'continue',
+    noSeatCause: null,
+    offersMade: 1,
+    offers: 1,
+    doorOpen: true,
+    lastResort: false,
+    door: number === 1 ? 'initial' : 'own',
+    yearResult: 0,
+    sponsorsBroken: 0,
+    investorShare: 0,
+    sideJob: false,
+    academy: false,
+    races: [],
+    freshRivalries: 0,
+    events: sample,
+  });
+  const career = (seed: number, seasons: SeasonSample[], texts: TextRepeatSample): CareerSample => ({
+    seed,
+    profile: { background: 'natural', age: 16, teamId: 'horizonte' },
+    birth: { score: 50, region: 'capital', traitBalance: 1 },
+    ended: 'completed',
+    seasons,
+    texts,
+  });
+  // A: duas temporadas. Na estreia, etapas com 1, 2, 0 e 4 cartões; na segunda, com 3 e 1, e 2 no começo do ano.
+  // Começa uma cadeia do catálogo (e a conclui) e uma que o catálogo não tem; recebe o mesmo perfil de patrocínio duas vezes.
+  const a = career(
+    1,
+    [
+      season(
+        1,
+        events([1, 2, 0, 4], {
+          byCategory: { track: 3, career: 2, money: 1, health: 1, personal: 0 },
+          chains: [chain.id],
+          unlocks: [
+            { kind: 'trait', id: 'rainMaster' },
+            { kind: 'aptitude', id: 'charisma' },
+          ],
+          sponsorOffers: ['perfil-a'],
+          others: 1,
+        }),
+      ),
+      season(
+        2,
+        events([3, 1], {
+          seasonStart: 2,
+          byCategory: { track: 2, career: 0, money: 3, health: 0, personal: 1 },
+          chains: [chain.id, 'cadeia-de-teste'],
+          chainsDone: [chain.id],
+          unlocks: [{ kind: 'trait', id: 'rainMaster' }],
+          sponsorOffers: ['perfil-b', 'perfil-a'],
+        }),
+      ),
+    ],
+    {
+      story: 1,
+      all: 2,
+      repeated: [
+        { text: 'Texto da Fase 5', times: 2, story: 2, events: ['story:evento'] },
+        { text: 'Texto de família', times: 3, story: 0, events: ['family-partner', 'birth-move'] },
+      ],
+    },
+  );
+  // B: uma temporada, etapas com 2, 0 e 1 cartões; conclui a cadeia de teste e repete um texto de família.
+  const b = career(
+    2,
+    [
+      season(
+        1,
+        events([2, 0, 1], {
+          byCategory: { track: 1, career: 1, money: 1, health: 0, personal: 0 },
+          chains: ['cadeia-de-teste'],
+          chainsDone: ['cadeia-de-teste'],
+          sponsorOffers: ['perfil-c'],
+          others: 2,
+        }),
+      ),
+    ],
+    { story: 0, all: 1, repeated: [{ text: 'Texto de família', times: 2, story: 0, events: ['family-wedding'] }] },
+  );
+  const summary = summarize([a, b], { seeds: 2, seasons: 2, firstSeed: 1, talent: 0 });
+  const stats = summary.events;
+
+  it('conta os cartões por etapa disputada, a faixa de 1 a 3 e os do começo do ano (da segunda temporada em diante)', () => {
+    expect(stats.all).toEqual({ rounds: 9, cards: 14, perRound: 14 / 9, zero: 2, one: 3, two: 2, three: 1, more: 1, starts: 1, startCards: 2, perStart: 2 });
+    expect(stats.bySeason).toEqual([
+      { season: 1, rounds: 7, cards: 10, perRound: 10 / 7, zero: 2, one: 2, two: 2, three: 0, more: 1, starts: 0, startCards: 0, perStart: 0 },
+      { season: 2, rounds: 2, cards: 4, perRound: 2, zero: 0, one: 1, two: 0, three: 1, more: 0, starts: 1, startCards: 2, perStart: 2 },
+    ]);
+    expect(stats).toMatchObject({ cards: 16, others: 3 });
+  });
+
+  it('mede a parcela de cada categoria, as cadeias começadas e concluídas, os traços e as propostas', () => {
+    expect(stats.byCategory).toEqual([
+      { category: 'track', cards: 6, share: 0.375 },
+      { category: 'career', cards: 3, share: 0.1875 },
+      { category: 'money', cards: 5, share: 0.3125 },
+      { category: 'health', cards: 1, share: 0.0625 },
+      { category: 'personal', cards: 1, share: 0.0625 },
+    ]);
+    // Todas as cadeias do catálogo aparecem, na ordem dele; a que só a amostra tem vem no fim, com o id no lugar do nome.
+    expect(stats.chains).toHaveLength(STORY_CHAINS.length + 1);
+    expect(stats.chains[0]).toEqual({ id: chain.id, title: chain.title, started: 1, done: 1 });
+    expect(stats.chains.at(-1)).toEqual({ id: 'cadeia-de-teste', title: 'cadeia-de-teste', started: 2, done: 1 });
+    expect(stats.chains.slice(1, -1).every((c) => c.started === 0 && c.done === 0)).toBe(true);
+    expect(stats).toMatchObject({ chainsStartedPerCareer: 1.5, chainsDonePerCareer: 1 });
+    expect(stats).toMatchObject({ unlocks: 3, unlocksPerCareer: 1.5, unlockCareers: 1 });
+    expect(stats.byUnlock.find((u) => u.id === 'rainMaster')).toMatchObject({ kind: 'trait', times: 2, careers: 1 });
+    expect(stats.byUnlock.find((u) => u.id === 'charisma')).toMatchObject({ kind: 'aptitude', times: 1, careers: 1 });
+    expect(stats).toMatchObject({
+      sponsorOffers: 4,
+      sponsorOffersPerCareer: 2,
+      sponsorProfiles: 3,
+      sponsorCatalog: SPONSOR_PROFILES.filter((p) => !p.chainOnly).length,
+      sponsorRepeated: 1,
+    });
+  });
+
+  it('soma os textos repetidos das carreiras e junta os exemplos, os da Fase 5 primeiro', () => {
+    expect(stats.repeats).toEqual({
+      story: 1,
+      storyCareers: 1,
+      all: 3,
+      allCareers: 2,
+      examples: [
+        { text: 'Texto da Fase 5', times: 2, story: 2, events: ['story:evento'], careers: 1 },
+        { text: 'Texto de família', times: 5, story: 0, events: ['family-partner', 'birth-move', 'family-wedding'], careers: 2 },
+      ],
+    });
+  });
+
+  it('o relatório mostra esses números, e sem carreira nenhuma não inventa número', () => {
+    const text = formatReport(summary);
+    expect(text).toContain('Cartões da Fase 5: 16 (1,56 por etapa; 2,00 no começo de cada temporada, da segunda em diante). Eventos de família e mudança: 3.');
+    expect(text).toContain('Etapas (com e sem o piloto na pista): 9. Sem nenhum cartão: 2. Com mais de 3: 1.');
+    expect(text).toMatch(/Todas as temporadas +9 +1,56 +22% +33% +22% +11% +11% +2,00/);
+    expect(text).toMatch(/Temporada 1 +7 +1,43 +29% +29% +29% +0% +14% +-\n/);
+    expect(text).toMatch(/Temporada 2 +2 +2,00 +0% +50% +0% +50% +0% +2,00/);
+    expect(text).toMatch(/Pista +6 +38%/);
+    expect(text).toMatch(/Vida pessoal +1 +6%/);
+    expect(text).toContain('Cadeias por carreira: 1,50 começadas e 1,00 concluídas, em média.');
+    expect(text).toMatch(new RegExp(`${literal(chain.title)} +${literal(chain.id)} +1 +1`));
+    expect(text).toMatch(/cadeia-de-teste +cadeia-de-teste +2 +1/);
+    expect(text).toContain('Escolhas de traço ou aptidão oferecidas: 3 (1,50 por carreira), em 1 de 2 carreiras.');
+    expect(text).toMatch(/Gênio na chuva +Talento +\d+ +2 +1/);
+    expect(text).toMatch(/Carisma +Aptidão +\d+ +1 +1/);
+    expect(text).toContain(
+      `Propostas de patrocínio: 4 (2,00 por carreira), de 3 perfis diferentes (o catálogo tem ${stats.sponsorCatalog}). Perfil repetido na mesma carreira: 1.`,
+    );
+    expect(text).toContain('Textos repetidos na mesma carreira, só nos cartões da Fase 5: 1 (em 1 de 2 carreiras).');
+    expect(text).toContain('Textos repetidos na mesma carreira, em todos os eventos (com família e mudança): 3 (em 2 de 2 carreiras).');
+    expect(text).toContain('  "Texto da Fase 5" (story:evento): 2 vezes, em 1 carreira.');
+    expect(text).toContain('  "Texto de família" (family-partner, birth-move, family-wedding): 5 vezes, em 2 carreiras.');
+
+    const empty = summarize([], SMALL).events;
+    expect(empty).toMatchObject({
+      all: { rounds: 0, cards: 0, perRound: 0, starts: 0, perStart: 0 },
+      bySeason: [],
+      cards: 0,
+      others: 0,
+      chainsStartedPerCareer: 0,
+      unlocks: 0,
+      unlocksPerCareer: 0,
+      sponsorOffers: 0,
+      sponsorOffersPerCareer: 0,
+      sponsorProfiles: 0,
+      repeats: { story: 0, storyCareers: 0, all: 0, allCareers: 0, examples: [] },
+    });
+    expect(empty.byCategory.every((c) => c.cards === 0 && c.share === 0)).toBe(true);
+    expect(empty.chains.every((c) => c.started === 0 && c.done === 0)).toBe(true);
+    expect(empty.byUnlock.every((u) => u.times === 0 && u.careers === 0)).toBe(true);
+    const section = formatReport(summarize([], SMALL)).split('10. EVENTOS')[1] ?? '';
+    expect(section).toContain('Cartões da Fase 5: 0 (- por etapa; - no começo de cada temporada, da segunda em diante).');
+    expect(section).toContain('Textos repetidos na mesma carreira, só nos cartões da Fase 5: 0 (em 0 de 0 carreiras).');
+    expect(section).toMatch(/Pista +0 +-/);
+    expect(section).not.toMatch(/NaN|undefined|Infinity/);
   });
 });
 
+describe('eventos em carreiras de verdade (Fase 5)', () => {
+  const card = (id: string, definitionId: string, title: string, label: string, outcome: string): PendingEvent => ({
+    id,
+    definitionId,
+    category: definitionId.startsWith('story:') ? 'track' : 'family',
+    season: 1,
+    round: 1,
+    title,
+    body: `Corpo do cartão ${id}.`,
+    choices: [{ id: 'a', label, description: '', outcomes: [{ probability: 1, text: outcome, effects: [] }] }],
+  });
+
+  it('acompanhar os cartões não muda a carreira, e o que ele vê é o que fica no registro', () => {
+    const watch = watchEvents();
+    let watched = createSimCareer(11);
+    let plain = watched;
+    const seen: PendingEvent[] = [];
+    for (let round = 0; round < 4; round++) {
+      const before = structuredClone(watched);
+      seen.push(...watch.look(watched));
+      expect(watched).toEqual(before);
+      watched = playRound(watched, SIM_CHOICES);
+      plain = playRound(plain, SIM_CHOICES);
+    }
+    seen.push(...watch.look(watched));
+    expect(watched).toEqual(plain);
+    // Cada cartão conta uma vez: ler de novo não acha nada novo.
+    expect(watch.look(watched)).toEqual([]);
+    // O que ele viu é o que o registro guarda (os cartões já respondidos) mais os que ainda esperam resposta.
+    const ids = (events: readonly { id: string }[]) => events.map((e) => e.id).sort();
+    expect(ids(seen)).toEqual(ids([...watched.eventLog, ...watched.pendingEvents]));
+    expect(seen.some((e) => e.definitionId.startsWith('story:'))).toBe(true);
+    // A temporada tem uma posição por etapa disputada e soma todos os cartões vistos.
+    const sample = watch.closeSeason(watched);
+    expect(sample.perRound).toHaveLength(4);
+    for (const n of sample.perRound) expect(n).toBeLessThanOrEqual(3);
+    expect(total(sample.perRound) + sample.seasonStart + sample.others).toBe(seen.length);
+    expect(total(Object.values(sample.byCategory))).toBe(total(sample.perRound) + sample.seasonStart);
+  });
+
+  it('conta os textos repetidos da carreira: só os da Fase 5 e todos os eventos', () => {
+    const career = createSimCareer(11);
+    const watch = watchEvents();
+    const long = `Um texto comprido que passa do limite do relatório e precisa ser cortado ${'de novo '.repeat(6)}`;
+    watch.look({
+      ...career,
+      pendingEvents: [card('e1', 'story:um', 'Título um', 'Aceitar', 'Deu certo.'), card('e2', 'family-partner', 'Família', 'Aceitar', long)],
+    });
+    // O mesmo cartão lido de novo não conta outra vez.
+    watch.look({ ...career, pendingEvents: [card('e1', 'story:um', 'Título um', 'Aceitar', 'Deu certo.')] });
+    expect(watch.texts()).toEqual({ story: 0, all: 1, repeated: [{ text: 'Aceitar', times: 2, story: 1, events: ['story:um', 'family-partner'] }] });
+    watch.look({
+      ...career,
+      pendingEvents: [card('e3', 'story:dois', 'Título dois', 'Aceitar', 'Deu certo.'), card('e4', 'birth-move', 'Mudança', 'Ficar', long)],
+    });
+    const texts = watch.texts();
+    expect(texts).toMatchObject({ story: 2, all: 3 });
+    // O texto comprido aparece cortado, com reticências.
+    const cut = texts.repeated.find((r) => r.events.includes('birth-move'));
+    expect(cut).toMatchObject({ times: 2, story: 0, events: ['family-partner', 'birth-move'] });
+    expect(cut?.text.length).toBeLessThanOrEqual(60);
+    expect(cut?.text.endsWith('…')).toBe(true);
+    // Os cartões da Fase 5 contam na etapa em que nasceram; os de família e a mudança ficam à parte.
+    expect(watch.closeSeason(career)).toMatchObject({ perRound: [2], seasonStart: 0, others: 2, byCategory: { track: 2 } });
+    expect(watch.closeSeason(career)).toEqual(emptyEventSample());
+  });
+
+  it('cada temporada da amostra traz os cartões de cada etapa, e a soma bate com o resumo', () => {
+    for (const season of small.samples.flatMap((c) => c.seasons)) {
+      // Uma posição por etapa disputada: as corridas do piloto mais as etapas em que ele não correu.
+      expect(season.events.perRound).toHaveLength(season.races.length + season.roundsMissed);
+      for (const n of season.events.perRound) expect(n).toBeLessThanOrEqual(3);
+      expect(total(Object.values(season.events.byCategory))).toBe(total(season.events.perRound) + season.events.seasonStart);
+      // A temporada de estreia não tem começo: a carreira já nasce nela.
+      if (season.season === 1) expect(season.events.seasonStart).toBe(0);
+    }
+    const { events } = small.summary;
+    expect(events.all.cards).toBeGreaterThan(0);
+    expect(events.all.zero + events.all.one + events.all.two + events.all.three + events.all.more).toBe(events.all.rounds);
+    expect(total(events.byCategory.map((c) => c.cards))).toBe(events.cards);
+    expect(total(events.bySeason.map((s) => s.rounds))).toBe(events.all.rounds);
+  });
+
+  // Critério de aceite da Fase 5: nenhum texto se repete numa carreira de 15 temporadas.
+  it('em 15 temporadas, nenhum texto de evento se repete na mesma carreira', () => {
+    for (const sample of runSimulation({ seeds: 2, seasons: 15, firstSeed: 1, talent: 0 }).samples) {
+      expect(sample.seasons, `semente ${sample.seed}`).toHaveLength(15);
+      expect(sample.texts, `semente ${sample.seed}`).toEqual(NO_REPEATS);
+    }
+  }, 60_000);
+});
+
 describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
-  // A semente 38 chega ao fim da segunda temporada em 20º, com proposta de equipe e sem caixa para
+  // A semente 11 chega ao fim da segunda temporada em 20º, com proposta de equipe e sem caixa para
   // bancá-la, e nenhuma porta se abre: nem academia, nem vaquinha, nem investidor. (Até a Fase 3 o
-  // exemplo era a semente 11; com a curva de pneus e os lances da Fase 4 as corridas dela mudaram.)
-  const sample = simulateCareer(38, { seasons: 3, talent: 0 });
+  // exemplo era a semente 11; na Fase 4, com a curva de pneus e os lances, foi a 38; na Fase 5, os
+  // eventos mudaram o dinheiro da 38, e a 11 voltou a mostrar o caso.)
+  const sample = simulateCareer(11, { seasons: 3, talent: 0 });
 
   it('a temporada seguinte é disputada pela vaga de aluguel, com o motivo "dinheiro"', () => {
     expect(sample.seasons[2]).toMatchObject({ season: 3, seat: 'fallback', noSeatCause: 'money', door: 'none' });
@@ -659,7 +964,7 @@ describe('uma carreira de verdade que fica sem vaga por dinheiro', () => {
     expect(sample.seasons[1]?.offers).toBe(0);
     expect(sample.seasons[1]?.doorOpen).toBe(false);
     expect(sample.seasons[1]?.position).toBe(20);
-    expect(summarize([sample], { seeds: 1, seasons: 3, firstSeed: 38, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
+    expect(summarize([sample], { seeds: 1, seasons: 3, firstSeed: 11, talent: 0 }).noSeat).toMatchObject({ money: 1, noOffer: 0, requirements: 0 });
   });
 });
 
@@ -677,6 +982,7 @@ describe('relatório', () => {
       '7. NASCIMENTO',
       '8. ECONOMIA E PORTAS',
       '9. LANCES DECISIVOS',
+      '10. EVENTOS',
     ]) {
       expect(report).toContain(title);
     }

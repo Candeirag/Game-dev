@@ -11,8 +11,10 @@ import { FAMILY } from '@/data/family';
 import { netWorth, post } from '../career/economy';
 import { enterAcademy } from '../career/paths';
 import { getPlayer } from '../career/selectors';
+import { commercialSponsors, maxSponsors } from '../career/sponsors';
 import { relocate } from '../birth/move';
 import { setKartFunding, startChildCareer } from '../dynasty/family';
+import { advanceChain, changeAttitude, personJoinsTeam, setFlag, setFollow, updateStory, upsertPerson } from '../story/memory';
 
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
 
@@ -50,8 +52,18 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
           s.tier > 0 && (effect.sponsorId === null || s.id === effect.sponsorId) ? { ...s, satisfaction: clamp(s.satisfaction + effect.value) } : s,
         ),
       };
-    case 'addSponsor':
-      return career.sponsors.some((s) => s.id === effect.sponsor.id) ? career : { ...career, sponsors: [...career.sponsors, effect.sponsor] };
+    case 'addSponsor': {
+      if (career.sponsors.some((s) => s.id === effect.sponsor.id)) return career;
+      // As cotas valem também na hora de assinar (duas propostas podem estar abertas ao mesmo tempo, e a
+      // academia cobra exclusividade): com tudo ocupado, o novo só entra no lugar de um menor; senão, desiste.
+      const commercial = commercialSponsors(career.sponsors);
+      if (effect.sponsor.tier > 0 && commercial.length >= maxSponsors(career)) {
+        const weakest = [...commercial].sort((a, b) => a.tier - b.tier || a.perSeason - b.perSeason)[0];
+        if (!weakest || weakest.tier >= effect.sponsor.tier) return career;
+        return { ...career, sponsors: [...career.sponsors.filter((s) => s.id !== weakest.id), effect.sponsor] };
+      }
+      return { ...career, sponsors: [...career.sponsors, effect.sponsor] };
+    }
     case 'removeSponsor':
       return { ...career, sponsors: career.sponsors.filter((s) => s.id !== effect.sponsorId) };
     case 'penaltyPoints':
@@ -173,6 +185,20 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
     }
     case 'relocate':
       return relocate(career);
+
+    /* ---------------- Memória das histórias (Fase 5) ---------------- */
+    case 'storyFlag':
+      return updateStory(career, setFlag(effect.flag, effect.set, career.season));
+    case 'storyPerson':
+      return updateStory(career, upsertPerson(effect.person));
+    case 'storyAttitude':
+      return updateStory(career, changeAttitude(effect.key, effect.value));
+    case 'storyJoinTeam':
+      return updateStory(career, personJoinsTeam(effect.key, effect.org, effect.teamKey));
+    case 'storyFollow':
+      return updateStory(career, setFollow(effect.key, effect.follow));
+    case 'storyChain':
+      return updateStory(career, advanceChain(effect.chainId, effect.step, effect.choice, effect.next, effect.notBefore, { season: career.season, round }));
   }
 }
 

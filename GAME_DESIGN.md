@@ -548,20 +548,60 @@ O painel mostra uma lista de oito passos até ser concluída ou dispensada: conh
 
 ## Eventos dinâmicos
 
-Depois de cada etapa, entram os eventos cuja condição vale (até dois) e, com 45% de chance, um sorteado por peso. O jogador precisa decidir antes do próximo fim de semana. Escolhas com desfecho incerto são sorteadas pela semente da carreira.
+Desde a Fase 5, os eventos são **cartões rápidos**: uma situação curta, duas ou três escolhas claras e o efeito mostrado só **depois** da escolha. O desfecho aparece com o texto e a lista do que mudou; cada linha tem ícone, rótulo, seta e sinal, e nenhuma informação fica só na cor. O jogador resolve os cartões antes do próximo fim de semana. Os cartões que ficam sem resposta na virada do ano passam para a temporada seguinte. Escolhas com desfecho incerto (marcadas "Incerto") são sorteadas pela semente da carreira.
 
-| Tipo          | Eventos                                                                    | Consequências possíveis                                                              |
-| ------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Entrevistas   | coletiva do vencedor; pressão em má fase                                   | confiança da equipe, confiança, rivalidade, patrocinadores                           |
-| Polêmicas     | toque sofrido; vídeo fora de contexto                                      | rivalidade, reputação, patrocinadores                                                |
-| Rivalidades   | provocação do rival; conflito com o companheiro                            | risco de toque, multa, confiança da equipe                                           |
-| Investigações | comissários após um toque causado; vistoria técnica                        | posições no próximo grid, pontos de punição, perda dos pontos da etapa               |
-| Protestos     | contra o rival à frente; contra o seu resultado                            | pontos do rival ou seus, taxa, rivalidade                                            |
-| Contrato      | aporte extra pedido pela equipe; sondagem de outra equipe; vontade de sair | dinheiro, rendimento do carro, custo da vaga, multa rescisória, interesse de equipes |
-| Patrocínio    | pressão por resultados; proposta nova (ou troca por um maior)              | receita, satisfação, fase                                                            |
-| Inesperados   | virose; prova de exibição; convite de academia; peça nova                  | lesão leve, experiência, academia, rendimento do carro                               |
+### Quantos e de que tipo
 
-Os eventos de família (no começo de cada temporada) e os de gestão (depois das etapas, no modo dirigente) estão descritos nas seções deles. Todo evento altera estado de jogo: nenhum é só texto.
+- **De 1 a 3 cartões por etapa**, inclusive nas etapas em que o piloto não corre. A média é de 1,4. O começo da temporada traz a proposta de patrocínio (se o piloto atrai uma) e um cartão de pré-temporada ou um passo de cadeia agendado para a virada.
+- O sorteio escolhe primeiro a categoria e depois o evento:
+
+  | Categoria    | Peso | Do que trata                                                                               |
+  | ------------ | ---- | ------------------------------------------------------------------------------------------ |
+  | Pista        | 40   | toques, comissários, punições, largadas, peça nova, vistoria técnica, acerto, pneus, chuva |
+  | Carreira     | 24   | imprensa, rivais, companheiro, chefe de equipe, propostas, academias                       |
+  | Dinheiro     | 16   | dívidas, investimentos, golpes, patrocinador cobrando, aportes, propostas de patrocínio    |
+  | Saúde        | 12   | lesões, virose, treino físico, sono, calor, cabeça                                         |
+  | Vida pessoal | 8    | escola, família, amizades, namoro, filhos, saudade de casa                                 |
+
+  Dentro da categoria, pesam a frequência do evento (rara, normal ou comum) e o que acabou de acontecer: o evento que reage à etapa (um toque, uma vitória, um abandono) pesa três vezes mais. O mesmo evento só volta, com outro texto, depois de algumas etapas.
+
+### Sem repetição
+
+Cada evento tem variantes de texto inteiro, e **cada variante sai no máximo uma vez por personagem**. A memória do save guarda as que já saíram, sem corte. Os patrocinadores vêm de **perfis**, cada um com nome, ramo, porte, valor, meta e personalidade:
+
+- o valor vai de baixo a premium;
+- a meta é folgada, normal ou dura;
+- a personalidade pode ser paciente, exigente, vaidosa, discreta, fiel ou impulsiva. Ela muda o quanto o patrocinador tolera resultado ruim: o paciente e o fiel sentem menos a queda de satisfação, o exigente e o impulsivo sentem mais, e o vaidoso comemora mais o pódio. Ela também muda o tom dos textos.
+
+Nenhum perfil volta na mesma carreira. Os eventos de família e a mudança para São Paulo seguem a mesma regra: a cada vez, um texto novo; acabadas as variantes, a pergunta não volta.
+
+### Encadeados, com memória
+
+A memória (`story`, no save) guarda:
+
+- os textos já vistos;
+- as **marcas** deixadas pelas escolhas;
+- as **pessoas** lembradas: nome, papel, o que pensam do piloto (de −100 a 100), onde e quando ele as conheceu e a idade que ele tinha;
+- as **cadeias** em andamento: o próximo passo e a partir de quando ele pode sair.
+
+Uma cadeia começa como um evento comum. Cada desfecho diz qual é o passo seguinte e o prazo (a etapa seguinte, algumas etapas, a próxima temporada, ou "quando a condição valer"). Um passo só sai com o prazo vencido e a condição valendo. No máximo um passo de cadeia sai por etapa, e no máximo quatro cadeias ocupam espaço ao mesmo tempo; a cadeia que espera algo de longo prazo, como chegar ao topo, não ocupa. Algumas cadeias atravessam categorias:
+
+- **o chefe de equipe do kart** com quem você brigou reaparece como diretor de uma equipe nas fórmulas e mexe no interesse dela por você;
+- **a padaria** que patrocinou você aos 15 anos pede retribuição quando você chega ao topo;
+- **o rival do kart**, inclusive o nascido de um toque num lance decisivo, acompanha a carreira: quando você sobe de categoria, ele entra no grid junto. Se ainda estava no grid, vem como está; se tinha sumido, volta com o mesmo nome e o nível de um piloto do meio do grid.
+
+A lista completa das cadeias está no PR da Fase 5 e em `src/data/events/cadeias/`.
+
+### Talentos e defeitos
+
+Algumas escolhas só aparecem com um traço de nascença **já revelado** ou com uma aptidão alta (ou baixa), e a tela mostra qual:
+
+- o esquentado ganha "partir para cima";
+- o piloto limpo explica a manobra com calma aos comissários;
+- o gênio da chuva, o poupador de pneus, o corpo de ferro e os outros traços também têm as suas;
+- o **carismático** (carisma alto) tem respostas melhores para a imprensa: um desfecho certo e bom, onde os outros arriscam.
+
+Os eventos de família (no começo de cada temporada) e os de gestão (depois das etapas, no modo dirigente) estão descritos nas seções deles. Todo evento altera estado de jogo: nenhum é só texto. Os números (cartões por etapa, pesos, tamanho de cada efeito, chances, prazos, faixas) estão em `STORY_EVENTS` e `SPONSOR_PROFILE_RULES` (`src/config/balance.ts`).
 
 ## Equilíbrio
 
@@ -614,6 +654,30 @@ A curva de pneus vale para todos os carros e os lances, só para o piloto do jog
 | Excelente (talento 8) | 74% (58%)                    | 1,12 (0,74)          | 0,20 (0,26)                      | 3,23                        | 46% → 59%                                      | 0,57 → 1,16                                           |
 
 As faixas são terços das corridas pela vantagem do piloto sobre o grid (nota geral menos o nível da categoria). Piloto melhor vê chances maiores e vence mais lances arriscados; por isso os lances pesam mais para quem joga bem: com talento 0 o topo fica onde estava, e com talento 4 e 8 mais carreiras chegam lá e ganham títulos (perto do que era na Fase 2, antes de a economia apertar). A "taxa de acerto geral" quase não muda entre as faixas (56% a 63%), porque o estilo do piloto escolhe opções seguras quando a chance é baixa. No padrão, 54% das corridas completas têm 4 lances, 28% têm 3 e 18% têm 2; 10 de 7.206 terminam atrás do safety car e ficam só com o da largada. Cada carreira ganha em média 3 rivalidades novas em 15 temporadas, e há menos de 1 toque a cada 100 lances.
+
+### Fase 5: eventos encadeados
+
+O robô escolhe sempre a primeira opção de cada cartão, a "natural": segue a cadeia e assina com o patrocinador. Os relatórios completos estão em `docs/simulador/fase-5*.txt`, e a seção 10 de cada um mede os eventos.
+
+| Robô                  | Chegam ao Grand Prix Mundial | Títulos por carreira | Temporadas sem vaga por carreira | Cartões por etapa | Etapas sem cartão | Cadeias começadas / concluídas por carreira | Textos repetidos |
+| --------------------- | ---------------------------- | -------------------- | -------------------------------- | ----------------- | ----------------- | ------------------------------------------- | ---------------- |
+| Mediano (talento 0)   | 16% (Fase 4: 8%)             | 0,22 (0,34)          | 0,50 (0,42)                      | 1,42              | 2 de 7.672        | 6,92 / 5,40                                 | 0                |
+| Bom (talento 4)       | 46% (38%)                    | 0,56 (0,58)          | 0,46 (0,50)                      | 1,42              | 0 de 7.902        | 6,38 / 5,30                                 | 0                |
+| Excelente (talento 8) | 72% (74%)                    | 1,18 (1,12)          | 0,16 (0,20)                      | 1,42              | 0 de 8.280        | 5,90 / 5,14                                 | 0                |
+
+- Em 150 carreiras de 15 temporadas, nenhuma repetiu texto, nem nos cartões nem nos eventos de família e na mudança para São Paulo.
+- Cartões por etapa: 65% das etapas têm 1, 28% têm 2 e 7% têm 3.
+- Divisão por categoria: pista 35%, carreira 24%, dinheiro 20%, saúde 12% e vida pessoal 9%.
+- Cada carreira recebe cerca de 9 propostas de patrocínio, de perfis sempre diferentes.
+
+**A economia ficou mais apertada no começo.** No robô mediano:
+
+- o caixa mediano do primeiro ano cai de R$ 17,4 mil para R$ 13,7 mil;
+- as vagas pagas por investidor sobem de 128 para 206;
+- o investidor de último recurso aparece em 3 fechamentos (era 0);
+- a maior sequência sem porta chega ao limite de 2 temporadas.
+
+Diminuir o tamanho dos efeitos de dinheiro dos cartões quase não muda isso. O aperto vem da troca do catálogo, com menos propostas de patrocínio do que antes e patrocinadores de personalidade exigente ou impulsiva. É um ponto para a calibragem da Fase 8 (ver a pendência do investidor).
 
 ## Limitações conhecidas e próximos passos
 

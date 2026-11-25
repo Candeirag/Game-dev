@@ -22,11 +22,13 @@ export interface CardProps {
   padded?: boolean;
   /** Cor da moldura: só muda quando o cartão inteiro tem um estado (pendência, fechamento de temporada). */
   tone?: Tone;
+  /** Id do elemento que dá nome à região (o título de dentro do corpo, quando não há barra de título). */
+  labelledBy?: string;
 }
 
-export function Card({ title, action, children, className, bodyClassName, padded = true, tone = 'neutral' }: CardProps) {
+export function Card({ title, action, children, className, bodyClassName, padded = true, tone = 'neutral', labelledBy }: CardProps) {
   return (
-    <section className={cx('chamfer p-px', EDGE[tone], className)}>
+    <section aria-labelledby={labelledBy} className={cx('chamfer p-px', EDGE[tone], className)}>
       <div className="chamfer flex h-full flex-col bg-ink-900">
         {(title || action) && (
           <header className="flex min-h-10 shrink-0 items-center justify-between gap-4 bg-ink-800 pl-4 pr-2">

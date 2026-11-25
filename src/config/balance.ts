@@ -612,6 +612,134 @@ export const ENGINEER_RADIO = {
   RAIN_WARNING_LAPS: 2,
 } as const;
 
+/* ------------------------------------------------------------------ */
+/* Eventos encadeados (Fase 5)                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cartões de evento: quantos saem por etapa, que categoria pesa mais, o tamanho de cada efeito e as
+ * faixas que as condições dos dados citam por nome (os dados em `src/data/events` não têm número).
+ * Calibrado com o simulador (`npm run sim`, seção 10).
+ */
+export const STORY_EVENTS = {
+  // Cartões por etapa: de 1 a 3, com estes pesos (índice 0 = um cartão). Média de 1,4 por etapa:
+  // umas 210 variantes em 15 temporadas, sem repetir.
+  PER_ROUND: [65, 28, 7],
+  // Peso de cada categoria no sorteio. O foco é a pista; a vida pessoal é rara.
+  CATEGORY_WEIGHTS: { track: 40, career: 24, money: 16, health: 12, personal: 8 },
+  // Peso de um evento dentro da categoria, pela frequência que os dados dão a ele.
+  EVENT_WEIGHTS: { rare: 1, normal: 3, common: 6 },
+  // Um evento que reage à etapa recém-disputada (condição `race`) pesa isto a mais: o toque de
+  // domingo vira assunto na segunda-feira.
+  REACTIVE_BOOST: 3,
+  // Passos de cadeia por etapa (entram antes do sorteio e contam no total da etapa).
+  MAX_CHAIN_STEPS_PER_ROUND: 1,
+  // Cadeias em andamento ao mesmo tempo: mais que isso embaralha as histórias.
+  MAX_ACTIVE_CHAINS: 4,
+  // Etapas entre duas aparições do mesmo evento (com variantes diferentes), dentro da temporada.
+  EVENT_SPACING: 5,
+  // Começo de temporada: a proposta de patrocínio (se houver) e no máximo um cartão de pré-temporada.
+  SEASON_START_CARDS: 1,
+
+  // Tamanho dos efeitos (índice 0 = tamanho 1). Moral, confiança, fase, confiança da equipe e
+  // relação com o companheiro, em pontos (0 a 100).
+  STAT_STEPS: [3, 6, 10],
+  // A reputação anda devagar (cerca de 10 pontos separam um degrau do seguinte).
+  REPUTATION_STEPS: [1, 2, 4],
+  // Dinheiro: fração do custo de vida anual da categoria (no kart regional, R$ 6 mil por ano:
+  // R$ 300, R$ 900 e R$ 2.400; no Grand Prix Mundial, R$ 17,5 mil, R$ 52,5 mil e R$ 140 mil).
+  MONEY_STEPS: [0.05, 0.15, 0.4],
+  RIVALRY_STEPS: [8, 15, 25],
+  // O que uma pessoa lembrada pensa do piloto (−100 a 100).
+  ATTITUDE_STEPS: [15, 30, 50],
+  SPONSOR_MOOD_STEPS: [5, 12, 22],
+  // Interesse de uma equipe no piloto (0 a 100).
+  INTEREST_STEPS: [6, 12, 20],
+  GRID_PLACES: [3, 5, 10],
+  PENALTY_POINTS: [1, 2, 3],
+  // Atributos: um treino especial rende pouco; uma lesão mal curada tira pouco.
+  ATTRIBUTE_STEPS: [0.3, 0.6, 1],
+  // Rendimento do equipamento (motor e chassi, 40 a 99).
+  CAR_STEPS: [0.5, 1, 1.5],
+  // Custo anual da vaga e multa rescisória: fração do valor atual.
+  SEAT_COST_STEPS: [0.04, 0.08, 0.15],
+  RELEASE_FEE_STEPS: [0.15, 0.3, 0.5],
+  // Relação com o parceiro ou parceira (0 a 100).
+  RELATIONSHIP_STEPS: [4, 8, 14],
+  // Etapas de uma lesão ou doença curta e longa.
+  INJURY_ROUNDS: { short: 1, long: 3 },
+
+  // Chances dos desfechos sorteados. `rest` é o que falta para 100%.
+  ODDS: { sure: 1, likely: 0.75, even: 0.5, unlikely: 0.3 },
+  // Prazos entre passos de cadeia, em etapas ou em temporadas (a partir da primeira etapa).
+  DELAYS: {
+    next: { rounds: 1, seasons: 0 },
+    soon: { rounds: 3, seasons: 0 },
+    later: { rounds: 6, seasons: 0 },
+    nextSeason: { rounds: 0, seasons: 1 },
+    twoSeasons: { rounds: 0, seasons: 2 },
+    whenever: { rounds: 0, seasons: 0 },
+  },
+
+  // Faixas que as condições citam por nome.
+  // Fases da vida (idade mínima de cada uma).
+  AGE_STAGES: { teen: 0, young: 18, adult: 25, veteran: 35 },
+  // Posição no campeonato: a pior posição de cada faixa; "metade de trás" começa depois do 10º.
+  STANDING_LEVELS: { leader: 1, top3: 3, top5: 5, top10: 10, backHalf: 11 },
+  // Indicadores de 0 a 100: muito baixo e baixo são "até"; alto e muito alto são "a partir de".
+  STAT_LEVELS: { veryLow: 20, low: 35, high: 65, veryHigh: 80 },
+  // Atitude de uma pessoa: hostil e negativa são "até"; positiva e fiel, "a partir de".
+  ATTITUDE_LEVELS: { hostile: -40, negative: -1, positive: 0, loyal: 40 },
+  // Caixa, em custos de vida anuais da categoria: no vermelho abaixo de 0; apertado até 0,5;
+  // confortável até 4; rico daí para cima.
+  CASH_LEVELS: { tight: 0.5, rich: 4 },
+  // Aptidões de nascença (0 a 100): "alta" a partir de, "baixa" até.
+  APTITUDE_LEVELS: { high: 65, low: 35 },
+  // Rivalidade mínima para alguém ser "o rival" de um cartão.
+  RIVAL_MIN: 20,
+  // Interesse mínimo para uma equipe ser "a equipe interessada".
+  INTERESTED_MIN: 55,
+  // Posições ganhas ou perdidas do grid à bandeirada para a etapa contar como "ganhou" ou "perdeu muito".
+  PLACES_SWING: 5,
+  // Umidade da pista (0 a 1) a partir da qual a corrida conta como "na chuva".
+  WET_RACE: 0.3,
+  // Um lance decisivo vencido conta como "arriscado" se a chance mostrada era menor que isto.
+  RISKY_MOMENT_CHANCE: 0.5,
+  // O rival que volta ao grid (sem estar no grid de antes) ganha o nível de um piloto desta posição
+  // na ordem de forças das equipes (0 = a mais forte, 9 = a mais fraca): o meio do grid.
+  FOLLOWER_TEAM_RANK: 5,
+
+  // Convite de academia: chance de passar na avaliação, pela nota do piloto em relação ao nível
+  // da categoria e pelo potencial (a mesma conta dos eventos de antes da Fase 5).
+  ACADEMY: { BASE: 0.4, RATING_DIVISOR: 40, POTENTIAL_PIVOT: 85, POTENTIAL_DIVISOR: 50, MIN: 0.2, MAX: 0.85 },
+  // Convite de academia: quem recebe (degraus, idade, etapa e posição no campeonato).
+  ACADEMY_INVITE: { MIN_TIER: 3, MAX_TIER: 6, MAX_AGE: 21, MIN_ROUND: 4, MAX_STANDING: 5 },
+} as const;
+
+/**
+ * Perfis de patrocinador (Fase 5): cada um com valor, exigência e personalidade. O valor de
+ * referência e a meta de cada porte continuam em SPONSOR_RULES (`src/engine/career/sponsors.ts`).
+ */
+export const SPONSOR_PROFILE_RULES = {
+  // Multiplica o valor anual de referência do porte.
+  VALUE: { low: 0.8, fair: 1, high: 1.2, premium: 1.4 },
+  // Posições somadas à meta do porte: o patrocinador folgado aceita mais atrás; o exigente, menos.
+  TARGET_SHIFT: { easy: 3, normal: 0, hard: -3 },
+  // Quanto da queda de satisfação de cada etapa a personalidade sente (1 = normal).
+  PATIENCE: { patient: 0.6, demanding: 1.4, vain: 1.1, discreet: 0.9, loyal: 0.5, impulsive: 1.6 },
+  // Quanto da alta de satisfação ela sente (o vaidoso adora pódio; o discreto mal comemora).
+  ENTHUSIASM: { patient: 1, demanding: 0.8, vain: 1.4, discreet: 0.8, loyal: 1.1, impulsive: 1.3 },
+  // Satisfação de um patrocinador que acaba de assinar (a mesma de antes da Fase 5).
+  START_SATISFACTION: 60,
+  // O valor de cada proposta varia até 10% para cima ou para baixo (faixa de 20%), e metade dos
+  // contratos vale por mais uma temporada (as mesmas contas de antes da Fase 5).
+  VALUE_VARIATION: 0.2,
+  EXTRA_SEASON_CHANCE: 0.5,
+  // Pechinchar: o valor sobe isto e a meta aperta tantas posições, se o patrocinador topar.
+  HAGGLE_VALUE: 1.2,
+  HAGGLE_TARGET: -1,
+} as const;
+
 /**
  * Mapa das tabelas de balanceamento que moram fora deste arquivo: caminho do módulo → nomes
  * exportados. Dados por categoria, pista e equipe ficam em `src/data`; regras gerais de cada
@@ -647,9 +775,8 @@ export const BALANCE_TABLES: Readonly<Record<string, readonly string[]>> = {
   'src/engine/career/offseason.ts': ['REPUTATION', 'TEAM_EVOLUTION', 'DEBT_SETTLEMENT_REPUTATION'],
   'src/engine/career/sponsors.ts': ['SPONSOR_RULES'],
   'src/engine/career/roundEffects.ts': ['RELATION_RULES'],
-  // Eventos.
+  // Eventos: o registro guardado no save (os números dos cartões estão em STORY_EVENTS).
   'src/engine/events/engine.ts': ['EVENT_RULES'],
-  'src/engine/events/definitions.ts': ['EVENT_DEFINITIONS'],
   // Patrimônio, família e gestão de equipe.
   'src/data/assets.ts': ['ASSET_RULES', 'LIFESTYLE_RULES', 'STOCKS', 'PROPERTIES', 'BUSINESSES'],
   'src/data/family.ts': ['FAMILY', 'TRAITS', 'PARTNER_BACKGROUND_INFO'],

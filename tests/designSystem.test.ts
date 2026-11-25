@@ -18,7 +18,7 @@ import { TYRE_LETTERS, tyreName } from '@/ui/kit/TyreBadge';
 import { DEFAULT_SETTINGS, MAX_TEXT_SCALE, SYSTEM_SCALE_RANGE, TEXT_SIZES, TEXT_SIZE_SCALE, parseSettings, textScale } from '@/ui/settings/settings';
 
 /** Usos do passo de 12 px (p-3, gap-3…) que sobraram nas telas antigas. Só diminui. */
-const STEP_3_LEFT = 261;
+const STEP_3_LEFT = 256;
 
 const ROOT = join(__dirname, '..');
 const UI = join(ROOT, 'src', 'ui');

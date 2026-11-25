@@ -39,6 +39,7 @@ import { currencyForNationality, formatMoney } from '@/domain/money';
 import { BIRTH } from '@/config/balance';
 import { HOMETOWNS } from '@/data/birth';
 import { birthAttributeBonus, birthPotentialBonus, drawBirth, maxBirthRerolls } from '../birth/draw';
+import { emptyStory } from '../story/memory';
 
 export const PLAYER_DRIVER_ID = 'player';
 
@@ -268,6 +269,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     crowdfund: null,
     sideJob: 'none',
     noDoorSeasons: 0,
+    story: emptyStory(PLAYER_DRIVER_ID),
     inbox: [
       {
         id: 's1-welcome',

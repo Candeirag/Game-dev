@@ -107,7 +107,7 @@ os mesmos argumentos e o mesmo código, sai sempre igual.
 - **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
   estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
   (`tests/names.test.ts` trava a lista).
-- **Saves.** Os de `tests/fixtures/` (versões 1 a 8) têm de continuar abrindo e jogáveis. Os
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 9) têm de continuar abrindo e jogáveis. Os
   das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
@@ -143,10 +143,23 @@ simulador, que só usam a API pública do motor).
   testes; quem pausa é a interface, por `answerMoment` na store); a chance mostrada é a mesma que
   resolve o lance; e o desfecho tem sorteio próprio (`'moment'`), que não mexe na sorte dos outros
   carros. Só o piloto do jogador tem lances. Vão para o save os lances de cada corrida
-  (`race.moments`) e o registro dos toques que criam rivalidade (`relations.rivalryLog`, para a
-  Fase 5); o rádio não vai. Testes: `tests/tyres.test.ts`, `tests/moments.test.ts`,
+  (`race.moments`) e o registro dos toques que criam rivalidade (`relations.rivalryLog`, que a
+  Fase 5 lê); o rádio não vai. Testes: `tests/tyres.test.ts`, `tests/moments.test.ts`,
   `tests/pacing.test.ts` e a seção 9 do simulador; a calibragem dos lances está em
   `tests/calibration/moments.calib.ts` (`npm run calibrate`).
+- Eventos encadeados (Fase 5): o conteúdo é dado, em `src/data/events` (pista, pista técnica,
+  carreira, dinheiro, saúde, vida pessoal, `cadeias/`, perfis de patrocinador), no formato de
+  `src/domain/storyEvents.ts`; o motor fica em `src/engine/story` (de 1 a 3 cartões por etapa,
+  cadeias com prazo, memória). Os dados não têm número: tamanhos, chances, prazos e faixas são nomes,
+  e os valores estão em `balance.ts` (`STORY_EVENTS`, `SPONSOR_PROFILE_RULES`). A memória vai para o
+  save (`career.story`: textos vistos, marcas, pessoas, cadeias) e é do personagem (a sucessão
+  começa uma nova). Regras que não podem quebrar: cada variante de texto sai no máximo uma vez por
+  personagem (vale para os eventos de família, em `src/data/familyTexts.ts`, e para a mudança para
+  São Paulo); a primeira escolha de cada cartão é a "natural" (o robô do simulador escolhe sempre a
+  primeira); escolha de traço só com o traço já revelado; texto sem gênero para "você" (o jogo não
+  sabe o gênero do piloto). `tests/storyEvents.test.ts` valida os dados (condições, referências,
+  marcadores, cadeias sem ponta solta, texto único no catálogo); `tests/story.test.ts`, o motor; a
+  seção 10 do simulador conta os cartões, as cadeias e os textos repetidos (tem de dar zero).
 - Toda aleatoriedade vem de `src/engine/rng.ts`, com semente (regra 4).
 - Dinheiro só por `src/domain/money.ts` (motor: `money(career, valor)`; interface:
   `formatMoney`). Plurais por `src/domain/text.ts`. Nome de categoria em frase só por

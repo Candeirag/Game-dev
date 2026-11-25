@@ -7,6 +7,7 @@
  * execução nunca divergem.
  */
 import { z } from 'zod';
+import { SPONSOR_PERSONALITIES, STORY_CATEGORIES } from './storyEvents';
 
 /* ------------------------------------------------------------------ */
 /* Primitivos                                                          */
@@ -608,6 +609,10 @@ export const SponsorSchema = z.object({
   satisfaction: RatingSchema,
   /** Posição no campeonato que o patrocinador espera. */
   targetPosition: z.number().int().min(1),
+  /** Perfil de `SPONSOR_PROFILES` de que ele saiu (Fase 5); ausente nos patrocinadores mais antigos. */
+  profileId: z.string().optional(),
+  /** Personalidade (Fase 5): muda o quanto ele tolera resultado ruim. Ausente: tolerância normal. */
+  personality: z.enum(SPONSOR_PERSONALITIES).optional(),
 });
 export type Sponsor = z.infer<typeof SponsorSchema>;
 
@@ -1019,6 +1024,21 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('lineupCondition'), stat: z.enum(['morale', 'confidence']), value: z.number() }),
   // Fase 2 da grande atualização: nascimento. Quem nasceu no interior se muda para a capital.
   z.object({ type: z.literal('relocate') }),
+  // Fase 5: memória das histórias (marcas, pessoas e cadeias), em `career.story`.
+  z.object({ type: z.literal('storyFlag'), flag: z.string().min(1), set: z.boolean() }),
+  z.object({ type: z.literal('storyPerson'), person: z.lazy(() => StoryPersonSchema) }),
+  z.object({ type: z.literal('storyAttitude'), key: z.string().min(1), value: z.number() }),
+  z.object({ type: z.literal('storyJoinTeam'), key: z.string().min(1), org: z.string(), teamKey: z.string().nullable() }),
+  z.object({ type: z.literal('storyFollow'), key: z.string().min(1), follow: z.boolean() }),
+  z.object({
+    type: z.literal('storyChain'),
+    chainId: z.string().min(1),
+    step: z.string().min(1),
+    choice: z.string().min(1),
+    /** Passo seguinte (null: a cadeia acaba aqui) e quando ele pode sair. */
+    next: z.string().nullable(),
+    notBefore: z.object({ season: z.number().int().min(1), round: z.number().int().min(0) }),
+  }),
 ]);
 export type Effect = z.infer<typeof EffectSchema>;
 
@@ -1033,6 +1053,8 @@ export const EVENT_CATEGORIES = [
   'unexpected',
   'family',
   'management',
+  // Fase 5: as cinco categorias dos cartões encadeados.
+  ...STORY_CATEGORIES,
 ] as const;
 export const EventCategorySchema = z.enum(EVENT_CATEGORIES);
 export type EventCategory = z.infer<typeof EventCategorySchema>;
@@ -1047,8 +1069,11 @@ export const EventOutcomeSchema = z.object({
 export const EventChoiceSchema = z.object({
   id: z.string(),
   label: z.string(),
+  /** Explicação da escolha. Os cartões da Fase 5 deixam vazio: o efeito só aparece depois. */
   description: z.string(),
   outcomes: z.array(EventOutcomeSchema).min(1),
+  /** Fase 5: a escolha existe por causa de um traço de nascença ou de uma aptidão (a tela mostra qual). */
+  unlock: z.object({ kind: z.enum(['trait', 'aptitude']), id: z.string(), level: z.enum(['high', 'low']).optional() }).optional(),
 });
 export type EventChoice = z.infer<typeof EventChoiceSchema>;
 
@@ -1061,6 +1086,12 @@ export const PendingEventSchema = z.object({
   title: z.string(),
   body: z.string(),
   choices: z.array(EventChoiceSchema).min(1),
+  /** Fase 5: chave da variante de texto (evento#variante), que não volta mais para este personagem. */
+  storyKey: z.string().optional(),
+  /** Fase 5: a cadeia a que o cartão pertence (id e nome). */
+  chain: z.object({ id: z.string(), title: z.string() }).optional(),
+  /** Fase 5: quem fala no cartão (nome e papel). */
+  speaker: z.object({ name: z.string(), role: z.string() }).optional(),
 });
 export type PendingEvent = z.infer<typeof PendingEventSchema>;
 
@@ -1203,6 +1234,65 @@ export const TRAINING_INTENSITIES = ['light', 'normal', 'intense'] as const;
 export const TrainingIntensitySchema = z.enum(TRAINING_INTENSITIES);
 export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
 
+/* ---------------- Memória das histórias (Fase 5 da grande atualização) ---------------- */
+
+/** Uma pessoa que o jogo lembra: o chefe de equipe do kart, o rival que volta, a dona da padaria. */
+export const StoryPersonSchema = z.object({
+  /** Chave nos dados (`chefe-kart`, `rival-kart`, `padaria`). */
+  key: z.string().min(1),
+  firstName: z.string(),
+  lastName: z.string(),
+  /** Papel, como aparece nos textos: "chefe de equipe", "dono da padaria". */
+  role: z.string(),
+  /** Pilotos: o id no grid em que foi conhecido (para voltar ao grid) e a nacionalidade. */
+  driverId: z.string().nullable(),
+  nationality: z.string().nullable(),
+  /** Idade da pessoa quando o piloto a conheceu (só pilotos), para saber a idade de hoje. */
+  age: z.number().int().nullable(),
+  /** Equipe ou empresa a que ela está ligada agora; `teamKey` ("categoria:equipe") quando é uma equipe. */
+  org: z.string().nullable(),
+  teamKey: z.string().nullable(),
+  /** Quando e onde o piloto a conheceu, e a idade que ele tinha. */
+  metSeason: z.number().int().min(1),
+  metCategoryId: CategoryIdSchema,
+  playerAge: z.number().int().min(0),
+  /** O que ela pensa do piloto: −100 (inimigo) a 100 (fiel). */
+  attitude: z.number().min(-100).max(100),
+  /** Piloto que acompanha a carreira: entra no grid quando o jogador sobe de categoria. */
+  follows: z.boolean(),
+  /** Cadeia que a guardou (ao acabar a cadeia, ela deixa de acompanhar). */
+  chainId: z.string().nullable(),
+});
+export type StoryPerson = z.infer<typeof StoryPersonSchema>;
+
+const StoryMomentSchema = z.object({ season: z.number().int().min(1), round: z.number().int().min(0) });
+
+export const StoryChainStateSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(['active', 'done']),
+  /** Próximo passo (null quando a cadeia acabou) e a partir de quando ele pode sair. */
+  next: z.string().nullable(),
+  notBefore: StoryMomentSchema,
+  /** Passos vividos, em ordem: o passo, a escolha e quando. */
+  steps: z.array(z.object({ step: z.string(), choice: z.string(), season: z.number().int().min(1), round: z.number().int().min(0) })),
+});
+export type StoryChainState = z.infer<typeof StoryChainStateSchema>;
+
+/**
+ * Memória do personagem atual. É dele, como o nascimento: a sucessão começa uma memória nova.
+ * `seen` não tem corte: é o que garante que nenhum texto se repete na carreira.
+ */
+export const StoryMemorySchema = z.object({
+  driverId: z.string(),
+  /** Variantes de texto já mostradas (evento#variante, perfil de patrocinador…) e quando. */
+  seen: z.array(z.object({ key: z.string().min(1), season: z.number().int().min(1), round: z.number().int().min(0) })),
+  /** Marcas deixadas por escolhas. */
+  flags: z.array(z.object({ id: z.string().min(1), season: z.number().int().min(1) })),
+  people: z.array(StoryPersonSchema),
+  chains: z.array(StoryChainStateSchema),
+});
+export type StoryMemory = z.infer<typeof StoryMemorySchema>;
+
 /**
  * Versão do formato do save. Sobe a cada mudança no que é gravado, sempre junto com uma migração
  * em src/persistence/migrations.ts e um save novo em tests/fixtures (o passo a passo está lá).
@@ -1215,8 +1305,10 @@ export type TrainingIntensity = z.infer<typeof TrainingIntensitySchema>;
  * Versão 7 (Fase 3): polo, investidor, vaquinha, trabalho paralelo e a conta das temporadas sem porta.
  * Versão 8 (Fase 4): os lances decisivos de cada corrida (`race.moments`) e o registro dos toques
  * em lances que criaram rivalidade (`relations.rivalryLog`). Saves antigos ficam com as duas listas vazias.
+ * Versão 9 (Fase 5): a memória das histórias (`story`: textos já mostrados, marcas, pessoas e cadeias).
+ * Saves antigos ficam com a memória vazia. Patrocinadores, escolhas e cartões ganham campos opcionais.
  */
-export const CAREER_SCHEMA_VERSION = 8;
+export const CAREER_SCHEMA_VERSION = 9;
 
 /* ---------------- Nascimento (Fase 2 da grande atualização) ---------------- */
 
@@ -1381,6 +1473,8 @@ export const CareerStateSchema = z.object({
   sideJob: SideJobSchema,
   /** Temporadas seguidas fechadas sem nenhuma porta aberta (nenhuma vaga além da de aluguel). */
   noDoorSeasons: z.number().int().min(0),
+  /** Memória das histórias do personagem atual (Fase 5 da grande atualização). */
+  story: StoryMemorySchema,
 });
 export type CareerState = z.infer<typeof CareerStateSchema>;
 

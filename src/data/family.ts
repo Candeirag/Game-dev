@@ -262,6 +262,6 @@ export const PARTNER_BACKGROUND_INFO = {
   motorsport: { name: 'Automobilismo', description: 'Cresceu nos boxes: entende a rotina e os filhos herdam mais aptidão.', talent: 78 },
   business: { name: 'Negócios', description: 'Ajuda a cuidar do dinheiro: os negócios da família rendem 10% mais.', talent: 66 },
   arts: { name: 'Artes', description: 'Vida fora das pistas: a moral se recupera mais rápido.', talent: 62 },
-  health: { name: 'Saúde', description: 'Médica ou fisioterapeuta: as lesões duram uma etapa a menos.', talent: 68 },
+  health: { name: 'Saúde', description: 'Trabalha com medicina ou fisioterapia: as lesões duram uma etapa a menos.', talent: 68 },
   media: { name: 'Mídia', description: 'Conhece a imprensa: a reputação cresce um pouco mais rápido.', talent: 64 },
 } as const;

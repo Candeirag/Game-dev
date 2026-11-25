@@ -30,6 +30,7 @@ import {
   driverStandings,
   getPlayer,
   isSeasonComplete,
+  resolveEvent,
   simulateRemainingRace,
   startNextSeason,
 } from './engineApi';
@@ -464,8 +465,8 @@ describe('migração da versão 3 para a 4', () => {
       data = migrateStep(data, data.schemaVersion as number);
       seen.push(data.schemaVersion);
     }
-    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
   });
 });
@@ -641,6 +642,81 @@ describe('migração da versão 7 para a 8 (lances decisivos e registro de rival
     const next = playRound(loaded);
     expect(validateCareerIntegrity(next)).toEqual([]);
     expect(next.relations.rivalryLog.slice(0, 1)).toEqual(played.relations.rivalryLog);
+  });
+});
+
+describe('migração da versão 8 para a 9 (memória das histórias)', () => {
+  const files = readdirSync('tests/fixtures/v8').filter((name) => name.endsWith('.json'));
+  type Loose = Record<string, unknown>;
+  const read = (name: string) => (JSON.parse(readFileSync(`tests/fixtures/v8/${name}`, 'utf8')) as { career: Loose }).career;
+
+  it('os saves da versão 8 têm cartões pendentes do catálogo antigo, para conferir que continuam resolvíveis', () => {
+    expect(files.length).toBeGreaterThan(0);
+    expect(files.map(read).some((c) => Array.isArray(c.pendingEvents) && c.pendingEvents.length > 0)).toBe(true);
+  });
+
+  it.each(files)('%s: só acrescenta a memória do personagem atual e sobe a versão', (name) => {
+    const before = read(name);
+    expect(before.schemaVersion).toBe(8);
+    expect('story' in before).toBe(false);
+    const after = migrateStep(before, 8) as Loose & { story: { seen: { key: string }[] } };
+    expect(after).toEqual({
+      ...before,
+      schemaVersion: 9,
+      story: { driverId: before.playerDriverId, seen: after.story.seen, flags: [], people: [], chains: [] },
+    });
+    // Só entram como vistos os eventos que continuam depois da Fase 5 (família e mudança), na ordem.
+    for (const s of after.story.seen) expect(s.key).toMatch(/^(birth-move|family-(partner|wedding|crisis|child|kart|career))#\d+$/);
+    // Rodar de novo sobre o resultado não muda nada.
+    expect(migrateStep({ ...after, schemaVersion: 8 }, 8)).toEqual(after);
+  });
+
+  it('a mudança para São Paulo que o save já mostrou entra como vista: a próxima pergunta sai com outro texto', () => {
+    const before = read('nascimento-mudanca-pendente.json');
+    const after = migrateStep(before, 8) as Loose & { story: { seen: { key: string }[] } };
+    expect(after.story.seen.map((s) => s.key)).toEqual(['birth-move#0']);
+  });
+
+  it.each(files)('%s: abre na versão atual, íntegro, e os cartões antigos pendentes continuam resolvíveis', (name) => {
+    const career = importCareer(readFileSync(`tests/fixtures/v8/${name}`, 'utf8'));
+    expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
+    expect(career.story).toMatchObject({ driverId: career.playerDriverId, flags: [], people: [], chains: [] });
+    expect(validateCareerIntegrity(career)).toEqual([]);
+    let c = career;
+    while (c.pendingEvents.length > 0) {
+      const event = c.pendingEvents[0]!;
+      c = resolveEvent(c, event.id, event.choices[0]!.id).career;
+    }
+    expect(validateCareerIntegrity(c)).toEqual([]);
+  });
+
+  // Carreira jogada já na versão 9: duas etapas com cartões das histórias resolvidos e pendentes.
+  const played = playRound(playRound(newCareer(42)));
+
+  it('uma carreira da versão 9 tem memória: os textos vistos e os cartões novos com a chave da variante', () => {
+    expect(played.story.seen.length).toBeGreaterThan(0);
+    for (const e of played.pendingEvents.filter((x) => x.definitionId.startsWith('story:')))
+      expect(played.story.seen.some((s) => s.key === e.storyKey)).toBe(true);
+  });
+
+  it('memória já gravada (save da versão 9 relido) passa intacta pela migração', () => {
+    const raw = { ...(JSON.parse(JSON.stringify(played)) as Loose), schemaVersion: 8 };
+    const after = migrateStep(raw, 8) as unknown as CareerState;
+    expect(after.story).toEqual(played.story);
+  });
+
+  it('uma carreira da versão 9 exporta e reimporta igual: a memória sobrevive ao schema', async () => {
+    expect(validateCareerIntegrity(played)).toEqual([]);
+    expect(CareerStateSchema.parse(JSON.parse(JSON.stringify(played)))).toEqual(played);
+    const back = importCareer(exportCareer(played, NOW));
+    expect(back).toEqual({ ...played, updatedAt: NOW });
+    const storage = new MemoryStorage();
+    await saveCareer(storage, 'slot1', played, NOW);
+    const { career: loaded } = await loadCareer(storage, 'slot1');
+    expect(loaded).toEqual({ ...played, updatedAt: NOW });
+    const next = playRound(loaded);
+    expect(validateCareerIntegrity(next)).toEqual([]);
+    expect(next.story.seen.length).toBeGreaterThanOrEqual(played.story.seen.length);
   });
 });
 

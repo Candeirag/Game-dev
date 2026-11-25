@@ -30,7 +30,7 @@ import {
   stockPrice,
   takeLoan,
 } from './engineApi';
-import { NOW, botCareer, botTraining, newCareer, pickBestOffer, playExecutiveRound, playLifeSeason, playRound, resolvePending } from './helpers';
+import { NOW, botCareer, botOffseason, botTraining, newCareer, pickBestOffer, playExecutiveRound, playLifeSeason, playRound, resolvePending } from './helpers';
 
 const ROOT = 'tests/fixtures';
 const CURRENT = `${ROOT}/v${CAREER_SCHEMA_VERSION}`;
@@ -86,6 +86,45 @@ const RECIPES: Readonly<Record<string, () => CareerState>> = {
       if (c.relations.rivalryLog.some((touch) => touch.fresh)) return playRound(c);
     }
     throw new Error('Nenhuma semente com toque num lance da primeira etapa.');
+  },
+  /**
+   * Eventos encadeados (Fase 5): o rival que nasceu no kart (cadeia "Velho conhecido") voltou ao grid
+   * das fórmulas, e a memória guarda a pessoa, a cadeia no meio e os textos já vistos. Parado no
+   * começo da primeira temporada nas fórmulas, com o cartão do reencontro pendente.
+   */
+  'historia-rival-do-kart-nas-formulas': () => {
+    for (let seed = 1; seed < 400; seed++) {
+      let c = botCareer(seed, 6);
+      for (let season = 0; season < 10; season++) {
+        c = botTraining(c);
+        while (c.nextRoundIndex < c.calendar.length) c = playRound(c);
+        // A mesma política de fim de ano do simulador: decisões resolvidas primeiro, e a porta paga só se abrir algo melhor.
+        const next = botOffseason(resolvePending(c));
+        c = startNextSeason(next.career, next.offerId);
+        if (getCategory(c.categoryId).vehicle !== 'formula') continue;
+        const rival = c.story.people.find((p) => p.key === 'rival-kart');
+        const chain = c.story.chains.find((x) => x.id === 'velho-conhecido');
+        if (!rival || chain?.status !== 'active' || !c.drivers.some((d) => d.id === rival.driverId)) break;
+        // Algumas etapas até o reencontro com o rival sair: o save fica com o cartão da cadeia pendente.
+        for (let round = 0; round < 4; round++) {
+          c = playRound(c);
+          if (c.pendingEvents.some((e) => e.chain?.id === 'velho-conhecido')) return c;
+        }
+        break;
+      }
+    }
+    throw new Error('Nenhuma semente com o rival do kart de volta nas fórmulas.');
+  },
+  /** Eventos encadeados (Fase 5): um cartão pendente com uma escolha que só existe por causa de um traço ou do carisma. */
+  'cartao-com-escolha-de-traco': () => {
+    for (let seed = 1; seed < 400; seed++) {
+      let c = newCareer(seed);
+      for (let i = 0; i < 10; i++) {
+        c = playRound(c);
+        if (c.pendingEvents.some((e) => e.choices.some((choice) => choice.unlock))) return c;
+      }
+    }
+    throw new Error('Nenhuma semente com escolha de traço em 10 etapas.');
   },
 };
 
@@ -204,5 +243,19 @@ describe('saves de exemplo', () => {
     const driven = atTheGrid.rounds.flatMap((round) => round.race.moments);
     expect(driven.length).toBeGreaterThan(0);
     expect(driven.every((moment) => moment.auto)).toBe(true);
+  });
+
+  it('e os eventos encadeados: o rival do kart de volta nas fórmulas, com a memória no meio da cadeia', () => {
+    const career = importCareer(readFileSync(`${CURRENT}/historia-rival-do-kart-nas-formulas.json`, 'utf8'));
+    expect(getCategory(career.categoryId).vehicle).toBe('formula');
+    const rival = career.story.people.find((p) => p.key === 'rival-kart');
+    expect(rival).toBeDefined();
+    expect(getCategory(rival!.metCategoryId).vehicle).toBe('kart');
+    expect(career.drivers.some((d) => d.id === rival!.driverId)).toBe(true);
+    expect(career.story.chains.find((c) => c.id === 'velho-conhecido')?.steps.length).toBeGreaterThan(0);
+    expect(career.pendingEvents.some((e) => e.chain?.id === 'velho-conhecido' && e.speaker)).toBe(true);
+    expect(career.story.seen.length).toBeGreaterThan(10);
+    const trait = importCareer(readFileSync(`${CURRENT}/cartao-com-escolha-de-traco.json`, 'utf8'));
+    expect(trait.pendingEvents.some((e) => e.choices.some((c) => c.unlock))).toBe(true);
   });
 });

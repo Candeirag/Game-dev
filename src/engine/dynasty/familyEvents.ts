@@ -2,7 +2,9 @@
  * Eventos de família, gerados no começo de cada temporada.
  *
  * Seguem a mesma regra dos demais eventos: cada escolha tem efeitos em dados,
- * aplicados por events/effects.ts. Conhecer alguém, casar, ter filhos, lidar
+ * aplicados por events/effects.ts. Desde a Fase 5, os textos estão em variantes
+ * (`src/data/familyTexts.ts`): cada vez que um tipo de evento aparece para o mesmo
+ * personagem, sai uma variante nova; acabadas as variantes, o evento não aparece mais. Conhecer alguém, casar, ter filhos, lidar
  * com uma crise e decidir a formação dos filhos mexem com moral, fase,
  * dinheiro, patrimônio e, mais tarde, com a sucessão.
  */
@@ -16,6 +18,8 @@ import { livingCostBase } from '../management/executive';
 import { generateChild, generatePartner } from './family';
 import { money } from '../career/selectors';
 import { counted } from '@/domain/text';
+import { FAMILY_EVENT_TEXTS } from '@/data/familyTexts';
+import { markSeen, storyOf } from '../story/memory';
 
 const stat = (name: Extract<Effect, { type: 'stat' }>['stat'], value: number): Effect => ({ type: 'stat', stat: name, value });
 const cash = (value: number, label: string): Effect => ({ type: 'cash', value, ledger: 'family', label });
@@ -31,7 +35,15 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
   const rng = createRng(hashSeed(career.seed, career.season, 'family-events'));
   const partnerRoll = rng.next();
   const childRoll = rng.next();
-  const add = (kind: string, title: string, body: string, choices: EventChoice[]) =>
+  // Fase 5: cada tipo de evento tem variantes de texto; sai a próxima que este personagem ainda não viu.
+  const story = storyOf(career);
+  const used: Record<string, number> = {};
+  const nextVariant = (group: keyof typeof FAMILY_EVENT_TEXTS): number => {
+    const seen = story.seen.filter((x) => x.key.startsWith(`family-${group}#`)).length;
+    return seen + (used[group] ?? 0);
+  };
+  const add = (kind: string, group: keyof typeof FAMILY_EVENT_TEXTS, variant: number, title: string, body: string, choices: EventChoice[]) => {
+    used[group] = (used[group] ?? 0) + 1;
     events.push({
       id: `s${career.season}-family-${kind}`,
       definitionId: `family-${kind}`,
@@ -41,106 +53,93 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
       title,
       body,
       choices,
+      storyKey: `family-${group}#${variant}`,
     });
+  };
 
-  if (!partner && player.age >= FAMILY.PARTNER_MIN_AGE && partnerRoll < FAMILY.PARTNER_CHANCE) {
+  const partnerText = FAMILY_EVENT_TEXTS.partner[nextVariant('partner')];
+  if (!partner && partnerText && player.age >= FAMILY.PARTNER_MIN_AGE && partnerRoll < FAMILY.PARTNER_CHANCE) {
     const candidate = generatePartner(hashSeed(career.seed, career.season, 'partner'), player.age, career.season);
     const info = PARTNER_BACKGROUND_INFO[candidate.background];
-    add(
-      'partner',
-      `Você conheceu ${candidate.firstName}`,
-      `Em um evento fora das pistas, você conheceu ${candidate.firstName} ${candidate.lastName}, ${candidate.age} anos (${info.name.toLowerCase()}). ${info.description} Um relacionamento toma tempo e atenção, mas quem tem a vida pessoal em ordem corre com a cabeça mais leve.`,
-      [
-        choice(
-          'date',
-          'Investir no relacionamento',
-          'Vocês começam a namorar. Menos tempo livre: a fase cai um pouco agora.',
-          sure(`Você e ${candidate.firstName} estão juntos.`, { type: 'partner', partner: candidate }, stat('form', -3), stat('morale', 6)),
-        ),
-        choice('focus', 'Focar só na carreira', 'Nada muda na rotina.', sure('Você preferiu não se envolver agora.', stat('morale', -2))),
-      ],
-    );
+    const t = partnerText({
+      first: candidate.firstName,
+      full: `${candidate.firstName} ${candidate.lastName}`,
+      age: candidate.age,
+      background: info.name.toLowerCase(),
+      description: info.description,
+    });
+    add('partner', 'partner', nextVariant('partner'), t.title, t.body, [
+      choice('date', t.date.label, t.date.description, sure(t.date.text, { type: 'partner', partner: candidate }, stat('form', -3), stat('morale', 6))),
+      choice('focus', t.focus.label, t.focus.description, sure(t.focus.text, stat('morale', -2))),
+    ]);
   }
 
+  const weddingText = FAMILY_EVENT_TEXTS.wedding[nextVariant('wedding')];
+  const crisisText = FAMILY_EVENT_TEXTS.crisis[nextVariant('crisis')];
   if (partner && !partner.married && partner.relationship >= FAMILY.MARRIAGE_RELATIONSHIP && career.season > partner.sinceSeason) {
     const party = Math.round(living * FAMILY.WEDDING_COST);
-    add(
-      'wedding',
-      'Casamento em pauta',
-      `Você e ${partner.firstName} estão juntos há ${counted(career.season - partner.sinceSeason, 'temporada', 'temporadas')} e o assunto casamento apareceu. O casamento dá estabilidade (a relação se desgasta menos), mas, em um divórcio, o cônjuge fica com ${Math.round(FAMILY.DIVORCE_SHARE * 100)}% do patrimônio.`,
-      [
+    const t = weddingText?.({
+      first: partner.firstName,
+      together: counted(career.season - partner.sinceSeason, 'temporada', 'temporadas'),
+      share: Math.round(FAMILY.DIVORCE_SHARE * 100),
+      party: money(career, party),
+      simple: money(career, party * 0.2),
+    });
+    if (t)
+      add('wedding', 'wedding', nextVariant('wedding'), t.title, t.body, [
         choice(
           'party',
-          'Casar com festa',
-          `Custa ${money(career, party)}.`,
-          sure(
-            `Você e ${partner.firstName} se casaram em uma grande festa.`,
-            { type: 'marry' },
-            cash(-party, 'Festa de casamento'),
-            { type: 'relationship', value: 10 },
-            stat('morale', 8),
-          ),
+          t.party.label,
+          t.party.description,
+          sure(t.party.text, { type: 'marry' }, cash(-party, 'Festa de casamento'), { type: 'relationship', value: 10 }, stat('morale', 8)),
         ),
         choice(
           'simple',
-          'Cerimônia simples',
-          `Custa ${money(career, party * 0.2)}.`,
-          sure(
-            `Você e ${partner.firstName} se casaram em uma cerimônia íntima.`,
-            { type: 'marry' },
-            cash(-party * 0.2, 'Casamento'),
-            { type: 'relationship', value: 4 },
-            stat('morale', 5),
-          ),
+          t.simple.label,
+          t.simple.description,
+          sure(t.simple.text, { type: 'marry' }, cash(-party * 0.2, 'Casamento'), { type: 'relationship', value: 4 }, stat('morale', 5)),
         ),
-        choice(
-          'wait',
-          'Adiar',
-          'A relação esfria um pouco.',
-          sure(`${partner.firstName} entendeu, mas ficou frustrado(a).`, { type: 'relationship', value: -8 }),
-        ),
-      ],
-    );
+        choice('wait', t.wait.label, t.wait.description, sure(t.wait.text, { type: 'relationship', value: -8 })),
+      ]);
   } else if (partner && partner.relationship < FAMILY.CRISIS_RELATIONSHIP) {
-    const breakText = partner.married ? `${partner.firstName} pediu o divórcio.` : `${partner.firstName} terminou o relacionamento.`;
-    add(
-      'crisis',
-      'Crise no relacionamento',
-      `A relação com ${partner.firstName} vai mal: muitas viagens, pouca presença. Enquanto isso durar, a sua moral cai a cada etapa.${partner.married ? ` Um divórcio custaria ${Math.round(FAMILY.DIVORCE_SHARE * 100)}% do seu patrimônio.` : ''}`,
-      [
-        choice('therapy', 'Dedicar tempo ao casal', `Terapia e mais dias em casa: custa ${money(career, living * 0.3)} e um pouco de fase.`, [
+    const t = crisisText?.({
+      first: partner.firstName,
+      married: partner.married,
+      share: Math.round(FAMILY.DIVORCE_SHARE * 100),
+      therapy: money(career, living * 0.3),
+      trip: money(career, living * 0.6),
+    });
+    if (t)
+      add('crisis', 'crisis', nextVariant('crisis'), t.title, t.body, [
+        choice('therapy', t.therapy.label, t.therapy.description, [
           {
             probability: 0.7,
-            text: 'O esforço deu resultado: a relação melhorou muito.',
+            text: t.therapy.better,
             effects: [cash(-living * 0.3, 'Terapia de casal'), stat('form', -4), { type: 'relationship', value: 20 }],
           },
           {
             probability: 0.3,
-            text: 'Houve alguma melhora, mas o problema continua.',
+            text: t.therapy.partial,
             effects: [cash(-living * 0.3, 'Terapia de casal'), stat('form', -4), { type: 'relationship', value: 7 }],
           },
         ]),
-        choice(
-          'trip',
-          'Viagem a dois',
-          `Custa ${money(career, living * 0.6)}.`,
-          sure('A viagem fez bem aos dois.', cash(-living * 0.6, 'Viagem em família'), { type: 'relationship', value: 14 }),
-        ),
-        choice('ignore', 'Deixar como está', 'Arriscado: a relação pode acabar.', [
+        choice('trip', t.trip.label, t.trip.description, sure(t.trip.text, cash(-living * 0.6, 'Viagem em família'), { type: 'relationship', value: 14 })),
+        choice('ignore', t.ignore.label, t.ignore.description, [
           {
             probability: 0.5,
-            text: breakText,
+            text: t.ignore.broke,
             effects: [{ type: 'divorce', share: partner.married ? FAMILY.DIVORCE_SHARE : 0 }, stat('morale', -15), stat('confidence', -5)],
           },
-          { probability: 0.5, text: 'Vocês seguem juntos, cada vez mais distantes.', effects: [{ type: 'relationship', value: -5 }, stat('morale', -6)] },
+          { probability: 0.5, text: t.ignore.distant, effects: [{ type: 'relationship', value: -5 }, stat('morale', -6)] },
         ]),
-      ],
-    );
+      ]);
   }
 
   const youngest = children.reduce((min, c) => Math.min(min, c.age), 99);
+  const childText = FAMILY_EVENT_TEXTS.child[nextVariant('child')];
   if (
     partner &&
+    childText &&
     partner.relationship >= 55 &&
     player.age <= FAMILY.CHILD_MAX_PARENT_AGE &&
     partner.age <= 45 &&
@@ -149,118 +148,98 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
     childRoll < FAMILY.CHILD_CHANCE
   ) {
     const baby = generateChild(career, hashSeed(career.seed, career.season, 'child'));
-    add(
-      'child',
-      'Aumentar a família?',
-      `Você e ${partner.firstName} conversam sobre ter ${children.length === 0 ? 'o primeiro filho' : 'mais um filho'}. Um filho herda parte do seu talento e pode continuar a história da família nas pistas, mas a criação e, mais tarde, a carreira dele custam caro.`,
-      [
-        choice(
-          'yes',
-          'Ter um filho',
-          'A família cresce.',
-          sure(`Nasceu ${baby.firstName} ${baby.lastName}.`, { type: 'child', child: baby }, { type: 'relationship', value: 6 }, stat('morale', 8)),
-        ),
-        choice('no', 'Ainda não', `${partner.firstName} queria; a relação sente.`, sure('Vocês decidiram esperar.', { type: 'relationship', value: -5 })),
-      ],
-    );
+    const t = childText({ first: partner.firstName, firstChild: children.length === 0, baby: `${baby.firstName} ${baby.lastName}` });
+    add('child', 'child', nextVariant('child'), t.title, t.body, [
+      choice('yes', t.yes.label, t.yes.description, sure(t.yes.text, { type: 'child', child: baby }, { type: 'relationship', value: 6 }, stat('morale', 8))),
+      choice('no', t.no.label, t.no.description, sure(t.no.text, { type: 'relationship', value: -5 })),
+    ]);
   }
 
   for (const child of children) {
+    const kartText = FAMILY_EVENT_TEXTS.kart[nextVariant('kart')];
     if (
+      kartText &&
       child.stage === 'child' &&
       child.age >= FAMILY.KART_START_AGE &&
       child.age < FAMILY.CAREER_START_AGE &&
       child.kartYears === 0 &&
       child.age === FAMILY.KART_START_AGE
     ) {
-      add(
-        `kart-${child.id}`,
-        `${child.firstName} quer andar de kart`,
-        `${child.firstName} fez ${child.age} anos e pede um kart. A formação vai até os ${FAMILY.CAREER_START_AGE - 1} anos: cada ano bem feito vale cerca de ${FAMILY.START_PER_KART_YEAR} pontos em todos os atributos quando a carreira começar, e mantém a vontade de correr.`,
-        [
-          choice(
-            'full',
-            'Programa completo',
-            `${money(career, FAMILY.KART_COST.full)} por ano: equipe, treinador e campeonatos.`,
-            sure(
-              `${child.firstName} começou um programa completo de kart.`,
-              { type: 'childKart', childId: child.id, funding: 'full' },
-              { type: 'childStat', childId: child.id, stat: 'bond', value: 5 },
-            ),
-          ),
-          choice(
-            'basic',
-            'Kart de fim de semana',
-            `${money(career, FAMILY.KART_COST.basic)} por ano: rende 60% da formação completa.`,
-            sure(
-              `${child.firstName} começou a correr nos fins de semana.`,
-              { type: 'childKart', childId: child.id, funding: 'basic' },
-              { type: 'childStat', childId: child.id, stat: 'bond', value: 3 },
-            ),
-          ),
-          choice(
-            'none',
-            'Agora não',
-            'Sem custo. A vontade de correr diminui a cada ano.',
-            sure(
-              `${child.firstName} ficou decepcionado(a).`,
-              { type: 'childKart', childId: child.id, funding: 'none' },
-              { type: 'childStat', childId: child.id, stat: 'bond', value: -6 },
-            ),
-          ),
-        ],
-      );
+      const t = kartText({
+        child: child.firstName,
+        age: child.age,
+        until: FAMILY.CAREER_START_AGE - 1,
+        perYear: FAMILY.START_PER_KART_YEAR,
+        full: money(career, FAMILY.KART_COST.full),
+        basic: money(career, FAMILY.KART_COST.basic),
+      });
+      add(`kart-${child.id}`, 'kart', nextVariant('kart'), t.title, t.body, [
+        choice(
+          'full',
+          t.full.label,
+          t.full.description,
+          sure(t.full.text, { type: 'childKart', childId: child.id, funding: 'full' }, { type: 'childStat', childId: child.id, stat: 'bond', value: 5 }),
+        ),
+        choice(
+          'basic',
+          t.basic.label,
+          t.basic.description,
+          sure(t.basic.text, { type: 'childKart', childId: child.id, funding: 'basic' }, { type: 'childStat', childId: child.id, stat: 'bond', value: 3 }),
+        ),
+        choice(
+          'none',
+          t.none.label,
+          t.none.description,
+          sure(t.none.text, { type: 'childKart', childId: child.id, funding: 'none' }, { type: 'childStat', childId: child.id, stat: 'bond', value: -6 }),
+        ),
+      ]);
     }
-    if ((child.stage === 'child' || child.stage === 'karting') && child.age >= FAMILY.CAREER_START_AGE && child.interest >= FAMILY.CAREER_INTEREST) {
-      const traits = child.traits.map((t) => getTrait(t).name.toLowerCase()).join(' e ');
+    const careerText = FAMILY_EVENT_TEXTS.career[nextVariant('career')];
+    if (
+      careerText &&
+      (child.stage === 'child' || child.stage === 'karting') &&
+      child.age >= FAMILY.CAREER_START_AGE &&
+      child.interest >= FAMILY.CAREER_INTEREST
+    ) {
       const seat = getCategory('kart-regional').economy.seatCost;
-      add(
-        `career-${child.id}`,
-        `${child.firstName} quer ser piloto`,
-        `${child.firstName} tem ${child.age} anos, é ${traits} e quer disputar o kart regional. A formação no kart rendeu ${counted(child.kartYears.toFixed(1).replace('.', ','), 'ano', 'anos')} de base. Uma vaga custa de ${money(career, seat[1])} a ${money(career, seat[0])} por temporada, e o custo sobe muito nos degraus seguintes. O apoio da família define em que equipe ele começa e se consegue pagar as promoções.`,
-        [
-          choice(
-            'full',
-            'Bancar a carreira',
-            'A família paga o que os patrocinadores dele não cobrirem.',
-            sure(
-              `${child.firstName} estreia no kart regional com apoio total.`,
-              { type: 'childCareer', childId: child.id, support: 'full' },
-              { type: 'childStat', childId: child.id, stat: 'bond', value: 8 },
-            ),
+      const t = careerText({
+        child: child.firstName,
+        age: child.age,
+        traits: child.traits.map((x) => getTrait(x).name.toLowerCase()).join(' e '),
+        base: counted(child.kartYears.toFixed(1).replace('.', ','), 'ano', 'anos'),
+        seatLow: money(career, seat[1]),
+        seatHigh: money(career, seat[0]),
+      });
+      add(`career-${child.id}`, 'career', nextVariant('career'), t.title, t.body, [
+        choice(
+          'full',
+          t.full.label,
+          t.full.description,
+          sure(t.full.text, { type: 'childCareer', childId: child.id, support: 'full' }, { type: 'childStat', childId: child.id, stat: 'bond', value: 8 }),
+        ),
+        choice(
+          'basic',
+          t.basic.label,
+          t.basic.description,
+          sure(t.basic.text, { type: 'childCareer', childId: child.id, support: 'basic' }, { type: 'childStat', childId: child.id, stat: 'bond', value: 3 }),
+        ),
+        choice(
+          'none',
+          t.none.label,
+          t.none.description,
+          sure(t.none.text, { type: 'childCareer', childId: child.id, support: 'none' }, { type: 'childStat', childId: child.id, stat: 'bond', value: -6 }),
+        ),
+        choice(
+          'forbid',
+          t.forbid.label,
+          t.forbid.description,
+          sure(
+            t.forbid.text,
+            { type: 'childStat', childId: child.id, stat: 'interest', value: -100 },
+            { type: 'childStat', childId: child.id, stat: 'bond', value: -20 },
           ),
-          choice(
-            'basic',
-            'Ajudar com metade',
-            'A família paga até metade da vaga.',
-            sure(
-              `${child.firstName} estreia no kart regional com ajuda parcial.`,
-              { type: 'childCareer', childId: child.id, support: 'basic' },
-              { type: 'childStat', childId: child.id, stat: 'bond', value: 3 },
-            ),
-          ),
-          choice(
-            'none',
-            'Que conquiste sozinho',
-            'Sem dinheiro da família: depende de bolsas e patrocinadores.',
-            sure(
-              `${child.firstName} vai tentar a sorte por conta própria.`,
-              { type: 'childCareer', childId: child.id, support: 'none' },
-              { type: 'childStat', childId: child.id, stat: 'bond', value: -6 },
-            ),
-          ),
-          choice(
-            'forbid',
-            'Proibir',
-            'Ele segue outro caminho. A relação sofre.',
-            sure(
-              `${child.firstName} desistiu das pistas, magoado(a).`,
-              { type: 'childStat', childId: child.id, stat: 'interest', value: -100 },
-              { type: 'childStat', childId: child.id, stat: 'bond', value: -20 },
-            ),
-          ),
-        ],
-      );
+        ),
+      ]);
     }
   }
   return events;
@@ -271,7 +250,13 @@ export function beginSeasonFamily(career: CareerState): CareerState {
   const settled = settleChildPaths(career);
   const known = new Set(settled.pendingEvents.map((e) => e.id));
   const events = familySeasonEvents(settled).filter((e) => !known.has(e.id));
-  return events.length > 0 ? { ...settled, pendingEvents: [...settled.pendingEvents, ...events] } : settled;
+  if (events.length === 0) return settled;
+  // Fase 5: o texto de cada evento entra na memória das histórias (não volta para este personagem).
+  return markSeen(
+    { ...settled, pendingEvents: [...settled.pendingEvents, ...events] },
+    events.flatMap((e) => (e.storyKey ? [e.storyKey] : [])),
+    0,
+  );
 }
 
 /**

@@ -49,6 +49,26 @@ const NOT_BALANCE = new Set([
   'MOMENT_TEXTS',
   'MOMENT_CONSEQUENCE_TEXTS',
   'RADIO_TEXTS',
+  // Eventos encadeados (Fase 5): os dados dos cartões, das cadeias e dos patrocinadores, e os nomes
+  // das pessoas. Só palavras e chaves: tamanhos, chances, prazos e faixas têm nome, e os números
+  // estão em STORY_EVENTS e SPONSOR_PROFILE_RULES, em src/config/balance.ts.
+  'STORY_EVENT_CATALOG',
+  'STORY_CHAINS',
+  'TRACK_EVENTS',
+  'TRACK_TECH_EVENTS',
+  'CAREER_EVENTS',
+  'MONEY_EVENTS',
+  'HEALTH_EVENTS',
+  'PERSONAL_EVENTS',
+  'TOP_EVENTS',
+  'CHAINS_A',
+  'CHAINS_B',
+  'CHAINS_C',
+  'SPONSOR_PROFILES',
+  'STORY_FIRST_NAMES',
+  'STORY_LAST_NAMES',
+  // Textos dos eventos de família em variantes (Fase 5): só palavras; os valores chegam prontos.
+  'FAMILY_EVENT_TEXTS',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',
@@ -97,7 +117,6 @@ const KNOWN_PRIVATE: Readonly<Record<string, readonly string[]>> = {
   'src/engine/career/offseason.ts': ['DEBT_CEILING_SHARE', 'OFFSEASON_TRAINING_CYCLES', 'TRUST_TERMINATION'],
   'src/engine/career/sponsors.ts': ['NAMES'],
   'src/engine/dynasty/succession.ts': ['NON_DRIVER_ATTRIBUTES'],
-  'src/engine/events/definitions.ts': ['REPUTATION_SCALE'],
   'src/engine/management/events.ts': ['BUILDERS'],
   'src/engine/management/executive.ts': ['FORCED_SALE_DISCOUNT'],
   'src/engine/simulation/practice.ts': ['SETUP_NOISE'],

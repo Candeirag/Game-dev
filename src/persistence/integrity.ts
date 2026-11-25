@@ -132,6 +132,17 @@ export function validateCareerIntegrity(career: CareerState): string[] {
   for (const holding of career.finance.stocks) if (!(holding.stockId in career.finance.stockPrices)) problems.push(`Ação sem cotação: ${holding.stockId}.`);
   if (new Set(career.finance.stocks.map((h) => h.stockId)).size !== career.finance.stocks.length) problems.push('Ação repetida na carteira.');
 
+  // Memória das histórias (Fase 5): do personagem atual, sem chave repetida.
+  const story = career.story;
+  if (story.driverId !== career.playerDriverId && !career.succession) problems.push('A memória das histórias é de outro personagem.');
+  if (new Set(story.seen.map((s) => s.key)).size !== story.seen.length) problems.push('Texto marcado como visto duas vezes na memória.');
+  if (new Set(story.people.map((p) => p.key)).size !== story.people.length) problems.push('Pessoa repetida na memória.');
+  if (new Set(story.chains.map((c) => c.id)).size !== story.chains.length) problems.push('Cadeia repetida na memória.');
+  if (new Set(story.flags.map((f) => f.id)).size !== story.flags.length) problems.push('Marca repetida na memória.');
+  for (const chain of story.chains) if ((chain.status === 'active') !== (chain.next !== null)) problems.push(`Cadeia ${chain.id} com estado incoerente.`);
+  const pendingKeys = career.pendingEvents.flatMap((e) => (e.storyKey ? [e.storyKey] : []));
+  if (new Set(pendingKeys).size !== pendingKeys.length) problems.push('Dois cartões pendentes com o mesmo texto.');
+
   for (const event of career.pendingEvents) {
     for (const choice of event.choices) {
       const total = choice.outcomes.reduce((sum, o) => sum + o.probability, 0);

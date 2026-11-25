@@ -14,7 +14,7 @@
  *  5. Patrocinadores: satisfação; os muito insatisfeitos rompem o contrato.
  *  6. Evolução: treino (foco, intensidade, moral, academia).
  *  7. Mercado: interesse das equipes.
- *  8. Eventos: decisões pendentes geradas pelo que aconteceu.
+ *  8. Eventos: de 1 a 3 cartões, sorteados dos dados e encadeados com a memória (Fase 5).
  *  9. Mensagens; depois, as revelações dos talentos e defeitos ocultos do nascimento.
  *
  * O nascimento (Fase 2) entra em quatro pontos: as viagens de quem mora no interior (1), o
@@ -26,7 +26,8 @@ import { ATTRIBUTE_LABELS, DNF_LABELS, TRAINING_FOCUS_LABELS } from '@/domain/la
 import { PENALTY_POINTS_BAN, getCategory } from '@/data/categories';
 import { getTrack } from '@/data/tracks';
 import { computeDriverStandings } from '../championship/standings';
-import { generateEvents } from '../events/engine';
+import { addRoundStoryEvents } from '../story/select';
+import { markSeen } from '../story/memory';
 import { createRng, hashSeed } from '../rng';
 import { conditionAfterRace, recoverInjury, rollInjury } from './condition';
 import { INTENSITY_GAIN, developAfterRound, type AttributeDelta } from './development';
@@ -313,10 +314,9 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
   // Nascimento: os traços ocultos que esta etapa mostrou.
   career = revealTraits(career, record);
 
-  /* 8. Eventos */
-  const events = generateEvents(career, record, round);
-  if (events.length > 0) career = { ...career, pendingEvents: [...career.pendingEvents, ...events] };
+  /* 8. Eventos: de 1 a 3 cartões encadeados (Fase 5) e, para quem nasceu no interior, a mudança. */
+  career = addRoundStoryEvents(career, record, round);
   const move = moveEventFor(career, round);
-  if (move) career = { ...career, pendingEvents: [...career.pendingEvents, move] };
+  if (move) career = markSeen({ ...career, pendingEvents: [...career.pendingEvents, move] }, move.storyKey ? [move.storyKey] : [], round);
   return career;
 }

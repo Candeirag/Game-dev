@@ -7,7 +7,9 @@
 import { ArrowLeft, CircleCheck, Flag, Headset, Play, Trash2, TriangleAlert, Trophy, UserRound } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { TYRE_COMPOUNDS } from '@/domain/schemas';
+import { EVENT_CATEGORY_LABELS } from '@/domain/labels';
+import { EVENT_CATEGORIES, type EventCategory, TYRE_COMPOUNDS } from '@/domain/schemas';
+import type { StoryEffectView } from '@/engine';
 import {
   advanceButtonClass,
   Button,
@@ -18,7 +20,9 @@ import {
   ChoiceCard,
   DecisionBar,
   Delta,
+  EffectList,
   EmptyState,
+  EVENT_CATEGORY_ICONS,
   Gauge,
   LockedCard,
   LowerThird,
@@ -36,6 +40,8 @@ import {
   Slider,
   Sparkline,
   Stat,
+  StoryCard,
+  StoryOutcome,
   Switch,
   Tabs,
   td,
@@ -164,6 +170,93 @@ const TOWER: TowerRow[] = [
   },
   { id: 'e', position: '–', color: '#9aa3b2', name: 'SIL', team: 'Vortex Racing', value: 'Quebra', tyre: <TyreBadge compound="wet" />, out: true },
 ];
+
+/** Um efeito de cada tipo, para conferir ícone, texto e seta de todos. */
+const ALL_EFFECTS: StoryEffectView[] = [
+  { kind: 'cash', value: -1400 },
+  { kind: 'stat', stat: 'morale', value: 6 },
+  { kind: 'stat', stat: 'teamTrust', value: -8 },
+  { kind: 'rivalry', name: 'Caio Brandão', value: 15 },
+  { kind: 'sponsorMood', name: 'Padaria Estrela', value: -10 },
+  { kind: 'sponsorAdded', name: 'Oficina Ponteiro', perSeason: 18_000, target: 8 },
+  { kind: 'sponsorRemoved', name: 'Padaria Estrela' },
+  { kind: 'grid', name: null, places: 3 },
+  { kind: 'penaltyPoints', value: 2 },
+  { kind: 'points', value: -5 },
+  { kind: 'interest', team: 'Vortex Racing', value: 12 },
+  { kind: 'attribute', attribute: 'racecraft', value: 1.5 },
+  { kind: 'injury', description: 'Punho torcido', rounds: 2, serious: false },
+  { kind: 'car', value: -1.5 },
+  { kind: 'seatCost', value: 960 },
+  { kind: 'releaseFee', value: 4500 },
+  { kind: 'relationship', value: 8 },
+  { kind: 'academy', name: 'Academia Vortex Racing' },
+  { kind: 'remember', name: 'Marta Ribeiro', role: 'chefe de equipe' },
+  { kind: 'attitude', name: 'Marta Ribeiro', value: 20 },
+  { kind: 'follows', name: 'Caio Brandão' },
+  { kind: 'joinsTeam', name: 'Marta Ribeiro', team: 'Vortex Racing' },
+  { kind: 'chain', ends: false },
+  { kind: 'chain', ends: true },
+  { kind: 'note', topic: 'family', text: 'Nasce Lia Ribeiro' },
+  { kind: 'note', topic: 'team', text: 'Caixa da equipe', value: -120_000, money: true },
+  { kind: 'note', topic: 'move', text: 'Mudança para São Paulo: acabam as viagens do interior' },
+];
+
+/** O chip de categoria do cartão, com o ícone de cada uma. */
+function CategoryChip({ category }: { category: EventCategory }) {
+  const Icon = EVENT_CATEGORY_ICONS[category];
+  return <Chip icon={<Icon size={12} aria-hidden className="shrink-0" />}>{EVENT_CATEGORY_LABELS[category]}</Chip>;
+}
+
+/** O cartão de decisão: tocar numa escolha vira o cartão no desfecho; "Continuar" volta ao começo. */
+function StoryDemo() {
+  const [chosen, setChosen] = useState<string | null>(null);
+  if (chosen)
+    return (
+      <StoryOutcome
+        key="desfecho"
+        className="enter"
+        title="O chefe de equipe quer uma resposta"
+        counter={{ current: 1, total: 2 }}
+        choiceLabel={chosen}
+        text="Marta aperta a sua mão e promete as peças novas para a próxima etapa. Na saída, avisa que vai cobrar o resultado."
+        note="Falta 1 decisão"
+        action={
+          <Button variant="primary" onClick={() => setChosen(null)}>
+            Próxima decisão
+          </Button>
+        }
+      >
+        <EffectList
+          effects={[
+            { kind: 'stat', stat: 'teamTrust', value: 7 },
+            { kind: 'cash', value: -1400 },
+            { kind: 'remember', name: 'Marta Ribeiro', role: 'chefe de equipe' },
+            { kind: 'chain', ends: false },
+          ]}
+        />
+      </StoryOutcome>
+    );
+  return (
+    <StoryCard
+      key="cartao"
+      className="enter"
+      category="track"
+      chain={{ title: 'Velho conhecido' }}
+      speaker={{ name: 'Marta Ribeiro', role: 'chefe de equipe' }}
+      counter={{ current: 1, total: 2 }}
+      title="O chefe de equipe quer uma resposta"
+      body="Depois da quebra no treino, Marta chama você no caminhão: ou a família ajuda a pagar as peças novas, ou o kart corre com o motor velho até o fim do ano."
+      choices={[
+        { id: 'pagar', label: 'Pagar as peças' },
+        { id: 'brigar', label: 'Cobrar a equipe pela quebra', unlock: { kind: 'trait', name: 'Esquentado' }, uncertain: true },
+        { id: 'charme', label: 'Convencer um patrocinador a pagar', unlock: { kind: 'aptitude', name: 'Carisma' } },
+        { id: 'antigo', label: 'Correr com o motor velho', description: 'Sem gastar agora; o kart perde rendimento.', uncertain: true },
+      ]}
+      onChoose={(id) => setChosen(id === 'pagar' ? 'Pagar as peças' : 'Uma das outras escolhas')}
+    />
+  );
+}
 
 export default function CatalogScreen() {
   const [tab, setTab] = useState<'a' | 'b' | 'c'>('a');
@@ -482,6 +575,31 @@ export default function CatalogScreen() {
           <p className="text-xs text-ink-400">
             A revelação entra item por item (cada um em 300 ms, só o atraso cresce); com menos movimento, tudo aparece de uma vez. O segredo escondido mostra só
             o "?"; revelado, talento e defeito vêm com ícone e palavra, nunca só com a cor.
+          </p>
+        </Section>
+
+        <Section title="Cartão de decisão (eventos)" wide>
+          <StoryDemo />
+          <p className="text-xs text-ink-400">
+            Um cartão por vez. No alto, a categoria (ícone e nome), a história a que o cartão pertence (livro aberto) e o contador; depois quem fala, o título,
+            o texto e as escolhas em botões grandes (48 px, 8 px entre eles). A escolha que existe por causa de um traço ou de uma aptidão leva as faíscas e o
+            nome dele; a de desfecho incerto leva o dado e a palavra "Incerto". O efeito só aparece depois: tocar numa escolha resolve na hora e o cartão vira o
+            desfecho, com o que foi escolhido, o que aconteceu e o que mudou. Deitado, o texto fica à esquerda e as escolhas à direita. A troca entra com
+            `enter`; com menos movimento, só esmaece.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {EVENT_CATEGORIES.map((category) => (
+              <CategoryChip key={category} category={category} />
+            ))}
+          </div>
+        </Section>
+
+        <Section title="O que mudou (lista de efeitos)" wide>
+          <EffectList effects={ALL_EFFECTS} className="md:max-w-xl" />
+          <p className="text-xs text-ink-400">
+            Uma linha por efeito: ícone, rótulo e, quando há número, a variação com seta e sinal (dinheiro abreviado, posições sem sinal). Verde é bom e âmbar é
+            ruim só onde há juízo claro; rivalidade e punição no grid de outro piloto ficam neutras. As linhas sem número (quem vai se lembrar, quem acompanha a
+            carreira, a história que continua ou acaba) dizem tudo em palavras.
           </p>
         </Section>
 
