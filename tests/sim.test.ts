@@ -3,13 +3,23 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { CATEGORIES } from '@/data/categories';
+import { CATEGORIES, getCategory } from '@/data/categories';
 import { SPONSOR_PROFILES, STORY_CHAINS } from '@/data/events';
 import { PLAYER_BACKGROUNDS, PLAYER_MAX_AGE, PLAYER_MIN_AGE } from '@/data/rules';
 import { ROOKIE_TEAM_IDS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
-import { type CareerState, CareerStateSchema, type MomentRecord, type PendingEvent, type Relative } from '@/domain/schemas';
-import { type HeirOutlook, type RaceMoment, childScoutReport, getPlayer, heirOutlook, heirSeatOptions, resolveSuccession } from '@/engine';
+import { type CareerState, CareerStateSchema, type MomentRecord, type PendingEvent, type Relative, type TeamStake } from '@/domain/schemas';
+import {
+  type HeirOutlook,
+  type RaceMoment,
+  canAcceptOffer,
+  childScoutReport,
+  getPlayer,
+  heirOutlook,
+  heirSeatOptions,
+  isFamilyTeamOffer,
+  resolveSuccession,
+} from '@/engine';
 import { HELP, parseArgs, runCli } from '../sim/cli';
 import {
   type AfterDrivingSample,
@@ -24,7 +34,7 @@ import {
   dynastyPolicy,
   heirTakesOver,
 } from '../sim/dynasty';
-import { BOT_HEIR_SCORE, BOT_HEIR_SEAT_ORDER, botChooseHeir, botHeirScore, botSuccession, playRound } from '../sim/policy';
+import { BOT_HEIR_SCORE, BOT_HEIR_SEAT_ORDER, botChooseHeir, botHeirScore, botSuccession, pickBestOffer, playRound, resolvePending } from '../sim/policy';
 import { formatReport } from '../sim/report';
 import {
   type CareerSample,
@@ -1439,6 +1449,9 @@ describe('dinastia em carreiras de verdade (Fase 6)', () => {
       expect(s.kartTests).toBeLessThanOrEqual(s.children);
       expect(s.racingChildren).toBeLessThanOrEqual(s.children);
       expect(s.childTraitsRevealed).toBeLessThanOrEqual(s.childTraits);
+      // O parente jovem só herda sem filho piloto na família.
+      if (s.heir.kind === 'relative') expect(s.racingChildren, `semente ${sample.seed}`).toBe(0);
+      else expect(s.racingChildren).toBeGreaterThan(0);
       // Quando um filho herda, os outros viram parentes com caminho próprio.
       const relatives = s.relatives.engineer + s.relatives.business + s.relatives.sportingDirector;
       expect(relatives).toBe(s.heir.kind === 'child' ? s.children - 1 : 0);
@@ -1452,12 +1465,15 @@ describe('dinastia em carreiras de verdade (Fase 6)', () => {
     expect(state?.succession).toBeTruthy();
     if (!state?.succession) return;
     const drivers = state.succession.heirs.filter((h) => h.canDrive);
+    // Com filho piloto, a escolha fica entre os filhos (o parente jovem só herda sem nenhum).
+    const racingChildren = drivers.filter((h) => h.kind === 'child');
+    expect(racingChildren.length).toBeGreaterThan(0);
     const choice = botChooseHeir(state);
-    const chosen = drivers.find((h) => h.id === choice?.heirId);
+    const chosen = racingChildren.find((h) => h.id === choice?.heirId);
     expect(chosen).toBeDefined();
     if (!choice || !chosen) return;
     const score = botHeirScore(heirOutlook(state, chosen));
-    for (const heir of drivers) expect(botHeirScore(heirOutlook(state, heir))).toBeLessThanOrEqual(score);
+    for (const heir of racingChildren) expect(botHeirScore(heirOutlook(state, heir))).toBeLessThanOrEqual(score);
     const available = heirSeatOptions(state, chosen.id).filter((o) => o.available);
     expect(choice.seat).toBe(BOT_HEIR_SEAT_ORDER.find((seat) => available.some((o) => o.id === seat)));
     expect(botSuccession(state, { heirChoice: 'outlook' })).toEqual(resolveSuccession(state, choice.heirId, 'driver', choice.seat));
@@ -1471,6 +1487,86 @@ describe('dinastia em carreiras de verdade (Fase 6)', () => {
       for (const label of labels) expect(label === null || label in BOT_HEIR_SCORE.SCOUT, String(label)).toBe(true);
     }
   });
+
+  it('o parente jovem não ganha de um filho piloto, nem com a pontuação maior; sem filho piloto, é ele quem herda', () => {
+    const state = opened[0];
+    if (!state?.succession) throw new Error('Nenhuma sucessão aberta na amostra.');
+    const racing = state.family.children.find((k) => k.stage === 'racing' && k.driver !== null && k.racing !== null);
+    if (!racing?.racing) throw new Error('A sucessão da amostra não tem filho piloto.');
+    // Um filho de quem só se sabe o pior: kart regional, teste e avaliação "limitados", nenhum traço revelado.
+    const weak = {
+      ...racing,
+      talent: 0,
+      kartTest: { season: state.season, depth: 'full' as const, gap: 9.999, revealed: [] },
+      birthTraits: racing.birthTraits.map((t) => ({ ...t, revealedSeason: null, revealedRound: null })),
+      racing: { ...racing.racing, categoryId: 'kart-regional' as const },
+    };
+    const heirs = state.succession.heirs.filter((h) => h.childId === racing.id || h.id === 'relative-driver');
+    const worse: CareerState = {
+      ...state,
+      family: { ...state.family, children: [weak] },
+      succession: { ...state.succession, heirs },
+    };
+    const child = heirs.find((h) => h.childId === racing.id);
+    const relative = heirs.find((h) => h.id === 'relative-driver');
+    if (!child || !relative) throw new Error('Herdeiros da amostra não encontrados.');
+    expect(botHeirScore(heirOutlook(worse, relative))).toBeGreaterThan(botHeirScore(heirOutlook(worse, child)));
+    expect(botChooseHeir(worse)?.heirId).toBe(child.id);
+    // Sem nenhum filho que corra, o parente jovem herda.
+    const noRacer: CareerState = {
+      ...worse,
+      succession: { ...worse.succession!, heirs: heirs.map((h) => (h.kind === 'child' ? { ...h, canDrive: false } : h)) },
+    };
+    expect(botChooseHeir(noRacer)?.heirId).toBe('relative-driver');
+  });
+
+  it('a 2ª geração prefere a equipe da família quando ela está no degrau mais alto ao alcance; sem a preferência, a mais forte', () => {
+    const state = opened[0];
+    if (!state) throw new Error('Nenhuma sucessão aberta na amostra.');
+    // O herdeiro corre a primeira temporada e chega ao fechamento com as propostas.
+    let c = heirTakesOver(state, dynastyPolicy(SIM_CHOICES), 0);
+    while (c.nextRoundIndex < c.calendar.length) c = playRound(c, SIM_CHOICES);
+    c = resolvePending(c);
+    const off = c.offseason;
+    if (!off) throw new Error('Sem fechamento.');
+    const plain = off.offers.find((o) => o.id === pickBestOffer(c));
+    if (!plain) throw new Error('Sem proposta escolhida.');
+    // Outra equipe da mesma categoria, com proposta aceitável, passa a ser da família (participação de 100%).
+    const rival = off.offers.find((o) => o.id !== plain.id && o.categoryId === plain.categoryId && o.kind !== 'fallback' && canAcceptOffer(c, o));
+    if (!rival) throw new Error('Sem outra proposta aceitável na mesma categoria.');
+    const stake: TeamStake = {
+      id: 'participacao-familia',
+      teamId: rival.teamId,
+      teamName: rival.teamName,
+      categoryId: rival.categoryId,
+      share: 1,
+      cost: 0,
+      value: 0,
+      lastPosition: 1,
+      lastDividend: 0,
+    };
+    const owned: CareerState = { ...c, finance: { ...c.finance, stakes: [...c.finance.stakes, stake] } };
+    expect(isFamilyTeamOffer(owned, rival)).toBe(true);
+    expect(pickBestOffer(owned)).toBe(plain.id);
+    expect(pickBestOffer(owned, { familyTeam: true })).toBe(rival.id);
+    // Uma equipe da família que o robô não pode aceitar (ou num degrau abaixo do melhor) não muda nada.
+    const out = off.offers.find((o) => !canAcceptOffer(c, o) || getCategory(o.categoryId).tier < getCategory(plain.categoryId).tier);
+    if (out) {
+      const other: CareerState = {
+        ...c,
+        finance: { ...c.finance, stakes: [...c.finance.stakes, { ...stake, teamId: out.teamId, categoryId: out.categoryId }] },
+      };
+      expect(pickBestOffer(other, { familyTeam: true })).toBe(plain.id);
+    }
+  });
+
+  it('numa carreira de verdade, a 2ª geração corre pela equipe da família quando ela está ao alcance', () => {
+    // Semente 2, talento 8: a família é dona de uma equipe que o herdeiro alcança (no talento 0, nenhuma chega a tanto).
+    const sample = simulateCareer(2, { seasons: 15, talent: 8, generations: 2 });
+    const gen2 = sample.dynasty?.gen2?.seasons ?? [];
+    expect(gen2.filter((s) => s.familyTeam).length).toBeGreaterThan(0);
+    expect(sample.dynasty?.gen1.seasons.some((s) => s.familyTeam)).toBe(false);
+  }, 120_000);
 
   it('o bônus de talento do simulador vale também para o herdeiro, ao assumir o carro', () => {
     const state = opened[0];

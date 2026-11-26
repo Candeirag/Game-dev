@@ -114,12 +114,22 @@ export function playSeason(career: CareerState, choices: Choices = {}): CareerSt
   return c;
 }
 
+/** Preferências do robô na escolha da proposta (Fase 6). Sem nenhuma, vale a escolha de sempre. */
+export interface OfferPreference {
+  /**
+   * Fica com a proposta da equipe da família (`isFamilyTeamOffer`) quando ela está na categoria mais
+   * alta entre as que o robô aceitaria, no lugar da equipe mais forte dessa categoria. Só a dinastia
+   * do simulador usa: os testes, as receitas dos saves e o golden seguem com a escolha de sempre.
+   */
+  familyTeam?: boolean;
+}
+
 /**
  * Política do robô para o fim de temporada: aceita a melhor proposta que
  * consegue cumprir. Prefere a categoria mais alta e, dentro dela, a equipe
- * mais forte.
+ * mais forte (ou a da família, com `preference.familyTeam`).
  */
-export function pickBestOffer(career: CareerState): string {
+export function pickBestOffer(career: CareerState, preference: OfferPreference = {}): string {
   const offers = (career.offseason?.offers ?? []).filter((o) => engine.canAcceptOffer(career, o));
   if (offers.length === 0) throw new Error('Nenhuma proposta aceitável (a rede de segurança deveria existir).');
   const strength = (categoryId: CareerState['categoryId'], teamId: string) => {
@@ -132,10 +142,12 @@ export function pickBestOffer(career: CareerState): string {
   // Antes de tudo, as contas: o robô prefere uma vaga que não o deixe devendo no fim do ano
   // (ou o contrato que já tem) a uma melhor que o endivide.
   const sound = (o: (typeof offers)[number]) => (o.kind === 'continue' || engine.financeProjection(career, o).projected >= 0 ? 1 : 0);
+  const family = (o: (typeof offers)[number]) => (preference.familyTeam && engine.isFamilyTeamOffer(career, o) ? 1 : 0);
   offers.sort(
     (a, b) =>
       sound(b) - sound(a) ||
       getCategory(b.categoryId).tier - getCategory(a.categoryId).tier ||
+      family(b) - family(a) ||
       keen(b) - keen(a) ||
       (keen(a) ? strength(b.categoryId, b.teamId) - strength(a.categoryId, a.teamId) : b.interest - a.interest),
   );
@@ -149,14 +161,15 @@ export type BotDoor = engine.DoorKey | 'none';
  * Portas no fim do ano: o robô fica com a melhor proposta que consegue aceitar sozinho
  * (`pickBestOffer`), a não ser que uma porta paga (academia, vaquinha ou investidor, nesta ordem
  * de preço) abra uma vaga num degrau acima dela, ou qualquer vaga de verdade quando só sobrou a
- * de aluguel. Devolve a carreira com a porta já aberta e a proposta a assinar.
+ * de aluguel. Devolve a carreira com a porta já aberta e a proposta a assinar. `preference` vai para
+ * `pickBestOffer`.
  */
-export function botOffseason(career: CareerState): { career: CareerState; offerId: string; door: BotDoor } {
+export function botOffseason(career: CareerState, preference: OfferPreference = {}): { career: CareerState; offerId: string; door: BotDoor } {
   const strength = (categoryId: CareerState['categoryId'], teamId: string) => {
     const ranked = engine.rankTeams(engine.teamsOfCategory(career, categoryId));
     return ranked.length - ranked.findIndex((t) => t.id === teamId);
   };
-  const best = pickBestOffer(career);
+  const best = pickBestOffer(career, preference);
   const bestTier = getCategory(career.offseason?.offers.find((o) => o.id === best)?.categoryId ?? career.categoryId).tier;
   const fallbackOnly = career.offseason?.offers.find((o) => o.id === best)?.kind === 'fallback';
   // Só vale abrir uma porta paga por uma vaga melhor do que a que o robô já consegue sozinho: um
@@ -251,6 +264,8 @@ export interface LifePolicy {
    * também a vaga do herdeiro. Vale só com `heir: 'driver'` (o padrão).
    */
   heirChoice?: 'first' | 'outlook';
+  /** No fim de cada temporada de piloto, prefere a equipe da família (`OfferPreference.familyTeam`). */
+  familyTeamFirst?: boolean;
   choices?: Choices;
 }
 
@@ -293,13 +308,17 @@ export function botHeirScore(outlook: engine.HeirOutlook): number {
 }
 
 /**
- * Escolha do herdeiro piloto pelo que se vê (Fase 6): entre os herdeiros que podem correr, o de maior
- * pontuação (`botHeirScore`; no empate, a ordem da sucessão, com os filhos primeiro), e a vaga pela
- * ordem BOT_HEIR_SEAT_ORDER entre as disponíveis (`heirSeatOptions`). null se ninguém pode correr.
+ * Escolha do herdeiro piloto pelo que se vê (Fase 6): entre os filhos que já correm, o de maior
+ * pontuação (`botHeirScore`; no empate, a ordem da sucessão), e a vaga pela ordem BOT_HEIR_SEAT_ORDER
+ * entre as disponíveis (`heirSeatOptions`). O parente jovem só herda quando nenhum filho pode correr:
+ * é a mesma condição da passagem de comando (`botWantsHandover`, que dispara quando um filho piloto
+ * cresce), e sem ela ele ganharia de todo filho com um defeito revelado, porque dele não se sabe nada.
+ * null se ninguém pode correr.
  */
 export function botChooseHeir(career: CareerState): { heirId: string; seat: engine.HeirSeat } | null {
-  const scored = (career.succession?.heirs ?? [])
-    .filter((heir) => heir.canDrive)
+  const drivers = (career.succession?.heirs ?? []).filter((heir) => heir.canDrive);
+  const children = drivers.filter((heir) => heir.kind === 'child');
+  const scored = (children.length > 0 ? children : drivers)
     .map((heir, order) => ({ heir, order, score: botHeirScore(engine.heirOutlook(career, heir)) }))
     .sort((a, b) => b.score - a.score || a.order - b.order);
   const best = scored[0];
@@ -401,7 +420,7 @@ export function playLifeSeason(career: CareerState, policy: LifePolicy = {}, onS
     // dinheiro ou a reputação que a proposta escolhida antes exigia.
     const settled = resolvePending(c);
     if (engine.getPlayer(settled).age >= (policy.retireAge ?? 36)) return engine.retireFromDriving(settled);
-    const next = botOffseason(settled);
+    const next = botOffseason(settled, { familyTeam: policy.familyTeamFirst });
     return engine.startNextSeason(next.career, next.offerId);
   }
   while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playExecutiveRound(c, policy.choices);

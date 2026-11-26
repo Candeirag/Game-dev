@@ -6,8 +6,10 @@
  * (compra uma equipe se o caixa permitir, aceita um cargo ou acompanha de fora) e passa o comando em
  * vida quando um filho com carreira de piloto chega a HEIR_RACING_AGE; sem filho piloto, aos
  * HANDOVER_AGE anos (o parente jovem herda). Morrer antes também abre a sucessão. O robô escolhe o
- * herdeiro e a vaga dele pelo que se vê (`botChooseHeir`), e a 2ª geração corre até RETIRE_AGE ou,
- * no máximo, GEN2_MAX_SEASONS temporadas. O bônus de talento do simulador vale para o piloto de cada
+ * herdeiro e a vaga dele pelo que se vê (`botChooseHeir`: entre os filhos que já correm; o parente
+ * jovem só sem filho piloto), e a 2ª geração corre até RETIRE_AGE ou, no máximo, GEN2_MAX_SEASONS
+ * temporadas, aceitando a proposta da equipe da família quando ela está no degrau mais alto ao
+ * alcance (`OfferPreference.familyTeam`). O bônus de talento do simulador vale para o piloto de cada
  * geração (`heirTakesOver`).
  *
  * Nada aqui sorteia: são as decisões do robô (`policy.ts`) sobre a API pública do motor. Em cada
@@ -67,6 +69,7 @@ export function dynastyPolicy(choices: Choices): LifePolicy {
     heirChoice: 'outlook',
     buyTeam: true,
     transitionFirst: true,
+    familyTeamFirst: true,
     handoverAge: SIM_DYNASTY.HANDOVER_AGE,
     handoverHeirAge: SIM_DYNASTY.HEIR_RACING_AGE,
     choices,
@@ -323,7 +326,7 @@ export function continueDynasty(seed: number, start: CareerState, from: DynastyS
           c = engine.retireFromDriving(c);
           continue;
         }
-        const next = botOffseason(c);
+        const next = botOffseason(c, { familyTeam: policy.familyTeamFirst });
         c = engine.startNextSeason(next.career, next.offerId);
         continue;
       }
