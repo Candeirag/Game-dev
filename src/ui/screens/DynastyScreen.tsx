@@ -26,7 +26,7 @@ import {
 import { Card, Chip, cx, GenerationTree, PageHeader, Pill, TableWrap, Tabs, TreeBranch, TreeBranches, TreeGeneration, td, th } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
-import { commandPeriod, endLabel, lifeYears, racedToText, takeoverLabel, teamsText, type GenerationLife } from './dynasty/dynastyText';
+import { commandPeriod, endLabel, generationLife, lifeYears, racedToText, takeoverLabel, teamsText, type GenerationLife } from './dynasty/dynastyText';
 import { LifeBackLink } from './life/LifeBackLink';
 
 type DynastyTab = 'arvore' | 'placar';
@@ -113,7 +113,19 @@ function RelativeBranch({ relative }: { relative: FamilyTreeRelative }) {
   );
 }
 
-function GenerationContent({ node, record, life, elder }: { node: FamilyTreeGeneration; record: GenerationRecord; life: GenerationLife; elder: Elder | null }) {
+function GenerationContent({
+  node,
+  record,
+  life,
+  elder,
+  surname,
+}: {
+  node: FamilyTreeGeneration;
+  record: GenerationRecord;
+  life: GenerationLife;
+  elder: Elder | null;
+  surname: string;
+}) {
   const takeover = takeoverLabel(node.generation, node.path);
   const TakeoverIcon = TAKEOVER_ICON[node.generation === 1 ? 'founder' : (node.path ?? 'driver')];
   const end = endLabel(life);
@@ -162,8 +174,10 @@ function GenerationContent({ node, record, life, elder }: { node: FamilyTreeGene
       </div>
       {hasBranches && (
         <div className="min-w-0 space-y-2">
+          {/* "Próxima geração", e não "Filhos": quando o herdeiro foi o parceiro ou um parente, os filhos de quem
+              saiu seguem na família de quem os cria, e o motor ainda não diz de quem cada criança é. */}
           {node.children.length > 0 && (
-            <TreeBranches title="Filhos" label={`Filhos de ${node.name}`}>
+            <TreeBranches title="Próxima geração" label={`Próxima geração da família ${surname}`}>
               {node.children.map((child) => (
                 <ChildBranch key={child.id} child={child} />
               ))}
@@ -171,7 +185,7 @@ function GenerationContent({ node, record, life, elder }: { node: FamilyTreeGene
           )}
           {node.current && node.children.length === 0 && <p className="text-xs text-ink-400">Ainda sem filhos.</p>}
           {node.relatives.length > 0 && (
-            <TreeBranches title="Seguiram outro caminho" label={`Filhos de ${node.name} que seguiram outro caminho`}>
+            <TreeBranches title="Seguiram outro caminho" label={`Parentes da ${node.generation}ª geração que seguiram outro caminho`}>
               {node.relatives.map((relative) => (
                 <RelativeBranch key={relative.id} relative={relative} />
               ))}
@@ -194,14 +208,7 @@ function TreeTab() {
           const record = records[index];
           if (!record) return null;
           const elder = tree.elders.find((e) => e.driverId === node.driverId) ?? null;
-          const life: GenerationLife = {
-            bornYear: node.bornYear,
-            fromYear: record.fromYear,
-            toYear: record.toYear,
-            endReason: node.endReason,
-            alive: node.alive,
-            age: node.current ? player.age : elder ? year - elder.bornYear : null,
-          };
+          const life = generationLife(node, record, { playerAge: player.age, elder, year });
           return (
             <TreeGeneration
               key={`${node.generation}-${node.driverId}`}
@@ -209,7 +216,7 @@ function TreeTab() {
               markerLabel={`${node.generation}ª geração`}
               current={node.current}
             >
-              <GenerationContent node={node} record={record} life={life} elder={elder} />
+              <GenerationContent node={node} record={record} life={life} elder={elder} surname={tree.surname} />
             </TreeGeneration>
           );
         })}
@@ -218,8 +225,12 @@ function TreeTab() {
   );
 }
 
-/** Coluna fixa do nome: fica à vista quando a tabela rola para o lado. */
-const sticky = 'sticky left-0 z-10 bg-ink-900';
+/**
+ * Coluna fixa do nome: fica à vista quando a tabela rola para o lado. A rolagem (`TableWrap`) tem 16 px
+ * de margem por dentro e a célula fixa para na borda dessa margem; com `-left-4`, ela encosta na borda
+ * da caixa e cobre a faixa por onde as colunas roladas apareceriam.
+ */
+const sticky = 'sticky -left-4 z-10 bg-ink-900';
 const num = cx(td, 'whitespace-nowrap text-right');
 const numHead = cx(th, 'text-right');
 

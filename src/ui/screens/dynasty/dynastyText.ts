@@ -3,9 +3,10 @@
  * já respondeu (`familyTree`, `generationRecords`); nenhuma regra de jogo mora aqui. Nenhuma frase
  * usa gênero: o jogo não sabe o do personagem, o do parceiro nem o dos filhos.
  */
-import type { CategoryId, LineageEntry } from '@/domain/schemas';
+import type { CategoryId, Elder, LineageEntry } from '@/domain/schemas';
 import { categoryRef } from '@/domain/categoryNames';
 import { counted, joinList } from '@/domain/text';
+import type { FamilyTreeGeneration, GenerationRecord } from '@/engine';
 
 /** Como o personagem chegou à frente da família (null: save antigo, sem o registro). */
 export function takeoverLabel(generation: number, path: LineageEntry['path']): string | null {
@@ -28,6 +29,26 @@ export interface GenerationLife {
   age: number | null;
 }
 
+/**
+ * A linha de vida de uma geração, juntando a árvore (`familyTree`) e o placar (`generationRecords`).
+ * A idade só existe para quem se sabe vivo: o personagem atual e quem passou o comando e segue na
+ * lista dos vivos (`elder`); a dele conta no ano da família (`familyYear`).
+ */
+export function generationLife(
+  node: Pick<FamilyTreeGeneration, 'bornYear' | 'endReason' | 'alive' | 'current'>,
+  record: Pick<GenerationRecord, 'fromYear' | 'toYear'>,
+  { playerAge, elder, year }: { playerAge: number; elder: Pick<Elder, 'bornYear'> | null; year: number },
+): GenerationLife {
+  return {
+    bornYear: node.bornYear,
+    fromYear: record.fromYear,
+    toYear: record.toYear,
+    endReason: node.endReason,
+    alive: node.alive,
+    age: node.current ? playerAge : elder ? year - elder.bornYear : null,
+  };
+}
+
 /** Os anos de vida: "1990 a 2041" para quem morreu no comando; "Nascimento em 1990 · 52 anos" para quem está vivo. */
 export function lifeYears(life: GenerationLife): string {
   const died = life.endReason === 'death' || life.endReason === 'accident';
@@ -44,6 +65,11 @@ export function commandPeriod(life: Pick<GenerationLife, 'fromYear' | 'toYear'>)
 /**
  * Como a geração terminou (null: a geração atual ou save antigo sem o motivo). O ano já está no
  * período à frente da família, então aqui só vai o motivo.
+ *
+ * Quem passou o comando em vida e não está mais na lista dos vivos (`dynasty.elders`) pode ter
+ * morrido depois ou vir de um save de antes da versão 10, que não tinha essa lista. Como o motor não
+ * grava o ano dessa morte, a frase não afirma nada além da passagem; quem segue vivo ganha, na tela,
+ * o selo "Em vida".
  */
 export function endLabel(life: GenerationLife): string | null {
   if (life.toYear === null) return null;
@@ -53,7 +79,7 @@ export function endLabel(life: GenerationLife): string | null {
     case 'accident':
       return 'Acidente fatal';
     case 'handover':
-      return life.alive ? 'Passou o comando em vida' : 'Passou o comando em vida e faleceu depois';
+      return 'Passou o comando em vida';
     default:
       return null;
   }
