@@ -55,6 +55,7 @@ export const EVENT_CATEGORY_ICONS: Readonly<Record<EventCategory, LucideIcon>> =
   unexpected: Zap,
   family: House,
   management: Building2,
+  transition: Mic,
   track: Flag,
   career: Briefcase,
   money: Wallet,

@@ -42,8 +42,13 @@
  * histórias (textos já mostrados, marcas, pessoas e cadeias). Um save antigo
  * começa com a memória vazia. Ver migrateV8.ts.
  *
+ * Versão 9 → 10 (Fase 6 da grande atualização): entram a dinastia (traços herdados e teste no kart
+ * dos filhos, parentes que seguiram outro caminho, o personagem anterior vivo, traços e parceiro de
+ * cada geração na linhagem) e o ano de transição. Um save antigo fica com tudo vazio, e os filhos
+ * dele ganham os traços na próxima virada de ano. Ver migrateV9.ts.
+ *
  * Como acrescentar a próxima versão (a migração é encadeada: um save da
- * versão 1 passa por 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → … até a atual):
+ * versão 1 passa por 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → … até a atual):
  * 1. suba CAREER_SCHEMA_VERSION em src/domain/schemas.ts e ajuste o schema;
  * 2. escreva `migrateVN` (N = a versão de origem) num arquivo próprio,
  *    `migrateVN.ts`, só com dados: recebe o save da versão N e devolve o da
@@ -77,6 +82,7 @@ import { migrateV5 } from './migrateV5';
 import { migrateV6 } from './migrateV6';
 import { migrateV7 } from './migrateV7';
 import { migrateV8 } from './migrateV8';
+import { migrateV9 } from './migrateV9';
 
 type Loose = Record<string, unknown>;
 type Migration = (data: Loose) => Loose;
@@ -294,6 +300,7 @@ export const MIGRATIONS: Readonly<Record<number, Migration>> = {
   6: migrateV6,
   7: migrateV7,
   8: migrateV8,
+  9: migrateV9,
 };
 
 /** Um único degrau da cadeia: da versão `from` para a `from + 1`. Serve para testar cada migração isolada. */

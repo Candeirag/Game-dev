@@ -353,6 +353,9 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     wins: 0,
     peakReputation: 0,
     netWorthPassed: null,
+    traits: [],
+    partnerName: null,
+    path,
   });
   const family = option.kind === 'child' ? emptyFamily() : { ...state.family, partner: option.kind === 'partner' ? null : state.family.partner };
   const inheritedNote = `Patrimônio recebido: ${money(career, succession.estate - succession.tax - siblingsShare)} (imposto de ${money(career, succession.tax)}${siblingsShare > 0 ? `; ${money(career, siblingsShare)} para os irmãos` : ''}).`;

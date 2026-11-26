@@ -144,6 +144,8 @@ export function generateChild(career: CareerState, seed: number): Child {
     support: 'none',
     driver: null,
     racing: null,
+    birthTraits: [],
+    kartTest: null,
   };
 }
 

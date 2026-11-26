@@ -740,6 +740,179 @@ export const SPONSOR_PROFILE_RULES = {
   HAGGLE_TARGET: -1,
 } as const;
 
+/* ------------------------------------------------------------------ */
+/* Dinastia e aposentadoria (Fase 6)                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Herança de talentos e defeitos. Cada filho nasce com três traços de nascença, como o fundador
+ * (um talento, um defeito e um terceiro qualquer, sem os dois lados de um par): parte vem do pai ou
+ * da mãe, parte é sorteada. Ficam ocultos até o teste no kart e as temporadas de carreira própria.
+ */
+export const HERITAGE = {
+  // Chance de cada traço do pai ou da mãe passar para um filho. Com três traços, em média 1,2 passa:
+  // o "gênio na chuva" costuma aparecer na família, e o "esquentado" também.
+  INHERIT_CHANCE: 0.4,
+  // Composição dos traços de um filho (a mesma do nascimento sorteado).
+  TALENTS: 1,
+  DEFECTS: 1,
+  EXTRA_TRAITS: 1,
+  // Teste no kart: a idade em que ele acontece (a adolescência, antes da carreira própria aos 14).
+  KART_TEST_AGE: 12,
+  // Custo do teste completo (um dia inteiro com instrutores) e do rápido (uma tarde).
+  KART_TEST_COST: { full: 3_000, quick: 900 },
+  // Quantos traços ocultos cada teste revela.
+  KART_TEST_REVEALS: { full: 2, quick: 1 },
+  // Diferença para o tempo de referência, em segundos: base, quanto cada ponto de teto abaixo de 90
+  // soma, quanto cada ano de formação no kart tira e o acaso do dia (desvio). Um teto 90 com seis
+  // anos de kart fica a 0,1 s; um teto 70 sem kart, a uns 1,4 s.
+  KART_TEST_GAP: { BASE: 0.6, PER_TALENT_POINT: 0.04, PER_KART_YEAR: 0.08, SD: 0.12 },
+  // Faixas da diferença para o veredito dos instrutores (até cada valor, em segundos).
+  KART_TEST_VERDICTS: { outstanding: 0.2, promising: 0.45, average: 0.8 },
+  // Chance de cada temporada de carreira própria (fora do campeonato do jogador) revelar mais um traço.
+  SEASON_REVEAL_CHANCE: 0.5,
+  // Aptidões de corpo e mente do herdeiro: esta parte vem do pai ou da mãe e o resto da média 50,
+  // com o desvio abaixo (um herdeiro não é cópia de ninguém).
+  APTITUDE_PARENT_WEIGHT: 0.5,
+  APTITUDE_SD: 10,
+  // Limites das aptidões (os mesmos do nascimento sorteado).
+  APTITUDE_MIN: 15,
+  APTITUDE_MAX: 95,
+} as const;
+
+/**
+ * O ano de transição: o primeiro ano fora do carro. Cada papel paga um cachê por etapa (fração do
+ * custo de vida de referência do personagem, que acompanha o prestígio dele) e deixa um legado.
+ */
+export const TRANSITION = {
+  // Cachê por etapa, em custos de vida anuais de referência. Comentarista e embaixador também
+  // ganham pela reputação (cada ponto acima de 30 soma esta fração, por etapa).
+  FEE_SHARE: { mentor: 0.04, commentator: 0.06, ambassador: 0.08 },
+  FEE_PER_REPUTATION: { mentor: 0, commentator: 0.001, ambassador: 0.002 },
+  // Reputação mínima para cada papel (o embaixador precisa de um nome que venda).
+  MIN_REPUTATION: { mentor: 0, commentator: 15, ambassador: 30 },
+  // Reputação no fechamento do ano de transição: o comentarista fica em evidência, o embaixador
+  // também; o mentor ganha se o pupilo terminar entre os 5 primeiros.
+  SEASON_REPUTATION: { mentor: 0, commentator: 2, ambassador: 1 },
+  MENTOR_TOP_REPUTATION: 2,
+  MENTOR_TOP_POSITION: 5,
+  // Mentor: o pupilo treina mais. Um piloto do campeonato ganha esta fração de ciclo de treino extra
+  // por etapa; um filho, este multiplicador na evolução do ano.
+  MENTOR_EXTRA_CYCLES: 0.5,
+  MENTOR_CHILD_DEVELOPMENT: 1.12,
+  // Idade máxima do pupilo que o mentor acompanha (pilotos do campeonato).
+  MENTOR_MAX_AGE: 21,
+  // Legado do mentor: o pupilo aceita a equipe do ex-mentor mais facilmente (pontos de atração).
+  MENTOR_LOYALTY: 15,
+  // Legado do comentarista: prestígio extra no mercado de dirigentes no fechamento do ano.
+  COMMENTATOR_PRESTIGE: 6,
+  // Legado do embaixador: a marca patrocina o herdeiro que correr (fração do custo da vaga da
+  // categoria dele, por temporada) durante estas temporadas.
+  AMBASSADOR_HEIR_SHARE: 0.15,
+  AMBASSADOR_HEIR_SEASONS: 3,
+  // A vida em viagem: relação com o parceiro e com os filhos no ano (embaixador e comentarista).
+  TRAVEL_RELATIONSHIP: { mentor: 2, commentator: -2, ambassador: -4 },
+  // Chance de um evento do ano de transição depois de cada etapa (cada evento sai uma vez).
+  EVENT_CHANCE: 0.45,
+  // Tamanho dos efeitos dos eventos: dinheiro em custos de vida anuais; reputação e moral em pontos.
+  EVENT_MONEY: [0.05, 0.15, 0.3],
+  EVENT_REPUTATION: [1, 2, 3],
+  EVENT_MORALE: [3, 6, 10],
+  EVENT_BOND: [3, 6, 10],
+} as const;
+
+/**
+ * O peso do sobrenome. Da segunda geração em diante, o herdeiro carrega a fama da família: mais
+ * reputação e mais contatos, e a imprensa compara o tempo todo (resultado ruim pesa mais). O peso é
+ * a fama do antecessor mais famoso: 0 até FAME_FLOOR de reputação máxima, 1 com 100.
+ */
+export const SURNAME = {
+  FAME_FLOOR: 30,
+  // Interesse extra das equipes (contatos), com peso 1.
+  CONTACTS_INTEREST: 10,
+  // No fechamento, uma queda de reputação pesa até esta fração a mais (com peso 1).
+  BAD_RESULT_WEIGHT: 0.6,
+  // Terminar na metade de trás do campeonato custa até estes pontos de reputação a mais.
+  BACK_HALF_REPUTATION: 3,
+  // Por etapa: moral perdida ao terminar fora dos 10 primeiros (ou abandonar), com peso 1.
+  ROUND_MORALE: 2,
+  // Chance de a imprensa comparar com o antecessor numa etapa (só mensagem).
+  PRESS_CHANCE: 0.25,
+} as const;
+
+/**
+ * Começo do herdeiro nas pistas e a equipe da família. Só da segunda geração em diante alguém
+ * começa numa equipe boa: o dinheiro da família paga a vaga.
+ */
+export const HEIR_START = {
+  // Força da equipe boa que o herdeiro pode comprar na categoria dele (0 = a melhor).
+  TOP_SEAT_RANK: 1,
+  // O preço da vaga na equipe boa leva este ágio sobre a tabela (a equipe cobra o sobrenome).
+  TOP_SEAT_PREMIUM: 0.25,
+  // A compra da vaga tem de deixar pelo menos esta reserva, em custos de vida anuais da categoria.
+  TOP_SEAT_RESERVE: 1,
+} as const;
+
+export const FAMILY_TEAM = {
+  // A equipe da família cobra do herdeiro esta fração da vaga de tabela (o resto é a família).
+  SEAT_SHARE: 0,
+  // Favorecimento: cada etapa em que o filho termina atrás do companheiro custa reputação à equipe
+  // (dirigente) ou moral ao piloto (herdeiro); no fechamento, terminar atrás do companheiro custa
+  // reputação ao personagem e à equipe.
+  ROUND_TEAM_REPUTATION: 0.3,
+  ROUND_MORALE: 1.5,
+  SEASON_REPUTATION: 2,
+  SEASON_TEAM_REPUTATION: 3,
+  // Bater o companheiro cala a imprensa: reputação no fechamento.
+  SEASON_BEAT_TEAMMATE_REPUTATION: 1,
+  // Chance de a imprensa falar em favorecimento numa etapa em que o filho ficou atrás (só mensagem).
+  PRESS_CHANCE: 0.3,
+} as const;
+
+/**
+ * Maus investimentos: da segunda geração em diante, quem herda dinheiro atrai propostas de negócio.
+ * No começo do ano, com patrimônio líquido acima do mínimo, um conhecido oferece um negócio.
+ */
+export const BAD_INVESTMENT = {
+  CHANCE: 0.3,
+  // Patrimônio mínimo, em custos de vida anuais de referência.
+  MIN_WEALTH: 20,
+  // Quanto do caixa e das aplicações o negócio pede.
+  STAKE_SHARE: 0.15,
+  // Desfechos: na maioria das vezes perde boa parte; às vezes ganha um pouco.
+  LOSS_CHANCE: 0.65,
+  LOSS_SHARE: 0.7,
+  GAIN_SHARE: 0.3,
+} as const;
+
+/**
+ * Os filhos que não herdaram a carreira e o personagem anterior. Os números de cada caminho:
+ * nível no ofício, desconto quando um parente é contratado e o patrocínio da empresa de quem foi
+ * para os negócios.
+ */
+export const RELATIVES = {
+  // Nível no ofício: base + parte do teto de piloto + o acaso (desvio).
+  SKILL_BASE: 35,
+  SKILL_TALENT_WEIGHT: 0.4,
+  SKILL_SD: 8,
+  // Idade em que um parente passa a trabalhar e em que para.
+  WORK_FROM_AGE: 22,
+  WORK_UNTIL_AGE: 68,
+  // Contratado pela equipe da família, aceita ganhar esta fração do salário de mercado.
+  STAFF_SALARY_SHARE: 0.7,
+  // Um parente nos boxes ou na direção de outra equipe abre portas: interesse extra das equipes por
+  // parente nesses caminhos, até o teto.
+  CONTACT_INTEREST: 3,
+  CONTACT_INTEREST_MAX: 6,
+  // Um parente nos negócios patrocina o herdeiro que corre: fração do custo da vaga da categoria por
+  // temporada, durante estas temporadas, se a relação estiver pelo menos neste nível.
+  BUSINESS_SPONSOR_SHARE: 0.12,
+  BUSINESS_SPONSOR_SEASONS: 4,
+  BUSINESS_SPONSOR_MIN_BOND: 40,
+  // O personagem anterior, vivo depois de passar o comando: mortalidade anual pela mesma tábua do
+  // jogador (FAMILY.MORTALITY), com sorteio próprio.
+} as const;
+
 /**
  * Mapa das tabelas de balanceamento que moram fora deste arquivo: caminho do módulo → nomes
  * exportados. Dados por categoria, pista e equipe ficam em `src/data`; regras gerais de cada

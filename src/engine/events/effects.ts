@@ -143,6 +143,8 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
         : career;
     case 'childCareer':
       return startChildCareer(career, effect.childId, effect.support);
+    case 'kartTest':
+      return career;
 
     /* ---------------- Gestão de equipe ---------------- */
     case 'teamBudget': {

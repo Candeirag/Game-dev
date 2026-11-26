@@ -465,8 +465,8 @@ describe('migração da versão 3 para a 4', () => {
       data = migrateStep(data, data.schemaVersion as number);
       seen.push(data.schemaVersion);
     }
-    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(Object.keys(MIGRATIONS).map(Number)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(() => migrateStep(data, CAREER_SCHEMA_VERSION)).toThrow(/Não há migração/);
   });
 });
@@ -717,6 +717,79 @@ describe('migração da versão 8 para a 9 (memória das histórias)', () => {
     const next = playRound(loaded);
     expect(validateCareerIntegrity(next)).toEqual([]);
     expect(next.story.seen.length).toBeGreaterThanOrEqual(played.story.seen.length);
+  });
+});
+
+describe('migração da versão 9 para a 10 (dinastia e ano de transição)', () => {
+  const files = readdirSync('tests/fixtures/v9').filter((name) => name.endsWith('.json'));
+  type Loose = Record<string, unknown>;
+  const read = (name: string) => (JSON.parse(readFileSync(`tests/fixtures/v9/${name}`, 'utf8')) as { career: Loose }).career;
+  const readV3 = (name: string) => (JSON.parse(readFileSync(`tests/fixtures/v3/${name}`, 'utf8')) as { career: Loose }).career;
+
+  it.each(files)('%s: só acrescenta os campos da dinastia e do ano de transição, e sobe a versão', (name) => {
+    const before = read(name);
+    expect(before.schemaVersion).toBe(9);
+    expect('transition' in before).toBe(false);
+    const after = migrateStep(before, 9);
+    const dynasty = before.dynasty as Loose & { lineage: Loose[] };
+    const family = before.family as Loose & { children: Loose[] };
+    expect(after).toEqual({
+      ...before,
+      schemaVersion: 10,
+      family: { ...family, children: family.children.map((c) => ({ ...c, birthTraits: [], kartTest: null })) },
+      dynasty: { ...dynasty, lineage: dynasty.lineage.map((l) => ({ ...l, traits: [], partnerName: null, path: null })), relatives: [], elder: null },
+      transition: null,
+    });
+    // Rodar de novo sobre o resultado não muda nada.
+    expect(migrateStep({ ...after, schemaVersion: 9 }, 9)).toEqual(after);
+  });
+
+  it.each(files)('%s: abre na versão atual, íntegro, e os eventos pendentes continuam resolvíveis', (name) => {
+    const career = importCareer(readFileSync(`tests/fixtures/v9/${name}`, 'utf8'));
+    expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
+    expect(career.transition).toBeNull();
+    expect(career.dynasty).toMatchObject({ relatives: [], elder: null });
+    expect(validateCareerIntegrity(career)).toEqual([]);
+    let c = career;
+    while (c.pendingEvents.length > 0) {
+      const event = c.pendingEvents[0]!;
+      c = resolveEvent(c, event.id, event.choices[0]!.id).career;
+    }
+    expect(validateCareerIntegrity(c)).toEqual([]);
+  });
+
+  it('os filhos de um save antigo (o do topo, da versão 3) chegam sem traços e sem teste no kart', () => {
+    const before = migrateCareerData(readV3('fase0-topo-fim-de-temporada.json')) as unknown as CareerState;
+    expect(before.family.children.length).toBeGreaterThan(0);
+    for (const child of before.family.children) expect(child).toMatchObject({ birthTraits: [], kartTest: null });
+    expect(CareerStateSchema.safeParse(before).success).toBe(true);
+  });
+
+  it('o efeito de ter um filho num evento pendente ganha os mesmos campos', () => {
+    const before = read('kart-na-largada.json');
+    const child = { id: 'child-g1-s9-0', firstName: 'Bia', traits: ['calm'] };
+    const pending = [{ id: 'e', choices: [{ id: 'yes', outcomes: [{ probability: 1, effects: [{ type: 'child', child }, { type: 'marry' }] }] }] }];
+    const after = migrateStep({ ...before, pendingEvents: pending }, 9) as Loose & { pendingEvents: typeof pending };
+    expect(after.pendingEvents[0]!.choices[0]!.outcomes[0]!.effects).toEqual([
+      { type: 'child', child: { ...child, birthTraits: [], kartTest: null } },
+      { type: 'marry' },
+    ]);
+  });
+
+  it('dados da versão 10 já gravados passam intactos pela migração', () => {
+    const career = importCareer(readFileSync(`tests/fixtures/v9/${files[0]}`, 'utf8'));
+    const written: CareerState = {
+      ...career,
+      transition: { role: 'commentator', season: career.season, protegeId: null, protegeName: null, brand: null, earnings: 1000, seen: ['x'], done: false },
+      dynasty: {
+        ...career.dynasty,
+        elder: { driverId: 'd', name: 'Nome Antigo', generation: 1, bornYear: 1990, role: 'retired', teamName: null, sinceSeason: 2 },
+      },
+    };
+    const raw = { ...(JSON.parse(JSON.stringify(written)) as Loose), schemaVersion: 9 };
+    const after = migrateStep(raw, 9) as unknown as CareerState;
+    expect(after.transition).toEqual(written.transition);
+    expect(after.dynasty.elder).toEqual(written.dynasty.elder);
   });
 });
 

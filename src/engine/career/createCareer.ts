@@ -255,8 +255,13 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
           wins: 0,
           peakReputation: STARTING_REPUTATION,
           netWorthPassed: null,
+          traits: [],
+          partnerName: null,
+          path: null,
         },
       ],
+      relatives: [],
+      elder: null,
     },
     management: null,
     executiveOffseason: null,
@@ -270,6 +275,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     sideJob: 'none',
     noDoorSeasons: 0,
     story: emptyStory(PLAYER_DRIVER_ID),
+    transition: null,
     inbox: [
       {
         id: 's1-welcome',

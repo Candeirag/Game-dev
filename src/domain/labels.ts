@@ -120,6 +120,7 @@ export const EVENT_CATEGORY_LABELS: Record<import('./schemas').EventCategory, st
   unexpected: 'Inesperado',
   family: 'Família',
   management: 'Gestão',
+  transition: 'Ano de transição',
   // Fase 5: as cinco categorias dos cartões encadeados.
   track: 'Pista',
   career: 'Carreira',

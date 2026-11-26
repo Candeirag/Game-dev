@@ -718,6 +718,41 @@ export const RelationsSchema = z.object({
 });
 export type Relations = z.infer<typeof RelationsSchema>;
 
+/* ---------------- Talentos e defeitos de nascença (Fase 2 da grande atualização) ---------------- */
+
+/**
+ * Talentos e defeitos ocultos, em pares que se excluem (cada talento tem o seu defeito oposto).
+ * Os ids entram no sorteio: a ordem desta lista não muda.
+ */
+export const TRAIT_IDS = [
+  'rainMaster',
+  'rainFear',
+  'bornStarter',
+  'slowStarter',
+  'tyreSaver',
+  'tyreEater',
+  'quickLearner',
+  'slowLearner',
+  'qualifyingKing',
+  'qualifyingNerves',
+  'ironBody',
+  'fragile',
+  'cleanRacer',
+  'hothead',
+  'bigStage',
+  'debutNerves',
+] as const;
+export const TraitIdSchema = z.enum(TRAIT_IDS);
+export type TraitId = z.infer<typeof TraitIdSchema>;
+
+export const BirthTraitSchema = z.object({
+  id: TraitIdSchema,
+  /** Temporada e etapa em que o jogo revelou o traço; null enquanto ele é um "?" na ficha. */
+  revealedSeason: z.number().int().min(1).nullable(),
+  revealedRound: z.number().int().min(0).nullable(),
+});
+export type BirthTrait = z.infer<typeof BirthTraitSchema>;
+
 /* ---------------- Família e dinastia (Fase 3) ---------------- */
 
 export const CHILD_TRAITS = ['determined', 'gifted', 'calm', 'aggressive', 'charismatic', 'rebel', 'studious', 'intuitive'] as const;
@@ -780,6 +815,22 @@ export const ChildRacingSchema = z.object({
 });
 export type ChildRacing = z.infer<typeof ChildRacingSchema>;
 
+/** Resultado do teste no kart que cada filho faz na adolescência (Fase 6). */
+export const KART_TEST_DEPTHS = ['full', 'quick'] as const;
+export const KartTestDepthSchema = z.enum(KART_TEST_DEPTHS);
+export type KartTestDepth = z.infer<typeof KartTestDepthSchema>;
+
+export const KartTestSchema = z.object({
+  season: z.number().int().min(1),
+  /** full: o teste completo, de um dia inteiro; quick: uma tarde, que revela menos. */
+  depth: KartTestDepthSchema,
+  /** Diferença para o tempo de referência dos instrutores, em segundos (0 = igualou a referência). */
+  gap: z.number().min(0),
+  /** Talentos e defeitos que o teste revelou. */
+  revealed: z.array(TraitIdSchema),
+});
+export type KartTest = z.infer<typeof KartTestSchema>;
+
 export const ChildSchema = z.object({
   id: z.string(),
   firstName: z.string(),
@@ -801,6 +852,14 @@ export const ChildSchema = z.object({
   support: SupportLevelSchema,
   driver: DriverSchema.nullable(),
   racing: ChildRacingSchema.nullable(),
+  /**
+   * Talentos e defeitos de nascença (Fase 6), parte herdada do pai ou da mãe e parte sorteada.
+   * Ficam ocultos até o teste no kart ou as temporadas de carreira própria revelarem; se o filho
+   * herdar a carreira, viram o nascimento dele. Vazio nos filhos de saves anteriores à versão 10
+   * até a próxima virada de ano.
+   */
+  birthTraits: z.array(BirthTraitSchema),
+  kartTest: KartTestSchema.nullable(),
 });
 export type Child = z.infer<typeof ChildSchema>;
 
@@ -825,13 +884,65 @@ export const LineageEntrySchema = z.object({
   peakReputation: RatingSchema,
   /** Patrimônio líquido transmitido ao sucessor. */
   netWorthPassed: z.number().nullable(),
+  /** Talentos e defeitos de nascença do personagem, gravados quando a geração termina (Fase 6). */
+  traits: z.array(BirthTraitSchema),
+  /** Nome do parceiro ou parceira quando a geração terminou (null: nenhum). */
+  partnerName: z.string().nullable(),
+  /** Como o personagem assumiu a família: nas pistas ou nos negócios (null: o fundador ou save antigo). */
+  path: z.enum(['driver', 'executive']).nullable(),
 });
 export type LineageEntry = z.infer<typeof LineageEntrySchema>;
+
+/** Caminhos dos filhos que não herdaram a carreira (Fase 6). */
+export const RELATIVE_PATHS = ['engineer', 'business', 'sportingDirector'] as const;
+export const RelativePathSchema = z.enum(RELATIVE_PATHS);
+export type RelativePath = z.infer<typeof RelativePathSchema>;
+
+/**
+ * Um filho que não foi escolhido herdeiro e seguiu caminho próprio (Fase 6). Continua na árvore da
+ * família e pode aparecer depois como profissional contratável ou como contato.
+ */
+export const RelativeSchema = z.object({
+  /** O id que ele tinha como filho. */
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  /** Geração do pai ou da mãe (ele é da geração seguinte). */
+  generation: z.number().int().min(1),
+  bornYear: z.number().int(),
+  path: RelativePathSchema,
+  /** Nível no ofício (0 a 100): engenharia, negócios ou direção esportiva. */
+  skill: RatingSchema,
+  traits: z.array(ChildTraitSchema).min(1).max(2),
+  /** Relação com o personagem do jogador. */
+  bond: RatingSchema,
+  /** Degrau mais alto em que correu antes de mudar de caminho (null: nunca correu). */
+  racedTo: CategoryIdSchema.nullable(),
+  sinceSeason: z.number().int().min(1),
+});
+export type Relative = z.infer<typeof RelativeSchema>;
+
+/** O personagem anterior, vivo depois de passar o comando em vida (Fase 6). */
+export const ElderSchema = z.object({
+  driverId: z.string(),
+  name: z.string(),
+  generation: z.number().int().min(1),
+  bornYear: z.number().int(),
+  /** owner: segue dono da equipe da família; investor: cuida das participações; retired: só acompanha. */
+  role: z.enum(['owner', 'investor', 'retired']),
+  teamName: z.string().nullable(),
+  sinceSeason: z.number().int().min(1),
+});
+export type Elder = z.infer<typeof ElderSchema>;
 
 export const DynastySchema = z.object({
   generation: z.number().int().min(1),
   surname: z.string(),
   lineage: z.array(LineageEntrySchema).min(1),
+  /** Filhos de todas as gerações que não herdaram a carreira (Fase 6). */
+  relatives: z.array(RelativeSchema),
+  /** O personagem anterior, quando passou o comando em vida e segue vivo (Fase 6). */
+  elder: ElderSchema.nullable(),
 });
 export type Dynasty = z.infer<typeof DynastySchema>;
 
@@ -862,6 +973,36 @@ export const SuccessionSchema = z.object({
   heirs: z.array(HeirOptionSchema).min(1),
 });
 export type Succession = z.infer<typeof SuccessionSchema>;
+
+/* ---------------- Ano de transição (Fase 6) ---------------- */
+
+/** O que o personagem faz no primeiro ano fora do carro. */
+export const TRANSITION_ROLES = ['mentor', 'commentator', 'ambassador'] as const;
+export const TransitionRoleSchema = z.enum(TRANSITION_ROLES);
+export type TransitionRole = z.infer<typeof TransitionRoleSchema>;
+
+/**
+ * O último ano de piloto como transição: em vez de um ano vazio assistindo, o personagem é mentor de
+ * um jovem, comentarista de TV ou embaixador de uma marca, enquanto decide virar dirigente. Fica
+ * gravado depois de terminar (`done`), porque o legado vale para o resto da vida do personagem.
+ */
+export const TransitionSchema = z.object({
+  role: TransitionRoleSchema,
+  /** Temporada do ano de transição. */
+  season: z.number().int().min(1),
+  /** Quem o mentor acompanha: um piloto do campeonato ou um dos filhos (id de piloto). */
+  protegeId: z.string().nullable(),
+  protegeName: z.string().nullable(),
+  /** A marca que o embaixador representa. */
+  brand: z.string().nullable(),
+  /** Cachês recebidos no ano. */
+  earnings: z.number().min(0),
+  /** Eventos do ano já mostrados (cada um sai uma vez). */
+  seen: z.array(z.string()),
+  /** O ano terminou: o legado do papel está valendo. */
+  done: z.boolean(),
+});
+export type Transition = z.infer<typeof TransitionSchema>;
 
 /* ---------------- Gestão de equipe (Fase 3) ---------------- */
 
@@ -1016,6 +1157,8 @@ export const EffectSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('childStat'), childId: z.string(), stat: z.enum(['interest', 'bond']), value: z.number() }),
   z.object({ type: z.literal('childKart'), childId: z.string(), funding: SupportLevelSchema }),
   z.object({ type: z.literal('childCareer'), childId: z.string(), support: SupportLevelSchema }),
+  // Fase 6: o teste no kart de um filho adolescente.
+  z.object({ type: z.literal('kartTest'), childId: z.string(), depth: KartTestDepthSchema }),
   // Fase 3: gestão de equipe.
   z.object({ type: z.literal('teamBudget'), value: z.number(), label: z.string() }),
   z.object({ type: z.literal('teamReputation'), value: z.number() }),
@@ -1053,6 +1196,8 @@ export const EVENT_CATEGORIES = [
   'unexpected',
   'family',
   'management',
+  // Fase 6: os eventos do ano de transição.
+  'transition',
   // Fase 5: as cinco categorias dos cartões encadeados.
   ...STORY_CATEGORIES,
 ] as const;
@@ -1307,8 +1452,12 @@ export type StoryMemory = z.infer<typeof StoryMemorySchema>;
  * em lances que criaram rivalidade (`relations.rivalryLog`). Saves antigos ficam com as duas listas vazias.
  * Versão 9 (Fase 5): a memória das histórias (`story`: textos já mostrados, marcas, pessoas e cadeias).
  * Saves antigos ficam com a memória vazia. Patrocinadores, escolhas e cartões ganham campos opcionais.
+ * Versão 10 (Fase 6): dinastia. Filhos com talentos e defeitos herdados e teste no kart; linhagem com
+ * traços, parceiro e caminho; parentes que seguiram outro caminho e o personagem anterior vivo
+ * (`dynasty.relatives`, `dynasty.elder`); ano de transição (`transition`); efeito `kartTest` e a
+ * categoria de evento `transition`. Saves antigos ficam com tudo vazio.
  */
-export const CAREER_SCHEMA_VERSION = 9;
+export const CAREER_SCHEMA_VERSION = 10;
 
 /* ---------------- Nascimento (Fase 2 da grande atualização) ---------------- */
 
@@ -1330,49 +1479,19 @@ export const BIRTH_ORIGINS = ['humble', 'racer-parent', 'business-parent', 'mech
 export const BirthOriginSchema = z.enum(BIRTH_ORIGINS);
 export type BirthOrigin = z.infer<typeof BirthOriginSchema>;
 
-/**
- * Talentos e defeitos ocultos, em pares que se excluem (cada talento tem o seu defeito oposto).
- * Os ids entram no sorteio: a ordem desta lista não muda.
- */
-export const TRAIT_IDS = [
-  'rainMaster',
-  'rainFear',
-  'bornStarter',
-  'slowStarter',
-  'tyreSaver',
-  'tyreEater',
-  'quickLearner',
-  'slowLearner',
-  'qualifyingKing',
-  'qualifyingNerves',
-  'ironBody',
-  'fragile',
-  'cleanRacer',
-  'hothead',
-  'bigStage',
-  'debutNerves',
-] as const;
-export const TraitIdSchema = z.enum(TRAIT_IDS);
-export type TraitId = z.infer<typeof TraitIdSchema>;
-
-export const BirthTraitSchema = z.object({
-  id: TraitIdSchema,
-  /** Temporada e etapa em que o jogo revelou o traço; null enquanto ele é um "?" na ficha. */
-  revealedSeason: z.number().int().min(1).nullable(),
-  revealedRound: z.number().int().min(0).nullable(),
-});
-export type BirthTrait = z.infer<typeof BirthTraitSchema>;
-
 /** O nascimento sorteado no começo da carreira. Os valores ficam gravados como saíram do sorteio. */
 export const BirthSchema = z.object({
-  /** De quem é: só vale para este personagem (um herdeiro não herda o nascimento). */
+  /**
+   * De quem é: só vale para este personagem. Desde a Fase 6, um herdeiro ganha um nascimento próprio
+   * (origem `racer-parent`, com os traços que herdou); o do fundador fica na linhagem.
+   */
   driverId: z.string().min(1),
   origin: BirthOriginSchema,
   /** Quantas vezes o sorteio foi refeito antes de começar. */
   rerolls: z.number().int().min(0),
   hometownId: z.string().min(1),
   region: z.enum(['capital', 'interior']),
-  /** Profissões da mãe e do pai (ids de src/data/birth.ts). */
+  /** Profissões da mãe e do pai (ids de src/data/birth.ts; num herdeiro, `dinastia`). */
   parents: z.object({ mother: z.string().min(1), father: z.string().min(1) }),
   /** Economias da família no começo da carreira (o caixa inicial). */
   savings: z.number().min(0),
@@ -1475,6 +1594,8 @@ export const CareerStateSchema = z.object({
   noDoorSeasons: z.number().int().min(0),
   /** Memória das histórias do personagem atual (Fase 5 da grande atualização). */
   story: StoryMemorySchema,
+  /** Ano de transição do personagem atual: o papel, o andamento e, depois de terminado, o legado (Fase 6). */
+  transition: TransitionSchema.nullable(),
 });
 export type CareerState = z.infer<typeof CareerStateSchema>;
 
