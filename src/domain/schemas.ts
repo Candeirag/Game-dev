@@ -989,7 +989,8 @@ export type TransitionRole = z.infer<typeof TransitionRoleSchema>;
 /**
  * O último ano de piloto como transição: em vez de um ano vazio assistindo, o personagem é mentor de
  * um jovem, comentarista de TV ou embaixador de uma marca, enquanto decide virar dirigente. Fica
- * gravado depois de terminar (`done`), porque o legado vale para o resto da vida do personagem.
+ * gravado depois de terminar (`done`): a oferta vale uma vez por personagem, e os legados da mentoria
+ * e da imagem de marca valem para o resto da vida dele.
  */
 export const TransitionSchema = z.object({
   role: TransitionRoleSchema,

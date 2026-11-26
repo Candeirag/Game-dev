@@ -40,7 +40,7 @@ import { pushMessages } from './inbox';
 import { licensePointsFor } from './license';
 import { promotedRivals, runAiMarket, updateMarketInterest } from './market';
 import { familyDriverIds, fullName, getPlayer, getTeam } from './selectors';
-import { missedTarget, renewSponsors } from './sponsors';
+import { isFamilySupport, missedTarget, renewSponsors } from './sponsors';
 import { money } from './selectors';
 import { categoryRef } from '@/domain/categoryNames';
 import { counted } from '@/domain/text';
@@ -502,7 +502,14 @@ export function startNextSeason(career: CareerState, offerId: string): CareerSta
       `${s.name} rompeu o patrocínio: a meta era terminar entre os ${s.targetPosition} primeiros. Você deixa de receber ${money(career, s.perSeason)} por temporada.`,
     );
   for (const s of sponsors.renewed) news.push(`${s.name} renovou o patrocínio por ${money(career, s.perSeason)} por temporada.`);
-  for (const s of sponsors.left) news.push(s.tier === 0 ? 'O apoio financeiro da família chegou ao fim.' : `${s.name} não renovou o patrocínio.`);
+  for (const s of sponsors.left)
+    news.push(
+      isFamilySupport(s)
+        ? 'O apoio financeiro da família chegou ao fim.'
+        : s.tier === 0
+          ? `${s.name} encerrou o patrocínio.`
+          : `${s.name} não renovou o patrocínio.`,
+    );
 
   let academy = career.academy;
   if (academy && next.tier === 7) {

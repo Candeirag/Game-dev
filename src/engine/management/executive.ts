@@ -62,6 +62,7 @@ import {
   activeTransition,
   addTransitionEvent,
   closeTransitionYear,
+  confirmProtege,
   mentorLoyalty,
   requireTransitionOffer,
   transitionFromOffer,
@@ -1050,7 +1051,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     management: null,
     history: trimHistory([...career.history, off.summary], familyDriverIds(career)),
     seasonTrend: recordSeasonTrend(career),
-    transition: transition ?? career.transition,
+    transition: career.transition,
   };
 
   // Gestão: continua (com a virada de ano), começa em outra equipe ou não existe.
@@ -1107,6 +1108,10 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   });
   state = { ...state, family: { ...state.family, children } };
 
+  // O ano de transição: o pupilo proposto no fechamento é conferido no grid novo, já com o mercado da
+  // IA e o plano dos filhos (quem subiu de categoria ou largou as pistas dá lugar a outro).
+  const confirmed = transition ? confirmProtege(state, transition) : null;
+  if (confirmed) state = { ...state, transition: confirmed.transition };
   const messages: InboxMessage[] = [
     {
       id: `s${nextSeason}-start`,
@@ -1115,8 +1120,8 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
       title: `Temporada ${nextYear}: ${category.shortName}`,
       body: managed
         ? `Você comanda a ${teamName} ${categoryRef(category.id, 'em')}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(career, managed.budget)}.`
-        : transition
-          ? `${transitionStartText(state, transition)} No fim da temporada, as propostas para comandar uma equipe voltam a aparecer.`
+        : confirmed
+          ? `${confirmed.note ? `${confirmed.note} ` : ''}${transitionStartText(state, confirmed.transition)} No fim da temporada, as propostas para comandar uma equipe voltam a aparecer.`
           : `Você acompanha ${categoryRef(category.id, 'the')} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
     },
   ];

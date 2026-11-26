@@ -32,15 +32,20 @@ function expectValid(career: CareerState) {
 
 const withCash = (career: CareerState, cash: number): CareerState => ({ ...career, finance: { ...career.finance, cash } });
 
-/** Fechamento da primeira temporada de um piloto que acaba de pendurar o capacete (memorizado por semente). */
+/** Fechamento da primeira temporada de um piloto, ainda nas pistas (memorizado por semente). */
 const closedCache = new Map<number, CareerState>();
-function retiredAt(seed = 77, reputation = 40, cash = 500_000): CareerState {
+function closedAt(seed = 77): CareerState {
   let closed = closedCache.get(seed);
   if (!closed) {
     closed = resolvePending(playSeason(newCareer(seed)));
     closedCache.set(seed, closed);
   }
-  return engine.retireFromDriving({ ...withCash(closed, cash), reputation });
+  return closed;
+}
+
+/** O mesmo fechamento, de quem acaba de pendurar o capacete. */
+function retiredAt(seed = 77, reputation = 40, cash = 500_000): CareerState {
+  return engine.retireFromDriving({ ...withCash(closedAt(seed), cash), reputation });
 }
 
 /** O ano de transição escolhido no primeiro fechamento depois de parar. */
@@ -90,10 +95,14 @@ describe('propostas do ano de transição', () => {
     expect([mentor!.brand, commentator!.brand]).toEqual([null, null]);
     expect([commentator!.protegeId, ambassador!.protegeId]).toEqual([null, null]);
     // Sem filho piloto: o titular do campeonato com contrato para o ano seguinte, até a idade-limite no
-    // ano de transição, com o maior potencial (empate pelo id).
+    // ano de transição, que o mercado da virada não tira da categoria, com o maior potencial (empate
+    // pelo id).
     const former = engine.formerCharacterIds(c);
-    const expected = c.drivers
-      .filter((d) => !d.isPlayer && !former.has(d.id) && d.teamId && d.role !== 'reserve' && d.contractEnd > c.season && d.age + 1 <= TRANSITION.MENTOR_MAX_AGE)
+    const market = c.drivers.filter((d) => !d.isPlayer && !former.has(d.id));
+    const leaving = new Set(engine.aiDepartures(c, market).map((x) => x.driver.id));
+    expect(leaving.size).toBeGreaterThan(0);
+    const expected = market
+      .filter((d) => d.teamId && d.role !== 'reserve' && d.contractEnd > c.season && !leaving.has(d.id) && d.age + 1 <= TRANSITION.MENTOR_MAX_AGE)
       .sort((a, b) => b.potential - a.potential || (a.id < b.id ? -1 : 1))[0]!;
     expect(mentor).toMatchObject({ protegeId: expected.id, protegeName: engine.fullName(expected), protegeIsChild: false });
   });
@@ -256,6 +265,36 @@ describe('o ano de transição no meio da temporada', () => {
     expectValid(engine.beginTransition(c, 'ambassador'));
   });
 
+  it('a janela do meio do ano fecha na primeira etapa sem o personagem; a oferta fica para o fechamento', () => {
+    const later = playExecutiveRound(retiredMidSeason());
+    expect(engine.transitionWindow(later)).toBeNull();
+    expect(engine.transitionOffers(later)).toEqual([]);
+    expect(() => engine.beginTransition(later, 'commentator')).toThrow(/logo depois de parar/);
+    // Sete etapas depois de parar, também não: o papel não começa no fim do ano para render um legado inteiro.
+    let c = later;
+    for (let i = 0; i < 6 && c.nextRoundIndex < c.calendar.length - 1; i++) c = playExecutiveRound(c);
+    expect(engine.transitionWindow(c)).toBeNull();
+    expect(engine.transitionWindow(playExecutiveSeason(c))).toBe('closing');
+  });
+
+  it(`perto do fim do ano (menos de ${TRANSITION.MIDSEASON_MIN_SHARE} do calendário pela frente), o ano de transição fica para o fechamento`, () => {
+    let c = newCareer(45);
+    const needed = Math.ceil(c.calendar.length * TRANSITION.MIDSEASON_MIN_SHARE);
+    while (c.calendar.length - c.nextRoundIndex > needed) c = resolvePending(playRound(c));
+    // Com a parte mínima do calendário pela frente, ainda começa no meio do ano.
+    expect(engine.transitionWindow(engine.retireFromDriving({ ...c, reputation: 40 }))).toBe('midseason');
+    // Uma etapa depois, não: quem para na penúltima etapa não faz um ano de transição de uma etapa só.
+    const late = engine.retireFromDriving({ ...resolvePending(playRound(c)), reputation: 40 });
+    expect(late.calendar.length - late.nextRoundIndex).toBe(needed - 1);
+    expect(engine.transitionWindow(late)).toBeNull();
+    expect(() => engine.beginTransition(late, 'commentator')).toThrow(/logo depois de parar/);
+    const closing = resolvePending(playExecutiveSeason(late));
+    expect(engine.transitionWindow(closing)).toBe('closing');
+    const next = engine.startExecutiveSeason(closing, { kind: 'transition', role: 'commentator' });
+    expect(next.transition).toMatchObject({ role: 'commentator', season: closing.season + 1, done: false });
+    expectValid(next);
+  });
+
   it('fora da janela, ou num papel indisponível, não começa', () => {
     let driving = newCareer(45);
     driving = playRound(driving);
@@ -398,6 +437,79 @@ describe('a mentoria acelera o pupilo', () => {
 
 /* ------------------------------------------------------------------ */
 
+describe('o pupilo da mentoria na virada do ano', () => {
+  it('quem o fechamento propõe tem vaga na primeira etapa do ano de transição (várias sementes)', () => {
+    for (const seed of [11, 22, 33, 44, 55, 66, 77, 88]) {
+      const retired = retiredAt(seed);
+      const offer = engine.transitionOffers(retired).find((o) => o.role === 'mentor')!;
+      expect(offer.available, `semente ${seed}`).toBe(true);
+      // Ninguém que o mercado da virada tira da categoria (quem sobe, quem passa da idade).
+      const leaving = engine
+        .aiDepartures(
+          retired,
+          retired.drivers.filter((d) => !d.isPlayer),
+        )
+        .map((x) => x.driver.id);
+      expect(leaving, `semente ${seed}`).not.toContain(offer.protegeId);
+      const c = engine.startExecutiveSeason(retired, { kind: 'transition', role: 'mentor' });
+      expect(c.transition!.protegeId, `semente ${seed}`).toBe(offer.protegeId);
+      expect(c.drivers.find((d) => d.id === offer.protegeId)?.teamId, `semente ${seed}`).toBeTruthy();
+      const played = playExecutiveRound(c);
+      expect(
+        played.rounds[0]!.race.entries.some((e) => e.driverId === offer.protegeId),
+        `semente ${seed}`,
+      ).toBe(true);
+      expect(played.inbox.find((m) => m.id === `s${played.season}-r1-race`)!.body).not.toContain('ficou sem vaga');
+    }
+  }, 60_000);
+
+  it('quem saiu do grid dá lugar a outro, pelo mesmo critério; quem ficou continua', () => {
+    const c = transitionYear('mentor');
+    const t = c.transition!;
+    expect(engine.confirmProtege(c, t)).toEqual({ transition: t, note: null });
+    const gone: CareerState = { ...c, drivers: c.drivers.map((d) => (d.id === t.protegeId ? { ...d, teamId: null, role: null } : d)) };
+    const former = engine.formerCharacterIds(gone);
+    const expected = gone.drivers
+      .filter((d) => !d.isPlayer && !former.has(d.id) && d.teamId && d.role !== 'reserve' && d.age <= TRANSITION.MENTOR_MAX_AGE)
+      .sort((a, b) => b.potential - a.potential || (a.id < b.id ? -1 : 1))[0]!;
+    const confirmed = engine.confirmProtege(gone, t);
+    expect(confirmed.transition).toEqual({ ...t, protegeId: expected.id, protegeName: engine.fullName(expected) });
+    expect(confirmed.note).toBe(`Com a saída de ${t.protegeName}, você passa a acompanhar ${engine.fullName(expected)}.`);
+    // Sem ninguém jovem no grid, fica quem foi proposto.
+    const veterans = { ...gone, drivers: gone.drivers.map((d) => (d.isPlayer ? d : { ...d, age: TRANSITION.MENTOR_MAX_AGE + 5 })) };
+    expect(engine.confirmProtege(veterans, t)).toEqual({ transition: t, note: null });
+    // Os outros papéis não têm pupilo.
+    const commentator = transitionYear('commentator');
+    expect(engine.confirmProtege(commentator, commentator.transition!).transition).toBe(commentator.transition);
+  });
+
+  it('o filho que corria no campeonato e larga as pistas na virada dá lugar a outro, e a mensagem explica', () => {
+    let c = engine.startChildCareer(withChildren(retiredAt(), [{ id: 'kid', age: 15 }]), 'kid', 'full');
+    const kid = c.family.children.find((k) => k.id === 'kid')!;
+    // O filho corre no campeonato acompanhado (está no grid) e passou da idade da categoria dele sem
+    // resultado para subir: na virada, encerra a carreira.
+    const driver = { ...kid.driver!, age: engine.getCategory(kid.racing!.categoryId).field.maxAge + 2 };
+    const team = c.drivers.find((d) => !d.isPlayer && d.teamId)!.teamId;
+    c = {
+      ...c,
+      drivers: [...c.drivers, { ...driver, teamId: team, role: 'reserve' }],
+      family: { ...c.family, children: c.family.children.map((k) => (k.id === 'kid' ? { ...k, driver } : k)) },
+    };
+    const offer = engine.transitionOffers(c).find((o) => o.role === 'mentor')!;
+    expect(offer).toMatchObject({ available: true, protegeId: driver.id, protegeIsChild: true });
+    const next = engine.startExecutiveSeason(c, { kind: 'transition', role: 'mentor' });
+    expect(next.family.children.find((k) => k.id === 'kid')!.stage).toBe('other');
+    const pupil = next.drivers.find((d) => d.id === next.transition!.protegeId)!;
+    expect(pupil.teamId).not.toBeNull();
+    expect(pupil.age).toBeLessThanOrEqual(TRANSITION.MENTOR_MAX_AGE);
+    expect(next.inbox.find((m) => m.id === `s${next.season}-start`)!.body).toContain(
+      `Com a saída de ${offer.protegeName}, você passa a acompanhar ${engine.fullName(pupil)}.`,
+    );
+  });
+});
+
+/* ------------------------------------------------------------------ */
+
 describe('fechamento do ano de transição', () => {
   function standing(driverId: string, position: number): engine.DriverStanding {
     return { driverId, teamId: 't', position, points: 0, wins: 0, podiums: 0, poles: 0, dnfs: 0, bestFinish: position, results: [] };
@@ -448,12 +560,14 @@ describe('legado do ano de transição', () => {
     return playExecutiveSeason(transitionYear(role));
   }
 
-  it('comentários na TV: prestígio extra no mercado de dirigentes', () => {
+  it('comentários na TV: prestígio extra no mercado de dirigentes no fechamento do ano', () => {
     const c = done('commentator');
     expect(engine.executiveStanding(c) - engine.executiveStanding({ ...c, transition: null })).toBe(TRANSITION.COMMENTATOR_PRESTIGE);
-    // Só depois de terminado.
-    const during = transitionYear('commentator');
-    expect(engine.transitionPrestige(during)).toBe(0);
+    // Durante o ano, ainda não; na temporada seguinte, não mais (o registro continua, para a oferta não voltar).
+    expect(engine.transitionPrestige(transitionYear('commentator'))).toBe(0);
+    const after = engine.startExecutiveSeason(resolvePending(c), { kind: 'spectate' });
+    expect(after.transition).toMatchObject({ role: 'commentator', done: true });
+    expect(engine.transitionPrestige(after)).toBe(0);
     expect(engine.transitionPrestige(done('mentor'))).toBe(0);
   });
 
@@ -522,6 +636,28 @@ describe('legado do ano de transição', () => {
     expect(business.sponsors).toEqual([]);
     expect([business.transition, business.retiredSeason]).toEqual([null, null]);
   });
+
+  it('a marca não é o apoio da família: na tela Vida e no fim do contrato', () => {
+    const closed = closedAt();
+    const sponsors = [
+      engine.familySupport(20_000, closed.season),
+      engine.familySupport(30_000, closed.season, { id: 'family-business-r1', name: 'Empresa de Nome Teste' }),
+      engine.familySupport(70_000, closed.season, { id: 'legacy-brand', name: 'Relógios Ponteiro Fino' }),
+    ];
+    const c: CareerState = { ...closed, sponsors };
+    expect(sponsors.map((x) => engine.isFamilySupport(x))).toEqual([true, true, false]);
+    expect(engine.lifeSummary(c).sponsors).toMatchObject({
+      count: 0,
+      familySupport: 50_000,
+      otherSupport: [{ name: 'Relógios Ponteiro Fino', perSeason: 70_000 }],
+    });
+    // Os três contratos acabam nesta temporada: a marca encerra o patrocínio, a família encerra o apoio.
+    const next = engine.startNextSeason(c, pickBestOffer(c));
+    const news = next.inbox.find((m) => m.id === `s${next.season}-market`)!.body;
+    expect(news).toContain('Relógios Ponteiro Fino encerrou o patrocínio.');
+    expect(news.match(/O apoio financeiro da família chegou ao fim\./g)).toHaveLength(2);
+    expect(next.sponsors.filter((x) => x.tier === 0)).toEqual([]);
+  });
 });
 
 /* ------------------------------------------------------------------ */
@@ -584,7 +720,8 @@ describe('save e integridade', () => {
       'Ano de transição: só a imagem de marca tem marca, e ela precisa de uma.',
     );
     expect(problems({ transition: { ...t, seen: ['conselho-na-vespera', 'conselho-na-vespera'] } })).toContain('Evento do ano de transição visto duas vezes.');
-    expect(problems({ transition: { ...t, seen: ['frase-vazada'] } })).toContain('Evento do ano de transição desconhecido ou de outro papel.');
+    // Um id que não está no catálogo (renomeado numa versão futura) não impede o save de abrir.
+    expect(problems({ transition: { ...t, seen: ['evento-que-saiu-do-catalogo'] } })).toEqual([]);
     expect(problems({ retiredSeason: c.season + 1 })).toContain('Aposentadoria numa temporada futura.');
     const driving = newCareer(3);
     expect(validateCareerIntegrity({ ...driving, retiredSeason: 1 })).toContain('Piloto em atividade com temporada de aposentadoria.');

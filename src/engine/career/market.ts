@@ -99,6 +99,36 @@ export interface MarketResult {
 }
 
 /**
+ * Quem deixa a categoria na virada do ano (o passo 1 de `runAiMarket`), na ordem das notícias:
+ * os três melhores da IA no campeonato sobem de categoria, se terminaram até o 5º (exceto no Grand
+ * Prix Mundial); depois, quem passou da idade da categoria sai e, no Grand Prix Mundial, aposenta-se
+ * quem tem 38 anos ou mais, ou 34 e nível abaixo do grid. `position` só vem para quem sobe. `ai` são
+ * os pilotos da IA que entram no mercado; a classificação é a da temporada que termina.
+ */
+export function aiDepartures(career: CareerState, ai: readonly Driver[]): { driver: Driver; position: number | null }[] {
+  const category = getCategory(career.categoryId);
+  const standings = computeDriverStandings(career.rounds, career.drivers, career.adjustments);
+  const departures: { driver: Driver; position: number | null }[] = [];
+  const leaving = new Set<string>();
+  if (category.tier < 7) {
+    for (const s of standings.filter((x) => x.driverId !== career.playerDriverId).slice(0, 3)) {
+      const d = ai.find((x) => x.id === s.driverId);
+      if (d?.teamId && s.position <= 5) {
+        leaving.add(d.id);
+        departures.push({ driver: d, position: s.position });
+      }
+    }
+  }
+  for (const d of ai) {
+    if (leaving.has(d.id)) continue;
+    const tooOld =
+      category.tier < 7 ? d.age > category.field.maxAge + 1 : d.age >= 38 || (d.age >= 34 && overallRating(d.attributes) < category.field.driverLevel - 5);
+    if (tooOld) departures.push({ driver: d, position: null });
+  }
+  return departures;
+}
+
+/**
  * Movimentação da IA dentro da categoria, entre duas temporadas.
  *
  * 1. Saídas: os três melhores da IA no campeonato sobem de categoria (exceto
@@ -133,24 +163,11 @@ export function runAiMarket(
   const capacity = (teamId: string | null) => (teamId === reserved?.teamId ? 0 : teamId === player.teamId ? 1 : 2);
 
   // 1. Saídas.
-  const leaving = new Set<string>();
-  if (category.tier < 7) {
-    for (const s of standings.filter((x) => x.driverId !== career.playerDriverId).slice(0, 3)) {
-      const d = ai.find((x) => x.id === s.driverId);
-      if (d?.teamId && s.position <= 5) {
-        leaving.add(d.id);
-        news.push(`${fullName(d)} (${s.position}º) sobe de categoria.`);
-      }
-    }
-  }
-  for (const d of ai) {
-    if (leaving.has(d.id)) continue;
-    const tooOld =
-      category.tier < 7 ? d.age > category.field.maxAge + 1 : d.age >= 38 || (d.age >= 34 && overallRating(d.attributes) < category.field.driverLevel - 5);
-    if (tooOld) {
-      leaving.add(d.id);
-      if (d.role !== 'reserve' && d.teamId) news.push(category.tier < 7 ? `${fullName(d)} deixa a categoria.` : `${fullName(d)} anuncia a aposentadoria.`);
-    }
+  const departures = aiDepartures(career, ai);
+  const leaving = new Set(departures.map((x) => x.driver.id));
+  for (const { driver: d, position } of departures) {
+    if (position !== null) news.push(`${fullName(d)} (${position}º) sobe de categoria.`);
+    else if (d.role !== 'reserve' && d.teamId) news.push(category.tier < 7 ? `${fullName(d)} deixa a categoria.` : `${fullName(d)} anuncia a aposentadoria.`);
   }
   const staying = ai.filter((d) => !leaving.has(d.id));
 

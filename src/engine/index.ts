@@ -25,7 +25,7 @@ export * from './management/team';
 export * from './management/executive';
 export { MANAGEMENT_EVENT_CHANCE } from './management/events';
 export * from './tutorial';
-export { MARKET, reachableCategories, teamsOfCategory, updateMarketInterest, targetInterest } from './career/market';
+export { MARKET, aiDepartures, reachableCategories, teamsOfCategory, updateMarketInterest, targetInterest } from './career/market';
 export { RELATION_RULES } from './career/roundEffects';
 export { TRAINING_GROUPS, TRAINABLE_ATTRIBUTES } from './career/training';
 export * from './championship/points';

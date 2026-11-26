@@ -821,8 +821,7 @@ export const TRANSITION = {
   MENTOR_MAX_AGE: 21,
   // Legado do mentor: o pupilo aceita a equipe do ex-mentor mais facilmente (pontos de atração).
   MENTOR_LOYALTY: 15,
-  // Legado do comentarista: prestígio extra no mercado de dirigentes, a partir do fechamento do ano de
-  // transição (como os outros legados, vale pelo resto da vida do personagem).
+  // Legado do comentarista: prestígio extra no mercado de dirigentes no fechamento do ano.
   COMMENTATOR_PRESTIGE: 6,
   // Legado do embaixador: a marca patrocina o herdeiro que correr (fração do custo da vaga da
   // categoria dele, por temporada) durante estas temporadas.
@@ -830,6 +829,10 @@ export const TRANSITION = {
   AMBASSADOR_HEIR_SEASONS: 3,
   // A vida em viagem: relação com o parceiro e com os filhos no ano (embaixador e comentarista).
   TRAVEL_RELATIONSHIP: { mentor: 2, commentator: -2, ambassador: -4 },
+  // No meio do ano, o ano de transição só começa logo depois de parar e com pelo menos esta parte do
+  // calendário pela frente (o papel tem de durar). Quem para mais perto do fim faz o ano de transição
+  // na temporada seguinte, inteiro, escolhido no fechamento.
+  MIDSEASON_MIN_SHARE: 0.5,
   // Chance de um evento do ano de transição depois de cada etapa (cada evento sai uma vez).
   EVENT_CHANCE: 0.45,
   // Tamanho dos efeitos dos eventos (o tamanho 1, 2 ou 3 do evento escolhe a posição na lista):

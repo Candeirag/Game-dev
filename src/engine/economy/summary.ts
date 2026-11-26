@@ -7,7 +7,7 @@ import { SIDE_JOBS } from '@/config/balance';
 import type { CareerState } from '@/domain/schemas';
 import { getCategory } from '@/data/categories';
 import { ECONOMY, netWorth, seasonRunningCosts, stocksValue } from '../career/economy';
-import { commercialSponsors } from '../career/sponsors';
+import { commercialSponsors, isFamilySupport } from '../career/sponsors';
 import { familyAnnualCost, getPropertyDefinition, loansBalance } from './assets';
 
 export interface LifeSummary {
@@ -18,7 +18,15 @@ export interface LifeSummary {
     perRound: number | null;
     debt: number;
   };
-  sponsors: { count: number; perSeason: number; familySupport: number; lowestSatisfaction: number | null };
+  sponsors: {
+    count: number;
+    perSeason: number;
+    /** Apoio da família por temporada: o dos pais e o da empresa de um parente, somados. */
+    familySupport: number;
+    /** Os apoios de porte 0 que não são da família (a marca do legado da imagem de marca), com o nome. */
+    otherSupport: { name: string; perSeason: number }[];
+    lowestSatisfaction: number | null;
+  };
   property: { count: number; rented: number; value: number; perRound: number };
   business: { count: number; value: number; lastProfit: number };
   investments: { fixedIncome: number; equityFund: number; stocks: number; total: number; holdings: number };
@@ -44,7 +52,7 @@ export function lifeSummary(career: CareerState): LifeSummary {
   const f = career.finance;
   const rounds = Math.max(1, career.calendar.length);
   const commercial = commercialSponsors(career.sponsors);
-  const family = career.sponsors.find((s) => s.tier === 0);
+  const support = career.sponsors.filter((s) => s.tier === 0);
   const rent = f.properties.reduce((sum, p) => {
     const def = getPropertyDefinition(p.catalogId);
     return sum + (p.use === 'rented' ? p.value * def.rentYield : 0) - p.value * def.upkeep;
@@ -60,7 +68,8 @@ export function lifeSummary(career: CareerState): LifeSummary {
     sponsors: {
       count: commercial.length,
       perSeason: commercial.reduce((sum, s) => sum + s.perSeason, 0),
-      familySupport: family?.perSeason ?? 0,
+      familySupport: support.filter(isFamilySupport).reduce((sum, s) => sum + s.perSeason, 0),
+      otherSupport: support.filter((s) => !isFamilySupport(s)).map((s) => ({ name: s.name, perSeason: s.perSeason })),
       lowestSatisfaction: commercial.length > 0 ? Math.min(...commercial.map((s) => s.satisfaction)) : null,
     },
     property: {

@@ -13,7 +13,7 @@
  *   (`retiredSeason`). Ela só é conhecida quando o save está na temporada da aposentadoria: no
  *   fechamento que veio da aposentadoria (o resumo do ano é de piloto) ou no resto de um ano em que
  *   o personagem correu algumas etapas antes de parar. Nos outros saves fica nula (quem parou antes
- *   já passou do primeiro ano fora do carro).
+ *   já passou do primeiro ano fora do carro; o herdeiro que assumiu pelos negócios nunca correu).
  *
  * O filho aparece também dentro do efeito `child` dos eventos pendentes (a escolha de ter um filho):
  * esses recebem os mesmos campos, para o cartão continuar resolvível.
@@ -62,10 +62,25 @@ function migrateLineageEntry(entry: unknown): unknown {
   };
 }
 
+/**
+ * O personagem atual assumiu pelos negócios: a geração dele começa depois da temporada do save (o
+ * herdeiro que assume no fechamento) ou na mesma temporada em que a anterior terminou (o que assume no
+ * meio do ano). Ele nunca parou de correr: o resumo de piloto e as etapas com o resultado de um filho
+ * que corria são do ano de outra pessoa.
+ */
+function tookOverBusiness(data: Loose, season: number): boolean {
+  const lineage = list(isObject(data.dynasty) ? data.dynasty.lineage : []).filter(isObject);
+  const current = lineage[lineage.length - 1];
+  const previous = lineage[lineage.length - 2];
+  if (!current || typeof current.fromSeason !== 'number') return false;
+  return current.fromSeason > season || (previous !== undefined && previous.toSeason === current.fromSeason);
+}
+
 /** A temporada da aposentadoria, quando o save está nela (ver o comentário do arquivo). */
 function retiredSeasonOf(data: Loose): number | null {
   if (typeof data.retiredSeason === 'number') return data.retiredSeason;
   if (data.mode !== 'executive' || typeof data.season !== 'number') return null;
+  if (tookOverBusiness(data, data.season)) return null;
   const off = isObject(data.executiveOffseason) ? data.executiveOffseason : null;
   if (off && isObject(off.summary) && off.summary.mode === 'driver') return data.season;
   // Parou no meio do ano: as etapas da temporada (até o fechamento dela) têm o resultado dele.

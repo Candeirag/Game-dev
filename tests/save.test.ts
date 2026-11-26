@@ -795,6 +795,24 @@ describe('migração da versão 9 para a 10 (dinastia e ano de transição)', ()
     expect(retiredSeason({ mode: 'driver', executiveOffseason: null, rounds: [round(player)] })).toBeNull();
     // Um valor já gravado passa intacto.
     expect(retiredSeason({ retiredSeason: 3 })).toBe(3);
+    // Quem assumiu pelos negócios nunca correu, mesmo com o resumo de piloto (o ano do antecessor) ou
+    // com as etapas de quando corria no campeonato: no fechamento, a geração dele começa na temporada
+    // seguinte; no meio do ano, a v9 também a gravava na seguinte (a v10, na mesma em que a anterior acaba).
+    const dynasty = base.dynasty as Loose;
+    const founder = (dynasty.lineage as Loose[])[0]!;
+    const lineage = (toSeason: number, fromSeason: number) => ({
+      ...dynasty,
+      lineage: [
+        { ...founder, toSeason, endReason: 'death' },
+        { ...founder, generation: 2, driverId: player, fromSeason, toSeason: null },
+      ],
+    });
+    expect(retiredSeason({ executiveOffseason: off('driver'), rounds: [], dynasty: lineage(season, season + 1) })).toBeNull();
+    expect(retiredSeason({ executiveOffseason: null, rounds: [round(player)], dynasty: lineage(season, season + 1) })).toBeNull();
+    expect(retiredSeason({ executiveOffseason: null, rounds: [round(player)], dynasty: lineage(season, season) })).toBeNull();
+    // Um herdeiro que correu e parou neste ano é deduzido como qualquer piloto.
+    expect(retiredSeason({ executiveOffseason: off('driver'), rounds: [], dynasty: lineage(season - 1, season) })).toBe(season);
+    expect(retiredSeason({ executiveOffseason: null, rounds: [round(player)], dynasty: lineage(season - 2, season - 1) })).toBe(season);
   });
 
   it('dados da versão 10 já gravados passam intactos pela migração', () => {

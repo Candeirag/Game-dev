@@ -64,6 +64,13 @@ export function familySupport(
 
 export const commercialSponsors = (sponsors: readonly Sponsor[]) => sponsors.filter((s) => s.tier > 0);
 
+/**
+ * O apoio é da família: o dos pais (`family`) ou o da empresa de um parente nos negócios (Fase 6). A
+ * marca do legado da imagem de marca (`legacy-brand`) também é de porte 0, mas não é da família.
+ */
+export const isFamilySupport = (sponsor: Pick<Sponsor, 'id' | 'tier'>) =>
+  sponsor.tier === 0 && (sponsor.id === 'family' || sponsor.id.startsWith('family-business-'));
+
 /** Quantos patrocinadores pessoais o piloto pode ter: a academia cobra exclusividade. */
 export function maxSponsors(career: CareerState): number {
   return career.academy ? ACADEMY_DOOR.MAX_PERSONAL_SPONSORS : SPONSOR_RULES.MAX_SPONSORS;

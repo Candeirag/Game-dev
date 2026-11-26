@@ -5,14 +5,15 @@
  * acompanhando o campeonato: mentoria de um jovem piloto, comentários na TV ou imagem de uma marca.
  * Cada papel paga um cachê por etapa (no ramo sem equipe de `applyExecutiveRoundEffects`), traz uma
  * mensagem por etapa e eventos próprios (categoria `transition`, cada um uma vez), e no fechamento do
- * ano dá reputação e mexe na vida em família. Depois, deixa um legado para o resto da vida do
- * personagem: o pupilo aceita a equipe do ex-mentor mais facilmente; o rosto da TV tem mais prestígio
- * no mercado de dirigentes; a marca patrocina o herdeiro que correr.
+ * ano dá reputação e mexe na vida em família. Depois, deixa um legado: o rosto da TV tem mais
+ * prestígio nas propostas de cargo daquele fechamento; pelo resto da vida do personagem, o pupilo
+ * aceita a equipe do ex-mentor mais facilmente e a marca patrocina o herdeiro que correr.
  *
  * A oferta vale uma vez por personagem (`career.transition === null`), na temporada em que ele parou de
  * correr (`career.retiredSeason`): logo depois de parar no meio do ano (`beginTransition`, o papel vale
  * pelo resto da temporada) ou no primeiro fechamento (o plano `transition` de `startExecutiveSeason`,
- * o papel vale pela temporada seguinte). Os números estão em TRANSITION (`src/config/balance.ts`) e os
+ * o papel vale pela temporada seguinte; o pupilo da mentoria é conferido no grid novo por
+ * `confirmProtege`). Os números estão em TRANSITION (`src/config/balance.ts`) e os
  * textos em `src/data/transition.ts`. Os sorteios têm nomes próprios ('transition-brand',
  * 'transition-event', 'mentor-dev'): quem não faz o ano de transição não muda de sorte.
  */
@@ -48,6 +49,7 @@ import { compareText, counted } from '@/domain/text';
 import type { DriverStanding } from '../championship/standings';
 import { developDriver } from '../career/development';
 import { post } from '../career/economy';
+import { aiDepartures } from '../career/market';
 import { pushMessages } from '../career/inbox';
 import { formerCharacterIds, fullName, money } from '../career/selectors';
 import { familySupport } from '../career/sponsors';
@@ -64,13 +66,20 @@ const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v))
  * A janela do ano de transição: 'closing' no fechamento da temporada em que o personagem parou de
  * correr (o papel vale pela temporada seguinte), 'midseason' logo depois de parar no meio do ano (vale
  * pelo resto dela); null fora disso, quando o ano de transição já foi escolhido ou passou.
+ *
+ * "Logo depois de parar" quer dizer antes da primeira etapa sem o personagem (a última etapa jogada,
+ * se houver, tem o resultado dele) e com pelo menos MIDSEASON_MIN_SHARE do calendário pela frente:
+ * quem para perto do fim da temporada faz o ano de transição na seguinte, inteiro, pelo fechamento.
  */
 export function transitionWindow(career: CareerState): 'closing' | 'midseason' | null {
   if (career.mode !== 'executive' || career.transition !== null || career.retiredSeason !== career.season) return null;
   if (career.succession || career.management) return null;
   if (career.executiveOffseason) return 'closing';
   if (career.weekend || career.nextRoundIndex >= career.calendar.length) return null;
-  return 'midseason';
+  const last = career.rounds[career.rounds.length - 1];
+  if (last && !last.race.entries.some((e) => e.driverId === career.playerDriverId)) return null;
+  const left = career.calendar.length - career.nextRoundIndex;
+  return left >= Math.ceil(career.calendar.length * TRANSITION.MIDSEASON_MIN_SHARE) ? 'midseason' : null;
 }
 
 /** O ano de transição em andamento nesta temporada (null: nenhum, ou já terminou). */
@@ -93,27 +102,55 @@ interface Protege {
 
 /**
  * Quem a mentoria acompanharia: o filho mais novo com carreira em andamento; sem filho piloto, o
- * piloto do campeonato com vaga de titular (no fechamento, com contrato para o ano seguinte), até
- * MENTOR_MAX_AGE anos na temporada do ano de transição, com o maior potencial (empate pelo id).
+ * piloto do campeonato com vaga de titular, até MENTOR_MAX_AGE anos na temporada do ano de transição,
+ * com o maior potencial (empate pelo id). `grid` diz de qual temporada é o grid: 'current' quando o
+ * papel vale nela (no meio do ano, ou no grid novo da virada do ano); 'next' no fechamento, quando o
+ * papel vale na seguinte: aí o piloto precisa de contrato para ela, conta a idade que terá e não pode
+ * ser um dos que o mercado da virada tira da categoria (`aiDepartures`: os que sobem e os que passam
+ * da idade).
  */
-function proposedProtege(career: CareerState, window: 'closing' | 'midseason'): Protege | null {
+function proposedProtege(career: CareerState, grid: 'current' | 'next'): Protege | null {
   const child = career.family.children.filter((c) => c.stage === 'racing' && c.driver).sort((a, b) => a.age - b.age || compareText(a.id, b.id))[0];
   if (child?.driver) return { id: child.driver.id, name: fullName(child), isChild: true };
-  const nextYear = window === 'closing' ? 1 : 0;
+  const next = grid === 'next';
   const former = formerCharacterIds(career);
-  const pick = career.drivers
+  const childIds = new Set(career.family.children.flatMap((c) => (c.driver ? [c.driver.id] : [])));
+  const market = career.drivers.filter((d) => !d.isPlayer && !former.has(d.id) && !childIds.has(d.id));
+  const leaving = next ? new Set(aiDepartures(career, market).map((x) => x.driver.id)) : new Set<string>();
+  const pick = market
     .filter(
       (d) =>
-        !d.isPlayer &&
         d.id !== career.playerDriverId &&
-        !former.has(d.id) &&
         d.teamId !== null &&
         d.role !== 'reserve' &&
-        (window === 'midseason' || d.contractEnd > career.season) &&
-        d.age + nextYear <= TRANSITION.MENTOR_MAX_AGE,
+        (!next || (d.contractEnd > career.season && !leaving.has(d.id))) &&
+        d.age + (next ? 1 : 0) <= TRANSITION.MENTOR_MAX_AGE,
     )
     .sort((a, b) => b.potential - a.potential || compareText(a.id, b.id))[0];
   return pick ? { id: pick.id, name: fullName(pick), isChild: false } : null;
+}
+
+/** O pupilo ainda corre: o filho segue nas pistas, ou o piloto do campeonato tem vaga de titular. */
+function protegeRacing(career: CareerState, protegeId: string): boolean {
+  const child = protegeChild(career.family.children, protegeId);
+  if (child) return child.stage === 'racing' && child.driver !== null;
+  return career.drivers.some((d) => d.id === protegeId && d.teamId !== null && d.role !== 'reserve');
+}
+
+/**
+ * Na virada do ano, confere o pupilo da mentoria escolhida no fechamento contra o grid novo (`career`
+ * já com o mercado da IA e o plano dos filhos). Quem a proposta mostrou continua, se ainda corre; se
+ * saiu do campeonato ou largou as pistas, a mentoria acompanha quem o mesmo critério escolhe agora
+ * (sem ninguém, fica quem foi proposto). Devolve o registro e, se o pupilo mudou, a frase que explica.
+ */
+export function confirmProtege(career: CareerState, t: Transition): { transition: Transition; note: string | null } {
+  if (t.role !== 'mentor' || !t.protegeId || protegeRacing(career, t.protegeId)) return { transition: t, note: null };
+  const replacement = proposedProtege(career, 'current');
+  if (!replacement) return { transition: t, note: null };
+  return {
+    transition: { ...t, protegeId: replacement.id, protegeName: replacement.name },
+    note: `Com a saída de ${t.protegeName ?? 'quem a mentoria acompanharia'}, você passa a acompanhar ${replacement.name}.`,
+  };
 }
 
 /** A marca que o personagem representaria (uma por personagem). */
@@ -149,7 +186,7 @@ export interface TransitionOffer {
 export function transitionOffers(career: CareerState): TransitionOffer[] {
   const window = transitionWindow(career);
   if (!window) return [];
-  const protege = proposedProtege(career, window);
+  const protege = proposedProtege(career, window === 'closing' ? 'next' : 'current');
   return TRANSITION_ROLES.map((role) => {
     const info = TRANSITION_ROLE_INFO[role];
     const min = TRANSITION.MIN_REPUTATION[role];
@@ -437,10 +474,13 @@ export function mentorLoyalty(career: CareerState, driverId: string): number {
   return t?.done && t.role === 'mentor' && t.protegeId === driverId ? TRANSITION.MENTOR_LOYALTY : 0;
 }
 
-/** Legado dos comentários na TV: prestígio extra no mercado de dirigentes. */
+/**
+ * Legado dos comentários na TV: prestígio extra no mercado de dirigentes no fechamento do ano de
+ * transição (as propostas de cargo daquele fim de ano). Depois, o nome volta a valer o que vale.
+ */
 export function transitionPrestige(career: CareerState): number {
   const t = career.transition;
-  return t?.done && t.role === 'commentator' ? TRANSITION.COMMENTATOR_PRESTIGE : 0;
+  return t?.done && t.role === 'commentator' && t.season === career.season ? TRANSITION.COMMENTATOR_PRESTIGE : 0;
 }
 
 /**

@@ -7,6 +7,10 @@
  * posição na lista EVENT_* daquela tabela, e as chances de um desfecho têm nome (as mesmas dos
  * cartões da Fase 5, em STORY_EVENTS.ODDS). A regra está em `src/engine/dynasty/transition.ts`.
  *
+ * Os ids dos eventos vão para o save (`transition.seen`, a lista do que já saiu no ano): não os
+ * renomeie nem os reaproveite. Um id que sumir do catálogo não impede um save de abrir (a integridade só
+ * confere repetição), mas o evento renomeado voltaria a sair para quem já o viu naquele ano.
+ *
  * Os textos não têm gênero para "você", para quem é acompanhado na mentoria nem para o parceiro:
  * o jogo não sabe o gênero de ninguém. Marcadores: `{pupilo}` (o nome de quem é acompanhado, só nos
  * eventos de mentoria) e `{marca}` (a marca representada, só nos de imagem de marca).
@@ -32,7 +36,7 @@ export const TRANSITION_ROLE_INFO: Readonly<Record<TransitionRole, TransitionRol
   commentator: {
     label: 'Comentários na TV',
     description: 'Comentar as corridas na transmissão, da cabine do autódromo, com o nome em evidência.',
-    legacy: 'O rosto conhecido da TV abre portas no mercado de dirigentes.',
+    legacy: 'No fim do ano, o rosto conhecido da TV abre portas no mercado de dirigentes.',
   },
   ambassador: {
     label: 'Imagem de uma marca',
