@@ -9,15 +9,26 @@
 import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { CATEGORY_IDS, PRACTICE_PROGRAMS, QUALIFYING_APPROACHES, type CategoryId, type PracticeProgram, type QualifyingApproach } from '@/domain/schemas';
+import {
+  CATEGORY_IDS,
+  PRACTICE_PROGRAMS,
+  QUALIFYING_APPROACHES,
+  type CategoryId,
+  type PracticeProgram,
+  type QualifyingApproach,
+  type TransitionRole,
+} from '@/domain/schemas';
 import { PRACTICE_PROGRAM_LABELS, QUALIFYING_APPROACH_LABELS } from '@/domain/labels';
 import { TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { amongTheFirst, counted } from '@/domain/text';
 import { getCategory } from '@/data/categories';
 import { MANAGEMENT, REGULATIONS } from '@/data/management';
 import { getTrack } from '@/data/tracks';
+import { TRANSITION_ROLE_INFO } from '@/data/transition';
 import {
+  activeTransition,
   executiveStanding,
+  favoritismNote,
   foundingCost,
   fullName,
   getNextEvent,
@@ -27,6 +38,8 @@ import {
   netWorth,
   ownedTeamValue,
   teamBudgetForecast,
+  transitionOffers,
+  transitionWindow,
   tutorialActive,
 } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
@@ -37,6 +50,7 @@ import {
   Button,
   Card,
   Check,
+  Chip,
   ChoiceCard,
   cx,
   EmptyState,
@@ -58,6 +72,7 @@ import { ScreenAction } from '../layout/ScreenAction';
 import { RaceBroadcast } from '../race/RaceBroadcast';
 import { TutorialCard } from './HelpScreen';
 import { ExportReminder } from '../components/SaveNotices';
+import { TransitionOfferChoices, TransitionPanel, transitionLaterText, transitionWaitsForClosing } from './executive/Transition';
 
 /** Campo de formulário: reto, com 44 px de altura para o toque. */
 const field = 'min-h-11 border border-ink-500 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
@@ -83,6 +98,8 @@ export function ExecutiveDashboardScreen() {
   const racing = career.family.children.filter((c) => c.stage === 'racing' && c.racing);
   const track = next ? getTrack(next.trackId) : null;
   const pending = career.pendingEvents.length > 0;
+  const transition = activeTransition(career);
+  const offerWindow = transitionWindow(career);
 
   return (
     <div className="space-y-3">
@@ -109,7 +126,9 @@ export function ExecutiveDashboardScreen() {
                 {career.executiveOffseason.teamPosition !== null
                   ? `A equipe terminou em ${career.executiveOffseason.teamPosition}º (meta: ${career.executiveOffseason.target}º). `
                   : ''}
-                Decida o rumo da próxima temporada: pilotos, patrocinadores, propostas de cargo e equipes à venda.
+                {offerWindow === 'closing'
+                  ? 'Decida o rumo da próxima temporada: o ano de transição, as propostas de cargo e as equipes à venda.'
+                  : 'Decida o rumo da próxima temporada: pilotos, patrocinadores, propostas de cargo e equipes à venda.'}
               </p>
               {/* No formato largo, o botão de avançar (na barra do pé da tela) já leva à tela Carreira. */}
               {!wide && (
@@ -193,12 +212,28 @@ export function ExecutiveDashboardScreen() {
                 ))}
               </ul>
             </Card>
+          ) : transition ? (
+            <TransitionPanel career={career} transition={transition} />
+          ) : offerWindow === 'midseason' ? (
+            <Card title="Ano de transição" tone="attention">
+              <p className="text-sm text-ink-300">
+                Você acabou de parar de correr. Antes da próxima etapa, dá para começar o ano de transição: mentoria de um jovem piloto, comentários na TV ou a
+                imagem de uma marca, com cachê por etapa e um legado. Se a próxima etapa passar sem um papel, ele fica para o fechamento.
+              </p>
+              {/* No formato largo, o botão de avançar (na barra do pé da tela) já leva à tela Carreira. */}
+              {!wide && (
+                <Button variant="primary" className="mt-4" onClick={() => navigate('/career')}>
+                  Escolher o papel
+                </Button>
+              )}
+            </Card>
           ) : (
             <Card title="Fora das pistas">
               <p className="text-sm text-ink-300">
                 Você não comanda nenhuma equipe nesta temporada. O campeonato segue, o seu patrimônio rende e a família continua. No fim do ano, a tela Carreira
                 traz propostas de cargo e equipes à venda.
               </p>
+              {transitionWaitsForClosing(career) && <p className="mt-2 text-xs text-ink-400">{transitionLaterText()}</p>}
             </Card>
           )}
 
@@ -306,7 +341,13 @@ export function ExecutiveWeekendScreen() {
   if (liveRace) return <RaceBroadcast spectator />;
 
   const planning = !seasonOver && next && track;
-  const who = m && team ? `Muro dos boxes · ${team.name}` : 'Acompanhando o campeonato';
+  const transition = activeTransition(career);
+  const who =
+    m && team
+      ? `Muro dos boxes · ${team.name}`
+      : transition
+        ? `Ano de transição · ${TRANSITION_ROLE_INFO[transition.role].label}`
+        : 'Acompanhando o campeonato';
 
   return (
     <div className="space-y-3">
@@ -483,11 +524,48 @@ export function ExecutiveCareerScreen() {
   const cash = career.finance.cash;
   const keepsTeam = m !== null && off !== null && !off.dismissed;
   const pending = career.pendingEvents.length > 0;
+  // Ano de transição: as propostas valem uma vez, logo depois de parar (no meio do ano) ou no primeiro fechamento.
+  const offerWindow = transitionWindow(career);
+  const offers = transitionOffers(career);
+  const [role, setRole] = useState<TransitionRole | null>(null);
+  const chosen = offers.find((o) => o.role === role && o.available) ?? null;
+  const canTransition = offers.some((o) => o.available);
+  const transition = activeTransition(career);
 
   if (!off) {
     return (
       <div className="space-y-3">
         <PageHeader eyebrow={`Temporada ${career.year}`} title="Carreira de dirigente" />
+        {offerWindow === 'midseason' && (
+          <Card title="Ano de transição" tone="attention">
+            <p className="text-sm text-ink-300">
+              O primeiro ano fora do carro pode ter um papel, com cachê a cada etapa e um legado. Começando agora, ele vale pelo resto desta temporada. A
+              proposta vale até a próxima etapa; depois, fica para o fechamento.
+            </p>
+            <div className="mt-4">
+              <TransitionOfferChoices offers={offers} selected={chosen?.role ?? null} onSelect={setRole} />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {!pending && (
+                <ScreenAction
+                  disabled={!chosen}
+                  title={chosen ? `Ano de transição: ${chosen.label}` : 'Escolha um papel para o ano de transição'}
+                  onClick={() => chosen && store.beginTransition(chosen.role)}
+                >
+                  Começar o ano de transição
+                </ScreenAction>
+              )}
+              <Button variant="ghost" onClick={() => navigate('/weekend')}>
+                Seguir sem papel
+              </Button>
+            </div>
+          </Card>
+        )}
+        {transitionWaitsForClosing(career) && (
+          <Card title="Ano de transição">
+            <p className="text-sm text-ink-300">{transitionLaterText()}</p>
+          </Card>
+        )}
         <Card bodyClassName="grid grid-cols-3 gap-3 !p-3">
           <Stat
             label="Prestígio como dirigente"
@@ -497,8 +575,8 @@ export function ExecutiveCareerScreen() {
           />
           <Stat
             label="Situação"
-            value={m ? (m.position === 'owner' ? 'Dono' : 'Chefe contratado') : 'Sem cargo'}
-            hint={team ? `${team.name} · ${category.shortName}` : 'Investidor'}
+            value={m ? (m.position === 'owner' ? 'Dono' : 'Chefe contratado') : transition ? 'Ano de transição' : 'Sem cargo'}
+            hint={team ? `${team.name} · ${category.shortName}` : transition ? TRANSITION_ROLE_INFO[transition.role].label : 'Investidor'}
           />
           <Stat label="Temporadas no comando" value={career.executiveLog.length} hint={m && m.strikes > 0 ? 'Advertido pela diretoria' : undefined} />
         </Card>
@@ -508,6 +586,10 @@ export function ExecutiveCareerScreen() {
               <li>
                 No fim de cada temporada, esta tela traz as decisões: dupla de pilotos, patrocinadores, propostas para chefiar outras equipes, equipes à venda e
                 a opção de fundar a sua.
+              </li>
+              <li>
+                Logo depois de pendurar o capacete, o primeiro ano fora do carro pode ter um papel (o <b className="text-ink-100">ano de transição</b>):
+                mentoria, comentários na TV ou a imagem de uma marca, cada um com cachê e um legado.
               </li>
               <li>
                 Como <b className="text-ink-100">chefe contratado</b>, você recebe salário e bônus por meta, mas é demitido depois de {MANAGEMENT.MAX_STRIKES}{' '}
@@ -547,6 +629,14 @@ export function ExecutiveCareerScreen() {
             >
               Seguir com a <span className="max-w-44 truncate">{team?.name}</span>
             </ScreenAction>
+          ) : offerWindow === 'closing' && canTransition ? (
+            <ScreenAction
+              disabled={!chosen}
+              title={chosen ? `Ano de transição: ${chosen.label}` : 'Escolha um papel no cartão Ano de transição'}
+              onClick={() => chosen && store.startExecutiveSeason({ kind: 'transition', role: chosen.role })}
+            >
+              Começar o ano de transição
+            </ScreenAction>
           ) : (
             <ScreenAction onClick={() => store.startExecutiveSeason({ kind: 'spectate' })}>Seguir sem equipe</ScreenAction>
           ))}
@@ -562,6 +652,25 @@ export function ExecutiveCareerScreen() {
 
       {tab === 'summary' && (
         <>
+          {offerWindow === 'closing' && (
+            <Card title="Ano de transição" tone="attention">
+              <p className="text-sm text-ink-300">
+                O primeiro ano fora do carro pode ter um papel, com cachê a cada etapa e um legado, pela próxima temporada inteira. Aceitar um cargo, comprar ou
+                fundar uma equipe agora pula o ano de transição.
+              </p>
+              <div className="mt-4">
+                <TransitionOfferChoices offers={offers} selected={chosen?.role ?? null} onSelect={setRole} />
+              </div>
+              {canTransition && (
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Button disabled={pending} onClick={() => store.startExecutiveSeason({ kind: 'spectate' })}>
+                    Seguir sem equipe
+                  </Button>
+                  <span className="min-w-0 flex-1 basis-60 text-xs text-ink-400">Um ano fora, sem papel: você só acompanha o campeonato.</span>
+                </div>
+              )}
+            </Card>
+          )}
           <div className="grid items-start gap-3 md:grid-cols-2">
             <Card title="Balanço do ano">
               {off.teamPosition !== null && (
@@ -587,7 +696,9 @@ export function ExecutiveCareerScreen() {
                 </ul>
               ) : (
                 <p className="text-sm text-ink-400">
-                  Você encerrou a carreira de piloto. Escolha o próximo passo: um cargo, uma equipe à venda ou fundar a sua.
+                  {offerWindow === 'closing'
+                    ? 'Você encerrou a carreira de piloto. Escolha o próximo passo: o ano de transição, um cargo, uma equipe à venda ou fundar a sua.'
+                    : 'Você encerrou a carreira de piloto. Escolha o próximo passo: um cargo, uma equipe à venda ou fundar a sua.'}
                 </p>
               )}
               {off.dismissed && <p className="mt-3 text-sm font-semibold text-gold-400">Você foi demitido e precisa de um novo rumo.</p>}
@@ -667,14 +778,19 @@ export function ExecutiveCareerScreen() {
           action={<span className="text-xs text-ink-400">{off.lineup.length} de 2 escolhidos</span>}
           bodyClassName="!p-3"
         >
-          <ul className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {/* Sem esticar a linha: o aviso de favorecimento deixa o cartão do filho mais alto que o vizinho. */}
+          <ul className="grid items-start gap-2 md:grid-cols-2 xl:grid-cols-3">
             {[...off.candidates]
               .sort((a, b) => b.rating - a.rating)
               .map((c) => {
                 const slot = off.lineup.indexOf(c.driverId);
                 const toggle = () => store.setLineup(slot >= 0 ? off.lineup.filter((id) => id !== c.driverId) : [...off.lineup, c.driverId].slice(-2));
+                const favoritism = favoritismNote(career, c);
                 return (
-                  <li key={c.driverId} className={cx('flex items-center gap-3 py-1 pl-3 pr-1', slot >= 0 ? 'bg-apex-500/10 shadow-ring-accent' : 'bg-ink-850')}>
+                  <li
+                    key={c.driverId}
+                    className={cx('flex flex-wrap items-center gap-x-3 py-1 pl-3 pr-1', slot >= 0 ? 'bg-apex-500/10 shadow-ring-accent' : 'bg-ink-850')}
+                  >
                     <span className="w-8 shrink-0 text-center font-display text-2xl font-bold leading-none" title="Nota">
                       <span className="sr-only">Nota </span>
                       {Math.floor(c.rating)}
@@ -701,6 +817,14 @@ export function ExecutiveCareerScreen() {
                     ) : (
                       <span className="flex min-h-11 shrink-0 items-center px-3 text-xs text-ink-400">Não aceita</span>
                     )}
+                    {favoritism && (
+                      <div className="flex basis-full flex-wrap items-start gap-x-2 gap-y-1 pb-2 pr-2 text-xs text-ink-300">
+                        <Chip tone="attention" size="sm">
+                          Favorecimento
+                        </Chip>
+                        <span className="min-w-0 flex-1 basis-48">{favoritism}</span>
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -708,7 +832,7 @@ export function ExecutiveCareerScreen() {
           <p className="mt-3 text-xs text-ink-400">
             O primeiro escolhido é o primeiro piloto. Pilotos melhores pedem salário maior ({categoryRef(TOP_CATEGORY_ID, 'em')}) ou pagam menos pela vaga (nas
             categorias de base), e só aceitam equipes à altura da ambição deles. Quem recusa quer uma equipe mais forte, ou chegou à idade-limite da categoria.
-            Um filho corre pela equipe da família sem salário e sem pagar pela vaga.
+            Um filho corre pela equipe da família sem salário e sem pagar pela vaga, mas a imprensa fala em favorecimento.
           </p>
         </Card>
       )}

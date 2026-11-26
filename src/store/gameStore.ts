@@ -21,6 +21,7 @@ import type {
   SupportLevel,
   TrainingFocus,
   TrainingIntensity,
+  TransitionRole,
   TyreCompound,
 } from '@/domain/schemas';
 import * as engine from '@/engine';
@@ -184,6 +185,8 @@ export interface GameStore {
   negotiateOffer(offerId: string, demand: NegotiationDemand): void;
   startNextSeason(offerId: string): void;
   retire(): void;
+  /** Logo depois de parar de correr no meio do ano: começa o ano de transição no papel escolhido (vale pelo resto da temporada). */
+  beginTransition(role: TransitionRole): void;
 
   /* Patrimônio pessoal */
   buyStock(stockId: string, shares: number): void;
@@ -721,6 +724,7 @@ export const useGameStore = create<GameStore>((set, get) => {
     retire() {
       apply(engine.retireFromDriving, { save: true });
     },
+    beginTransition: action(engine.beginTransition),
 
     buyStock: action(engine.buyStock),
     sellStock: action(engine.sellStock),

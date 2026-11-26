@@ -9,7 +9,7 @@
  */
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { CareerState } from '@/domain/schemas';
-import { getNextEvent, isSeasonComplete } from '@/engine';
+import { getNextEvent, isSeasonComplete, transitionWindow } from '@/engine';
 
 export interface Chrome {
   setRaceBar(open: boolean): void;
@@ -83,6 +83,8 @@ export function primaryAction(career: CareerState): PrimaryAction | null {
   if (career.weekend) return { label: 'Continuar fim de semana', to: '/weekend', tone: 'accent' };
   if (pending > 0)
     return { label: pending === 1 ? 'Resolver decisão' : `Resolver ${pending} decisões`, to: '/dashboard', tone: 'attention', anchor: 'decisoes' };
+  // Logo depois de parar no meio do ano, o ano de transição vale só até a próxima etapa: a escolha vem antes.
+  if (transitionWindow(career) === 'midseason') return { label: 'Escolher o ano de transição', to: '/career', tone: 'accent' };
   if (career.executiveOffseason) return { label: 'Planejar a temporada', to: '/career', tone: 'accent' };
   if (career.offseason) return { label: 'Ver propostas', to: '/career', tone: 'accent' };
   if (isSeasonComplete(career)) return { label: 'Fechar a temporada', to: '/career', tone: 'accent' };
