@@ -397,11 +397,18 @@ function paySiblings(finance: Finance, season: number, round: number, share: num
  * O estado em que o herdeiro assume. Pelas pistas, no meio da temporada (acidente), o ano dos filhos
  * fecha antes, para o herdeiro chegar com a temporada dele concluída: ali a temporada em curso é
  * abandonada. Nos negócios, o ano segue e a família fecha o ano normalmente, no fim da temporada.
+ *
+ * O filho que vai herdar a carreira nas pistas não sai delas nesse fechamento (`keepRacing` de
+ * `closeFamilyYear`): a sucessão já o mostrou como quem pode correr. Antes, o sorteio do filho
+ * rebelde (ou a falta de dinheiro no plano da temporada seguinte) podia tirá-lo das pistas ali, e a
+ * escolha terminava em erro. Os outros filhos fecham o ano como sempre.
  */
-function successionStage(career: CareerState, path: 'driver' | 'executive'): CareerState {
+function successionStage(career: CareerState, path: 'driver' | 'executive', heir: HeirOption): CareerState {
   const state: CareerState = { ...career, succession: null };
   const midSeason = !state.offseason && !state.executiveOffseason;
-  return midSeason && path === 'driver' ? { ...state, family: closeFamilyYear(state).family } : state;
+  if (!midSeason || path !== 'driver') return state;
+  const keepRacing = new Set(heir.childId && heir.canDrive ? [heir.childId] : []);
+  return { ...state, family: closeFamilyYear(state, {}, new Set(), keepRacing).family };
 }
 
 /**
@@ -562,7 +569,7 @@ export function heirSeatOptions(career: CareerState, heirId: string): HeirSeatOp
   const option = succession.heirs.find((h) => h.id === heirId);
   if (!option) throw new Error('Herdeiro não encontrado.');
   if (!option.canDrive) return [];
-  const state = successionStage(career, 'driver');
+  const state = successionStage(career, 'driver', option);
   const { driver, racing } = heirCareer(state, option);
   if (!driver || !racing) return [];
   const { cash } = inheritanceSplit(state, succession, option);
@@ -580,7 +587,7 @@ export function heirStartCategory(career: CareerState, heirId: string): Category
   const option = succession.heirs.find((h) => h.id === heirId);
   if (!option) throw new Error('Herdeiro não encontrado.');
   if (!option.canDrive) return null;
-  const { driver, racing } = heirCareer(successionStage(career, 'driver'), option);
+  const { driver, racing } = heirCareer(successionStage(career, 'driver', option), option);
   return driver && racing ? racing.categoryId : null;
 }
 
@@ -595,7 +602,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
 
   const former = getPlayer(career);
   const midSeason = !career.offseason && !career.executiveOffseason;
-  let state = successionStage(career, path);
+  let state = successionStage(career, path, option);
   const { child, driver: heirDriver, racing: heirRacing } = heirCareer(state, option);
   const generation = state.dynasty.generation + 1;
   const heirDriverId = heirDriver?.id ?? `dyn-${option.id}-g${generation}-s${state.season}`;

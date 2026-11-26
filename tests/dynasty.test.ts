@@ -730,6 +730,53 @@ describe('vaga do herdeiro piloto', () => {
     expectValid(heir);
   });
 
+  it('no meio do ano, o herdeiro piloto não sai das pistas no fechamento da sucessão; os irmãos fecham o ano como sempre', () => {
+    // O caso que terminava em erro: o ano dos filhos fecha antes da escolha, e o sorteio do filho
+    // rebelde e distante tirava das pistas justamente o herdeiro que a sucessão mostrava como quem
+    // pode correr ('Este herdeiro não tem carreira de piloto.').
+    let c = midSeason(62);
+    c = withChildren(c, [
+      { id: 'kid', firstName: 'Alex', age: 17, kartYears: 6, talent: 90, interest: 90, traits: ['rebel'], bond: 5 },
+      { id: 'sib', firstName: 'Bia', age: 16, kartYears: 6, talent: 85, interest: 90, traits: ['rebel'], bond: 5 },
+      { id: 'broke', firstName: 'Cris', age: 16, kartYears: 2, talent: 70, interest: 90, traits: ['calm'] },
+    ]);
+    c = engine.startChildCareer(engine.startChildCareer(engine.startChildCareer(c, 'kid', 'full'), 'sib', 'full'), 'broke', 'none');
+    // Sem apoio e já um ano correndo de favor: o plano da temporada seguinte a tiraria das pistas.
+    c = { ...c, family: { ...c.family, children: c.family.children.map((k) => (k.id === 'broke' ? { ...k, racing: { ...k.racing!, stalled: 1 } } : k)) } };
+    const opened = engine.beginSuccession(c, 'accident');
+    const heirs = opened.succession!.heirs;
+    expect(heirs.filter((h) => h.canDrive && h.kind === 'child').map((h) => h.id)).toEqual(['kid', 'sib', 'broke']);
+    const plain = engine.closeFamilyYear({ ...opened, succession: null }).family.children;
+    const stage = (children: Child[], id: string) => children.find((k) => k.id === id)!.stage;
+    // No fechamento comum, os três largam as pistas: dois pelo sorteio do rebelde, um sem dinheiro.
+    expect(['kid', 'sib', 'broke'].map((id) => stage(plain, id))).toEqual(['other', 'other', 'other']);
+
+    // Quem herda fica nas pistas; os outros filhos fecham o ano exatamente como no fechamento comum.
+    for (const id of ['kid', 'broke']) {
+      const kept = engine.closeFamilyYear({ ...opened, succession: null }, {}, new Set(), new Set([id])).family.children;
+      expect(stage(kept, id)).toBe('racing');
+      expect(kept.filter((k) => k.id !== id)).toEqual(plain.filter((k) => k.id !== id));
+    }
+    // Quem o plano tiraria das pistas fica onde estava, na mesma equipe.
+    const broke = opened.family.children.find((k) => k.id === 'broke')!.racing!;
+    const keptBroke = engine.closeFamilyYear({ ...opened, succession: null }, {}, new Set(), new Set(['broke'])).family.children.find((k) => k.id === 'broke')!;
+    expect(keptBroke.racing).toMatchObject({ categoryId: broke.categoryId, teamRank: broke.teamRank, teamName: broke.teamName });
+
+    for (const id of ['kid', 'broke']) {
+      const [current] = engine.heirSeatOptions(opened, id);
+      expect(current).toMatchObject({ id: 'current', available: true });
+      const category = engine.heirStartCategory(opened, id);
+      expect(category).not.toBeNull();
+      const heir = engine.resolveSuccession(opened, id, 'driver');
+      expect(engine.getPlayer(heir).id).toBe(`dyn-${id}`);
+      expect(heir.categoryId).toBe(category);
+      expect(heir.teams.find((t) => t.id === engine.getPlayer(heir).teamId)!.name).toBe(current!.teamName);
+      // Os outros dois viram parentes, com o caminho próprio de cada um.
+      expect(heir.dynasty.relatives.map((r) => r.firstName).sort()).toEqual(['Alex', 'Bia', 'Cris'].filter((n) => n !== engine.getPlayer(heir).firstName));
+      expectValid(heir);
+    }
+  });
+
   it('a equipe da frente: paga na hora com o patrimônio herdado, e o contrato do ano não cobra de novo', () => {
     const opened = heirIn('f4', 5);
     const top = engine.heirSeatOptions(opened, 'kid')[1]!;

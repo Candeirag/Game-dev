@@ -510,11 +510,17 @@ export interface FamilyYearResult {
  * aniversários, formação no kart, vontade de correr, relação com o jogador e
  * plano da temporada seguinte. `worldResults` traz o resultado real dos filhos
  * que correram no campeonato do jogador.
+ *
+ * `keepRacing` (ids de filhos) vale só para o fechamento da sucessão no meio do ano: quem vai herdar
+ * a carreira nas pistas não sai delas ali. Fica de fora do sorteio do filho rebelde e, se o plano da
+ * temporada seguinte o tiraria das pistas (sem dinheiro, passou da idade), fica onde está. Cada
+ * sorteio aqui é do próprio filho: os outros fecham o ano como sempre.
  */
 export function closeFamilyYear(
   career: CareerState,
   worldResults: Readonly<Record<string, { position: number; wins: number; driver: Driver; teamName: string }>> = {},
   keepInWorld: ReadonlySet<string> = new Set(),
+  keepRacing: ReadonlySet<string> = new Set(),
 ): FamilyYearResult {
   const notes: string[] = [];
   const kartBoost = hasPersonalProperty(career.finance, 'kartodromo') ? 1.25 : 1;
@@ -544,9 +550,11 @@ export function closeFamilyYear(
     child = { ...child, bond: Math.round(clamp(child.bond + traitSum(child, 'bond') + lifestyleBond + supportBond + homeBond + (65 - child.bond) * 0.08)) };
     // Um filho rebelde e distante pode largar o automobilismo.
     const inWorld = child.driver !== null && keepInWorld.has(child.driver.id);
+    const staysRacing = keepRacing.has(child.id);
     if (
       child.stage === 'racing' &&
       !inWorld &&
+      !staysRacing &&
       child.traits.includes('rebel') &&
       child.bond < 25 &&
       createRng(hashSeed(career.seed, career.season, 'rebel', child.id)).next() < 0.4
@@ -556,8 +564,10 @@ export function closeFamilyYear(
     }
     if (child.stage === 'racing' && child.driver && !keepInWorld.has(child.driver.id)) {
       const planned = planChildSeason(child, career);
-      child = planned.child;
-      if (planned.note) notes.push(planned.note);
+      if (!staysRacing || planned.child.stage === 'racing') {
+        child = planned.child;
+        if (planned.note) notes.push(planned.note);
+      }
     }
     // Quem deixou as pistas não guarda mais os dados de piloto (o histórico da carreira fica em `racing`).
     if (child.stage === 'other' && child.driver) child = { ...child, driver: null };
