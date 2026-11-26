@@ -1,9 +1,10 @@
 /**
  * Dinastia (Fase 6, etapa B): a sucessão com vários filhos (parentes com caminho próprio, nascimento
  * do herdeiro, linhagem com os traços do antecessor), quem passa o comando em vida, as opções de vaga
- * do herdeiro piloto, o patrocínio do parente nos negócios, o sobrenome e as regras de integridade
- * novas.
+ * do herdeiro piloto, o patrocínio do parente nos negócios, o sobrenome, o placar e a árvore da
+ * família, e as regras de integridade novas.
  */
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { FAMILY_TEAM, HEIR_START, RELATIVES } from '@/config/balance';
 import { CareerStateSchema, type CareerState, type Child, type ChildRacing, type TeamStake } from '@/domain/schemas';
@@ -307,6 +308,14 @@ describe('quem passa o comando em vida', () => {
     expect(heir.finance.stakes.find((s) => s.teamId === team.id)).toMatchObject({ share: 1 });
     expect(heir.inbox.find((m) => m.id === `s${heir.season}-heir-g2`)!.body).toContain(`continua sob o controle de ${heir.dynasty.elder!.name}`);
     expectValid(heir);
+
+    // A árvore mostra o fundador vivo, no controle da equipe.
+    const tree = engine.familyTree(heir);
+    expect(tree.generations[0]).toMatchObject({ alive: true, elderRole: 'owner', current: false });
+    expect(tree.generations[1]).toMatchObject({ alive: true, current: true });
+    expect(tree.elder).toEqual(heir.dynasty.elder);
+    // E o placar, a temporada como dono da equipe.
+    expect(engine.generationRecords(heir)[0]).toMatchObject({ driverSeasons: 1, executiveSeasons: 1, managedTeams: [team.name], endReason: 'handover' });
   }, 60_000);
 
   it('sem equipe própria: cuida das participações, se houver; senão, sai de cena. A morte não cria ninguém nesse papel', () => {
@@ -504,6 +513,114 @@ describe('vaga do herdeiro piloto', () => {
 });
 
 /* ------------------------------------------------------------------ */
+
+describe('placar e árvore da dinastia', () => {
+  it('o placar de cada geração bate com a linhagem e com as temporadas', () => {
+    const c = bigFamily();
+    const heir = engine.resolveSuccession(engine.beginSuccession(c, 'death'), 'kid-heir', 'driver');
+    const closed = playSeason(heir);
+    const records = engine.generationRecords(closed);
+    expect(records).toHaveLength(2);
+    const [first, second] = records as [engine.GenerationRecord, engine.GenerationRecord];
+    const entry = closed.dynasty.lineage[0]!;
+    expect(first).toMatchObject({
+      generation: 1,
+      current: false,
+      name: entry.name,
+      titles: entry.titles,
+      wins: entry.wins,
+      endReason: 'death',
+      driverSeasons: 1,
+      executiveSeasons: 0,
+      drivenTeams: [closed.history[0]!.playerTeamName],
+      managedTeams: [],
+      traits: c.birth!.traits,
+      partnerName: entry.partnerName,
+      toSeason: 1,
+      toYear: closed.history[0]!.year,
+    });
+    const off = closed.offseason!;
+    const team = closed.teams.find((t) => t.id === engine.getPlayer(closed).teamId)!;
+    expect(second).toMatchObject({
+      generation: 2,
+      current: true,
+      path: 'driver',
+      toSeason: null,
+      titles: off.playerPosition === 1 ? 1 : 0,
+      wins: off.wins,
+      podiums: off.podiums,
+      drivenTeams: [team.name],
+      driverSeasons: 1,
+      bestCategoryId: 'f4',
+      // O nascimento do herdeiro vale: a temporada pode ter revelado mais um traço.
+      traits: closed.birth!.traits,
+    });
+    expect(closed.birth!.driverId).toBe(closed.playerDriverId);
+    const totals = engine.dynastyTotals(closed);
+    expect(totals).toMatchObject({
+      generations: 2,
+      titles: first.titles + second.titles,
+      wins: first.wins + second.wins,
+      podiums: first.podiums + second.podiums,
+    });
+    expect(totals.teams).toBe(new Set([...first.drivenTeams, ...second.drivenTeams]).size);
+    expect(totals.bestCategoryId).toBe('f4');
+  });
+
+  it('as vitórias da temporada em curso contam; o título só com ela fechada', () => {
+    const heir = engine.resolveSuccession(engine.beginSuccession(bigFamily(), 'death'), 'kid-heir', 'driver');
+    let c = heir;
+    for (let i = 0; i < 3; i++) c = playRound(c);
+    const live = engine.generationRecords(c)[1]!;
+    const standing = engine.computeDriverStandings(c.rounds, c.drivers, c.adjustments).find((s) => s.driverId === c.playerDriverId)!;
+    expect(live.wins).toBe(standing.wins);
+    expect(live.titles).toBe(0);
+    expect(live.driverSeasons).toBe(1);
+  });
+
+  it('o placar e a árvore abrem em todos os saves gravados', () => {
+    const files = readdirSync('tests/fixtures')
+      .filter((name) => /^v\d+$/.test(name))
+      .flatMap((folder) => readdirSync(`tests/fixtures/${folder}`).map((name) => `tests/fixtures/${folder}/${name}`))
+      .filter((path) => path.endsWith('.json'));
+    expect(files.length).toBeGreaterThan(20);
+    for (const file of files) {
+      const career = importCareer(readFileSync(file, 'utf8'));
+      const records = engine.generationRecords(career);
+      expect(records, file).toHaveLength(career.dynasty.lineage.length);
+      expect(records.at(-1)!.current, file).toBe(true);
+      expect(engine.familyTree(career).generations, file).toHaveLength(career.dynasty.generation);
+      expect(engine.dynastyTotals(career).generations, file).toBe(career.dynasty.lineage.length);
+    }
+  });
+
+  it('a árvore: o personagem de cada geração, o parceiro, os filhos atuais e os parentes', () => {
+    const c = bigFamily();
+    const tree = engine.familyTree(c);
+    expect(tree.surname).toBe(c.dynasty.surname);
+    expect(tree.generations).toHaveLength(1);
+    const now = tree.generations[0]!;
+    expect(now).toMatchObject({ current: true, alive: true, elderRole: null, relatives: [] });
+    expect(now.partnerName).toBe(`${c.family.partner!.firstName} ${c.family.partner!.lastName}`);
+    expect(now.children.map((k) => k.id)).toEqual(['kid-heir', 'kid-eng', 'kid-biz', 'kid-raced']);
+    const heirNode = now.children[0]!;
+    expect(heirNode.revealed).toHaveLength(1);
+    expect(heirNode.hidden).toBe(2);
+
+    const heir = engine.resolveSuccession(engine.beginSuccession(c, 'death'), 'kid-heir', 'driver');
+    const after = engine.familyTree(heir);
+    expect(after.generations.map((g) => [g.generation, g.alive, g.current])).toEqual([
+      [1, false, false],
+      [2, true, true],
+    ]);
+    expect(after.generations[0]!.relatives.map((r) => [r.id, r.path, r.age])).toEqual(
+      heir.dynasty.relatives.map((r) => [r.id, r.path, heir.year - r.bornYear]),
+    );
+    expect(after.generations[0]!.partnerName).toBe(heir.dynasty.lineage[0]!.partnerName);
+    expect(after.generations[1]!.children).toEqual([]);
+    expect(after.generations[1]!.relatives).toEqual([]);
+  });
+});
 
 /* ------------------------------------------------------------------ */
 
