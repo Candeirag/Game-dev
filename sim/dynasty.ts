@@ -4,13 +4,15 @@
  *
  * A 1ª geração segue como piloto até SIM_DYNASTY.RETIRE_AGE, faz o ano de transição, vira dirigente
  * (compra uma equipe se o caixa permitir, aceita um cargo ou acompanha de fora) e passa o comando em
- * vida quando um filho com carreira de piloto chega a HEIR_RACING_AGE; sem filho piloto, aos
- * HANDOVER_AGE anos (o parente jovem herda). Morrer antes também abre a sucessão. O robô escolhe o
- * herdeiro e a vaga dele pelo que se vê (`botChooseHeir`: entre os filhos que já correm; o parente
- * jovem só sem filho piloto), e a 2ª geração corre até RETIRE_AGE ou, no máximo, GEN2_MAX_SEASONS
- * temporadas, aceitando a proposta da equipe da família quando ela está no degrau mais alto ao
- * alcance (`OfferPreference.familyTeam`). O bônus de talento do simulador vale para o piloto de cada
- * geração (`heirTakesOver`).
+ * vida quando um filho com carreira de piloto chega a HEIR_RACING_AGE, mas espera enquanto um filho
+ * mais novo, que já corre ou quer correr, parecer mais promissor (`botWantsHandover`,
+ * `botChildProspect`); aos HANDOVER_AGE anos a espera acaba e, sem filho piloto, o parente jovem
+ * herda. Morrer antes também abre a sucessão. O robô escolhe o herdeiro e a vaga dele pelo que se vê
+ * (`botChooseHeir`: entre os filhos que já correm, sobretudo pela avaliação dos treinadores e pelo
+ * teste no kart; o parente jovem só sem filho piloto), e a 2ª geração corre até RETIRE_AGE ou, no
+ * máximo, GEN2_MAX_SEASONS temporadas, aceitando a proposta da equipe da família quando ela está no
+ * degrau mais alto ao alcance (`OfferPreference.familyTeam`). O bônus de talento do simulador vale
+ * para o piloto de cada geração (`heirTakesOver`).
  *
  * Nada aqui sorteia: são as decisões do robô (`policy.ts`) sobre a API pública do motor. Em cada
  * fechamento e em cada sucessão, a carreira passa pela conferência de integridade e pelo formato do
@@ -51,9 +53,12 @@ import type { SeasonSample } from './run';
 export const SIM_DYNASTY = {
   /** Idade em que cada geração pendura o capacete (a do robô de sempre). */
   RETIRE_AGE: 36,
-  /** Passa o comando em vida quando um filho com carreira de piloto chega a esta idade. */
+  /**
+   * Passa o comando em vida quando um filho com carreira de piloto chega a esta idade, a não ser que
+   * um filho mais novo, que já corre ou quer correr, pareça mais promissor (aí espera por ele).
+   */
   HEIR_RACING_AGE: 18,
-  /** Sem filho piloto, passa o comando a esta idade (o parente jovem herda). */
+  /** A esta idade, a espera acaba: passa o comando ao filho piloto ou, sem filho piloto, ao parente jovem. */
   HANDOVER_AGE: 60,
   /** A 2ª geração corre no máximo estas temporadas na amostra (ou até RETIRE_AGE, o que vier antes). */
   GEN2_MAX_SEASONS: 22,

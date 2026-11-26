@@ -97,10 +97,13 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
   padrão (`--generations 2`): depois das temporadas pedidas, cada carreira continua com o mesmo
   robô. A 1ª geração corre até os 36 anos, faz o ano de transição, vira dirigente (compra uma
   equipe se o caixa permitir, aceita um cargo ou acompanha de fora) e passa o comando em vida quando
-  um filho com carreira de piloto chega aos 16 anos; sem filho piloto, aos 60, e o parente jovem
-  herda (morrer antes também abre a sucessão). O robô escolhe o herdeiro entre os filhos que já
-  correm, pelo que se vê (degrau, teste no kart, avaliação dos treinadores, talentos e defeitos
-  revelados, idade); o parente jovem só herda quando nenhum filho corre. A vaga: uma equipe da
+  um filho com carreira de piloto chega aos 18 anos, mas espera enquanto um filho mais novo, que já
+  corre ou quer correr, parecer mais promissor (pela avaliação dos treinadores, pelo teste no kart e
+  pelos talentos e defeitos revelados). Aos 60 anos, a espera acaba: passa o comando ao filho piloto
+  ou, sem filho piloto, ao parente jovem (morrer antes também abre a sucessão). O robô escolhe o
+  herdeiro entre os filhos que já correm, sobretudo pela avaliação dos treinadores e pelo teste no
+  kart (o degrau em que corre, os talentos e defeitos revelados e a idade também contam); o parente
+  jovem só herda quando nenhum filho corre. A vaga: uma equipe da
   frente, se o patrimônio cobrir; senão, a da família; senão, a equipe em que já corria. A 2ª
   geração corre até os 36 anos ou 22 temporadas e, no fim de cada uma, fica com a proposta da
   equipe da família quando ela está no degrau mais alto ao alcance (senão, a equipe mais forte,

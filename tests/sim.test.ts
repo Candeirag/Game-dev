@@ -1408,6 +1408,13 @@ describe('dinastia nos agregados (Fase 6)', () => {
     expect(section).toContain('Engenharia: 2 · Negócios: 0 · Direção esportiva: 2.');
     expect(section).toContain('Comentários na TV: 2 · Imagem de uma marca: 0 · Mentoria: 0 · sem ano de transição: 2.');
     expect(section).toContain('Equipe da família: a 2ª geração correu por ela em 1 temporada, em 1 de 3 carreiras.');
+    // O parágrafo final descreve a política do robô de agora: espera o filho mais promissor e escolhe pela avaliação.
+    const prose = section.replace(/\s+/g, ' ');
+    expect(prose).toContain(
+      `chega aos ${SIM_DYNASTY.HEIR_RACING_AGE} anos, mas espera enquanto um filho mais novo, que já corre ou quer correr, parecer mais promissor`,
+    );
+    expect(prose).toContain(`Aos ${SIM_DYNASTY.HANDOVER_AGE} anos, a espera acaba: passa o comando ao filho piloto ou, sem filho piloto, ao parente jovem.`);
+    expect(prose).toContain('sobretudo pela avaliação dos treinadores e pelo teste no kart');
     expect(section).not.toMatch(/NaN|undefined|Infinity/);
   });
 
