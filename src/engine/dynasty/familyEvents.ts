@@ -141,7 +141,7 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
   }
 
   const childText = FAMILY_EVENT_TEXTS.child[nextVariant('child')];
-  if (partner && childText && partner.relationship >= FAMILY.CHILD_RELATIONSHIP && roomForChild(career) && childRoll < FAMILY.CHILD_CHANCE) {
+  if (partner && childText && roomForChild(career) && childRoll < FAMILY.CHILD_CHANCE) {
     const baby = generateChild(career, hashSeed(career.seed, career.season, 'child'));
     const t = childText({ first: partner.firstName, firstChild: children.length === 0, baby: `${baby.firstName} ${baby.lastName}` });
     add('child', 'child', nextVariant('child'), t.title, t.body, [
@@ -164,7 +164,7 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
         {
           probability: BAD_INVESTMENT.LOSS_CHANCE,
           text: t.invest.lost,
-          effects: [{ type: 'cash', value: -loss, ledger: 'investment', label, capToCash: true }],
+          effects: [{ type: 'cash', value: -loss, ledger: 'investment', label }],
         },
         { probability: 1 - BAD_INVESTMENT.LOSS_CHANCE, text: t.invest.won, effects: [{ type: 'cash', value: gain, ledger: 'investment', label }] },
       ]),
@@ -292,14 +292,14 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
  * Quanto o negócio de um conhecido pede neste começo de ano (0: não há proposta). Só da segunda
  * geração em diante, com patrimônio líquido de pelo menos BAD_INVESTMENT.MIN_WEALTH custos de vida
  * de referência e com a chance BAD_INVESTMENT.CHANCE (sorteio 'bad-investment', que não acontece na
- * primeira geração). O negócio pede BAD_INVESTMENT.STAKE_SHARE do caixa e das aplicações.
+ * primeira geração). O negócio pede BAD_INVESTMENT.STAKE_SHARE do caixa: a aposta sai da conta, e a
+ * perda (uma parte dela) também, sem limite, para bater com o que o texto diz.
  */
 export function badInvestmentStake(career: CareerState): number {
   if (career.dynasty.generation < 2) return 0;
   if (netWorth(career.finance) < livingCostBase(career) * BAD_INVESTMENT.MIN_WEALTH) return 0;
   if (createRng(hashSeed(career.seed, career.season, 'bad-investment')).next() >= BAD_INVESTMENT.CHANCE) return 0;
-  const liquid = Math.max(0, career.finance.cash) + career.finance.fixedIncome + career.finance.equityFund;
-  return Math.round((liquid * BAD_INVESTMENT.STAKE_SHARE) / 100) * 100;
+  return Math.round((Math.max(0, career.finance.cash) * BAD_INVESTMENT.STAKE_SHARE) / 100) * 100;
 }
 
 /**

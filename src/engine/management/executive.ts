@@ -57,7 +57,7 @@ import { familyDriverIds, formerCharacterIds, fullName, getPlayer } from '../car
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
 import { familyTrainingFactors } from '../dynasty/heritage';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
-import { refreshElders } from '../dynasty/relatives';
+import { isWorkingAge, refreshElders } from '../dynasty/relatives';
 import { checkMortality } from '../dynasty/succession';
 import { favoritismExecutiveRound, favoritismExecutiveSeason } from '../dynasty/surname';
 import {
@@ -93,6 +93,7 @@ import {
   staffRating,
   syncManagedTeam,
   withFamilyStaff,
+  familyStaffRelativeId,
   isFamilyStaff,
 } from './team';
 import { money } from '../career/selectors';
@@ -560,19 +561,28 @@ export function buildExecutiveOffseason(career: CareerState, summary: SeasonSumm
   };
 }
 
-/** Equipe técnica na virada do ano: a experiência muda as notas, e contratos vencidos são renovados ou perdidos. */
+/**
+ * Equipe técnica na virada do ano: a experiência muda as notas, e contratos vencidos são renovados ou
+ * perdidos. Um parente (Fase 6) fica com a nota do ofício dele (o nível do parente, que não muda) e
+ * renova sempre, com o desconto de família, enquanto estiver entre os parentes e em idade de trabalho
+ * (RELATIVES.WORK_UNTIL_AGE) no ano que vem; senão, sai, e a função fica vaga.
+ */
 function staffYearEnd(career: CareerState, m: ManagedTeam, notes: string[]): StaffMember[] {
   const staff: StaffMember[] = [];
   for (const person of m.staff) {
+    if (isFamilyStaff(person)) {
+      const relative = career.dynasty.relatives.find((r) => r.id === familyStaffRelativeId(person));
+      const rating = relative?.skill ?? person.rating;
+      if (person.contractEnd > career.season) staff.push({ ...person, rating });
+      else if (relative && isWorkingAge(relative, career.year + 1)) {
+        const salary = Math.round((staffSalary(m.categoryId, rating, person.role) * RELATIVES.STAFF_SALARY_SHARE) / 100) * 100;
+        staff.push({ ...person, rating, contractEnd: career.season + RELATIVES.STAFF_CONTRACT_SEASONS, salary });
+      } else notes.push(`${person.name} ${relative ? 'se aposentou e deixou' : 'deixou'} a equipe. A função fica vaga até você contratar alguém.`);
+      continue;
+    }
     const rng = createRng(hashSeed(career.seed, career.season, 'staff-year', person.id));
     const rating = Math.round(clamp(person.rating + gaussian(rng) * 1.5, 30, 97));
     if (person.contractEnd <= career.season) {
-      // Um parente (Fase 6) renova sempre, com o desconto de família sobre o salário de mercado.
-      if (isFamilyStaff(person)) {
-        const salary = Math.round((staffSalary(m.categoryId, rating, person.role) * RELATIVES.STAFF_SALARY_SHARE) / 100) * 100;
-        staff.push({ ...person, rating, contractEnd: career.season + RELATIVES.STAFF_CONTRACT_SEASONS, salary });
-        continue;
-      }
       // Profissional muito acima do nível da equipe tende a aceitar proposta de fora.
       if (rating - m.reputation > 15 && rng.next() < 0.5) {
         notes.push(`${person.name} não renovou e deixou a equipe. A função fica vaga até você contratar alguém.`);

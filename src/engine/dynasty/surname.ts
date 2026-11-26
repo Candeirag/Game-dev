@@ -36,16 +36,27 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
  * famoso, de SURNAME.FAME_FLOOR (peso 0) a 100 (peso 1).
  */
 export function surnameWeight(career: Pick<CareerState, 'dynasty'>): number {
-  const earlier = career.dynasty.lineage.slice(0, -1);
-  if (earlier.length === 0) return 0;
-  const peak = Math.max(...earlier.map((e) => e.peakReputation));
-  return clamp((peak - SURNAME.FAME_FLOOR) / (100 - SURNAME.FAME_FLOOR), 0, 1);
+  const famous = famousPredecessor(career);
+  if (!famous) return 0;
+  return clamp((famous.peakReputation - SURNAME.FAME_FLOOR) / (100 - SURNAME.FAME_FLOOR), 0, 1);
 }
 
 /** Quem veio imediatamente antes na linhagem (null na primeira geração). */
 export function predecessor(career: Pick<CareerState, 'dynasty'>): LineageEntry | null {
   const { lineage } = career.dynasty;
   return lineage.length >= 2 ? (lineage[lineage.length - 2] ?? null) : null;
+}
+
+/**
+ * O antecessor mais famoso (a maior reputação máxima entre as gerações anteriores; no empate, o mais
+ * recente), null na primeira geração. É a pessoa que dá o peso do sobrenome, e por isso a mesma de
+ * que a imprensa e os cartões falam (`{antecessor}`): na terceira geração, pode ser o avô campeão, e
+ * não o pai que só foi dirigente.
+ */
+export function famousPredecessor(career: Pick<CareerState, 'dynasty'>): LineageEntry | null {
+  let best: LineageEntry | null = null;
+  for (const entry of career.dynasty.lineage.slice(0, -1)) if (!best || entry.peakReputation >= best.peakReputation) best = entry;
+  return best;
 }
 
 /**
@@ -125,8 +136,8 @@ export interface PressureRound {
 
 /**
  * Pressão de uma etapa no modo piloto. Sobrenome: terminar fora dos SURNAME.ROUND_TOP primeiros (ou
- * abandonar) custa peso × SURNAME.ROUND_MORALE de moral, e a imprensa compara com quem veio antes
- * (chance SURNAME.PRESS_CHANCE). Equipe da família: terminar atrás do companheiro custa
+ * abandonar) custa peso × SURNAME.ROUND_MORALE de moral, e a imprensa compara com o antecessor mais
+ * famoso (chance SURNAME.PRESS_CHANCE). Equipe da família: terminar atrás do companheiro custa
  * FAMILY_TEAM.ROUND_MORALE de moral, e a imprensa fala em favorecimento (chance FAMILY_TEAM.PRESS_CHANCE).
  * Sem peso e sem equipe da família, nada muda e nada é sorteado.
  */
@@ -141,7 +152,7 @@ export function pressureRound(career: CareerState, record: RoundRecord): Pressur
     out.messages.push({ id: `s${season}-r${round}-${id}`, date: record.date, category: 'media', title: text.title, body: text.body });
 
   const weight = surnameWeight(career);
-  const before = predecessor(career);
+  const before = famousPredecessor(career);
   if (weight > 0 && before) {
     const good = entry.status === 'finished' && entry.position <= SURNAME.ROUND_TOP;
     if (!good) out.morale -= weight * SURNAME.ROUND_MORALE;
@@ -241,7 +252,7 @@ export function pressureSeason(career: CareerState, standings: readonly DriverSt
   if (!me) return out;
   let extra = 0;
   const weight = surnameWeight(career);
-  const before = predecessor(career);
+  const before = famousPredecessor(career);
   if (weight > 0 && before) {
     const drop = Math.max(0, career.reputation - after);
     const field = career.drivers.filter((d) => d.teamId !== null && d.role !== 'reserve').length;

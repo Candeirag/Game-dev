@@ -81,14 +81,18 @@ function withNewPeople(ctx: StoryContext, b: StoryBindings, source: CardSource):
   return { ...b, persons };
 }
 
+/** O cartão faz nascer um filho em alguma escolha (efeito `child`, Fase 6). */
+export function makesChild(spec: StoryCardSpec): boolean {
+  return spec.choices.some((c) => c.outcomes.some((o) => o.effects.some((e) => e.e === 'child')));
+}
+
 /**
  * O bebê de um cartão que faz nascer um filho (efeito `child`, Fase 6), sorteado antes do texto para
  * o cartão poder citá-lo (`{bebe}`). Sorteio próprio por cartão e momento ('story-child'), que não
  * mexe nos sorteios do cartão.
  */
 function withNewBaby(ctx: StoryContext, b: StoryBindings, source: CardSource): StoryBindings {
-  const born = source.spec.choices.some((c) => c.outcomes.some((o) => o.effects.some((e) => e.e === 'child')));
-  if (!born || b.baby) return b;
+  if (!makesChild(source.spec) || b.baby) return b;
   const seed = hashSeed(ctx.career.seed, 'story-child', source.key, ctx.career.season, ctx.round);
   return { ...b, baby: generateChild(ctx.career, seed) };
 }

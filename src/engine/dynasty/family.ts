@@ -19,6 +19,7 @@ import type {
   DriverAttributes,
   Family,
   Partner,
+  PendingEvent,
   SupportLevel,
 } from '@/domain/schemas';
 import { CHILD_TRAITS, PARTNER_BACKGROUNDS } from '@/domain/schemas';
@@ -156,24 +157,30 @@ export function generateChild(career: CareerState, seed: number): Child {
 }
 
 /**
- * Há espaço para mais um filho agora: com parceiro, dentro das idades-limite do casal
- * (FAMILY.CHILD_MAX_PARENT_AGE e PARTNER_MAX_CHILD_AGE), abaixo de FAMILY.MAX_CHILDREN, sem filho
- * nascido nesta temporada (todos com pelo menos um ano) e sem outro nascimento já à espera de
- * resposta na fila de eventos. Vale para o evento de família do começo do ano e para os cartões de
- * vida pessoal (Fase 6), que nunca disputam o mesmo bebê.
+ * Há espaço para mais um filho agora: com parceiro e o casal bem (relação de pelo menos
+ * FAMILY.CHILD_RELATIONSHIP), dentro das idades-limite do casal (FAMILY.CHILD_MAX_PARENT_AGE e
+ * PARTNER_MAX_CHILD_AGE), abaixo de FAMILY.MAX_CHILDREN, sem filho nascido nesta temporada (todos
+ * com pelo menos um ano) e sem outro nascimento já à espera de resposta na fila de eventos. Vale para
+ * o evento de família do começo do ano e para os cartões de vida pessoal (Fase 6), que nunca disputam
+ * o mesmo bebê; numa mesma leva de cartões, sai no máximo um que faz nascer filho (`story/select.ts`).
  */
 export function roomForChild(career: CareerState): boolean {
   const { partner, children } = career.family;
   if (!partner) return false;
   const youngest = children.reduce((min, c) => Math.min(min, c.age), 99);
-  const babyWaiting = career.pendingEvents.some((e) => e.choices.some((c) => c.outcomes.some((o) => o.effects.some((x) => x.type === 'child'))));
   return (
+    partner.relationship >= FAMILY.CHILD_RELATIONSHIP &&
     getPlayer(career).age <= FAMILY.CHILD_MAX_PARENT_AGE &&
     partner.age <= FAMILY.PARTNER_MAX_CHILD_AGE &&
     children.length < FAMILY.MAX_CHILDREN &&
     youngest >= 1 &&
-    !babyWaiting
+    !career.pendingEvents.some(bringsBaby)
   );
+}
+
+/** O evento faz nascer um filho em alguma escolha (o bebê já sorteado, à espera da resposta). */
+export function bringsBaby(event: Pick<PendingEvent, 'choices'>): boolean {
+  return event.choices.some((c) => c.outcomes.some((o) => o.effects.some((x) => x.type === 'child')));
 }
 
 const traitProduct = (child: Child, key: 'development') => child.traits.reduce((p, t) => p * getTrait(t)[key], 1);

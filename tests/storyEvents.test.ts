@@ -601,6 +601,11 @@ describe('dados dos cartões da dinastia (Fase 6)', () => {
         e.choices[0]?.outcomes.every((o) => o.effects.some((x) => x.e === 'child')),
         e.id,
       ).toBe(true);
+      // E sempre dá para deixar para depois: alguma escolha não faz nascer ninguém.
+      expect(
+        e.choices.some((c) => c.outcomes.every((o) => !o.effects.some((x) => x.e === 'child'))),
+        e.id,
+      ).toBe(true);
     }
     // Nenhuma cadeia faz nascer filho: o bebê é sempre de um cartão avulso.
     expect(STORY_CHAINS.flatMap((c) => c.steps).filter(bornHere)).toEqual([]);
@@ -627,5 +632,19 @@ describe('dados dos cartões da dinastia (Fase 6)', () => {
       ).toBe(true);
       expect(variantsOf(id), id).toBeGreaterThan(0);
     }
+  });
+
+  it('da segunda geração em diante, nenhum cartão fala de pai e mãe anônimos (um deles é o antecessor, que pode ter morrido)', () => {
+    const parents = /\b(sua mãe|seu pai|seus pais|os pais aceitam)\b/i;
+    const firstOnly = (spec: StoryCardSpec) => spec.when.some((c) => c.c === 'generation' && c.max === 1);
+    const problems: string[] = [];
+    for (const card of cards) {
+      if (firstOnly(card.spec)) continue;
+      card.spec.variants.forEach((v, i) => {
+        const texts = [v.title, v.body, ...Object.values(v.choices).flatMap((c) => [c.label, ...c.outcomes])];
+        for (const text of texts) if (parents.test(text)) problems.push(`${card.where}, variante ${i}: "${text}"`);
+      });
+    }
+    expect(problems).toEqual([]);
   });
 });

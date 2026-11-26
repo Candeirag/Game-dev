@@ -912,7 +912,8 @@ export const BAD_INVESTMENT = {
   CHANCE: 0.3,
   // Patrimônio mínimo, em custos de vida anuais de referência.
   MIN_WEALTH: 20,
-  // Quanto do caixa e das aplicações o negócio pede.
+  // Quanto do caixa o negócio pede (as aplicações contam para o patrimônio mínimo, mas a aposta sai
+  // da conta).
   STAKE_SHARE: 0.15,
   // Desfechos: na maioria das vezes perde boa parte; às vezes ganha um pouco.
   LOSS_CHANCE: 0.65,
@@ -934,7 +935,8 @@ export const RELATIVES = {
   WORK_FROM_AGE: 22,
   WORK_UNTIL_AGE: 68,
   // Contratado pela equipe da família, aceita ganhar esta fração do salário de mercado (também na
-  // renovação), com contrato desta duração em temporadas, e não sai na renovação.
+  // renovação), com contrato desta duração em temporadas, e renova sempre enquanto estiver em idade
+  // de trabalho.
   STAFF_SALARY_SHARE: 0.7,
   STAFF_CONTRACT_SEASONS: 2,
   // Um parente nos boxes ou na direção de outra equipe abre portas: interesse extra das equipes por

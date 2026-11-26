@@ -45,7 +45,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'Prova de matemática na sexta-feira',
-        body: 'A professora marcou a prova bimestral para o mesmo dia do treino livre. Sua mãe já avisou que, se a nota vier vermelha, o kart fica na garagem.',
+        body: 'A professora marcou a prova bimestral para o mesmo dia do treino livre. Em casa, já avisaram que, se a nota vier vermelha, o kart fica na garagem.',
         choices: {
           estudar: {
             label: 'Fazer a prova e chegar ao treino com atraso',
@@ -338,7 +338,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'Vestibular no sábado da etapa',
-        body: 'A primeira fase do vestibular caiu no sábado da próxima etapa, bem na hora do treino livre. Seus pais pagaram a inscrição; a equipe conta com você na pista.',
+        body: 'A primeira fase do vestibular caiu no sábado da próxima etapa, bem na hora do treino livre. A família pagou a inscrição; a equipe conta com você na pista.',
         choices: {
           'fazer-prova': {
             label: 'Fazer a prova e chegar só para a classificação',
@@ -355,7 +355,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Cursinho ou pista?',
-        body: 'Seus pais querem matricular você no cursinho pré-vestibular, com aulas aos sábados. Isso significa menos dias de treino justamente na fase mais importante do campeonato.',
+        body: 'Em casa, querem matricular você no cursinho pré-vestibular, com aulas aos sábados. Isso significa menos dias de treino justamente na fase mais importante do campeonato.',
         choices: {
           'fazer-prova': {
             label: 'Topar o cursinho e encaixar os treinos no domingo',
@@ -366,7 +366,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
           },
           'adiar-estudos': {
             label: 'Pedir um ano só para a pista antes do cursinho',
-            outcomes: ['Os pais aceitam, a contragosto. Com mais horas de treino, até o chefe de equipe nota a diferença.'],
+            outcomes: ['A família aceita, a contragosto. Com mais horas de treino, até o chefe de equipe nota a diferença.'],
           },
         },
       },
@@ -1503,7 +1503,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
         choices: {
           'ligar-para-casa': {
             label: 'Desabafar com a família por mensagem de voz',
-            outcomes: ['Sua mãe manda um áudio de seis minutos com conselho, reza e receita de bolo. Funciona melhor que qualquer curso.'],
+            outcomes: ['No grupo da família, chega um áudio de seis minutos com conselho, reza e receita de bolo. Funciona melhor que qualquer curso.'],
           },
           'visitar-o-brasil': {
             label: 'Tirar uns dias no Brasil para recarregar',
@@ -1609,7 +1609,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
           },
           'visitar-o-brasil': {
             label: 'Fazer surpresa e aparecer na festa',
-            outcomes: ['A porta abre e a festa para. Sua mãe derruba o copo, seu pai finge que não chorou. Nenhum dinheiro foi mais bem gasto.'],
+            outcomes: ['A porta abre e a festa para. Alguém derruba o copo, alguém finge que não chorou. Nenhum dinheiro foi mais bem gasto.'],
           },
           'mergulhar-no-trabalho': {
             label: 'Trabalhar o dia todo para não pensar na data',
@@ -1950,7 +1950,8 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     ],
   },
   {
-    id: 'bebe-a-caminho',
+    // A vontade de ter um filho aparece por um empurrão de fora; dá para deixar para depois.
+    id: 'a-familia-pode-crescer',
     category: 'personal',
     frequency: 'common',
     when: [
@@ -1959,68 +1960,67 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     ],
     choices: [
       {
-        id: 'contar-para-a-equipe',
+        id: 'tentar-agora',
         outcomes: [
           {
             odds: 'sure',
-            effects: [{ e: 'child' }, { e: 'stat', stat: 'teamTrust', size: 1 }, { e: 'stat', stat: 'morale', size: 1 }],
+            effects: [{ e: 'child' }, { e: 'stat', stat: 'morale', size: 2 }, { e: 'stat', stat: 'form', size: -1 }],
           },
         ],
       },
       {
-        id: 'guardar-a-noticia',
+        id: 'deixar-para-depois',
         outcomes: [
           {
             odds: 'sure',
-            effects: [{ e: 'child' }, { e: 'relationship', size: 2 }, { e: 'stat', stat: 'form', size: -1 }],
+            effects: [
+              { e: 'stat', stat: 'form', size: 1 },
+              { e: 'relationship', size: -1 },
+            ],
           },
         ],
       },
     ],
     variants: [
       {
-        title: 'Notícia boa no meio da semana',
-        body: 'O telefone toca entre dois treinos no simulador: a família vai crescer. Do outro lado da linha, uma voz que mistura riso e choro.',
+        title: 'Um bebê no colo, no meio do paddock',
+        body: 'Um mecânico da equipe aparece no paddock com o filho recém-nascido, e alguém põe o bebê no seu colo para a foto. À noite, em casa, a conversa volta àquela foto mais de uma vez.',
         choices: {
-          'contar-para-a-equipe': {
-            label: 'Contar para todo mundo na equipe',
-            outcomes: ['A equipe faz festa no box, e meses depois {bebe} ganha um macacão minúsculo com o número do seu carro.'],
+          'tentar-agora': {
+            label: 'Dizer que está na hora de a família de vocês crescer também',
+            outcomes: ['Pouco tempo depois, {bebe} chega ao mundo, e o mecânico é o primeiro a mandar um macacão minúsculo com o número do seu carro.'],
           },
-          'guardar-a-noticia': {
-            label: 'Guardar a notícia só para a família por enquanto',
-            outcomes: [
-              'O segredo dura até o nascimento de {bebe}. Em casa, os meses de espera aproximam ainda mais a família, e os treinos ficam em segundo plano.',
-            ],
+          'deixar-para-depois': {
+            label: 'Devolver o bebê, rir e mudar de assunto',
+            outcomes: ['A foto vai para a porta da geladeira, e o assunto fica para outra hora. Os treinos agradecem; o jantar fica um pouco mais quieto.'],
           },
         },
       },
       {
-        title: 'Um exame que muda o ano',
-        body: 'O resultado do exame chega por mensagem, com três pontos de exclamação: vem um bebê aí. A temporada inteira ganha outro sentido.',
+        title: 'A pergunta da médica',
+        body: 'Na consulta de rotina, a médica pergunta sem rodeio se vocês pensam em ter um filho: não é urgente, mas o calendário da vida não espera o do campeonato.',
         choices: {
-          'contar-para-a-equipe': {
-            label: 'Espalhar a novidade no grupo da equipe',
-            outcomes: ['O grupo da equipe explode em mensagens. No dia em que {bebe} nasce, os mecânicos mandam um vídeo cantando parabéns.'],
+          'tentar-agora': {
+            label: 'Sair do consultório com a decisão tomada',
+            outcomes: ['A visita seguinte ao consultório já é para conhecer {bebe}, que chega com a agenda da temporada pregada na porta do quarto.'],
           },
-          'guardar-a-noticia': {
-            label: 'Esperar o momento certo para contar',
-            outcomes: [
-              'Só a família sabe até o fim. {bebe} nasce numa semana sem corrida, como quem escolhe a data, e o ritmo dos treinos sente os meses de espera.',
-            ],
+          'deixar-para-depois': {
+            label: 'Responder que, por enquanto, a família está do tamanho certo',
+            outcomes: ['A médica anota sem comentar. Na volta para casa, o rádio do carro fala mais alto que vocês dois.'],
           },
         },
       },
       {
-        title: 'Vem aí mais alguém',
-        body: 'A família recebe a notícia num jantar comum, entre o arroz e a salada: vem aí um bebê. Ninguém termina o prato.',
+        title: 'A festa do afilhado',
+        body: 'Na festa de aniversário do afilhado, entre bolo e balões, alguém da família pergunta, alto demais, quando vem um bebê de vocês. A mesa inteira espera a resposta.',
         choices: {
-          'contar-para-a-equipe': {
-            label: 'Brindar na hora e avisar a equipe no dia seguinte',
-            outcomes: ['O brinde vira tradição de jantar até a chegada de {bebe}, e a equipe manda flores para a maternidade.'],
+          'tentar-agora': {
+            label: 'Responder que talvez seja logo e trocar um olhar cúmplice',
+            outcomes: ['A resposta vira promessa cumprida: na festa seguinte do afilhado, {bebe} está no colo, de chapéu de aniversário torto.'],
           },
-          'guardar-a-noticia': {
-            label: 'Combinar de contar só depois de alguns meses',
-            outcomes: ['O segredo pesa e alegra ao mesmo tempo. Quando {bebe} chega, a notícia corre mais rápido que qualquer volta lançada.'],
+          'deixar-para-depois': {
+            label: 'Desconversar e puxar o assunto da próxima corrida',
+            outcomes: ['A pergunta morre no meio do parabéns, mas volta com vocês no carro, no caminho de casa.'],
           },
         },
       },

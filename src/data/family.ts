@@ -132,9 +132,9 @@ export const FAMILY = {
   WEDDING_COST: 0.8,
   /**
    * Filhos: chance anual de o assunto surgir, idade-limite do personagem e do parceiro, relação
-   * mínima do casal para o assunto surgir no começo do ano e máximo de filhos. Os dois números do
-   * meio estavam soltos no evento de família; a Fase 6 (filhos que nascem por cartões de vida
-   * pessoal) os trouxe para cá, sem mudar os valores.
+   * mínima do casal para o assunto surgir (no começo do ano e nos cartões de vida pessoal) e máximo
+   * de filhos. Os dois números do meio estavam soltos no evento de família; a Fase 6 (filhos que
+   * nascem por cartões de vida pessoal) os trouxe para cá, sem mudar os valores.
    */
   CHILD_CHANCE: 0.4,
   CHILD_MAX_PARENT_AGE: 48,

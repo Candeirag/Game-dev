@@ -9,6 +9,8 @@
  *    à corrida). Entram no sorteio os eventos avulsos com variante nova, os passos iniciais das
  *    cadeias que ainda não aconteceram e a proposta de patrocínio.
  *
+ * Numa mesma leva sai no máximo um cartão que faz nascer filho (Fase 6).
+ *
  * Nenhuma variante sai duas vezes para o mesmo personagem: ela entra na memória (`seen`) quando o
  * cartão é criado. Se o catálogo não tiver mais nada que sirva, a etapa fica com menos cartões
  * (o simulador conta essas etapas na seção 10).
@@ -29,7 +31,8 @@ import { createRng, hashSeed, type Rng } from '../rng';
 import { resolveNeeds } from './bindings';
 import { allHold } from './conditions';
 import { buildContext, type StoryContext } from './context';
-import { type CardSource, chainCardKey, instantiateCard, pickVariant, unseenVariants } from './instantiate';
+import { bringsBaby } from '../dynasty/family';
+import { type CardSource, chainCardKey, instantiateCard, makesChild, pickVariant, unseenVariants } from './instantiate';
 import { activeChains, findChain, isDue, lastAppearance, markSeen } from './memory';
 import { canOfferSponsor, sponsorOfferCard } from './sponsorOffer';
 
@@ -77,11 +80,18 @@ function busyChains(ctx: StoryContext): number {
   return busy;
 }
 
+/**
+ * Marca de `taken` para "esta leva já tem um bebê": `roomForChild` só olha a fila de eventos, que
+ * ainda não tem os cartões da leva, e dois cartões de filho na mesma etapa fariam nascer dois bebês
+ * com o mesmo id (o segundo não existiria).
+ */
+const babyTaken = 'story-child';
+
 function eventCandidates(ctx: StoryContext, taken: ReadonlySet<string>): Candidate[] {
   const out: Candidate[] = [];
   const { story, career } = ctx;
   for (const spec of STORY_EVENT_CATALOG) {
-    if (taken.has(spec.id)) continue;
+    if (taken.has(spec.id) || (taken.has(babyTaken) && makesChild(spec))) continue;
     const last = lastAppearance(story, spec.id, career.season);
     if (last !== null && (spec.oncePerSeason || ctx.round - last < STORY_EVENTS.EVENT_SPACING)) continue;
     const build = cardCandidate(ctx, { key: spec.id, spec });
@@ -152,6 +162,7 @@ function generate(career: CareerState, record: RoundRecord | null, round: number
     cards.push(built.event);
     keys.push(built.key);
     taken.add(takenKey);
+    if (bringsBaby(built.event)) taken.add(babyTaken);
     return true;
   };
 

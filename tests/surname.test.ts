@@ -12,6 +12,7 @@ import { categoryRef } from '@/domain/categoryNames';
 import { FAMILY } from '@/data/family';
 import { FAMILY_EVENT_TEXTS } from '@/data/familyTexts';
 import { importCareer } from '@/persistence/saveService';
+import { applyEffects } from '@/engine/events/effects';
 import { markSeen } from '@/engine/story/memory';
 import * as engine from './engineApi';
 import { newCareer, playExecutiveRound, playRound, playSeason, resolvePending } from './helpers';
@@ -41,6 +42,27 @@ function asHeir(c: CareerState, peak: number, patch: Partial<LineageEntry> = {})
     ...patch,
   };
   return { ...c, dynasty: { ...c.dynasty, generation: 2, lineage: [before, { ...current, generation: 2 }] } };
+}
+
+const MIDDLE = 'Pai Dirigente';
+
+/**
+ * A mesma carreira na terceira geração: o avô (PREDECESSOR) com a reputação máxima `peak` e, no
+ * meio, um pai com reputação máxima `middlePeak` (o antecessor imediato) que nunca correu.
+ */
+function asThird(c: CareerState, peak: number, middlePeak: number): CareerState {
+  const heir = asHeir(c, peak);
+  const [first, current] = heir.dynasty.lineage;
+  const middle: LineageEntry = {
+    ...first!,
+    generation: 2,
+    driverId: 'pai-dirigente',
+    name: MIDDLE,
+    bornYear: c.year - 30,
+    peakReputation: middlePeak,
+    path: 'executive',
+  };
+  return { ...heir, dynasty: { ...heir.dynasty, generation: 3, lineage: [first!, middle, { ...current!, generation: 3 }] } };
 }
 
 function relative(c: CareerState, id: string, path: Relative['path'], age: number, skill = 70): Relative {
@@ -145,6 +167,17 @@ describe('o peso do sobrenome', () => {
     expect(engine.surnameWeight(third)).toBeCloseTo((80 - SURNAME.FAME_FLOOR) / (100 - SURNAME.FAME_FLOOR), 10);
   });
 
+  it('o antecessor de quem se fala é o mesmo que dá o peso: o mais famoso, e no empate o mais recente', () => {
+    const c = newCareer(5);
+    expect(engine.famousPredecessor(c)).toBeNull();
+    const third = asThird(c, 80, 40);
+    expect(engine.predecessor(third)?.name).toBe(MIDDLE);
+    expect(engine.famousPredecessor(third)?.name).toBe(PREDECESSOR);
+    expect(engine.surnameWeight(third)).toBeCloseTo((80 - SURNAME.FAME_FLOOR) / (100 - SURNAME.FAME_FLOOR), 10);
+    expect(engine.famousPredecessor(asThird(c, 80, 80))?.name).toBe(MIDDLE);
+    expect(engine.famousPredecessor(asThird(c, 50, 90))?.name).toBe(MIDDLE);
+  });
+
   it('contatos: o sobrenome e os parentes nos boxes somam interesse das equipes', () => {
     const c = played();
     const category = engine.getCategory(c.categoryId);
@@ -227,6 +260,25 @@ describe('pressão do sobrenome', () => {
     expect(count / 800).toBeGreaterThan(SURNAME.PRESS_CHANCE - 0.05);
     expect(count / 800).toBeLessThan(SURNAME.PRESS_CHANCE + 0.05);
     expect(engine.pressureRound(heir, atRound(record, 7))).toEqual(engine.pressureRound(heir, atRound(record, 7)));
+  });
+
+  it('na terceira geração, a imprensa, o fechamento e os cartões falam do avô famoso, não do pai que só dirigiu', () => {
+    const c = played();
+    const id = engine.getPlayer(c).id;
+    const third = asThird(c, 100, 20);
+    const record = withResult(c.rounds[0]!, id, 15);
+    const messages = Array.from({ length: 40 }, (_, i) => engine.pressureRound(third, atRound(record, i + 1)).messages).flat();
+    expect(messages.length).toBeGreaterThan(0);
+    for (const m of messages) {
+      expect(m.body).toContain(PREDECESSOR);
+      expect(m.body).not.toContain(MIDDLE);
+    }
+    const standings = engine.computeDriverStandings(c.rounds, c.drivers, c.adjustments);
+    const season = engine.pressureSeason({ ...third, reputation: 40 }, standings, 30);
+    expect(season.notes[0]).toContain(PREDECESSOR);
+    const card = engine.storyCardFor(third, null, 1, 'sobrenome-abre-portas', 0)!;
+    expect(card.body).toContain(PREDECESSOR);
+    expect(card.body).not.toContain(MIDDLE);
   });
 
   it('na etapa de verdade, a moral do herdeiro cai pelo peso (a mesma corrida, só a linhagem muda)', () => {
@@ -500,6 +552,51 @@ describe('parentes contratáveis', () => {
     const regular = engine.buildStaffMarket(c.seed, next.season, m.categoryId, closed.management!.reputation);
     expect(market.filter((s) => !engine.isFamilyStaff(s))).toEqual(regular);
   });
+
+  it('na virada do ano, o parente fica com a nota do ofício; velho demais ou fora da família, não renova', () => {
+    let c = executive();
+    while (c.nextRoundIndex < c.calendar.length) c = playExecutiveRound(c);
+    c = resolvePending(c);
+    const m = c.management!;
+    const member = (id: string, role: 'chiefEngineer' | 'technicalDirector' | 'sportingDirector', contractEnd: number) => ({
+      id: `staff-family-${id}-${role}`,
+      name: `Caio ${id}`,
+      role,
+      rating: 50,
+      salary: 1000,
+      contractEnd,
+    });
+    // Faz WORK_UNTIL_AGE no ano que vem (renova), passa da idade no ano que vem (sai), não está mais
+    // entre os parentes (sai) e ainda tem contrato (fica, com a nota do ofício).
+    const nextYear = c.year + 1;
+    const lastYear = { ...relative(c, 'ultimo-ano', 'engineer', 0, 72), bornYear: nextYear - RELATIVES.WORK_UNTIL_AGE };
+    const retiring = { ...relative(c, 'aposenta', 'sportingDirector', 0, 64), bornYear: nextYear - RELATIVES.WORK_UNTIL_AGE - 1 };
+    const staying = { ...relative(c, 'contrato', 'engineer', 0, 81), bornYear: nextYear - RELATIVES.WORK_UNTIL_AGE - 3 };
+    const staff = [
+      ...m.staff.filter((s) => s.role !== 'chiefEngineer' && s.role !== 'sportingDirector' && s.role !== 'technicalDirector'),
+      member('ultimo-ano', 'chiefEngineer', c.season),
+      member('aposenta', 'sportingDirector', c.season),
+      member('sumiu', 'technicalDirector', c.season),
+    ];
+    const open = withRelatives({ ...c, executiveOffseason: null, succession: null, management: { ...m, staff } }, [lastYear, retiring, staying]);
+    const closed = engine.closeExecutiveSeason(open);
+    const after = closed.management!.staff;
+    const renewed = after.find((s) => s.id === 'staff-family-ultimo-ano-chiefEngineer')!;
+    expect(renewed).toMatchObject({ rating: 72, contractEnd: c.season + RELATIVES.STAFF_CONTRACT_SEASONS });
+    expect(renewed.salary).toBe(Math.round((engine.staffSalary(m.categoryId, 72, 'chiefEngineer') * RELATIVES.STAFF_SALARY_SHARE) / 100) * 100);
+    expect(after.some((s) => s.id === 'staff-family-aposenta-sportingDirector')).toBe(false);
+    expect(after.some((s) => s.id === 'staff-family-sumiu-technicalDirector')).toBe(false);
+    const notes = closed.executiveOffseason!.notes;
+    expect(notes).toContain('Caio aposenta se aposentou e deixou a equipe. A função fica vaga até você contratar alguém.');
+    expect(notes).toContain('Caio sumiu deixou a equipe. A função fica vaga até você contratar alguém.');
+    // Com contrato em vigor, fica até o fim dele, mesmo fora da idade, e a nota é a do ofício.
+    const withContract = withRelatives(
+      { ...open, management: { ...m, staff: [...staff.filter((s) => !engine.isFamilyStaff(s)), member('contrato', 'chiefEngineer', c.season + 1)] } },
+      [staying],
+    );
+    const kept = engine.closeExecutiveSeason(withContract).management!.staff.find((s) => s.id === 'staff-family-contrato-chiefEngineer')!;
+    expect(kept).toMatchObject({ rating: 81, contractEnd: c.season + 1 });
+  });
 });
 
 describe('maus investimentos', () => {
@@ -513,13 +610,12 @@ describe('maus investimentos', () => {
       expect(engine.familySeasonEvents(at(c, s)).some((e) => e.definitionId === 'family-bad-investment')).toBe(false);
     }
     const heir = asHeir(c, 60);
-    const liquid = heir.finance.cash + heir.finance.fixedIncome + heir.finance.equityFund;
     let count = 0;
     for (let s = 1; s <= 600; s++) {
       const stake = engine.badInvestmentStake(at(heir, s));
       if (stake === 0) continue;
       count += 1;
-      expect(stake).toBe(Math.round((liquid * BAD_INVESTMENT.STAKE_SHARE) / 100) * 100);
+      expect(stake).toBe(Math.round((heir.finance.cash * BAD_INVESTMENT.STAKE_SHARE) / 100) * 100);
     }
     expect(count / 600).toBeGreaterThan(BAD_INVESTMENT.CHANCE - 0.05);
     expect(count / 600).toBeLessThan(BAD_INVESTMENT.CHANCE + 0.05);
@@ -539,7 +635,9 @@ describe('maus investimentos', () => {
     const [lost, won] = event.choices[0]!.outcomes;
     const loss = Math.round((stake * BAD_INVESTMENT.LOSS_SHARE) / 100) * 100;
     const gain = Math.round((stake * BAD_INVESTMENT.GAIN_SHARE) / 100) * 100;
-    expect(lost).toMatchObject({ probability: BAD_INVESTMENT.LOSS_CHANCE, effects: [{ type: 'cash', value: -loss, ledger: 'investment', capToCash: true }] });
+    expect(lost).toMatchObject({ probability: BAD_INVESTMENT.LOSS_CHANCE, effects: [{ type: 'cash', value: -loss, ledger: 'investment' }] });
+    // A perda não tem teto: sai inteira, como o texto promete.
+    expect(lost!.effects[0]).not.toHaveProperty('capToCash');
     expect(won).toMatchObject({ probability: 1 - BAD_INVESTMENT.LOSS_CHANCE, effects: [{ type: 'cash', value: gain, ledger: 'investment' }] });
     expect(event.choices[1]!.outcomes).toMatchObject([{ probability: 1, effects: [] }]);
     // Resolver mexe no caixa pelo lançamento dos investimentos.
@@ -554,6 +652,29 @@ describe('maus investimentos', () => {
       0,
     );
     expect(engine.familySeasonEvents(all).some((e) => e.definitionId === 'family-bad-investment')).toBe(false);
+  });
+
+  it('a aposta sai do caixa: com pouco caixa e muito aplicado, a perda aplicada é a do texto, e a escolha natural nunca dá dinheiro', () => {
+    const base = asHeir(newCareer(21), 60);
+    const heir: CareerState = { ...base, finance: { ...base.finance, cash: 400_000, fixedIncome: 5_000_000 } };
+    const season = Array.from({ length: 80 }, (_, i) => i + 1).find((s) => engine.badInvestmentStake(at(heir, s)) > 0)!;
+    const c = at(heir, season);
+    const stake = engine.badInvestmentStake(c);
+    expect(stake).toBe(Math.round((400_000 * BAD_INVESTMENT.STAKE_SHARE) / 100) * 100);
+    const event = engine.familySeasonEvents(c).find((e) => e.definitionId === 'family-bad-investment')!;
+    const [lost, won] = event.choices[0]!.outcomes;
+    const loss = Math.round((stake * BAD_INVESTMENT.LOSS_SHARE) / 100) * 100;
+    const gain = Math.round((stake * BAD_INVESTMENT.GAIN_SHARE) / 100) * 100;
+    expect(event.choices[0]!.description).toContain(engine.money(c, loss));
+    const after = applyEffects(c, lost!.effects, 0);
+    expect(after.finance.cash).toBe(c.finance.cash - loss);
+    expect(after.finance.fixedIncome).toBe(c.finance.fixedIncome);
+    // A esperança da escolha natural é negativa: o freio nunca vira ganho.
+    expect(lost!.probability * -loss + won!.probability * gain).toBeLessThan(0);
+    // Sem caixa, não há o que apostar (as aplicações ficam quietas), mesmo com patrimônio.
+    const broke: CareerState = { ...c, finance: { ...c.finance, cash: -10_000 } };
+    expect(engine.badInvestmentStake(broke)).toBe(0);
+    expect(engine.familySeasonEvents(broke).some((e) => e.definitionId === 'family-bad-investment')).toBe(false);
   });
 
   it('pelo menos seis variantes, sem texto repetido no catálogo da família', () => {
@@ -592,6 +713,9 @@ describe('cartões da dinastia', () => {
     expect(engine.roomForChild({ ...c, family: { ...c.family, partner: null } })).toBe(false);
     const partner = c.family.partner!;
     expect(engine.roomForChild({ ...c, family: { ...c.family, partner: { ...partner, age: FAMILY.PARTNER_MAX_CHILD_AGE + 1 } } })).toBe(false);
+    // O casal precisa estar bem, como no evento de família do começo do ano.
+    expect(engine.roomForChild({ ...c, family: { ...c.family, partner: { ...partner, relationship: FAMILY.CHILD_RELATIONSHIP } } })).toBe(true);
+    expect(engine.roomForChild({ ...c, family: { ...c.family, partner: { ...partner, relationship: FAMILY.CHILD_RELATIONSHIP - 1 } } })).toBe(false);
     const old = { ...c, drivers: c.drivers.map((d) => (d.isPlayer ? { ...d, age: FAMILY.CHILD_MAX_PARENT_AGE + 1 } : d)) };
     expect(engine.roomForChild(old)).toBe(false);
     const kid = (age: number, i: number): Child => ({ ...engine.generateChild(c, 50 + i), id: `k${i}`, age });
@@ -632,5 +756,24 @@ describe('cartões da dinastia', () => {
     const c = { ...base, season };
     const card = engine.storyCardFor(c, null, 1, 'conversa-sobre-um-filho')!;
     expect(engine.familySeasonEvents({ ...c, pendingEvents: [card] }).some((e) => e.definitionId === 'family-child')).toBe(false);
+  });
+
+  it('numa mesma etapa sai no máximo um cartão que faz nascer filho, e o bebê do texto é o que nasce', () => {
+    // Semente e etapa em que, sem a regra, os dois cartões de filho saíam juntos (e o segundo bebê,
+    // com o mesmo id, nunca entrava na família).
+    const c = { ...playRound(careerWithPartner(15)), pendingEvents: [] };
+    const record = c.rounds[c.rounds.length - 1]!;
+    const out = engine.addRoundStoryEvents(c, atRound(record, 164), 164);
+    const babies = out.pendingEvents.filter(engine.bringsBaby);
+    expect(babies).toHaveLength(1);
+    expect(out.pendingEvents.length).toBeGreaterThan(1);
+    const card = babies[0]!;
+    const effect = card.choices[0]!.outcomes[0]!.effects.find((e) => e.type === 'child');
+    const baby = effect?.type === 'child' ? effect.child : null;
+    const born = engine.resolveEvent(out, card.id, card.choices[0]!.id).career;
+    expect(born.family.children.map((k) => k.id)).toEqual([baby!.id]);
+    expect(card.choices[0]!.outcomes[0]!.text).toContain(baby!.firstName);
+    for (let r = 1; r <= 200; r++)
+      expect(engine.addRoundStoryEvents(c, atRound(record, r), r).pendingEvents.filter(engine.bringsBaby).length).toBeLessThanOrEqual(1);
   });
 });
