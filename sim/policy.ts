@@ -235,16 +235,92 @@ export interface LifePolicy {
   /** Como dirigente, passa o comando em vida ao chegar a esta idade. */
   handoverAge?: number;
   /**
+   * Como dirigente, passa o comando em vida assim que um filho com carreira de piloto chega a esta
+   * idade (Fase 6). Com `transitionFirst`, espera o ano de transição, enquanto ele estiver ao alcance.
+   */
+  handoverHeirAge?: number;
+  /**
    * No primeiro fechamento depois de parar de correr, faz o ano de transição antes de pensar em
    * comprar equipe ou aceitar cargo (Fase 6). Sem isto, o ano de transição só fica no lugar do ano
    * sem cargo: quando não há equipe ao alcance nem proposta.
    */
   transitionFirst?: boolean;
+  /**
+   * Como o robô escolhe quem herda as pistas: 'first' (o padrão de sempre) fica com o primeiro filho
+   * que corre; 'outlook' (Fase 6) pontua quem pode correr pelo que se vê (`botChooseHeir`) e escolhe
+   * também a vaga do herdeiro. Vale só com `heir: 'driver'` (o padrão).
+   */
+  heirChoice?: 'first' | 'outlook';
   choices?: Choices;
 }
 
 /** A ordem em que o robô escolhe o papel do ano de transição (o primeiro disponível). */
 export const BOT_TRANSITION_ORDER = ['commentator', 'ambassador', 'mentor'] as const;
+
+/**
+ * Quanto o robô dá a cada coisa que se sabe de um herdeiro que pode correr (`heirOutlook`), na
+ * escolha pelo que se vê (`botChooseHeir`). É política do robô, não regra do jogo.
+ */
+export const BOT_HEIR_SCORE = {
+  /** Por degrau da categoria em que o herdeiro corre (quem não corre, nada). */
+  TIER: 10,
+  /** Pelo veredito do teste no kart (sem teste, nada). */
+  KART_TEST: { outstanding: 8, promising: 4, average: 0, limited: -4 },
+  /** Pela avaliação dos treinadores, pelo rótulo que ela mostra (sem avaliação, nada). */
+  SCOUT: { 'Fora de série': 8, 'Muito promissor': 5, Promissor: 2, Mediano: 0, Limitado: -4 } as Readonly<Record<string, number>>,
+  /** Por talento revelado; cada defeito revelado tira o mesmo. */
+  TRAIT: 3,
+  /** Por ano de idade acima de YOUTH_AGE: quem é mais velho tem menos temporadas pela frente. */
+  AGE: 1,
+  YOUTH_AGE: 18,
+} as const;
+
+/** A ordem em que o robô escolhe a vaga do herdeiro piloto (a primeira disponível). */
+export const BOT_HEIR_SEAT_ORDER = ['top', 'family', 'current'] as const satisfies readonly engine.HeirSeat[];
+
+/** A pontuação que o robô dá a um herdeiro pelo que se sabe dele (`BOT_HEIR_SCORE`). */
+export function botHeirScore(outlook: engine.HeirOutlook): number {
+  const score = BOT_HEIR_SCORE;
+  const talents = outlook.revealed.filter((t) => t.kind === 'talent').length;
+  const defects = outlook.revealed.length - talents;
+  return (
+    (outlook.tier ?? 0) * score.TIER +
+    (outlook.kartTest ? score.KART_TEST[outlook.kartTest.verdict] : 0) +
+    (outlook.scout ? (score.SCOUT[outlook.scout] ?? 0) : 0) +
+    (talents - defects) * score.TRAIT -
+    Math.max(0, outlook.age - score.YOUTH_AGE) * score.AGE
+  );
+}
+
+/**
+ * Escolha do herdeiro piloto pelo que se vê (Fase 6): entre os herdeiros que podem correr, o de maior
+ * pontuação (`botHeirScore`; no empate, a ordem da sucessão, com os filhos primeiro), e a vaga pela
+ * ordem BOT_HEIR_SEAT_ORDER entre as disponíveis (`heirSeatOptions`). null se ninguém pode correr.
+ */
+export function botChooseHeir(career: CareerState): { heirId: string; seat: engine.HeirSeat } | null {
+  const scored = (career.succession?.heirs ?? [])
+    .filter((heir) => heir.canDrive)
+    .map((heir, order) => ({ heir, order, score: botHeirScore(engine.heirOutlook(career, heir)) }))
+    .sort((a, b) => b.score - a.score || a.order - b.order);
+  const best = scored[0];
+  if (!best) return null;
+  const options = engine.heirSeatOptions(career, best.heir.id);
+  const seat = BOT_HEIR_SEAT_ORDER.find((id) => options.some((o) => o.id === id && o.available)) ?? 'current';
+  return { heirId: best.heir.id, seat };
+}
+
+/**
+ * O robô dirigente passa o comando em vida neste fechamento? Aos `handoverAge` anos ou, com
+ * `handoverHeirAge`, assim que um filho com carreira de piloto chega a essa idade. Com
+ * `transitionFirst`, espera o ano de transição enquanto algum papel estiver ao alcance.
+ */
+export function botWantsHandover(career: CareerState, policy: LifePolicy): boolean {
+  if (career.mode !== 'executive' || !career.executiveOffseason) return false;
+  if (policy.transitionFirst && engine.transitionOffers(career).some((o) => o.available)) return false;
+  if (policy.handoverAge !== undefined && engine.getPlayer(career).age >= policy.handoverAge) return true;
+  const heirAge = policy.handoverHeirAge;
+  return heirAge !== undefined && career.family.children.some((k) => k.stage === 'racing' && k.driver !== null && k.racing !== null && k.age >= heirAge);
+}
 
 /** O ano de transição no primeiro papel disponível na ordem do robô, ou null fora da janela. */
 function botTransition(career: CareerState): CareerState | null {
@@ -285,10 +361,18 @@ export function botExecutiveOffseason(career: CareerState, policy: LifePolicy = 
   return botTransition(c) ?? engine.startExecutiveSeason(c, { kind: 'spectate' });
 }
 
-/** Escolha do robô em uma sucessão. */
+/**
+ * Escolha do robô em uma sucessão. Com `heirChoice: 'outlook'`, quem herda as pistas e a vaga dele
+ * saem de `botChooseHeir`; senão, vale a escolha de sempre (o primeiro filho que corre, na equipe em
+ * que já corria), que os testes e as receitas dos saves de exemplo usam.
+ */
 export function botSuccession(career: CareerState, policy: LifePolicy = {}): CareerState {
   const heirs = career.succession?.heirs ?? [];
   const preferDriver = (policy.heir ?? 'driver') === 'driver';
+  if (preferDriver && policy.heirChoice === 'outlook') {
+    const choice = botChooseHeir(career);
+    if (choice) return engine.resolveSuccession(career, choice.heirId, 'driver', choice.seat);
+  }
   const driver = heirs.find((h) => h.kind === 'child' && h.canDrive) ?? heirs.find((h) => h.canDrive);
   const manager = heirs.find((h) => h.kind === 'child' && h.canManage) ?? heirs.find((h) => h.kind === 'partner') ?? heirs.find((h) => h.canManage);
   const pick = preferDriver ? (driver ?? manager) : (manager ?? driver);
@@ -323,7 +407,7 @@ export function playLifeSeason(career: CareerState, policy: LifePolicy = {}, onS
   while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playExecutiveRound(c, policy.choices);
   onSeasonEnd?.(c);
   if (c.succession) return botSuccession(c, policy);
-  if (policy.handoverAge !== undefined && engine.getPlayer(c).age >= policy.handoverAge) return botSuccession(engine.beginHandover(resolvePending(c)), policy);
+  if (botWantsHandover(c, policy)) return botSuccession(engine.beginHandover(resolvePending(c)), policy);
   return botExecutiveOffseason(c, policy);
 }
 
