@@ -2,7 +2,7 @@
  * O ano de transição (Fase 6, etapa C): as propostas dos três papéis, a entrada no fechamento e no
  * meio do ano, o cachê e a mensagem de cada etapa, os eventos do ano (sem repetir), a mentoria que
  * acelera o pupilo, o fechamento (reputação, vida em família, legado), o legado de cada papel, a
- * regra de uma vez por personagem, o save e a integridade.
+ * regra de uma vez por personagem, o robô, o save e a integridade.
  */
 import { describe, expect, it } from 'vitest';
 import { STORY_EVENTS, TRANSITION } from '@/config/balance';
@@ -11,7 +11,18 @@ import { TRANSITION_BRANDS, TRANSITION_EVENTS, TRANSITION_ROLE_INFO, TRANSITION_
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { exportCareer, importCareer } from '@/persistence/saveService';
 import * as engine from './engineApi';
-import { NOW, newCareer, pickBestOffer, playExecutiveRound, playRound, playSeason, resolvePending } from './helpers';
+import {
+  NOW,
+  botCareer,
+  botExecutiveOffseason,
+  newCareer,
+  pickBestOffer,
+  playExecutiveRound,
+  playLifeSeason,
+  playRound,
+  playSeason,
+  resolvePending,
+} from './helpers';
 
 function expectValid(career: CareerState) {
   const parsed = CareerStateSchema.safeParse(career);
@@ -511,6 +522,41 @@ describe('legado do ano de transição', () => {
     expect(business.sponsors).toEqual([]);
     expect([business.transition, business.retiredSeason]).toEqual([null, null]);
   });
+});
+
+/* ------------------------------------------------------------------ */
+
+describe('o robô no ano de transição', () => {
+  const noJobs = (career: CareerState): CareerState => ({ ...career, executiveOffseason: { ...career.executiveOffseason!, jobOffers: [] } });
+
+  it('sem equipe comprada nem cargo aceito, escolhe o primeiro papel disponível: comentários, imagem de marca, mentoria', () => {
+    expect(botExecutiveOffseason(noJobs(retiredAt(77, 40))).transition?.role).toBe('commentator');
+    expect(botExecutiveOffseason(noJobs(retiredAt(77, 10))).transition?.role).toBe('mentor');
+    // Com uma proposta de cargo, o robô de sempre aceita o cargo.
+    const withJob = retiredAt(77, 40);
+    expect(withJob.executiveOffseason!.jobOffers.length).toBeGreaterThan(0);
+    const job = botExecutiveOffseason(withJob);
+    expect(job.management?.position).toBe('principal');
+    expect(job.transition).toBeNull();
+    // Na dinastia do simulador, o ano de transição vem antes do cargo.
+    expect(botExecutiveOffseason(withJob, { transitionFirst: true })).toMatchObject({ management: null, transition: { role: 'commentator' } });
+    // Fora da janela, o ano sem cargo de sempre.
+    const later = playExecutiveSeason(engine.startExecutiveSeason(retiredAt(), { kind: 'spectate' }));
+    expect(botExecutiveOffseason(noJobs(later)).transition).toBeNull();
+  });
+
+  it('uma vida com o ano de transição primeiro: depois dele, a carreira de dirigente segue íntegra', () => {
+    let c = botCareer(5, 8);
+    const roles: string[] = [];
+    for (let guard = 0; guard < 12 && c.season < 9; guard++) {
+      c = playLifeSeason(c, { retireAge: 18, buyTeam: true, transitionFirst: true });
+      if (c.transition && !roles.includes(c.transition.role)) roles.push(c.transition.role);
+      expectValid(c);
+    }
+    expect(roles).toEqual(['commentator']);
+    expect(c.transition).toMatchObject({ done: true });
+    expect(c.mode).toBe('executive');
+  }, 60_000);
 });
 
 /* ------------------------------------------------------------------ */

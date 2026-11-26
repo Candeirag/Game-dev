@@ -234,7 +234,23 @@ export interface LifePolicy {
   buyTeam?: boolean;
   /** Como dirigente, passa o comando em vida ao chegar a esta idade. */
   handoverAge?: number;
+  /**
+   * No primeiro fechamento depois de parar de correr, faz o ano de transição antes de pensar em
+   * comprar equipe ou aceitar cargo (Fase 6). Sem isto, o ano de transição só fica no lugar do ano
+   * sem cargo: quando não há equipe ao alcance nem proposta.
+   */
+  transitionFirst?: boolean;
   choices?: Choices;
+}
+
+/** A ordem em que o robô escolhe o papel do ano de transição (o primeiro disponível). */
+export const BOT_TRANSITION_ORDER = ['commentator', 'ambassador', 'mentor'] as const;
+
+/** O ano de transição no primeiro papel disponível na ordem do robô, ou null fora da janela. */
+function botTransition(career: CareerState): CareerState | null {
+  const offers = engine.transitionOffers(career);
+  const role = BOT_TRANSITION_ORDER.find((r) => offers.some((o) => o.role === r && o.available));
+  return role ? engine.startExecutiveSeason(career, { kind: 'transition', role }) : null;
 }
 
 /** Joga uma etapa no modo dirigente (o jogador não corre). */
@@ -255,13 +271,18 @@ export function botExecutiveOffseason(career: CareerState, policy: LifePolicy = 
     }
     return engine.startExecutiveSeason(c, { kind: 'continue' });
   }
+  if (policy.transitionFirst) {
+    const transition = botTransition(c);
+    if (transition) return transition;
+  }
   if (policy.buyTeam) {
     const affordable = off.listings.filter((l) => l.price <= c.finance.cash * 0.6).sort((a, b) => b.price - a.price)[0];
     if (affordable) return engine.startExecutiveSeason(c, { kind: 'buy', listingId: affordable.id });
   }
   const job = off.jobOffers[0];
   if (job) return engine.startExecutiveSeason(c, { kind: 'job', offerId: job.id });
-  return engine.startExecutiveSeason(c, { kind: 'spectate' });
+  // Sem equipe comprada nem cargo aceito: o ano de transição no lugar do ano sem cargo (Fase 6).
+  return botTransition(c) ?? engine.startExecutiveSeason(c, { kind: 'spectate' });
 }
 
 /** Escolha do robô em uma sucessão. */
