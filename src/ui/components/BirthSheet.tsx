@@ -1,15 +1,16 @@
 /**
  * Ficha do nascimento: família, corpo e mente e os talentos e defeitos (os ocultos aparecem como
  * "?"). Usada na tela de nascimento, com a revelação em sequência, e na ficha do piloto, já
- * preenchida.
+ * preenchida. Quem herdou a carreira da família (Fase 6) tem o cartão da herança no lugar do das
+ * profissões dos pais (`HeirBirthFamily`).
  */
-import { Briefcase, HandCoins, MapPin, Wallet } from 'lucide-react';
+import { Briefcase, HandCoins, History, MapPin, Network, Sparkles, TriangleAlert, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { AttributeKey, Birth } from '@/domain/schemas';
+import type { AttributeKey, Birth, LineageEntry, TraitId } from '@/domain/schemas';
 import { ATTRIBUTE_LABELS } from '@/domain/labels';
 import { APTITUDE_INFO, APTITUDE_ORDER, BIRTH_TRAITS, FATHER_PROFESSIONS, HOMETOWNS, MOTHER_PROFESSIONS } from '@/data/birth';
 import { birthAttributeBonus, charismaSponsorFactor } from '@/engine';
-import { Card, Delta, ProgressBar, RevealItem, SecretCard, meterTone, type RevealSequence } from '@/ui/kit';
+import { Card, Chip, Delta, ProgressBar, RevealItem, SecretCard, meterTone, type RevealSequence } from '@/ui/kit';
 import { counted } from '@/domain/text';
 import { formatMoney } from '../format';
 
@@ -37,6 +38,65 @@ function FamilyRow({ icon, label, children }: { icon: ReactNode; label: string; 
         <div className="text-sm text-ink-100">{children}</div>
       </div>
     </div>
+  );
+}
+
+/**
+ * O nascimento de quem herdou a carreira da família (filho ou parente jovem que assumiu na sucessão):
+ * origem de filho de ex-piloto, com a família da dinastia no lugar das profissões dos pais.
+ */
+export function isDynastyBirth(birth: Birth): boolean {
+  return birth.origin === 'racer-parent' && birth.parents.mother === 'dinastia';
+}
+
+/** A família de quem herdou a carreira: cidade, sobrenome e geração, quem veio antes e de onde vem o dinheiro. */
+export function HeirBirthFamily({
+  birth,
+  surname,
+  generation,
+  predecessor,
+}: {
+  birth: Birth;
+  surname: string;
+  generation: number;
+  predecessor: Pick<LineageEntry, 'name' | 'generation'> | null;
+}) {
+  return (
+    <Card title="Família" bodyClassName="grid gap-2 p-4">
+      <FamilyRow icon={<MapPin size={16} />} label={birth.region === 'interior' ? 'Interior' : 'Capital'}>
+        {hometownLabel(birth)}
+      </FamilyRow>
+      <FamilyRow icon={<Network size={16} />} label="Herança">
+        Nasceu na família {surname}, {generation}ª geração
+      </FamilyRow>
+      {predecessor && (
+        <FamilyRow icon={<History size={16} />} label="Quem veio antes">
+          {predecessor.name}, {predecessor.generation}ª geração
+        </FamilyRow>
+      )}
+      <FamilyRow icon={<Wallet size={16} />} label="Dinheiro">
+        Sem economias próprias: o que a família tinha veio pela herança
+      </FamilyRow>
+      <p className="border-t border-ink-700 pt-2 text-xs text-ink-300">
+        Quem herda a carreira já nasce com os talentos e defeitos da família (parte herdada, parte sorteada) e com corpo e mente puxados em parte dos de quem
+        veio antes. O que o teste no kart e as temporadas de carreira própria revelaram continua revelado.
+      </p>
+    </Card>
+  );
+}
+
+/** Um talento ou defeito revelado, compacto: a palavra e o ícone vão junto com a cor. */
+export function TraitChip({ id }: { id: TraitId }) {
+  const info = BIRTH_TRAITS[id];
+  const talent = info.kind === 'talent';
+  return (
+    <Chip
+      size="sm"
+      tone={talent ? 'good' : 'attention'}
+      icon={talent ? <Sparkles size={12} aria-hidden className="shrink-0" /> : <TriangleAlert size={12} aria-hidden className="shrink-0" />}
+    >
+      {talent ? 'Talento' : 'Defeito'}: {info.name}
+    </Chip>
   );
 }
 
@@ -126,16 +186,31 @@ export function BirthAptitudes({ birth, sequence = STILL, from = 0 }: { birth: B
   );
 }
 
+/**
+ * Quando um traço apareceu. Na etapa 0, no teste no kart da adolescência; no herdeiro, antes da
+ * temporada em que assumiu (`since`), nas temporadas da carreira própria; senão, na etapa em que a
+ * pista revelou.
+ */
+function revealedWhen(trait: Birth['traits'][number], since: number | undefined): string | undefined {
+  if (trait.revealedSeason === null) return undefined;
+  if (trait.revealedRound === 0) return `Temporada ${trait.revealedSeason} · teste no kart`;
+  if (since !== undefined && trait.revealedSeason < since) return `Temporada ${trait.revealedSeason} · carreira própria, antes de assumir`;
+  return `Temporada ${trait.revealedSeason}, etapa ${trait.revealedRound}`;
+}
+
 export function BirthTraits({
   birth,
   sequence = STILL,
   from = 0,
   showRevealed = true,
+  heirSince,
 }: {
   birth: Birth;
   sequence?: RevealSequence;
   from?: number;
   showRevealed?: boolean;
+  /** Herdeiro da família: a temporada em que assumiu (o que apareceu antes foi na infância e na carreira própria). */
+  heirSince?: number;
 }) {
   const hidden = birth.traits.filter((t) => t.revealedSeason === null).length;
   return (
@@ -154,7 +229,7 @@ export function BirthTraits({
               kind={info.kind}
               title={info.name}
               description={info.description}
-              meta={revealed ? `Temporada ${trait.revealedSeason}, etapa ${trait.revealedRound}` : undefined}
+              meta={revealed ? revealedWhen(trait, heirSince) : undefined}
               hint="Talento ou defeito"
             />
           </RevealItem>

@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { ATTRIBUTE_KEYS, type AttributeKey } from '@/domain/schemas';
 import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
-import { activeBirth, computeCareerStats, fullName, overallRating } from '@/engine';
+import { activeBirth, computeCareerStats, fullName, overallRating, predecessor } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
 import { Card, cx, Delta, EmptyState, Meter, PageHeader, Pill, PortraitOr, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
-import { BirthAptitudes, BirthFamily, BirthTraits } from '../components/BirthSheet';
+import { BirthAptitudes, BirthFamily, BirthTraits, HeirBirthFamily, isDynastyBirth } from '../components/BirthSheet';
 import { portraitUrl } from '../images';
 import { TrendLine, attributeSeries } from '../components/TrendLine';
 import { formatRating } from '../format';
@@ -39,7 +39,7 @@ export function DriverScreen() {
   const birth = activeBirth(career);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageHeader eyebrow={`${nationality} · ${player.age} anos · ${team.name}`} title={fullName(player)}>
         <Tabs value={tab} options={TABS} onChange={setTab} />
       </PageHeader>
@@ -47,7 +47,7 @@ export function DriverScreen() {
       {tab === 'attributes' && (
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
           <Card title="Atributos" action={<span className="text-xs text-ink-400">Variação desde o início da temporada</span>} bodyClassName="px-2 py-1">
-            <ul className="grid gap-x-3 md:grid-cols-2">
+            <ul className="grid gap-x-4 md:grid-cols-2">
               {ATTRIBUTE_KEYS.map((key) => {
                 const value = player.attributes[key];
                 const active = selected === key;
@@ -83,18 +83,18 @@ export function DriverScreen() {
             </ul>
           </Card>
 
-          <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" className="text-xs" />} bodyClassName="p-3">
+          <Card title="Avaliação" action={<Delta value={overallDelta} suffix=" na temporada" className="text-xs" />} bodyClassName="p-4">
             <div className="flex items-center gap-4">
               {/* O retrato do piloto, quando importado (sem ele, o cartão fica como era). */}
               <PortraitOr src={portraitUrl(player.id, true)} name={`${player.firstName} ${player.lastName}`} color={team.color} fallback={null} />
               <Ring value={formatRating(overall)} label="Geral" fraction={overall / 100} tone="accent" size={76} />
-              <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">
+              <div className="grid min-w-0 flex-1 grid-cols-2 gap-4">
                 <Stat label="Potencial" value={formatRating(player.potential)} />
                 <Stat label="Reputação" value={career.reputation} />
               </div>
             </div>
             {/* Evolução por temporada: a nota geral ou, com um atributo aberto, a dele. */}
-            <div className="mt-3 border-t border-ink-700 pt-3">
+            <div className="mt-4 border-t border-ink-700 pt-4">
               <TrendLine
                 title={selected ? ATTRIBUTE_LABELS[selected] : 'Nota geral'}
                 values={attributeSeries(career, player.id, selected ?? 'overall', selected ? player.attributes[selected] : overall)}
@@ -103,7 +103,7 @@ export function DriverScreen() {
                 threshold={0.5}
               />
             </div>
-            <div className="mt-3 border-t border-ink-700 pt-3 text-xs text-ink-400 md:min-h-[6.25rem]">
+            <div className="mt-4 border-t border-ink-700 pt-4 text-xs text-ink-400 md:min-h-[6.25rem]">
               {selected && (
                 <div className="hidden md:block">
                   <h3 className="font-display text-base font-semibold uppercase tracking-[0.06em] text-ink-200">{ATTRIBUTE_LABELS[selected]}</h3>
@@ -121,12 +121,12 @@ export function DriverScreen() {
 
       {tab === 'condition' && (
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
-          <Card title="Condição" action={player.injury ? <Pill tone="bad">Lesionado</Pill> : undefined} bodyClassName="space-y-3 p-3">
+          <Card title="Condição" action={player.injury ? <Pill tone="bad">Lesionado</Pill> : undefined} bodyClassName="space-y-4 p-4">
             <Meter label="Fase" value={player.condition.form} hint="Média dos resultados recentes em relação à meta. Vale até ±0,12% no tempo de volta." />
             <Meter label="Confiança" value={player.condition.confidence} hint="Muda a chance de erro (de −25% a +25%) e o sucesso nas disputas de posição." />
             <Meter label="Moral" value={player.condition.morale} hint="Muda a regularidade das voltas e o rendimento do treino (de −20% a +20%)." />
             {player.injury && (
-              <p className="border border-gold-400/40 bg-gold-400/10 px-3 py-2 text-sm text-ink-100">
+              <p className="border border-gold-400/40 bg-gold-400/10 px-4 py-2 text-sm text-ink-100">
                 {player.injury.description}:{' '}
                 {player.injury.severity === 'serious' ? 'você não pode correr' : 'você pode correr, 0,3% mais lento e com 30% mais erros'}. Recuperação em{' '}
                 {counted(player.injury.roundsRemaining, 'etapa', 'etapas')}.
@@ -137,7 +137,7 @@ export function DriverScreen() {
             )}
           </Card>
 
-          <Card title="Programa de treino" bodyClassName="p-3">
+          <Card title="Programa de treino" bodyClassName="p-4">
             <TrainingFocusPicker />
           </Card>
         </div>
@@ -147,15 +147,19 @@ export function DriverScreen() {
         (birth ? (
           <div className="grid items-start gap-4 md:grid-cols-2">
             <div className="space-y-4">
-              <BirthFamily birth={birth} />
-              <BirthTraits birth={birth} />
+              {isDynastyBirth(birth) ? (
+                <HeirBirthFamily birth={birth} surname={career.dynasty.surname} generation={career.dynasty.generation} predecessor={predecessor(career)} />
+              ) : (
+                <BirthFamily birth={birth} />
+              )}
+              <BirthTraits birth={birth} heirSince={isDynastyBirth(birth) ? career.dynasty.lineage.at(-1)?.fromSeason : undefined} />
             </div>
             <BirthAptitudes birth={birth} />
           </div>
         ) : (
           <EmptyState title="Sem nascimento sorteado">
             {career.birth
-              ? 'O nascimento sorteado é do personagem que começou a carreira; quem herdou o lugar não tem.'
+              ? 'O nascimento guardado é de quem veio antes. Esta sucessão aconteceu numa versão anterior do jogo, quando quem herdava o lugar não ganhava nascimento próprio; os próximos herdeiros de sangue ganham.'
               : 'Esta carreira começou antes dos nascimentos sorteados: o piloto não tem família, aptidões nem talentos ocultos de nascença.'}
           </EmptyState>
         ))}
