@@ -11,6 +11,7 @@ import { useGameStore } from '@/store/gameStore';
 import { Button, Card, cx, EmptyState, Meter, PageHeader, Pill, Stat, TableWrap, Tabs, td, th } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
+import { DynastyLink } from './DynastyScreen';
 import { LifeBackLink } from './life/LifeBackLink';
 
 type FamilyTab = 'family' | 'children' | 'lineage';
@@ -221,6 +222,7 @@ export function FamilyScreen() {
         }
       >
         <Tabs value={tab} options={TABS} onChange={setTab} />
+        <DynastyLink />
       </PageHeader>
 
       {tab === 'family' && (

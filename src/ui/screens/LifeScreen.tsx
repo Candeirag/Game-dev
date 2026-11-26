@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, ChartLine, ChevronRight, CreditCard, Handshake, Heart, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { Building2, ChartLine, ChevronRight, CreditCard, Handshake, Heart, Network, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { LIFESTYLE_LABELS } from '@/domain/labels';
 import { counted } from '@/domain/text';
 import { lifeSummary, ownedTeamValue } from '@/engine';
@@ -149,6 +149,7 @@ export function LifeScreen() {
                 </>
               }
             />
+            <Row to="/dinastia" icon={Network} title="Dinastia" value={`${career.dynasty.generation}ª geração`} summary="Árvore da família e placar" />
           </ul>
         </Panel>
 

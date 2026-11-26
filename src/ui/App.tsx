@@ -9,6 +9,7 @@ import { CalendarScreen } from './screens/CalendarScreen';
 import { CareerScreen } from './screens/CareerScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { DriverScreen } from './screens/DriverScreen';
+import { DynastyScreen } from './screens/DynastyScreen';
 import { ExecutiveCareerScreen, ExecutiveDashboardScreen, ExecutiveWeekendScreen } from './screens/ExecutiveScreens';
 import { FamilyScreen } from './screens/FamilyScreen';
 import { FinanceScreen } from './screens/FinanceScreen';
@@ -77,6 +78,7 @@ export function App() {
           <Route path="/life" element={<LifeScreen />} />
           <Route path="/finance" element={<FinanceScreen />} />
           <Route path="/family" element={<FamilyScreen />} />
+          <Route path="/dinastia" element={<DynastyScreen />} />
           <Route path="/help" element={<HelpScreen />} />
           <Route path="/calendar" element={<CalendarScreen />} />
           <Route path="/standings" element={<StandingsScreen />} />

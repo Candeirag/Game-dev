@@ -232,7 +232,8 @@ function CareerShell() {
   const primary = items.filter((item) => mainRoutes.includes(item.to));
   const secondary = items.filter((item) => !mainRoutes.includes(item.to));
   const inSecondary =
-    secondary.some((item) => location.pathname.startsWith(item.to)) || ['/finance', '/family'].some((route) => location.pathname.startsWith(route));
+    secondary.some((item) => location.pathname.startsWith(item.to)) ||
+    ['/finance', '/family', '/dinastia'].some((route) => location.pathname.startsWith(route));
   const action = primaryAction(career);
   // Na própria tela de destino o botão não precisa aparecer (a não ser quando rola até as decisões).
   // Na tela de destino o atalho só sai quando ela já mostra o passo: na aba padrão (sem `?tab=`).
