@@ -1,7 +1,7 @@
 /** Ajuda: tutorial em passos e um resumo de como o jogo funciona, um assunto por vez. */
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Briefcase, Check, CircleUser, Flag, Heart, ListChecks, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
-import { BAD_INVESTMENT, FAMILY_TEAM, HEIR_START, HERITAGE, RACE_MOMENTS, RELATIVES } from '@/config/balance';
+import { BAD_INVESTMENT, FAMILY_TEAM, HEIR_START, HERITAGE, RACE_MOMENTS, RELATIVES, SURNAME, TRANSITION } from '@/config/balance';
 import { TRANSITION_ROLES } from '@/domain/schemas';
 import { CATEGORY_NAMES, FIRST_CATEGORY_ID, FIRST_FORMULA_CATEGORY_ID, TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { capitalize, counted } from '@/domain/text';
@@ -89,15 +89,15 @@ function familyItems(): string[] {
     `A partir dos ${FAMILY.PARTNER_MIN_AGE} anos você pode conhecer alguém, casar e ter até ${FAMILY.MAX_CHILDREN} filhos. As decisões do casal aparecem no começo de cada temporada, e um filho também pode chegar por um cartão da vida pessoal ao longo do ano.`,
     `Cada filho herda parte do seu talento e nasce com talentos e defeitos de nascença, como você: cada um dos seus passa para cada filho com ${percent(HERITAGE.INHERIT_CHANCE)} de chance, e o resto é sorteado. Eles já agem desde cedo, mas ficam ocultos ("?" na tela Família) até alguém ver a criança pilotar.`,
     `Dos ${FAMILY.KART_START_AGE} aos ${FAMILY.CAREER_START_AGE - 1} anos vem a formação no kart. Aos ${HERITAGE.KART_TEST_AGE}, o teste no kart: o completo revela ${counted(reveals.full, 'talento ou defeito', 'talentos ou defeitos')}, o rápido ${reveals.quick}, e os dois mostram a diferença para o tempo de referência dos instrutores, com três casas. Aos ${FAMILY.CAREER_START_AGE}, a carreira própria, que você pode bancar; cada temporada dela tem ${percent(HERITAGE.SEASON_REVEAL_CHANCE)} de chance de revelar mais um.`,
-    `Ao pendurar o capacete, o primeiro ano fora do carro é o ano de transição: um papel à escolha (${transitionRoles}), com cachê por etapa e eventos próprios. No fechamento desse ano, você decide se vira dirigente.`,
+    `Ao pendurar o capacete, o primeiro ano fora do carro pode ser o ano de transição: um papel à escolha (${transitionRoles}), com cachê por etapa e eventos próprios. Quem para no meio da temporada escolhe logo depois de parar, se ainda houver pelo menos ${percent(TRANSITION.MIDSEASON_MIN_SHARE)} do calendário pela frente; senão, a escolha fica para o fechamento, e o papel vale pela temporada seguinte inteira. Ele não é obrigatório: dá para ir direto para os negócios (aceitar um cargo, comprar ou fundar uma equipe) ou seguir sem equipe. No fechamento do ano de transição, você decide se vira dirigente.`,
     `Cada papel do ano de transição deixa um legado. ${transitionLegacies}`,
     'Quando o personagem morre ou passa o comando em vida, você escolhe quem assume, pelo que se sabe de cada um: talentos e defeitos já revelados, o teste no kart, a avaliação dos treinadores, a categoria e a equipe. Quem corre pode seguir nas pistas; quem é adulto pode assumir os negócios. O save nunca acaba.',
-    `A herança paga imposto de ${percent(ASSET_RULES.INHERITANCE_TAX)} sobre o que passa de ${formatMoney(ASSET_RULES.INHERITANCE_EXEMPT)} (${percent(ASSET_RULES.HANDOVER_TAX)} quando o comando passa em vida). Quando quem assume é um dos filhos, os outros levam ${percent(ASSET_RULES.SIBLING_SHARE)} cada (até três).`,
+    `A herança paga imposto de ${percent(ASSET_RULES.INHERITANCE_TAX)} sobre o que passa de ${formatMoney(ASSET_RULES.INHERITANCE_EXEMPT)} (${percent(ASSET_RULES.HANDOVER_TAX)} quando o comando passa em vida). Quando quem assume é um dos filhos, os outros levam ${percent(ASSET_RULES.SIBLING_SHARE)} cada (até ${counted(ASSET_RULES.SIBLING_SHARE_MAX, 'irmão', 'irmãos')}).`,
     `Os filhos que não assumem seguem caminho próprio (${paths}) e continuam na árvore da família. A partir dos ${RELATIVES.WORK_FROM_AGE} anos, quem foi para a engenharia ou para a direção esportiva aparece entre os profissionais que a equipe da família pode contratar, por um salário menor, e abre portas em outras equipes; quem foi para os negócios pode patrocinar quem corre.`,
-    `Da segunda geração em diante, o sobrenome pesa: quem herda começa com pelo menos ${percent(FAMILY.NAME_PRESTIGE)} da maior reputação da família e com mais contatos nas equipes, mas a imprensa compara com quem veio antes, e resultado ruim custa mais reputação e moral.`,
+    `Da segunda geração em diante, o sobrenome pesa: quem herda começa com pelo menos ${percent(FAMILY.NAME_PRESTIGE)} da maior reputação da família. Se alguém que veio antes ficou conhecido (reputação máxima acima de ${SURNAME.FAME_FLOOR}), vêm também mais contatos nas equipes, a imprensa compara com essa pessoa e resultado ruim custa mais reputação e moral; quanto maior a fama, maior o peso.`,
     `O patrimônio paga o começo: só quem herda pode comprar uma vaga numa equipe da frente, ${percent(HEIR_START.TOP_SEAT_PREMIUM)} mais cara que a tabela e paga na hora, se a herança cobrir a vaga e uma reserva para viver. Se a família é dona de uma equipe na categoria, dá para correr por ela${FAMILY_TEAM.SEAT_SHARE === 0 ? ', com a vaga paga pela família' : ''}; a imprensa fala em favorecimento, e ficar atrás do companheiro custa moral e reputação.`,
     'Quem passa o comando em vida continua por perto: segue no controle da equipe, cuida das participações da família ou acompanha de longe.',
-    `Dinheiro de família tem freio: além do imposto, quem herdou patrimônio recebe propostas de negócio no começo do ano, e ${percent(BAD_INVESTMENT.LOSS_CHANCE)} delas terminam em prejuízo.`,
+    `Dinheiro de família tem freio: além do imposto, da segunda geração em diante, quem tem patrimônio de pelo menos ${BAD_INVESTMENT.MIN_WEALTH} vezes o custo de vida de um ano pode receber a proposta de negócio de um conhecido no começo do ano (${percent(BAD_INVESTMENT.CHANCE)} de chance por ano), e ${percent(BAD_INVESTMENT.LOSS_CHANCE)} desses negócios terminam em prejuízo.`,
     'A árvore da família e o placar de cada geração (títulos, vitórias, pódios e equipes) ficam na tela Dinastia, aberta pelo botão "Árvore e placar" em Família.',
   ];
 }
@@ -169,7 +169,7 @@ const TOPICS: { id: string; title: string; icon: LucideIcon; items: readonly str
     title: 'Depois das pistas',
     icon: Briefcase,
     items: [
-      'Ao se aposentar, o primeiro ano fora do carro é o ano de transição (veja Família e dinastia). Depois dele, você pode investir, aceitar o comando de uma equipe, comprar uma ou fundar a sua.',
+      'Ao se aposentar, o primeiro ano fora do carro pode ser o ano de transição (veja Família e dinastia). Depois dele, ou no lugar dele, você pode investir, aceitar o comando de uma equipe, comprar uma ou fundar a sua.',
       'Como dirigente, você decide pilotos, equipe técnica, instalações, patrocinadores e a pesquisa do carro, dentro do regulamento de cada categoria.',
       'O chefe contratado vive de salário e pode ser demitido; o dono fica com o lucro, cobre o prejuízo e deixa a equipe aos herdeiros.',
     ],
