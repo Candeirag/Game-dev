@@ -152,11 +152,16 @@ export const FAMILY = {
   HAPPY_MORALE: 0.3,
   CRISIS_MORALE: -0.6,
 
-  /** Herança de talento: pesos do jogador, do parceiro e do acaso, e desvio individual. */
-  TALENT_PARENT: 0.5,
+  /**
+   * Herança de talento: pesos do jogador, do parceiro e do acaso (média e desvio), e desvio individual.
+   * Fase 6: eram 0,5 / 0,2 / 0,3 com média 72. Quem cresce numa família de pilotos (kart desde os 8
+   * anos, boxes em casa) puxa mais do pai ou da mãe e menos da média: com o pai de teto 89, a média dos
+   * filhos sobe de 79,5 para 82. Sem isso, no simulador, a 2ª geração ia menos longe que a 1ª.
+   */
+  TALENT_PARENT: 0.55,
   TALENT_PARTNER: 0.2,
-  TALENT_CHANCE: 0.3,
-  TALENT_CHANCE_MEAN: 72,
+  TALENT_CHANCE: 0.25,
+  TALENT_CHANCE_MEAN: 78,
   TALENT_CHANCE_SD: 9,
   TALENT_NOISE_SD: 4,
 

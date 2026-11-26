@@ -31,6 +31,7 @@ import type {
   Driver,
   DriverAttributes,
   Elder,
+  Finance,
   HeirOption,
   InboxMessage,
   LineageEntry,
@@ -368,10 +369,28 @@ export interface HeirSeatOption {
  */
 function inheritanceSplit(career: CareerState, succession: Succession, option: HeirOption): { siblingsShare: number; cash: number } {
   const siblings = option.kind === 'child' ? career.family.children.filter((c) => c.id !== option.childId).length : 0;
-  const siblingsShare = Math.round(
-    Math.max(0, succession.estate - succession.tax) * ASSET_RULES.SIBLING_SHARE * Math.min(ASSET_RULES.SIBLING_SHARE_MAX, siblings),
-  );
+  // Os irmãos recebem a parte deles em dinheiro: SIBLING_SHARE cada um (até SIBLING_SHARE_MAX) do que
+  // a família tem de líquido depois do imposto (caixa e aplicações). A equipe, os imóveis e as empresas
+  // ficam inteiros com quem herda, e a partilha nunca deixa o herdeiro devendo (Fase 6). Antes, a parte
+  // era sobre o patrimônio inteiro e saía do caixa: quando o patrimônio era quase todo a equipe, o
+  // herdeiro começava com dívida de milhões, ou sem dinheiro nem para a vaga no kart.
+  const liquid = Math.max(0, career.finance.cash + career.finance.fixedIncome + career.finance.equityFund - succession.tax);
+  const siblingsShare = Math.round(liquid * ASSET_RULES.SIBLING_SHARE * Math.min(ASSET_RULES.SIBLING_SHARE_MAX, siblings));
   return { siblingsShare, cash: career.finance.cash - succession.tax - siblingsShare };
+}
+
+/**
+ * Paga a parte dos irmãos: primeiro do caixa, depois da renda fixa e, por fim, do fundo de ações (a
+ * partilha cabe no que é líquido; ver `inheritanceSplit`).
+ */
+function paySiblings(finance: Finance, season: number, round: number, share: number): Finance {
+  if (share <= 0) return finance;
+  const fromCash = Math.min(share, Math.max(0, finance.cash));
+  const fromFixed = Math.min(share - fromCash, finance.fixedIncome);
+  const fromFund = Math.min(share - fromCash - fromFixed, finance.equityFund);
+  const rest = share - fromCash - fromFixed - fromFund;
+  const paid = post(finance, season, round, 'inheritance', -(fromCash + rest), 'Parte dos irmãos na herança');
+  return { ...paid, fixedIncome: paid.fixedIncome - fromFixed, equityFund: paid.equityFund - fromFund };
 }
 
 /**
@@ -597,7 +616,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     -succession.tax,
     succession.cause === 'handover' ? 'Imposto sobre a doação' : 'Imposto de herança',
   );
-  finance = post(finance, state.season, round, 'inheritance', -siblingsShare, 'Parte dos irmãos na herança');
+  finance = paySiblings(finance, state.season, round, siblingsShare);
   state = { ...state, finance };
 
   // Linhagem: quem sai leva os traços de nascença e o nome do parceiro; quem entra, o caminho. Numa

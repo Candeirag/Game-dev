@@ -345,15 +345,55 @@ describe('sucessão com vários filhos', () => {
 /* ------------------------------------------------------------------ */
 
 describe('a lista de herdeiros e a parte dos irmãos', () => {
-  it('a parte dos irmãos: cada um leva ASSET_RULES.SIBLING_SHARE, até ASSET_RULES.SIBLING_SHARE_MAX irmãos', () => {
+  it('a parte dos irmãos: cada um leva ASSET_RULES.SIBLING_SHARE do dinheiro líquido depois do imposto, até ASSET_RULES.SIBLING_SHARE_MAX irmãos', () => {
     const many = ASSET_RULES.SIBLING_SHARE_MAX + 2;
     const kids = Array.from({ length: many }, (_, i): Partial<Child> => (i === 0 ? { id: 'kid-0', age: 25, stage: 'other' } : { id: `kid-${i}`, age: 10 }));
     const opened = engine.beginSuccession(withChildren(founder(), kids), 'death');
     const { estate, tax } = opened.succession!;
     const heir = engine.resolveSuccession(opened, 'kid-0', 'executive');
-    const share = Math.round((estate - tax) * ASSET_RULES.SIBLING_SHARE * ASSET_RULES.SIBLING_SHARE_MAX);
+    const { cash, fixedIncome, equityFund } = opened.finance;
+    const share = Math.round((cash + fixedIncome + equityFund - tax) * ASSET_RULES.SIBLING_SHARE * ASSET_RULES.SIBLING_SHARE_MAX);
     expect(heir.finance.transactions).toContainEqual(expect.objectContaining({ key: 'inheritance', amount: -share }));
     expect(heir.dynasty.lineage.at(-2)!.netWorthPassed).toBe(Math.round(estate - tax - share));
+  });
+
+  it('a parte dos irmãos sai só do dinheiro: a equipe fica inteira com quem herda e a partilha nunca deixa dívida', () => {
+    // Dono de uma equipe da Fórmula Elite com pouco dinheiro em caixa: quase todo o patrimônio é a equipe.
+    const owner = ownerAtSeasonEnd('f2');
+    const poor = withChildren(withCash(owner, 50_000), [
+      { id: 'kid-heir', age: 17, kartYears: 6, talent: 88, interest: 90 },
+      { id: 'kid-a', age: 20, stage: 'other' },
+      { id: 'kid-b', age: 22, stage: 'other' },
+    ]);
+    const opened = engine.beginHandover(racingIn(poor, 'kid-heir', 'kart-national', 5));
+    const { estate, tax } = opened.succession!;
+    expect(engine.ownedTeamValue(opened)).toBeGreaterThan(estate / 2);
+    const heir = engine.resolveSuccession(opened, 'kid-heir', 'driver');
+    const liquid = Math.max(0, 50_000 + opened.finance.fixedIncome + opened.finance.equityFund - tax);
+    const share = Math.round(liquid * ASSET_RULES.SIBLING_SHARE * 2);
+    const paid = heir.finance.transactions.filter((t) => t.key === 'inheritance' && t.label === 'Parte dos irmãos na herança');
+    expect(paid.reduce((sum, t) => sum - t.amount, 0)).toBe(share);
+    // O imposto pode deixar o caixa negativo; a parte dos irmãos, não.
+    expect(heir.finance.cash).toBe(50_000 - tax - share);
+    expect(share).toBeLessThanOrEqual(liquid);
+    // A equipe continua da família, inteira.
+    expect(heir.finance.stakes.some((s) => s.share === 1)).toBe(true);
+  });
+
+  it('a parte dos irmãos sai primeiro do caixa e, se faltar, das aplicações', () => {
+    const kids: Partial<Child>[] = [
+      { id: 'kid-0', age: 25, stage: 'other' },
+      { id: 'kid-1', age: 20, stage: 'other' },
+    ];
+    const rich = withChildren(founder(), kids);
+    const base = { ...rich, finance: { ...rich.finance, cash: 100_000, fixedIncome: 3_000_000, equityFund: 1_000_000 } };
+    const opened = engine.beginSuccession(base, 'death');
+    const { tax } = opened.succession!;
+    const share = Math.round((100_000 + 3_000_000 + 1_000_000 - tax) * ASSET_RULES.SIBLING_SHARE);
+    const heir = engine.resolveSuccession(opened, 'kid-0', 'executive');
+    const fromCash = Math.max(0, Math.min(share, 100_000 - tax));
+    expect(heir.finance.fixedIncome + heir.finance.equityFund).toBe(4_000_000 - (share - fromCash));
+    expect(heir.finance.equityFund).toBe(1_000_000);
   });
 
   it('os parentes da lista não repetem o nome de ninguém da família; sem repetição, o sorteio de sempre', () => {

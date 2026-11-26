@@ -589,12 +589,12 @@ describe('dados dos cartões da dinastia (Fase 6)', () => {
   const events = STORY_EVENT_CATALOG;
   const variantsOf = (id: string) => events.find((e) => e.id === id)?.variants.length ?? 0;
 
-  it('filhos que nascem pela vida pessoal: pelo menos dois eventos comuns, com três variantes ou mais', () => {
+  it('filhos que nascem pela vida pessoal: pelo menos dois eventos raros (peso baixo), com três variantes ou mais', () => {
     const births = events.filter((e) => bornHere(e));
     expect(births.length).toBeGreaterThanOrEqual(2);
     for (const e of births) {
       expect(e.category, e.id).toBe('personal');
-      expect(e.frequency, e.id).toBe('common');
+      expect(e.frequency, e.id).toBe('rare');
       expect(e.variants.length, e.id).toBeGreaterThanOrEqual(3);
       // A escolha natural (a primeira) faz o filho nascer.
       expect(

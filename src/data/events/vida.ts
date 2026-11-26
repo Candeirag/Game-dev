@@ -1887,7 +1887,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
   {
     id: 'conversa-sobre-um-filho',
     category: 'personal',
-    frequency: 'common',
+    frequency: 'rare',
     when: [
       { c: 'has', what: 'roomForChild' },
       { c: 'age', from: 'young' },
@@ -1953,7 +1953,7 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     // A vontade de ter um filho aparece por um empurrão de fora; dá para deixar para depois.
     id: 'a-familia-pode-crescer',
     category: 'personal',
-    frequency: 'common',
+    frequency: 'rare',
     when: [
       { c: 'has', what: 'roomForChild' },
       { c: 'age', from: 'young' },

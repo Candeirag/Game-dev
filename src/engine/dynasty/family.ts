@@ -109,8 +109,8 @@ export function partnerMoraleEffect(family: Family): number {
 
 /**
  * Um filho recém-nascido. O talento (teto de desenvolvimento) é herdado:
- * 50% do potencial do jogador, 20% da aptidão do parceiro e 30% de acaso
- * (média 72, desvio 9), mais um desvio individual de 4 pontos e o bônus dos
+ * 55% do potencial do jogador, 20% da aptidão do parceiro e 25% de acaso
+ * (média 78, desvio 9; os números estão em FAMILY), mais um desvio individual de 4 pontos e o bônus dos
  * traços de personalidade. O resultado é provável, não garantido: filhos de
  * campeões costumam ser bons, às vezes medianos e, raramente, melhores que os
  * pais.

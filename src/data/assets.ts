@@ -193,7 +193,7 @@ export const ASSET_RULES = {
   INHERITANCE_TAX: 0.08,
   HANDOVER_TAX: 0.04,
   INHERITANCE_EXEMPT: 100_000,
-  /** Parte da herança que vai para cada irmão do herdeiro escolhido, até SIBLING_SHARE_MAX irmãos. */
+  /** Parte do dinheiro líquido da herança (caixa e aplicações, depois do imposto) que vai para cada irmão do herdeiro escolhido, até SIBLING_SHARE_MAX irmãos. */
   SIBLING_SHARE: 0.15,
   SIBLING_SHARE_MAX: 3,
 } as const;
