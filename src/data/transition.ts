@@ -68,15 +68,17 @@ export interface TransitionTextParams {
   championship: string;
   brand: string;
   pupil: string;
-  /** Como foi a etapa de quem é acompanhado ("terminou em 4º", "abandonou"), ou null fora do campeonato. */
+  /** Como foi a etapa de quem é acompanhado ("terminou em 4º", "venceu a etapa", "abandonou"), ou null fora do campeonato. */
   pupilResult: string | null;
+  /** Quem é acompanhado venceu a etapa: a mensagem não repete o nome como vencedor. */
+  pupilWon: boolean;
 }
 
 /** A mensagem de cada etapa do ano de transição, por papel. */
 export const TRANSITION_ROUND_TEXTS: Readonly<Record<TransitionRole, (p: TransitionTextParams) => string>> = {
   mentor: (p) =>
     p.pupilResult
-      ? `${p.pupil} ${p.pupilResult}. Você acompanhou o fim de semana inteiro nos boxes. Vencedor: ${p.winner}. Ajuda de custo da mentoria: ${p.fee}.`
+      ? `${p.pupil} ${p.pupilResult}. Você acompanhou o fim de semana inteiro nos boxes.${p.pupilWon ? '' : ` Vencedor: ${p.winner}.`} Ajuda de custo da mentoria: ${p.fee}.`
       : `Você passou o fim de semana acompanhando ${p.pupil} na carreira própria. Vencedor da etapa: ${p.winner}. Ajuda de custo da mentoria: ${p.fee}.`,
   commentator: (p) => `Da cabine, você comentou a vitória de ${p.winner} para todo o país. Cachê da transmissão: ${p.fee}.`,
   ambassador: (p) => `Um dia inteiro no paddock com os convidados da ${p.brand}, entre fotos e autógrafos. Vencedor: ${p.winner}. Cachê: ${p.fee}.`,

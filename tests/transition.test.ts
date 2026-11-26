@@ -436,6 +436,27 @@ describe('a mentoria acelera o pupilo', () => {
     expect(helped.inbox.find((m) => m.id === `s${helped.season}-r1-race`)!.body).toContain(mentor.transition!.protegeName!);
   });
 
+  it('quando o pupilo vence a etapa, a mensagem diz que venceu e não repete o nome como vencedor', () => {
+    const mentor = transitionYear('mentor');
+    const message = (career: CareerState) => {
+      const played = playExecutiveRound(career);
+      return played.inbox.find((m) => m.id === `s${played.season}-r1-race`)!.body;
+    };
+    // O pupilo não muda a corrida (o treino extra vem depois dela): a mesma etapa com outro pupilo.
+    const [first, second] = playExecutiveRound(mentor).rounds[0]!.race.entries;
+    const nameOf = (id: string) => engine.fullName(mentor.drivers.find((d) => d.id === id)!);
+    const following = (id: string) => ({ ...mentor, transition: { ...mentor.transition!, protegeId: id, protegeName: nameOf(id) } });
+    const name = nameOf(first!.driverId);
+    const won = message(following(first!.driverId));
+    expect(won).toMatch(new RegExp(`^${name} venceu a etapa\\. Você acompanhou o fim de semana inteiro nos boxes\\. Ajuda de custo da mentoria: `));
+    expect(won).not.toContain('Vencedor');
+    expect(won.split(name)).toHaveLength(2);
+    // Sem vencer, a mensagem segue com a posição e o vencedor.
+    const other = message(following(second!.driverId));
+    expect(other).toMatch(new RegExp(`^${nameOf(second!.driverId)} (terminou em 2º|abandonou)\\. `));
+    expect(other).toContain(`Vencedor: ${name}.`);
+  });
+
   it('o pupilo do campeonato que perde a vaga não treina, e a mensagem diz que ficou de fora', () => {
     const mentor = transitionYear('mentor');
     const seated = mentor.drivers.find((d) => !d.isPlayer && d.teamId)!;
@@ -827,7 +848,7 @@ describe('dados do ano de transição', () => {
     const repeated = all.filter((text, i) => all.indexOf(text) !== i);
     expect(repeated).toEqual([]);
     // As mensagens de etapa e de começo de cada papel são diferentes entre si.
-    const params = { round: 1, winner: 'W', fee: 'F', championship: 'C', brand: 'B', pupil: 'P', pupilResult: null };
+    const params = { round: 1, winner: 'W', fee: 'F', championship: 'C', brand: 'B', pupil: 'P', pupilResult: null, pupilWon: false };
     const messages = TRANSITION_ROLES.flatMap((r) => [TRANSITION_ROUND_TEXTS[r](params), TRANSITION_START_TEXTS[r](params)]);
     expect(new Set(messages).size).toBe(messages.length);
   });

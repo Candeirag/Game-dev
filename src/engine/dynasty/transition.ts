@@ -261,7 +261,15 @@ export function transitionFromOffer(offer: TransitionOffer, season: number): Tra
   };
 }
 
-function textParams(career: CareerState, t: Transition, round: number, winner: string, fee: number, pupilResult: string | null): TransitionTextParams {
+function textParams(
+  career: CareerState,
+  t: Transition,
+  round: number,
+  winner: string,
+  fee: number,
+  pupilResult: string | null,
+  pupilWon = false,
+): TransitionTextParams {
   return {
     round,
     winner,
@@ -270,6 +278,7 @@ function textParams(career: CareerState, t: Transition, round: number, winner: s
     brand: t.brand ?? '',
     pupil: t.protegeName ?? '',
     pupilResult,
+    pupilWon,
   };
 }
 
@@ -316,22 +325,25 @@ export function transitionRound(career: CareerState, record: RoundRecord): { car
     finance: post(career.finance, season, round, 'transition', fee, `Ano de transição (${TRANSITION_ROLE_INFO[t.role].label})`),
     transition: { ...t, earnings: t.earnings + fee },
   };
+  const winnerId = record.race.entries[0]?.driverId;
   let pupilResult: string | null = null;
+  let pupilWon = false;
   if (t.role === 'mentor' && t.protegeId) {
     const pupil = next.drivers.find((d) => d.id === t.protegeId && d.teamId !== null);
     if (pupil) {
       const trained = developDriver(pupil, hashSeed(career.seed, season, round, 'mentor-dev', pupil.id), TRANSITION.MENTOR_EXTRA_CYCLES, 1).driver;
       next = { ...next, drivers: next.drivers.map((d) => (d.id === pupil.id ? trained : d)) };
       const entry = record.race.entries.find((e) => e.driverId === pupil.id);
-      pupilResult = !entry ? 'não correu' : entry.status === 'finished' ? `terminou em ${entry.position}º` : 'abandonou';
+      // Quem venceu não ganha o "Vencedor:" com o próprio nome logo depois.
+      pupilWon = entry !== undefined && entry.driverId === winnerId;
+      pupilResult = !entry ? 'não correu' : pupilWon ? 'venceu a etapa' : entry.status === 'finished' ? `terminou em ${entry.position}º` : 'abandonou';
     } else if (!protegeChild(career.family.children, t.protegeId)) {
       // Um piloto do campeonato que perdeu a vaga: o filho acompanhado por fora tem o texto da carreira própria.
       pupilResult = 'ficou sem vaga e não correu';
     }
   }
-  const winnerId = record.race.entries[0]?.driverId;
   const winner = career.drivers.find((d) => d.id === winnerId);
-  const body = TRANSITION_ROUND_TEXTS[t.role](textParams(career, t, round, winner ? fullName(winner) : '-', fee, pupilResult));
+  const body = TRANSITION_ROUND_TEXTS[t.role](textParams(career, t, round, winner ? fullName(winner) : '-', fee, pupilResult, pupilWon));
   return { career: next, body };
 }
 
