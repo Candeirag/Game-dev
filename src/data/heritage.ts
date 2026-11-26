@@ -20,8 +20,10 @@ export const KART_TEST_VERDICT_INFO: Readonly<Record<KartTestVerdict, KartTestVe
     label: 'Impressionante',
     comment: 'Os instrutores conferiram o cronômetro duas vezes e pediram o telefone da família.',
   },
+  // "Bom ritmo", não "Promissor": essa palavra é da avaliação dos treinadores (`childScoutReport`),
+  // cujas faixas são outras, e as duas aparecem lado a lado para o mesmo filho.
   promising: {
-    label: 'Promissor',
+    label: 'Bom ritmo',
     comment: 'Os instrutores gostaram do que viram: com treino, dá para pensar em carreira.',
   },
   average: {

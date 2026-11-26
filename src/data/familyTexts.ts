@@ -610,7 +610,7 @@ export const FAMILY_EVENT_TEXTS: {
     }),
     (p) => ({
       title: `${p.child} contra o relógio`,
-      body: `Aos ${p.age} anos, ${p.child} pergunta quando vai poder andar num kart de verdade, com tempo marcado. Um treinador oferece um teste: é o jeito de descobrir, antes da carreira, o que vem de nascença e o que vai ser preciso treinar.`,
+      body: `Aos ${p.age} anos, ${p.child} quer saber de uma vez quanto vale contra o cronômetro. Um treinador de fora oferece um teste: é o jeito de descobrir, antes da carreira, o que vem de nascença e o que vai ser preciso treinar.`,
       full: {
         label: 'Teste com todos os exercícios',
         description: `Largadas, pista molhada e voltas longas: ${p.full}. Mostra mais.`,
@@ -629,7 +629,7 @@ export const FAMILY_EVENT_TEXTS: {
     }),
     (p) => ({
       title: `Convite para ${p.child}`,
-      body: `Uma equipe de kart que procura talentos convidou ${p.child}, ${p.age} anos, para uma tarde de testes. O cronômetro não mente: é ali que aparecem os primeiros talentos e defeitos de quem ainda nem começou a correr.`,
+      body: `Uma equipe de kart que procura talentos convidou ${p.child}, ${p.age} anos, para uma tarde de testes. O cronômetro não mente: é ali que aparecem os talentos e defeitos de quem ainda não começou a carreira.`,
       full: {
         label: 'Aceitar o teste completo',
         description: `Equipe, instrutores e um dia inteiro de pista: ${p.full}. Revela mais.`,
@@ -648,7 +648,7 @@ export const FAMILY_EVENT_TEXTS: {
     }),
     (p) => ({
       title: `Hora de medir ${p.child}`,
-      body: `${p.child} vive falando de kart, mas ninguém mediu o ritmo com seriedade. Com ${p.age} anos, é a idade certa para um teste com instrutores: dá para saber se há talento escondido, ou um defeito que vai custar caro lá na frente.`,
+      body: `${p.child} vive falando de kart, e a família quer a opinião de quem entende. Com ${p.age} anos, é a idade certa para um teste com instrutores de fora: dá para saber se há talento escondido, ou um defeito que vai custar caro lá na frente.`,
       full: {
         label: 'Pagar o teste completo',
         description: `Dia inteiro, com relatório e conversa com a família: ${p.full}. Mais detalhes.`,
@@ -660,9 +660,9 @@ export const FAMILY_EVENT_TEXTS: {
         text: `${p.child} fez a versão curta, e os instrutores resumiram tudo numa conversa de corredor.`,
       },
       skip: {
-        label: 'Deixar o ritmo sem medida',
+        label: 'Ficar sem a opinião de fora',
         description: `Sem gasto. ${p.child} se decepciona, e o vínculo cai um pouco.`,
-        text: `${p.child} seguiu dando voltas por diversão, sem ninguém cronometrar.`,
+        text: `${p.child} ficou sem saber o que os instrutores teriam dito.`,
       },
     }),
     (p) => ({

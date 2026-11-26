@@ -17,7 +17,7 @@ import { markSeen } from '@/engine/story/memory';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { exportCareer, importCareer } from '@/persistence/saveService';
 import * as engine from './engineApi';
-import { NOW, newCareer } from './helpers';
+import { NOW, newCareer, playExecutiveRound, playRound } from './helpers';
 
 const hidden = (...ids: TraitId[]): BirthTrait[] => ids.map((id) => ({ id, revealedSeason: null, revealedRound: null }));
 const kind = (id: TraitId) => BIRTH_TRAITS[id].kind;
@@ -50,6 +50,16 @@ function withChild(career: CareerState, patch: Partial<Child>, seed = 1): { care
 }
 
 const findChild = (career: CareerState, id: string) => career.family.children.find((c) => c.id === id)!;
+
+/** Um filho com a carreira própria começada (apoio completo). */
+function racingChild(base: CareerState, patch: Partial<Child> = {}, id = 'kid-r'): CareerState {
+  const { career } = withChild(base, { id, age: 15, kartYears: 6, talent: 86, interest: 90, ...patch });
+  return engine.startChildCareer(career, id, 'full');
+}
+
+/** Todos os textos de um objeto de texto (título, corpo, rótulos, descrições e desfechos). */
+const allStrings = (value: unknown): string[] =>
+  typeof value === 'string' ? [value] : value && typeof value === 'object' ? Object.values(value).flatMap(allStrings) : [];
 
 /* ------------------------------------------------------------------ */
 
@@ -211,25 +221,34 @@ describe('teste no kart', () => {
     }
     expect(titles).toHaveLength(FAMILY_EVENT_TEXTS.kartTest.length);
     expect(new Set(titles).size).toBe(titles.length);
-    // Os textos do grupo não se repetem entre si nem com os de outros grupos.
-    const params = { child: 'Teca', age: 12, full: 'R$ 3 mil', quick: 'R$ 900' };
-    const texts = FAMILY_EVENT_TEXTS.kartTest.flatMap((variant) => {
-      const t = variant(params);
-      return [
-        t.title,
-        t.body,
-        t.full.label,
-        t.full.description,
-        t.full.text,
-        t.quick.label,
-        t.quick.description,
-        t.quick.text,
-        t.skip.label,
-        t.skip.description,
-        t.skip.text,
-      ];
-    });
+    // Os textos do grupo não se repetem entre si nem com os de outros grupos (mesmos nomes e valores).
+    const name = 'Teca';
+    const [high, low] = ['R$ 3 mil', 'R$ 900'];
+    const texts = FAMILY_EVENT_TEXTS.kartTest.flatMap((variant) => allStrings(variant({ child: name, age: 12, full: high, quick: low })));
+    expect(texts).toHaveLength(FAMILY_EVENT_TEXTS.kartTest.length * 11);
     expect(texts.filter((t, i) => texts.indexOf(t) !== i)).toEqual([]);
+    const others = new Set([
+      ...FAMILY_EVENT_TEXTS.partner.flatMap((v) =>
+        allStrings(v({ first: name, full: `${name} Souza`, age: 12, background: 'médica', description: 'Cuida de um hospital.' })),
+      ),
+      ...FAMILY_EVENT_TEXTS.wedding.flatMap((v) => allStrings(v({ first: name, together: '3 temporadas', share: 50, party: high, simple: low }))),
+      ...FAMILY_EVENT_TEXTS.crisis.flatMap((v) =>
+        [true, false].flatMap((married) => allStrings(v({ first: name, married, share: 50, therapy: high, trip: low }))),
+      ),
+      ...FAMILY_EVENT_TEXTS.child.flatMap((v) => [true, false].flatMap((firstChild) => allStrings(v({ first: name, firstChild, baby: name })))),
+      ...FAMILY_EVENT_TEXTS.kart.flatMap((v) => allStrings(v({ child: name, age: 12, until: 14, perYear: 2, full: high, basic: low }))),
+      ...FAMILY_EVENT_TEXTS.career.flatMap((v) => allStrings(v({ child: name, age: 12, traits: 'calmo', base: '3,0 anos', seatLow: low, seatHigh: high }))),
+    ]);
+    expect(others.size).toBeGreaterThan(100);
+    expect(texts.filter((t) => others.has(t))).toEqual([]);
+  });
+
+  it('o veredito do teste não usa as palavras da avaliação dos treinadores', () => {
+    const { child } = withChild(careerWithPartner(), { stage: 'racing' });
+    const scout = new Set(Array.from({ length: 61 }, (_, i) => engine.childScoutReport({ ...child, talent: 40 + i })));
+    expect(scout.size).toBe(5);
+    for (const verdict of Object.values(KART_TEST_VERDICT_INFO)) expect(scout.has(verdict.label)).toBe(false);
+    expect(new Set(Object.values(KART_TEST_VERDICT_INFO).map((v) => v.label)).size).toBe(4);
   });
 
   it('dois filhos na idade do teste ganham dois eventos, com textos diferentes', () => {
@@ -244,11 +263,6 @@ describe('teste no kart', () => {
 /* ------------------------------------------------------------------ */
 
 describe('temporadas de carreira própria', () => {
-  function racingChild(base: CareerState, patch: Partial<Child> = {}, id = 'kid-r'): CareerState {
-    const { career } = withChild(base, { id, age: 15, kartYears: 6, talent: 86, interest: 90, ...patch });
-    return engine.startChildCareer(career, id, 'full');
-  }
-
   it('cada temporada pode revelar mais um traço (sorteio próprio), com nota no fechamento', () => {
     const base = careerWithPartner();
     let reveals = 0;
@@ -298,6 +312,65 @@ describe('temporadas de carreira própria', () => {
     expect(neutral).toBeGreaterThan(slow);
     expect(engine.childTrainingFactor({ birthTraits: hidden('quickLearner') })).toBe(TRAIT_EFFECTS.quickLearner.training);
   });
+
+  it('familyTrainingFactors: por id de piloto, só os filhos que correm e aprendem rápido ou devagar', () => {
+    const quick = racingChild(careerWithPartner(), { birthTraits: hidden('quickLearner', 'rainFear', 'tyreSaver') });
+    const kid = findChild(quick, 'kid-r');
+    expect(engine.familyTrainingFactors(quick)).toEqual({ [kid.driver!.id]: TRAIT_EFFECTS.quickLearner.training });
+    const neutral = racingChild(careerWithPartner(), { birthTraits: hidden('rainMaster', 'tyreEater', 'hothead') });
+    expect(engine.familyTrainingFactors(neutral)).toEqual({});
+    // Quem não corre não entra (não tem piloto).
+    const { career } = withChild(careerWithPartner(), { age: 12, birthTraits: hidden('slowLearner', 'rainMaster', 'tyreSaver') });
+    expect(engine.familyTrainingFactors(career)).toEqual({});
+  });
+
+  it('no campeonato do jogador, o filho no grid aprende rápido ou devagar nas etapas (piloto e dirigente)', () => {
+    const base = careerWithPartner();
+    // O piloto do filho é um piloto do grid com margem para evoluir, como o filho na equipe do dirigente.
+    const rival = base.drivers.find((d) => d.teamId && !d.isPlayer && d.role !== 'reserve' && d.potential - d.attributes.pace > 5)!;
+    const withGridKid = (career: CareerState, traits: BirthTrait[] | null): CareerState => {
+      if (!traits) return career;
+      const c = racingChild(career);
+      return {
+        ...c,
+        family: { ...c.family, children: c.family.children.map((k) => (k.id === 'kid-r' ? { ...k, driver: { ...rival }, birthTraits: traits } : k)) },
+      };
+    };
+    const total = (career: CareerState) => Object.values(career.drivers.find((d) => d.id === rival.id)!.attributes).reduce((a, b) => a + b, 0);
+    for (const play of [(c: CareerState) => playRound(c), (c: CareerState) => playExecutiveRound(engine.retireFromDriving(c))]) {
+      const quick = total(play(withGridKid(base, hidden('quickLearner', 'rainFear', 'tyreSaver'))));
+      const neutral = total(play(withGridKid(base, hidden('rainMaster', 'tyreEater', 'hothead'))));
+      const slow = total(play(withGridKid(base, hidden('slowLearner', 'rainMaster', 'tyreSaver'))));
+      expect(quick).toBeGreaterThan(neutral);
+      expect(neutral).toBeGreaterThan(slow);
+      // Sem filho no grid, o piloto evolui exatamente como com um filho sem esses traços.
+      expect(total(play(withGridKid(base, null)))).toBe(neutral);
+    }
+  });
+
+  it('a evolução por fora segue o apoio da família (HERITAGE.SUPPORT_DEVELOPMENT)', () => {
+    const c = racingChild(careerWithPartner());
+    const kid = findChild(c, 'kid-r');
+    const rating = (support: Child['support']) => engine.overallRating(engine.closeChildSeason({ ...kid, support }, c, null).child.driver!.attributes);
+    expect(HERITAGE.SUPPORT_DEVELOPMENT.full).toBeGreaterThan(HERITAGE.SUPPORT_DEVELOPMENT.basic);
+    expect(rating('full')).toBeGreaterThan(rating('basic'));
+    expect(rating('basic')).toBeGreaterThan(rating('none'));
+  });
+
+  it('a avaliação dos treinadores segue as faixas de HERITAGE.SCOUT_BANDS', () => {
+    const { child } = withChild(careerWithPartner(), { stage: 'karting', kartYears: HERITAGE.SCOUT_MIN_KART_YEARS });
+    const bands = HERITAGE.SCOUT_BANDS;
+    const report = (talent: number) => engine.childScoutReport({ ...child, talent });
+    expect(engine.childScoutReport({ ...child, kartYears: HERITAGE.SCOUT_MIN_KART_YEARS - 0.01 })).toBeNull();
+    expect(report(bands.outstanding)).toBe('Fora de série');
+    expect(report(bands.outstanding - 1)).toBe('Muito promissor');
+    expect(report(bands.veryPromising)).toBe('Muito promissor');
+    expect(report(bands.veryPromising - 1)).toBe('Promissor');
+    expect(report(bands.promising)).toBe('Promissor');
+    expect(report(bands.promising - 1)).toBe('Mediano');
+    expect(report(bands.average)).toBe('Mediano');
+    expect(report(bands.average - 1)).toBe('Limitado');
+  });
 });
 
 /* ------------------------------------------------------------------ */
@@ -325,10 +398,40 @@ describe('filhos de saves antigos', () => {
     expectValid(engine.beginSeasonFamily(old));
   });
 
-  it('o fechamento do ano da família também dá os traços antes de revelar', () => {
+  it('o fechamento do ano da família dá os mesmos traços de ensureHeritage, antes de revelar', () => {
     const old = oldSave();
+    const ids = (children: readonly Child[]) => children.map((c) => c.birthTraits.map((t) => t.id));
     const { family } = engine.closeFamilyYear(old);
+    expect(ids(family.children)).toEqual(ids(engine.ensureHeritage(old).family.children));
     for (const child of family.children) expectValidTraits(child.birthTraits);
+    // Um filho de save antigo que corre: a temporada revela um dos traços que ele herda (não outro).
+    let revealed = 0;
+    for (let i = 0; i < 12; i++) {
+      const c = racingChild(careerWithPartner(), {}, `kid-old-${i}`);
+      const oldKid = { ...findChild(c, `kid-old-${i}`), birthTraits: [] };
+      const asOld = { ...c, family: { ...c.family, children: [oldKid] } };
+      const expected = engine.ensureHeritage(asOld).family.children[0]!.birthTraits;
+      const closed = engine.closeFamilyYear(asOld).family.children[0]!;
+      expect(closed.birthTraits.map((t) => t.id)).toEqual(expected.map((t) => t.id));
+      revealed += closed.birthTraits.filter((t) => t.revealedSeason === c.season).length;
+    }
+    expect(revealed).toBeGreaterThan(0);
+  });
+
+  it('save antigo com nascimento ativo: o filho sem traços herda do fundador', () => {
+    const base = careerWithPartner();
+    expect(engine.activeBirth(base)).not.toBeNull();
+    const children = Array.from({ length: 8 }, (_, i) => ({ ...engine.generateChild(base, i + 1), id: `kid-antigo-${i}`, birthTraits: [] }));
+    const old: CareerState = { ...base, family: { ...base.family, children } };
+    const ensured = engine.ensureHeritage(old);
+    for (const child of ensured.family.children) {
+      expectValidTraits(child.birthTraits);
+      expect(child.birthTraits).toEqual(engine.drawHeritageTraits(base.birth!.traits, engine.hashSeed(base.seed, 'child-heritage', child.id)));
+    }
+    // Os traços do fundador contam: sem o nascimento ativo, a herança sai diferente.
+    const orphans = engine.ensureHeritage({ ...old, birth: null });
+    expect(orphans.family.children.map((c) => c.birthTraits)).not.toEqual(ensured.family.children.map((c) => c.birthTraits));
+    expectValid(ensured);
   });
 });
 
@@ -410,7 +513,7 @@ describe('o herdeiro: o que se sabe dele e o nascimento', () => {
     expect(Math.abs(none.reduce((a, b) => a + b, 0) / none.length - BIRTH.APTITUDE_MEAN)).toBeLessThan(1.5);
   });
 
-  it('o parente jovem herda a carreira com traços sorteados, todos ocultos; quem não corre precisa do id', () => {
+  it('o parente jovem herda a carreira com traços sorteados, todos ocultos; o filho que não corre precisa do id', () => {
     const { career } = heirCareer();
     const heirs = engine.beginSuccession(career, 'death').succession!.heirs;
     const relative = heirs.find((h) => h.id === 'relative-driver')!;
@@ -418,9 +521,23 @@ describe('o herdeiro: o que se sabe dele e o nascimento', () => {
     expect(birth.driverId).toBe(relative.driver!.id);
     expectValidTraits(birth.traits);
     expect(birth.traits.every((t) => t.revealedSeason === null)).toBe(true);
+    // Um filho que assume os negócios sem correr: quem chama passa o id que ele vai ter.
+    const { career: withAdult } = withChild(career, { id: 'kid-adulto', age: 19, stage: 'other' }, 3);
+    const adultChild = engine.beginSuccession(withAdult, 'death').succession!.heirs.find((h) => h.childId === 'kid-adulto')!;
+    expect(() => engine.heirBirth(withAdult, adultChild)).toThrow(/id de piloto/);
+    const adultBirth = engine.heirBirth(withAdult, adultChild, 'dyn-kid-adulto-g2-s1');
+    expect(adultBirth.driverId).toBe('dyn-kid-adulto-g2-s1');
+    expect(adultBirth.traits).toEqual(findChild(withAdult, 'kid-adulto').birthTraits);
+  });
+
+  it('o parceiro e o parente adulto não têm nascimento de herdeiro', () => {
+    const { career } = heirCareer();
+    const heirs = engine.beginSuccession(career, 'death').succession!.heirs;
     const partner = heirs.find((h) => h.kind === 'partner')!;
-    expect(() => engine.heirBirth(career, partner)).toThrow(/id de piloto/);
-    expect(engine.heirBirth(career, partner, 'dyn-partner-g2-s1').driverId).toBe('dyn-partner-g2-s1');
+    const adult = heirs.find((h) => h.id === 'relative-adult')!;
+    expect(() => engine.heirBirth(career, partner)).toThrow(/Só o filho e o parente jovem/);
+    expect(() => engine.heirBirth(career, partner, 'dyn-partner-g2-s1')).toThrow(/Só o filho e o parente jovem/);
+    expect(() => engine.heirBirth(career, adult, 'dyn-relative-adult-g2-s1')).toThrow(/Só o filho e o parente jovem/);
   });
 });
 

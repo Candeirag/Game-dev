@@ -87,7 +87,9 @@ export function moraleTrainingFactor(morale: number): number {
 /**
  * Desenvolve todos os pilotos com vaga após uma etapa. Reservas treinam, mas
  * rendem metade (não competem). `playerMultiplier` reúne a intensidade do
- * treino e o apoio da academia do jogador.
+ * treino e o apoio da academia do jogador. `factors` traz multiplicadores
+ * próprios por id de piloto (os filhos que aprendem rápido ou devagar,
+ * Fase 6); quem não está lá rende como sempre.
  */
 export function developAfterRound(
   drivers: readonly Driver[],
@@ -95,6 +97,7 @@ export function developAfterRound(
   season: number,
   round: number,
   playerMultiplier = 1,
+  factors: Readonly<Record<string, number>> = {},
 ): { drivers: Driver[]; deltas: Record<string, AttributeDelta> } {
   const deltas: Record<string, AttributeDelta> = {};
   const next = drivers.map((d) => {
@@ -103,7 +106,8 @@ export function developAfterRound(
       moraleTrainingFactor(d.condition.morale) *
       (d.isPlayer ? playerMultiplier : 1) *
       (d.role === 'reserve' ? 0.5 : 1) *
-      (d.injury?.severity === 'serious' ? 0.3 : 1);
+      (d.injury?.severity === 'serious' ? 0.3 : 1) *
+      (factors[d.id] ?? 1);
     const result = developDriver(d, hashSeed(careerSeed, season, round, 'development', d.id), 1, multiplier);
     deltas[d.id] = result.delta;
     return result.driver;

@@ -33,6 +33,7 @@ import { conditionAfterRace, recoverInjury, rollInjury } from './condition';
 import { INTENSITY_GAIN, developAfterRound, type AttributeDelta } from './development';
 import { LIFESTYLE_RULES } from '@/data/assets';
 import { partnerMoraleEffect } from '../dynasty/family';
+import { familyTrainingFactors } from '../dynasty/heritage';
 import { hasPersonalProperty, settleAssetsRound } from '../economy/assets';
 import { post, settleRound } from './economy';
 import { economyTrainingFactor } from './hubs';
@@ -259,7 +260,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
 
   /* 6. Evolução */
   const multiplier = INTENSITY_GAIN[career.trainingIntensity] * (career.academy ? 1.1 : 1) * birthTrainingFactor(career) * economyTrainingFactor(career);
-  const developed = developAfterRound(career.drivers, career.seed, season, round, multiplier);
+  const developed = developAfterRound(career.drivers, career.seed, season, round, multiplier, familyTrainingFactors(career));
   career = { ...career, drivers: developed.drivers };
 
   /* 7. Mercado */

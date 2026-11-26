@@ -101,6 +101,21 @@ export function childTrainingFactor(child: Pick<Child, 'birthTraits'>): number {
   return child.birthTraits.reduce((factor, t) => factor * (traitEffect(t.id).training ?? 1), 1);
 }
 
+/**
+ * O mesmo multiplicador para os filhos que correm no campeonato do jogador (na equipe do dirigente,
+ * por exemplo): por id de piloto, só os diferentes de 1. Lá a evolução é a das etapas
+ * (`developAfterRound` e o simulador da equipe); na carreira por fora, é a de `closeChildSeason`.
+ */
+export function familyTrainingFactors(career: CareerState): Readonly<Record<string, number>> {
+  const factors: Record<string, number> = {};
+  for (const child of career.family.children) {
+    if (!child.driver) continue;
+    const factor = childTrainingFactor(child);
+    if (factor !== 1) factors[child.driver.id] = factor;
+  }
+  return factors;
+}
+
 /* ------------------------------------------------------------------ */
 /* Teste no kart                                                       */
 /* ------------------------------------------------------------------ */
@@ -208,11 +223,12 @@ export function revealSeasonTrait(child: Child, career: CareerState): { child: C
  * antes disso, ninguém viu a criança pilotar.
  */
 export function childScoutReport(child: Child): string | null {
-  if (child.stage !== 'racing' && child.kartYears < 0.5) return null;
-  if (child.talent >= 90) return 'Fora de série';
-  if (child.talent >= 86) return 'Muito promissor';
-  if (child.talent >= 82) return 'Promissor';
-  if (child.talent >= 76) return 'Mediano';
+  if (child.stage !== 'racing' && child.kartYears < HERITAGE.SCOUT_MIN_KART_YEARS) return null;
+  const bands = HERITAGE.SCOUT_BANDS;
+  if (child.talent >= bands.outstanding) return 'Fora de série';
+  if (child.talent >= bands.veryPromising) return 'Muito promissor';
+  if (child.talent >= bands.promising) return 'Promissor';
+  if (child.talent >= bands.average) return 'Mediano';
   return 'Limitado';
 }
 
@@ -266,9 +282,14 @@ export function heirOutlook(career: CareerState, heir: HeirOption): HeirOutlook 
  *
  * `driverId` é o id de piloto do herdeiro; quando ele ainda não corre (um filho que assume os
  * negócios), quem chama passa o id que ele vai ter.
+ *
+ * Só o filho (nos dois caminhos) e o parente jovem piloto têm nascimento de herdeiro. O parceiro e o
+ * parente adulto não são de sangue nem pilotos: não ganham talentos e defeitos de nascença (lança
+ * erro, e a sucessão deixa o nascimento como está).
  */
 export function heirBirth(career: CareerState, heir: HeirOption, driverId?: string): Birth {
-  const child = heir.childId ? career.family.children.find((c) => c.id === heir.childId) : undefined;
+  const child = heir.kind === 'child' && heir.childId ? career.family.children.find((c) => c.id === heir.childId) : undefined;
+  if (!child && !(heir.kind === 'relative' && heir.driver)) throw new Error('Só o filho e o parente jovem piloto têm nascimento de herdeiro.');
   const id = driverId ?? child?.driver?.id ?? heir.driver?.id;
   if (!id) throw new Error('O herdeiro ainda não tem id de piloto.');
   const predecessor = activeBirth(career);

@@ -52,6 +52,7 @@ import {
 } from '../career/offseason';
 import { familyDriverIds, formerCharacterIds, fullName, getPlayer } from '../career/selectors';
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
+import { familyTrainingFactors } from '../dynasty/heritage';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality } from '../dynasty/succession';
 import { closeAssetsYear, liquidateAssets, settleAssetsRound } from '../economy/assets';
@@ -238,8 +239,10 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
   });
   career = { ...career, drivers, gridPenalties: { ...gridDrops } };
 
-  /* 3. Evolução dos pilotos. Os da equipe do jogador ganham com o simulador, o engenheiro-chefe e o comando. */
-  career = { ...career, drivers: developAfterRound(career.drivers, career.seed, season, round, 1).drivers };
+  /* 3. Evolução dos pilotos. Os da equipe do jogador ganham com o simulador, o engenheiro-chefe e o comando.
+     Os filhos no grid aprendem rápido ou devagar pelos traços de nascença (Fase 6). */
+  const childFactors = familyTrainingFactors(career);
+  career = { ...career, drivers: developAfterRound(career.drivers, career.seed, season, round, 1, childFactors).drivers };
   const m1 = career.management;
   if (m1) {
     const confidence = (staffRating(m1, 'chiefEngineer') - 60) / 40;
@@ -250,7 +253,12 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
         if (d.teamId !== m1.teamId) return d;
         const trained =
           m1.facilities.simulator > 0
-            ? developDriver(d, hashSeed(career.seed, season, round, 'simulator', d.id), 1, m1.facilities.simulator * MANAGEMENT.SIMULATOR_DRIVER_DEV).driver
+            ? developDriver(
+                d,
+                hashSeed(career.seed, season, round, 'simulator', d.id),
+                1,
+                m1.facilities.simulator * MANAGEMENT.SIMULATOR_DRIVER_DEV * (childFactors[d.id] ?? 1),
+              ).driver
             : d;
         return {
           ...trained,

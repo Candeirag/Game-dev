@@ -748,6 +748,8 @@ export const SPONSOR_PROFILE_RULES = {
  * Herança de talentos e defeitos. Cada filho nasce com três traços de nascença, como o fundador
  * (um talento, um defeito e um terceiro qualquer, sem os dois lados de um par): parte vem do pai ou
  * da mãe, parte é sorteada. Ficam ocultos até o teste no kart e as temporadas de carreira própria.
+ * Aqui também estão os números do que se vê de um filho antes da sucessão (o teste, a avaliação dos
+ * treinadores) e da evolução dele na carreira própria.
  */
 export const HERITAGE = {
   // Chance de cada traço do pai ou da mãe passar para um filho. Com três traços, em média 1,2 passa:
@@ -774,6 +776,17 @@ export const HERITAGE = {
   // Chance de cada temporada de carreira própria (por fora ou no campeonato do jogador) revelar mais
   // um traço.
   SEASON_REVEAL_CHANCE: 0.5,
+  // Evolução de um filho numa temporada de carreira própria por fora do campeonato do jogador, pelo
+  // apoio da família: completo, básico ou nenhum. Os números estavam soltos em `closeChildSeason`; a
+  // Fase 6 mexeu nessa conta (aprender rápido ou devagar) e os trouxe para cá, sem mudar os valores.
+  SUPPORT_DEVELOPMENT: { full: 1, basic: 0.92, none: 0.85 },
+  // Avaliação dos treinadores sobre o teto de um filho (`childScoutReport`, que a tela da sucessão e o
+  // robô leem): o teto mínimo de cada faixa, da melhor para a pior ("Fora de série", "Muito
+  // promissor", "Promissor", "Mediano"); abaixo da última, "Limitado". Só existe com a carreira em
+  // andamento ou depois deste tanto de anos de kart: antes, ninguém viu a criança pilotar. Valores de
+  // antes da Fase 6, trazidos para cá sem mudança.
+  SCOUT_BANDS: { outstanding: 90, veryPromising: 86, promising: 82, average: 76 },
+  SCOUT_MIN_KART_YEARS: 0.5,
   // Aptidões de corpo e mente do herdeiro: esta parte vem do pai ou da mãe e o resto da média 50,
   // com o desvio abaixo (um herdeiro não é cópia de ninguém).
   APTITUDE_PARENT_WEIGHT: 0.5,

@@ -22,6 +22,7 @@ import type {
   SupportLevel,
 } from '@/domain/schemas';
 import { CHILD_TRAITS, PARTNER_BACKGROUNDS } from '@/domain/schemas';
+import { HERITAGE } from '@/config/balance';
 import { LIFESTYLE_RULES } from '@/data/assets';
 import { LICENSE_WINDOW_SEASONS, categoryByTier, getCategory, type CategoryDefinition } from '@/data/categories';
 import { NEUTRAL_CONDITION } from '@/data/drivers';
@@ -334,9 +335,11 @@ export function closeChildSeason(
     const noise = gaussian(rng) * Math.max(1, FAMILY.SEASON_NOISE_SD + traitSum(child, 'volatility'));
     position = estimateSeasonPosition(competitiveRating(driver.attributes), category, racing.teamRank, noise);
     wins = winsFor(position, rng);
+    // Aprender rápido ou devagar (childTrainingFactor) vale também no campeonato do jogador: ali a
+    // evolução é a das etapas (familyTrainingFactors, em developAfterRound).
     const multiplier =
       traitProduct(child, 'development') *
-      (child.support === 'full' ? 1 : child.support === 'basic' ? 0.92 : 0.85) *
+      HERITAGE.SUPPORT_DEVELOPMENT[child.support] *
       (racing.academy ? FAMILY.ACADEMY_DEVELOPMENT : 1) *
       childTrainingFactor(child);
     // Uma temporada equivale às etapas da categoria mais a pré-temporada, em três blocos:
