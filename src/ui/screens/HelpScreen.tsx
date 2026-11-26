@@ -1,12 +1,18 @@
 /** Ajuda: tutorial em passos e um resumo de como o jogo funciona, um assunto por vez. */
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Briefcase, Check, CircleUser, Flag, Heart, ListChecks, TrendingUp, Wallet, type LucideIcon } from 'lucide-react';
-import { RACE_MOMENTS } from '@/config/balance';
+import { BAD_INVESTMENT, FAMILY_TEAM, HEIR_START, HERITAGE, RACE_MOMENTS, RELATIVES } from '@/config/balance';
+import { TRANSITION_ROLES } from '@/domain/schemas';
 import { CATEGORY_NAMES, FIRST_CATEGORY_ID, FIRST_FORMULA_CATEGORY_ID, TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
-import { capitalize } from '@/domain/text';
+import { capitalize, counted } from '@/domain/text';
+import { ASSET_RULES } from '@/data/assets';
+import { RELATIVE_PATH_INFO } from '@/data/dynasty';
+import { FAMILY } from '@/data/family';
+import { TRANSITION_ROLE_INFO } from '@/data/transition';
 import { tutorialSteps } from '@/engine';
 import { useGameStore } from '@/store/gameStore';
 import { Button, Card, cx, PageHeader } from '@/ui/kit';
+import { formatMoney } from '../format';
 import { useCareer } from '../hooks/useCareer';
 
 /**
@@ -30,7 +36,7 @@ export function TutorialCard({ compact = true }: { compact?: boolean }) {
           </button>
         ) : undefined
       }
-      bodyClassName={compact ? undefined : 'p-3'}
+      bodyClassName={compact ? undefined : 'p-4'}
     >
       <ol className={cx('grid gap-y-2', !compact && 'gap-x-6 lg:grid-cols-2')}>
         {steps.map((step, index) => (
@@ -60,7 +66,44 @@ export function TutorialCard({ compact = true }: { compact?: boolean }) {
   );
 }
 
-const TOPICS: { id: string; title: string; icon: LucideIcon; items: string[] }[] = [
+/** "40%": as frações das tabelas, em porcentagem. */
+const percent = (share: number) => `${Math.round(share * 100)}%`;
+
+/** "a, b ou c". */
+const orList = (items: readonly string[]) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} ou ${items[items.length - 1]}` : (items[0] ?? ''));
+
+/** "Mentoria" → "mentoria"; "Comentários na TV" → "comentários na TV" (só a primeira letra). */
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
+
+/** Os papéis do ano de transição ("mentoria, comentários na TV ou imagem de uma marca"). */
+const transitionRoles = orList(TRANSITION_ROLES.map((role) => lowerFirst(TRANSITION_ROLE_INFO[role].label)));
+
+/** O legado de cada papel ("Mentoria: quem foi acompanhado…"). */
+const transitionLegacies = TRANSITION_ROLES.map((role) => `${TRANSITION_ROLE_INFO[role].label}: ${lowerFirst(TRANSITION_ROLE_INFO[role].legacy)}`).join(' ');
+
+/** Os textos de família e dinastia (Fase 6). Os números saem todos das tabelas do jogo. */
+function familyItems(): string[] {
+  const reveals = HERITAGE.KART_TEST_REVEALS;
+  const paths = orList(Object.values(RELATIVE_PATH_INFO).map((info) => info.label.toLowerCase()));
+  return [
+    `A partir dos ${FAMILY.PARTNER_MIN_AGE} anos você pode conhecer alguém, casar e ter até ${FAMILY.MAX_CHILDREN} filhos. As decisões do casal aparecem no começo de cada temporada, e um filho também pode chegar por um cartão da vida pessoal ao longo do ano.`,
+    `Cada filho herda parte do seu talento e nasce com talentos e defeitos de nascença, como você: cada um dos seus passa para cada filho com ${percent(HERITAGE.INHERIT_CHANCE)} de chance, e o resto é sorteado. Eles já agem desde cedo, mas ficam ocultos ("?" na tela Família) até alguém ver a criança pilotar.`,
+    `Dos ${FAMILY.KART_START_AGE} aos ${FAMILY.CAREER_START_AGE - 1} anos vem a formação no kart. Aos ${HERITAGE.KART_TEST_AGE}, o teste no kart: o completo revela ${counted(reveals.full, 'talento ou defeito', 'talentos ou defeitos')}, o rápido ${reveals.quick}, e os dois mostram a diferença para o tempo de referência dos instrutores, com três casas. Aos ${FAMILY.CAREER_START_AGE}, a carreira própria, que você pode bancar; cada temporada dela tem ${percent(HERITAGE.SEASON_REVEAL_CHANCE)} de chance de revelar mais um.`,
+    `Ao pendurar o capacete, o primeiro ano fora do carro é o ano de transição: um papel à escolha (${transitionRoles}), com cachê por etapa e eventos próprios. No fechamento desse ano, você decide se vira dirigente.`,
+    `Cada papel do ano de transição deixa um legado. ${transitionLegacies}`,
+    'Quando o personagem morre ou passa o comando em vida, você escolhe quem assume, pelo que se sabe de cada um: talentos e defeitos já revelados, o teste no kart, a avaliação dos treinadores, a categoria e a equipe. Quem corre pode seguir nas pistas; quem é adulto pode assumir os negócios. O save nunca acaba.',
+    `A herança paga imposto de ${percent(ASSET_RULES.INHERITANCE_TAX)} sobre o que passa de ${formatMoney(ASSET_RULES.INHERITANCE_EXEMPT)} (${percent(ASSET_RULES.HANDOVER_TAX)} quando o comando passa em vida). Quando quem assume é um dos filhos, os outros levam ${percent(ASSET_RULES.SIBLING_SHARE)} cada (até três).`,
+    `Os filhos que não assumem seguem caminho próprio (${paths}) e continuam na árvore da família. A partir dos ${RELATIVES.WORK_FROM_AGE} anos, quem foi para a engenharia ou para a direção esportiva aparece entre os profissionais que a equipe da família pode contratar, por um salário menor, e abre portas em outras equipes; quem foi para os negócios pode patrocinar quem corre.`,
+    `Da segunda geração em diante, o sobrenome pesa: quem herda começa com pelo menos ${percent(FAMILY.NAME_PRESTIGE)} da maior reputação da família e com mais contatos nas equipes, mas a imprensa compara com quem veio antes, e resultado ruim custa mais reputação e moral.`,
+    `O patrimônio paga o começo: só quem herda pode comprar uma vaga numa equipe da frente, ${percent(HEIR_START.TOP_SEAT_PREMIUM)} mais cara que a tabela e paga na hora, se a herança cobrir a vaga e uma reserva para viver. Se a família é dona de uma equipe na categoria, dá para correr por ela${FAMILY_TEAM.SEAT_SHARE === 0 ? ', com a vaga paga pela família' : ''}; a imprensa fala em favorecimento, e ficar atrás do companheiro custa moral e reputação.`,
+    'Quem passa o comando em vida continua por perto: segue no controle da equipe, cuida das participações da família ou acompanha de longe.',
+    `Dinheiro de família tem freio: além do imposto, quem herdou patrimônio recebe propostas de negócio no começo do ano, e ${percent(BAD_INVESTMENT.LOSS_CHANCE)} delas terminam em prejuízo.`,
+    'A árvore da família e o placar de cada geração (títulos, vitórias, pódios e equipes) ficam na tela Dinastia, aberta pelo botão "Árvore e placar" em Família.',
+  ];
+}
+
+/** Os itens de cada assunto; os que têm dinheiro são montados na hora (a moeda de exibição vem do save). */
+const TOPICS: { id: string; title: string; icon: LucideIcon; items: readonly string[] | (() => readonly string[]) }[] = [
   {
     id: 'piloto',
     title: 'Piloto',
@@ -119,18 +162,14 @@ const TOPICS: { id: string; title: string; icon: LucideIcon; items: string[] }[]
     id: 'familia',
     title: 'Família e dinastia',
     icon: Heart,
-    items: [
-      'A partir dos 21 anos você pode conhecer alguém, casar e ter filhos. As decisões aparecem no começo de cada temporada.',
-      'Os filhos herdam parte do seu talento. Dos 8 aos 13 anos vem a formação no kart; aos 14, a carreira própria, que você pode bancar.',
-      'Quando o personagem morre ou passa o comando, um herdeiro assume: nas pistas ou nos negócios. O save nunca acaba.',
-    ],
+    items: familyItems,
   },
   {
     id: 'depois',
     title: 'Depois das pistas',
     icon: Briefcase,
     items: [
-      'Ao se aposentar, você pode investir, aceitar o comando de uma equipe, comprar uma ou fundar a sua.',
+      'Ao se aposentar, o primeiro ano fora do carro é o ano de transição (veja Família e dinastia). Depois dele, você pode investir, aceitar o comando de uma equipe, comprar uma ou fundar a sua.',
       'Como dirigente, você decide pilotos, equipe técnica, instalações, patrocinadores e a pesquisa do carro, dentro do regulamento de cada categoria.',
       'O chefe contratado vive de salário e pode ser demitido; o dono fica com o lucro, cobre o prejuízo e deixa a equipe aos herdeiros.',
     ],
@@ -173,7 +212,7 @@ export function HelpScreen() {
               aria-controls="help-panel"
               onClick={() => open(section.id)}
               className={cx(
-                'flex min-h-11 shrink-0 items-center gap-2 px-3 text-left text-sm font-semibold transition-colors',
+                'flex min-h-11 shrink-0 items-center gap-2 px-4 text-left text-sm font-semibold transition-colors',
                 selected
                   ? 'bg-ink-700 text-ink-100 shadow-[inset_0_-3px_0_0_var(--color-apex-500)] md:shadow-[inset_3px_0_0_0_var(--color-apex-500)]'
                   : 'text-ink-400 hover:text-ink-100',
@@ -185,11 +224,11 @@ export function HelpScreen() {
           );
         })}
       </div>
-      <div id="help-panel" role="tabpanel" aria-labelledby={`help-tab-${current}`} className="mt-3 min-w-0 md:col-start-2 md:row-start-2 md:mt-0">
+      <div id="help-panel" role="tabpanel" aria-labelledby={`help-tab-${current}`} className="mt-4 min-w-0 md:col-start-2 md:row-start-2 md:mt-0">
         {topic ? (
           <Card title={topic.title}>
             <ul className="max-w-3xl list-disc space-y-2 pl-4 text-sm leading-snug text-ink-300">
-              {topic.items.map((item) => (
+              {(typeof topic.items === 'function' ? topic.items() : topic.items).map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
