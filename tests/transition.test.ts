@@ -376,6 +376,23 @@ describe('eventos do ano de transição', () => {
     }
   });
 
+  it('com o filho único como pupilo, os ciúmes de outro filho não saem; com mais um filho, saem', () => {
+    const jealous = TRANSITION_EVENTS.filter((e) => e.needs === 'otherChild').map((e) => e.id);
+    expect(jealous.length).toBeGreaterThan(0);
+    let only = engine.startChildCareer(withChildren(retiredAt(), [{ id: 'kid', age: 15 }]), 'kid', 'full');
+    only = engine.startExecutiveSeason(only, { kind: 'transition', role: 'mentor' });
+    const kid = only.family.children.find((k) => k.id === 'kid')!;
+    expect(only.transition!.protegeId).toBe(kid.driver!.id);
+    const ids = (c: CareerState) => engine.transitionEventCandidates(c, c.transition!).map((e) => e.id);
+    expect(ids(only)).not.toEqual(expect.arrayContaining(jealous));
+    // Os eventos que só pedem um filho continuam valendo com o pupilo como filho único.
+    const withAnother = withChildren(only, [{ id: 'kid-small', age: 6 }]);
+    expect(ids(withAnother)).toEqual(expect.arrayContaining(jealous));
+    // Com um pupilo de fora da família, basta um filho em casa.
+    const outsider = withChildren(transitionYear('mentor'), [{ id: 'kid', age: 8 }]);
+    expect(ids(outsider)).toEqual(expect.arrayContaining(jealous));
+  });
+
   it('os tamanhos dos dados viram efeitos pelas listas EVENT_*', () => {
     const c = withChildren(withPartner(transitionYear('mentor')), [
       { id: 'kid-a', age: 8 },
@@ -798,7 +815,7 @@ describe('dados do ano de transição', () => {
     for (const event of TRANSITION_EVENTS) {
       const kinds = event.choices.flatMap((c) => c.outcomes.flatMap((o) => o.effects.map((e) => e.e)));
       if (kinds.includes('relationship')) expect(event.needs, event.id).toBe('partner');
-      if (kinds.includes('bond')) expect(event.needs, event.id).toBe('children');
+      if (kinds.includes('bond')) expect(['children', 'otherChild'], event.id).toContain(event.needs);
       const allowed = event.role === 'mentor' ? ['pupilo'] : event.role === 'ambassador' ? ['marca'] : [];
       for (const text of textsOf(event)) for (const key of placeholders(text)) expect(allowed, `${event.id}: {${key}}`).toContain(key);
     }

@@ -368,15 +368,17 @@ export function transitionEffects(career: CareerState, spec: TransitionEffectSpe
   }
 }
 
-function needsMet(career: CareerState, spec: TransitionEventSpec): boolean {
+function needsMet(career: CareerState, t: Transition, spec: TransitionEventSpec): boolean {
   if (spec.needs === 'partner') return career.family.partner !== null;
   if (spec.needs === 'children') return career.family.children.length > 0;
+  // Um filho além de quem a mentoria acompanha (os ciúmes em casa não fazem sentido com o filho único como pupilo).
+  if (spec.needs === 'otherChild') return career.family.children.some((c) => !t.protegeId || protegeChild([c], t.protegeId) === undefined);
   return true;
 }
 
 /** Os eventos do papel que ainda podem sair (não vistos e com quem eles pressupõem). */
 export function transitionEventCandidates(career: CareerState, t: Transition): TransitionEventSpec[] {
-  return TRANSITION_EVENTS.filter((e) => e.role === t.role && !t.seen.includes(e.id) && needsMet(career, e));
+  return TRANSITION_EVENTS.filter((e) => e.role === t.role && !t.seen.includes(e.id) && needsMet(career, t, e));
 }
 
 /** Monta o cartão pendente de um evento dos dados. */

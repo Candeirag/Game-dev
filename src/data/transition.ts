@@ -93,8 +93,11 @@ export const TRANSITION_START_TEXTS: Readonly<Record<TransitionRole, (p: Transit
 /* Eventos do ano                                                      */
 /* ------------------------------------------------------------------ */
 
-/** Quem o evento pressupõe (sem essa pessoa, ele não sai). */
-export type TransitionNeed = 'partner' | 'children';
+/**
+ * Quem o evento pressupõe (sem essa pessoa, ele não sai): o parceiro, um filho, ou um filho além de
+ * quem a mentoria acompanha (`otherChild`). Os textos não contam quantos filhos há: pode ser um só.
+ */
+export type TransitionNeed = 'partner' | 'children' | 'otherChild';
 
 /**
  * Um efeito de um desfecho: dinheiro, reputação, moral, relação com o parceiro ou vínculo de todos os
@@ -204,7 +207,7 @@ export const TRANSITION_EVENTS: readonly TransitionEventSpec[] = [
     role: 'commentator',
     needs: 'children',
     title: 'Visita à cabine',
-    body: 'A emissora abre a cabine de transmissão para a família assistir a uma corrida ao seu lado. As crianças não falam de outra coisa.',
+    body: 'A emissora abre a cabine de transmissão para a família assistir a uma corrida ao seu lado. Em casa, ninguém fala de outra coisa.',
     choices: [
       {
         id: 'levar-a-familia',
@@ -215,7 +218,7 @@ export const TRANSITION_EVENTS: readonly TransitionEventSpec[] = [
       {
         id: 'cabine-de-trabalho',
         label: 'Manter a cabine só para o trabalho',
-        description: 'Concentração total, e crianças decepcionadas.',
+        description: 'Concentração total, e decepção em casa.',
         outcomes: sure('A transmissão saiu impecável; em casa, a decepção durou a semana.', fx('reputation', 1), fx('bond', -1)),
       },
     ],
@@ -333,7 +336,7 @@ export const TRANSITION_EVENTS: readonly TransitionEventSpec[] = [
     role: 'ambassador',
     needs: 'children',
     title: 'Aniversário no dia do evento',
-    body: 'O maior evento do ano da {marca} caiu no mesmo dia do aniversário de uma das crianças.',
+    body: 'O maior evento do ano da {marca} caiu justo no dia de um aniversário na família.',
     choices: [
       {
         id: 'ir-ao-evento',
@@ -555,20 +558,20 @@ export const TRANSITION_EVENTS: readonly TransitionEventSpec[] = [
   {
     id: 'ciumes-em-casa',
     role: 'mentor',
-    needs: 'children',
+    needs: 'otherChild',
     title: 'Ciúmes em casa',
-    body: 'As crianças reclamam que você passa mais tempo com {pupilo} do que com o resto da família.',
+    body: 'Em casa, a reclamação é uma só: você passa mais tempo com {pupilo} do que com a família.',
     choices: [
       {
         id: 'levar-as-criancas',
-        label: 'Levar as crianças a um treino',
+        label: 'Levar a família a um treino',
         description: 'Um dia de pista para todo mundo.',
-        outcomes: sure('As crianças passaram o dia no box e voltaram falando de corrida sem parar.', fx('bond', 2)),
+        outcomes: sure('A família passou o dia no box e voltou falando de corrida sem parar.', fx('bond', 2)),
       },
       {
         id: 'explicar-que-e-trabalho',
         label: 'Explicar que é trabalho',
-        description: 'Um dia elas vão entender.',
+        description: 'Um dia vão entender.',
         outcomes: sure('A explicação foi aceita, mas sem muito entusiasmo.', fx('bond', -1)),
       },
     ],
