@@ -27,6 +27,7 @@ import { CATEGORIES, getCategory } from '@/data/categories';
 import { SPONSOR_PROFILES, STORY_CHAINS, STORY_EVENT_CATALOG } from '@/data/events';
 import type { PlayerBackground } from '@/data/rules';
 import * as engine from '@/engine';
+import { continueDynasty, dynastyStats, type DynastySample, type DynastyStats } from './dynasty';
 import { botOffseason, botTraining, playRound, resolvePending, withTalent, type BotDoor, type Choices, type MomentPolicy, type RaceWatch } from './policy';
 
 /** Data fixa de criação das carreiras: o relógio não entra na simulação. */
@@ -45,9 +46,16 @@ export interface SimOptions {
    * o estilo do piloto decide, como em "simular até o fim". 'safe' e 'bold' servem para comparar.
    */
   moments?: MomentPolicy;
+  /**
+   * Gerações por carreira (Fase 6). Com 1, a amostra acaba nas temporadas pedidas. Com 2, cada carreira
+   * continua dali até a 2ª geração (`sim/dynasty.ts`) e o relatório ganha a seção 11; as seções 1 a 10
+   * continuam medindo só as temporadas pedidas da 1ª geração. Sem valor, vale 1 (a linha de comando
+   * usa 2 por padrão).
+   */
+  generations?: 1 | 2;
 }
 
-export const DEFAULT_SIM_OPTIONS: Required<SimOptions> = { seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style' };
+export const DEFAULT_SIM_OPTIONS: Required<SimOptions> = { seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style', generations: 2 };
 
 /**
  * A política simples do simulador, num lugar só: treino de acerto, classificação e corrida
@@ -209,6 +217,8 @@ export interface CareerSample {
   ended: 'completed' | 'succession';
   /** Textos de evento que esta carreira viu mais de uma vez (Fase 5: nenhum texto pode se repetir). */
   texts: TextRepeatSample;
+  /** A dinastia (Fase 6): só com `generations: 2`, a continuação da carreira até a 2ª geração. */
+  dynasty?: DynastySample;
 }
 
 /** Um texto que apareceu mais de uma vez na mesma carreira. */
@@ -459,10 +469,26 @@ function birthSample(career: CareerState): BirthSample {
   };
 }
 
-/** Joga uma carreira com o robô e devolve uma linha por temporada disputada. */
-export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons' | 'talent' | 'moments'>): CareerSample {
-  const profile = profileForSeed(seed);
+/**
+ * Joga uma carreira com o robô e devolve uma linha por temporada disputada. Com `generations: 2`, a
+ * carreira continua depois delas até a 2ª geração (`continueDynasty`, que mostra cada passo a
+ * `onDynastyStep`, se houver), sem mudar as temporadas da amostra.
+ */
+export function simulateCareer(
+  seed: number,
+  options: Pick<SimOptions, 'seasons' | 'talent' | 'moments' | 'generations'>,
+  onDynastyStep?: (career: CareerState) => void,
+): CareerSample {
   const choices: Choices = { ...SIM_CHOICES, moments: options.moments ?? DEFAULT_SIM_OPTIONS.moments };
+  const { sample, career } = playSampleSeasons(seed, options, choices);
+  if ((options.generations ?? 1) < 2) return sample;
+  const from = { firstSeasons: sample.seasons, startAge: sample.profile.age, choices, talent: options.talent };
+  return { ...sample, dynasty: continueDynasty(seed, career, from, onDynastyStep) };
+}
+
+/** As temporadas pedidas de uma carreira: a amostra e a carreira como ficou no fim dela (para a dinastia continuar). */
+function playSampleSeasons(seed: number, options: Pick<SimOptions, 'seasons' | 'talent'>, choices: Choices): { sample: CareerSample; career: CareerState } {
+  const profile = profileForSeed(seed);
   const seasons: SeasonSample[] = [];
   let index = 1;
   let birth: BirthSample | null = null;
@@ -484,7 +510,7 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
         career = playRound(career, choices, watch);
       }
       // Um acidente fatal no meio do ano encerra a amostra sem contar a temporada incompleta.
-      if (!career.offseason) return { seed, profile, birth, seasons, ended: 'succession', texts: events.texts() };
+      if (!career.offseason) return { sample: { seed, profile, birth, seasons, ended: 'succession', texts: events.texts() }, career };
       // As decisões que a última etapa deixou pendentes são resolvidas aqui, depois do fechamento
       // do ano (que acontece ao concluir a última etapa) e antes de medir o caixa e de escolher a
       // proposta, como faz o jogador.
@@ -493,14 +519,14 @@ export function simulateCareer(seed: number, options: Pick<SimOptions, 'seasons'
       seasons.push(sampleSeason(career, index, seat, cause, door, races, events.closeSeason(career)));
       // Quem jogou todas as temporadas pedidas completou a carreira, mesmo que a sucessão venha no último fechamento.
       if (index === options.seasons) break;
-      if (career.succession) return { seed, profile, birth, seasons, ended: 'succession', texts: events.texts() };
+      if (career.succession) return { sample: { seed, profile, birth, seasons, ended: 'succession', texts: events.texts() }, career };
       const next = botOffseason(career);
       seat = career.offseason?.offers.find((o) => o.id === next.offerId)?.kind ?? 'fallback';
       cause = seat === 'fallback' ? seatMarket(career).cause : null;
       door = next.door;
       career = engine.startNextSeason(next.career, next.offerId);
     }
-    return { seed, profile, birth, seasons, ended: 'completed', texts: events.texts() };
+    return { sample: { seed, profile, birth, seasons, ended: 'completed', texts: events.texts() }, career };
   } catch (error) {
     // Uma carreira que quebra tem de dizer qual foi: é com a semente que se reproduz o defeito.
     throw new Error(`A carreira da semente ${seed} falhou na temporada ${index}: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
@@ -610,6 +636,8 @@ export interface SimSummary {
   moments: MomentStats;
   /** Eventos encadeados com memória (Fase 5). */
   events: EventStats;
+  /** A dinastia (Fase 6): só com `generations: 2`; senão, null. */
+  dynasty: DynastyStats | null;
 }
 
 /** Cartões da Fase 5 por etapa disputada e no começo da temporada (a regra é de 1 a 3 por etapa). */
@@ -1264,6 +1292,7 @@ export function summarize(samples: readonly CareerSample[], options: SimOptions)
     doors: doorStats(samples),
     moments: momentStats(samples),
     events: eventStats(samples, options.seasons),
+    dynasty: (options.generations ?? 1) >= 2 ? dynastyStats(samples.flatMap((c) => c.dynasty ?? [])) : null,
   };
 }
 

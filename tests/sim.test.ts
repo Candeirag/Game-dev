@@ -2,16 +2,29 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { CATEGORIES } from '@/data/categories';
 import { SPONSOR_PROFILES, STORY_CHAINS } from '@/data/events';
 import { PLAYER_BACKGROUNDS, PLAYER_MAX_AGE, PLAYER_MIN_AGE } from '@/data/rules';
 import { ROOKIE_TEAM_IDS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
-import type { MomentRecord, PendingEvent } from '@/domain/schemas';
-import type { RaceMoment } from '@/engine';
+import { type CareerState, CareerStateSchema, type MomentRecord, type PendingEvent, type Relative } from '@/domain/schemas';
+import { type HeirOutlook, type RaceMoment, childScoutReport, getPlayer, heirOutlook, heirSeatOptions, resolveSuccession } from '@/engine';
 import { HELP, parseArgs, runCli } from '../sim/cli';
-import { playRound } from '../sim/policy';
+import {
+  type AfterDrivingSample,
+  type DynastySample,
+  type DynastySeason,
+  type GenerationEnd,
+  type GenerationSample,
+  type HeirSample,
+  SIM_DYNASTY,
+  type SuccessionSample,
+  continueDynasty,
+  dynastyPolicy,
+  heirTakesOver,
+} from '../sim/dynasty';
+import { BOT_HEIR_SCORE, BOT_HEIR_SEAT_ORDER, botChooseHeir, botHeirScore, botSuccession, playRound } from '../sim/policy';
 import { formatReport } from '../sim/report';
 import {
   type CareerSample,
@@ -36,32 +49,55 @@ import {
   watchEvents,
 } from '../sim/run';
 
-const SMALL = { seeds: 4, seasons: 3, firstSeed: 11, talent: 0 };
+// Os testes rápidos medem só a 1ª geração; a dinastia (Fase 6) tem testes próprios, mais demorados.
+const SMALL = { seeds: 4, seasons: 3, firstSeed: 11, talent: 0, generations: 1 } as const;
 const small: SimResult = runSimulation(SMALL);
 /** Carreira montada à mão sem nenhum texto repetido. */
 const NO_REPEATS: TextRepeatSample = { story: 0, all: 0, repeated: [] };
 const total = (values: readonly number[]) => values.reduce((sum, value) => sum + value, 0);
 
 describe('argumentos da linha de comando', () => {
-  it('sem argumentos, vale o padrão: 50 carreiras de 15 temporadas', () => {
-    expect(parseArgs([])).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style', json: false, out: null, help: false });
-    expect(DEFAULT_SIM_OPTIONS).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style' });
+  it('sem argumentos, vale o padrão: 50 carreiras de 15 temporadas, com a dinastia até a 2ª geração', () => {
+    expect(parseArgs([])).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style', generations: 2, json: false, out: null, help: false });
+    expect(DEFAULT_SIM_OPTIONS).toEqual({ seeds: 50, seasons: 15, firstSeed: 1, talent: 0, moments: 'style', generations: 2 });
   });
 
   it('lê cada opção, com espaço ou com sinal de igual', () => {
     expect(
-      parseArgs(['--seeds', '8', '--seasons', '20', '--first-seed', '100', '--talent', '4', '--moments', 'bold', '--json', '--out', 'relatorio.txt']),
+      parseArgs([
+        '--seeds',
+        '8',
+        '--seasons',
+        '20',
+        '--first-seed',
+        '100',
+        '--talent',
+        '4',
+        '--moments',
+        'bold',
+        '--generations',
+        '1',
+        '--json',
+        '--out',
+        'relatorio.txt',
+      ]),
     ).toEqual({
       seeds: 8,
       seasons: 20,
       firstSeed: 100,
       talent: 4,
       moments: 'bold',
+      generations: 1,
       json: true,
       out: 'relatorio.txt',
       help: false,
     });
-    expect(parseArgs(['--seeds=3', '--seasons=2', '--moments=safe'])).toMatchObject({ seeds: 3, seasons: 2, moments: 'safe' });
+    expect(parseArgs(['--seeds=3', '--seasons=2', '--moments=safe', '--generations=2'])).toMatchObject({
+      seeds: 3,
+      seasons: 2,
+      moments: 'safe',
+      generations: 2,
+    });
     expect(parseArgs(['--help']).help).toBe(true);
   });
 
@@ -74,6 +110,9 @@ describe('argumentos da linha de comando', () => {
     expect(() => parseArgs(['--talent', '99'])).toThrow(/de 0 a 12/);
     expect(() => parseArgs(['--moments', 'ousado'])).toThrow(/--moments precisa ser style, safe ou bold \(veio "ousado"\)/);
     expect(() => parseArgs(['--moments'])).toThrow(/Falta o valor de --moments/);
+    expect(() => parseArgs(['--generations', '3'])).toThrow(/--generations precisa ser 1 ou 2 \(veio "3"\)/);
+    expect(() => parseArgs(['--generations', 'duas'])).toThrow(/--generations precisa ser 1 ou 2/);
+    expect(() => parseArgs(['--generations'])).toThrow(/Falta o valor de --generations/);
     expect(() => parseArgs(['--first-seed', '4294967295', '--seeds', '2'])).toThrow(/32 bits/);
   });
 
@@ -993,6 +1032,9 @@ describe('relatório', () => {
     expect(report).toContain('Campeonato Regional de Kart');
     expect(report).toContain('Chegaram ao Grand Prix Mundial: 0 de 4 carreiras (0%).');
     expect(report).not.toMatch(/NaN|undefined|Infinity/);
+    // Com uma geração, nada da dinastia: nem a seção 11, nem a linha do cabeçalho.
+    expect(report).not.toContain('11. DINASTIA');
+    expect(report).not.toContain('Dinastia:');
   });
 
   it('é idêntico em duas execuções com os mesmos argumentos (sem data nem duração)', () => {
@@ -1010,6 +1052,7 @@ describe('linha de comando', () => {
 
   it('--help mostra a ajuda e não simula nada', () => {
     expect(run(['--help'])).toEqual({ code: 0, out: HELP, err: '' });
+    expect(HELP).toContain('--generations N');
   });
 
   it('uma falha do motor sai com código 1 e a mensagem com a semente, sem relatório', () => {
@@ -1030,7 +1073,7 @@ describe('linha de comando', () => {
   });
 
   it('o relatório vai para a saída padrão; o progresso e o tempo, para a saída de erro', () => {
-    const result = run(['--seeds', '4', '--seasons', '3', '--first-seed', '11']);
+    const result = run(['--seeds', '4', '--seasons', '3', '--first-seed', '11', '--generations', '1']);
     expect(result.code).toBe(0);
     expect(result.out).toBe(formatReport(small.summary));
     expect(result.err).toMatch(/4\/4 carreiras/);
@@ -1040,14 +1083,16 @@ describe('linha de comando', () => {
   });
 
   it('--moments troca a política de lances do robô e aparece na linha da política; o padrão não muda de texto', () => {
-    const bold = run(['--seeds', '1', '--seasons', '1', '--first-seed', '11', '--moments', 'bold']);
+    // Só a 1ª geração: o que se confere aqui é a política de lances.
+    const quick = ['--seeds', '1', '--seasons', '1', '--first-seed', '11', '--generations', '1'];
+    const bold = run([...quick, '--moments', 'bold']);
     expect(bold.code).toBe(0);
     expect(bold.out).toContain('melhor proposta aceitável) · talento 0 · lances: sempre a opção mais arriscada\n');
     expect(bold.out).toContain('Nesta execução o robô responde a todos, sempre com a opção mais arriscada');
-    const safe = run(['--seeds', '1', '--seasons', '1', '--first-seed', '11', '--moments=safe']);
+    const safe = run([...quick, '--moments=safe']);
     expect(safe.out).toContain('· talento 0 · lances: sempre a opção mais segura\n');
-    const standard = run(['--seeds', '1', '--seasons', '1', '--first-seed', '11']);
-    expect(run(['--seeds', '1', '--seasons', '1', '--first-seed', '11', '--moments', 'style']).out).toBe(standard.out);
+    const standard = run(quick);
+    expect(run([...quick, '--moments', 'style']).out).toBe(standard.out);
     expect(standard.out).toContain('melhor proposta aceitável) · talento 0\n');
     expect(standard.out).toContain('O robô não responde a nenhum: quem escolhe a opção é o estilo do piloto');
     expect(new Set([standard.out, bold.out, safe.out]).size).toBe(3);
@@ -1070,13 +1115,404 @@ describe('linha de comando', () => {
 
   it('--json escreve os dados completos e --out grava a saída num arquivo', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'sim-')), 'dados.json');
-    const result = run(['--seeds', '2', '--seasons', '2', '--json', '--out', file]);
+    const result = run(['--seeds', '2', '--seasons', '2', '--generations', '1', '--json', '--out', file]);
     const data = JSON.parse(result.out) as SimResult;
     expect(data.samples).toHaveLength(2);
-    expect(data.summary.options).toEqual({ seeds: 2, seasons: 2, firstSeed: 1, talent: 0, moments: 'style' });
+    expect(data.summary.options).toEqual({ seeds: 2, seasons: 2, firstSeed: 1, talent: 0, moments: 'style', generations: 1 });
+    // Com uma geração, nem as carreiras nem o resumo trazem a dinastia.
+    expect(data.summary.dynasty).toBeNull();
+    expect(data.samples.every((sample) => sample.dynasty === undefined)).toBe(true);
     // Os dados completos trazem os lances de cada corrida, com a chance mostrada.
     expect(data.samples[0]?.seasons[0]?.races[0]?.moments[0]).toMatchObject({ kind: 'start', chance: expect.any(Number) });
     expect(readFileSync(file, 'utf8')).toBe(result.out);
     expect(result.err).toContain(`gravado em ${file}`);
+  });
+});
+
+describe('dinastia nos agregados (Fase 6)', () => {
+  const run = (age: number, tier: number, extra: Partial<DynastySeason> = {}): DynastySeason => ({
+    age,
+    tier,
+    position: 10,
+    wins: 0,
+    title: false,
+    familyTeam: false,
+    ...extra,
+  });
+  const generation = (startAge: number, seasons: DynastySeason[], end: GenerationEnd = 'retired'): GenerationSample => ({
+    startAge,
+    startTier: seasons[0]?.tier ?? 1,
+    seasons,
+    end,
+  });
+  const heir = (extra: Partial<HeirSample> = {}): HeirSample => ({
+    kind: 'child',
+    age: 16,
+    tier: 2,
+    ownSeasons: 2,
+    revealed: 2,
+    hidden: 1,
+    kartTest: 'promising',
+    score: 30,
+    seat: 'current',
+    seats: ['current'],
+    ...extra,
+  });
+  const succession = (extra: Partial<SuccessionSample> = {}): SuccessionSample => ({
+    cause: 'handover',
+    formerAge: 44,
+    estate: 1_000_000,
+    tax: 100_000,
+    siblingsShare: 270_000,
+    inherited: 630_000,
+    children: 3,
+    racingChildren: 2,
+    kartTests: 2,
+    childTraitsRevealed: 4,
+    childTraits: 9,
+    heir: heir(),
+    relatives: { engineer: 1, business: 0, sportingDirector: 1 },
+    ...extra,
+  });
+  const offTrack = (extra: Partial<AfterDrivingSample> = {}): AfterDrivingSample => ({
+    transition: 'commentator',
+    transitionSeasons: 1,
+    owner: 4,
+    principal: 0,
+    none: 1,
+    ...extra,
+  });
+  const career = (seed: number, dynasty: DynastySample): CareerSample => ({
+    seed,
+    profile: { background: 'natural', age: dynasty.gen1.startAge, teamId: 'horizonte' },
+    birth: { score: 50, region: 'capital', traitBalance: 1 },
+    seasons: [],
+    ended: 'completed',
+    texts: NO_REPEATS,
+    dynasty,
+  });
+  // A: a 2ª geração vai mais longe, até o topo, com dois títulos (um pela equipe da família), largando numa equipe da frente.
+  const a = career(1, {
+    gen1: generation(16, [run(16, 1, { position: 1, title: true, wins: 5 }), run(17, 2), run(18, 4, { wins: 1 })]),
+    gen2: generation(16, [run(16, 2), run(17, 4), run(18, 7, { title: true, wins: 6, familyTeam: true }), run(19, 7, { title: true, wins: 4 })]),
+    succession: succession({ heir: heir({ seat: 'top', seats: ['current', 'top'] }) }),
+    afterDriving: offTrack(),
+  });
+  // B: morre aos 61, sem filhos; o parente jovem herda e para no mesmo degrau.
+  const b = career(2, {
+    gen1: generation(15, [run(15, 1), run(16, 3, { wins: 2 }), run(17, 3)]),
+    gen2: generation(15, [run(15, 1), run(16, 3)], 'limit'),
+    succession: succession({
+      cause: 'death',
+      formerAge: 61,
+      estate: 200_000,
+      tax: 0,
+      siblingsShare: 0,
+      inherited: 200_000,
+      children: 0,
+      racingChildren: 0,
+      kartTests: 0,
+      childTraitsRevealed: 0,
+      childTraits: 0,
+      heir: heir({ kind: 'relative', age: 15, tier: 1, ownSeasons: 0, revealed: 0, hidden: 3, kartTest: null }),
+      relatives: { engineer: 0, business: 0, sportingDirector: 0 },
+    }),
+    afterDriving: offTrack({ transition: null, transitionSeasons: 0, owner: 0, principal: 2, none: 20 }),
+  });
+  // C: não chega à 2ª geração (a amostra acabou antes).
+  const c = career(3, {
+    gen1: generation(14, [run(14, 1)], 'accident'),
+    gen2: null,
+    succession: null,
+    afterDriving: offTrack({ transition: null, transitionSeasons: 0, owner: 0, principal: 0, none: 0 }),
+  });
+  // D: a 2ª geração, pela equipe da família, vai menos longe e morre num acidente.
+  const d = career(4, {
+    gen1: generation(16, [run(16, 1), run(17, 5)]),
+    gen2: generation(17, [run(17, 2)], 'accident'),
+    succession: succession({
+      estate: 500_000,
+      tax: 50_000,
+      siblingsShare: 90_000,
+      inherited: 360_000,
+      heir: heir({ seat: 'family', seats: ['current', 'family'] }),
+      relatives: { engineer: 1, business: 0, sportingDirector: 1 },
+    }),
+    afterDriving: offTrack(),
+  });
+  const summary = summarize([a, b, c, d], { seeds: 4, seasons: 3, firstSeed: 1, talent: 0, generations: 2 });
+  const dynasty = summary.dynasty;
+
+  it('cada geração: degrau mais alto, monopostos, topo, títulos, vitórias, estreia e temporadas com título', () => {
+    expect(dynasty).not.toBeNull();
+    expect(dynasty?.gen1).toMatchObject({
+      careers: 4,
+      seasonsPerCareer: 9 / 4,
+      averageStartAge: 61 / 4,
+      averageStartTier: 1,
+      averageHighestTier: 13 / 4,
+      highestTier: [1, 0, 1, 1, 1, 0, 0],
+      formulaShare: 0.5,
+      topShare: 0,
+      titlesPerCareer: 0.25,
+      winsPerCareer: 2,
+      maxTitles: 1,
+      titleSeasonShare: 1 / 9,
+    });
+    // A 2ª geração só conta as carreiras que chegaram a ela; o degrau da estreia entra no "mais alto".
+    expect(dynasty?.gen2).toMatchObject({
+      careers: 3,
+      seasonsPerCareer: 7 / 3,
+      averageStartAge: 16,
+      averageStartTier: 5 / 3,
+      averageHighestTier: 4,
+      highestTier: [0, 1, 1, 0, 0, 0, 1],
+      titlesPerCareer: 2 / 3,
+      winsPerCareer: 10 / 3,
+      maxTitles: 2,
+      titleSeasonShare: 2 / 7,
+    });
+    expect(dynasty?.gen2.formulaShare).toBeCloseTo(1 / 3);
+    expect(dynasty?.gen2.topShare).toBeCloseTo(1 / 3);
+  });
+
+  it('comparação pela semente, herdeiros, causas e herança', () => {
+    expect(dynasty).toMatchObject({
+      careers: 4,
+      reached: 3,
+      childHeir: 2,
+      relativeHeir: 1,
+      causes: { handover: 2, death: 1, accident: 0 },
+      paired: { further: 1, same: 1, shorter: 1 },
+      // Medianas de três sucessões.
+      inheritance: { estate: 500_000, tax: 50_000, siblingsShare: 90_000, inherited: 360_000 },
+      seats: { current: 1, top: 1, family: 1, topAvailable: 1, familyAvailable: 1 },
+      heir: { kartTested: 2 },
+      family: { childrenPerFamily: 2, childless: 1, children: 6, kartTests: 4, traitsRevealed: 8, traits: 18 },
+      relatives: { engineer: 2, business: 0, sportingDirector: 2 },
+      transition: { commentator: 2, ambassador: 0, mentor: 0, none: 2 },
+      afterDriving: { transition: 0.5, owner: 2, principal: 0.5, none: 5.5 },
+      familyTeam: { seasons: 1, careers: 1 },
+    });
+    expect(dynasty?.averageFormerAge).toBeCloseTo(149 / 3);
+    expect(dynasty?.heir.age).toBeCloseTo(47 / 3);
+    expect(dynasty?.heir.hidden).toBeCloseTo(5 / 3);
+  });
+
+  it('a seção 11 mostra esses números', () => {
+    const text = formatReport(summary);
+    const section = text.split('11. DINASTIA')[1] ?? '';
+    expect(text).toContain('Dinastia: depois das 3 temporadas, cada carreira segue até a 2ª geração (seção 11)');
+    expect(section).toContain(
+      'Chegaram à 2ª geração: 3 de 4 carreiras. Herdeiro piloto: um filho ou uma filha que já corria em 2; sem filho piloto, o parente jovem em 1.',
+    );
+    expect(section).toContain('em vida, 2 · por morte, 1 · por acidente, 0 (aos 49,7 anos, em média).');
+    expect(section).toMatch(/1ª geração +4 +2,3 +15,3 +1,0 +3,25 +50% +0% +0,25 +2,0 +1 +11%/);
+    expect(section).toMatch(/2ª geração +3 +2,3 +16,0 +1,7 +4,00 +33% +33% +0,67 +3,3 +2 +29%/);
+    expect(section).toContain('Degrau mais alto, 2ª geração: 1º 0 · 2º 1 · 3º 1 · 4º 0 · 5º 0 · 6º 0 · 7º 1.');
+    expect(section).toContain('Pela semente (degrau mais alto): a 2ª geração foi mais longe em 1, ficou no mesmo degrau em 1 e foi menos longe em 1.');
+    expect(section).toContain('Não ganha tudo: a 2ª geração foi campeã em 29% das temporadas; o máximo numa carreira foi 2 títulos.');
+    expect(section).toContain('A da frente estava ao alcance em 1 sucessão; a da família, em 1.');
+    expect(section).toContain('Engenharia: 2 · Negócios: 0 · Direção esportiva: 2.');
+    expect(section).toContain('Comentários na TV: 2 · Imagem de uma marca: 0 · Mentoria: 0 · sem ano de transição: 2.');
+    expect(section).toContain('Equipe da família: a 2ª geração correu por ela em 1 temporada, em 1 de 3 carreiras.');
+    expect(section).not.toMatch(/NaN|undefined|Infinity/);
+  });
+
+  it('o resumo vazio não tem número quebrado', () => {
+    const empty = summarize([], { ...SMALL, generations: 2 });
+    expect(empty.dynasty).toMatchObject({
+      careers: 0,
+      reached: 0,
+      averageFormerAge: 0,
+      gen1: { careers: 0, averageHighestTier: 0, formulaShare: 0, topShare: 0, titlesPerCareer: 0, maxTitles: 0, titleSeasonShare: 0 },
+      gen2: { careers: 0, highestTier: [0, 0, 0, 0, 0, 0, 0] },
+      paired: { further: 0, same: 0, shorter: 0 },
+      inheritance: { estate: 0, tax: 0, siblingsShare: 0, inherited: 0 },
+      family: { childrenPerFamily: 0, children: 0 },
+    });
+    const section = formatReport(empty).split('11. DINASTIA')[1] ?? '';
+    expect(section).toContain('Chegaram à 2ª geração: 0 de 0 carreiras.');
+    expect(section).toContain('por acidente, 0.');
+    expect(section).toMatch(/2ª geração +0 +- +- +- +- +- +- +0,00 +0,0 +0 +0%/);
+    expect(section).not.toMatch(/NaN|undefined|Infinity/);
+    // Sem dinastia pedida, o resumo não traz nada dela.
+    expect(summarize([], SMALL).dynasty).toBeNull();
+  });
+});
+
+describe('o robô na sucessão (Fase 6)', () => {
+  const outlook = (extra: Partial<HeirOutlook> = {}): HeirOutlook => ({
+    heirId: 'h',
+    age: 16,
+    revealed: [],
+    hidden: 3,
+    kartTest: null,
+    scout: null,
+    categoryId: null,
+    tier: null,
+    teamName: null,
+    ...extra,
+  });
+
+  it('pontua o que se vê: degrau, teste no kart, avaliação, talentos menos defeitos e idade', () => {
+    expect(botHeirScore(outlook())).toBe(0);
+    expect(botHeirScore(outlook({ categoryId: 'kart-national', tier: 2 }))).toBe(2 * BOT_HEIR_SCORE.TIER);
+    expect(botHeirScore(outlook({ kartTest: { depth: 'full', gap: 0.1, verdict: 'outstanding' } }))).toBe(BOT_HEIR_SCORE.KART_TEST.outstanding);
+    expect(botHeirScore(outlook({ kartTest: { depth: 'quick', gap: 1.2, verdict: 'limited' } }))).toBeLessThan(0);
+    expect(botHeirScore(outlook({ scout: 'Muito promissor' }))).toBe(BOT_HEIR_SCORE.SCOUT['Muito promissor']);
+    const traits = outlook({
+      revealed: [
+        { id: 'rainMaster', kind: 'talent' },
+        { id: 'bornStarter', kind: 'talent' },
+        { id: 'fragile', kind: 'defect' },
+      ],
+    });
+    expect(botHeirScore(traits)).toBe(BOT_HEIR_SCORE.TRAIT);
+    // Até YOUTH_AGE a idade não pesa; depois, cada ano tira um pouco.
+    expect(botHeirScore(outlook({ age: BOT_HEIR_SCORE.YOUTH_AGE }))).toBe(0);
+    expect(botHeirScore(outlook({ age: BOT_HEIR_SCORE.YOUTH_AGE + 7 }))).toBe(-7 * BOT_HEIR_SCORE.AGE);
+  });
+});
+
+describe('dinastia em carreiras de verdade (Fase 6)', () => {
+  // Duas sementes cuja 2ª geração vai até o fim (aos 36 anos ou no limite de temporadas da amostra).
+  const SEEDS = [7, 16] as const;
+  const OPTIONS = { seasons: 15, talent: 0, generations: 2 } as const;
+  const steps: { seed: number; season: number; generation: number; problems: string[]; valid: boolean }[] = [];
+  const opened: CareerState[] = [];
+  let samples: CareerSample[] = [];
+
+  beforeAll(() => {
+    samples = SEEDS.map((seed) =>
+      simulateCareer(seed, OPTIONS, (career) => {
+        steps.push({
+          seed,
+          season: career.season,
+          generation: career.dynasty.generation,
+          problems: validateCareerIntegrity(career),
+          valid: CareerStateSchema.safeParse(career).success,
+        });
+        if (career.succession) opened.push(career);
+      }),
+    );
+  }, 120_000);
+
+  it('as duas gerações vão até o fim, com a carreira íntegra e no formato do save em cada passo', () => {
+    for (const [i, sample] of samples.entries()) {
+      const seed = SEEDS[i];
+      const dynasty = sample.dynasty;
+      expect(dynasty, `semente ${seed}`).toBeDefined();
+      if (!dynasty) continue;
+      // A 1ª geração começa pelas temporadas da amostra e corre até pendurar o capacete.
+      expect(dynasty.gen1.seasons.slice(0, 15)).toEqual(
+        sample.seasons.map((s) => ({ age: s.age, tier: s.tier, position: s.position, wins: s.wins, title: s.title, familyTeam: false })),
+      );
+      expect(dynasty.gen1.end).toBe('retired');
+      expect(dynasty.gen1.seasons.at(-1)?.age).toBe(SIM_DYNASTY.RETIRE_AGE);
+      expect(dynasty.afterDriving.transition, `semente ${seed}`).not.toBeNull();
+      // A 2ª geração começa na sucessão e vai até os 36 anos ou o limite de temporadas.
+      expect(dynasty.gen2?.end, `semente ${seed}`).toMatch(/^(retired|limit)$/);
+      const gen2 = dynasty.gen2?.seasons ?? [];
+      expect(gen2.length).toBeGreaterThan(0);
+      expect(gen2.length).toBeLessThanOrEqual(SIM_DYNASTY.GEN2_MAX_SEASONS);
+      expect(gen2.length === SIM_DYNASTY.GEN2_MAX_SEASONS || (gen2.at(-1)?.age ?? 0) >= SIM_DYNASTY.RETIRE_AGE).toBe(true);
+      expect(gen2.map((s) => s.age)).toEqual(gen2.map((_, n) => (dynasty.gen2?.startAge ?? 0) + n));
+      // Cada passo: integridade e formato do save; a 1ª e a 2ª geração passam por ele.
+      const mine = steps.filter((step) => step.seed === seed);
+      expect(mine.filter((step) => step.problems.length > 0 || !step.valid)).toEqual([]);
+      expect(new Set(mine.map((step) => step.generation))).toEqual(new Set([1, 2]));
+      expect(mine.map((step) => step.season)).toEqual([...mine.map((step) => step.season)].sort((x, y) => x - y));
+    }
+  });
+
+  it('a sucessão guarda o que a família tinha e o que o herdeiro recebeu', () => {
+    for (const sample of samples) {
+      const s = sample.dynasty?.succession;
+      expect(s, `semente ${sample.seed}`).toBeTruthy();
+      if (!s) continue;
+      expect(Math.abs(s.estate - s.tax - s.siblingsShare - s.inherited)).toBeLessThanOrEqual(1);
+      expect(s.heir.seats).toContain('current');
+      expect(s.heir.seats).toContain(s.heir.seat);
+      // A vaga é a primeira da ordem do robô entre as que estavam ao alcance.
+      expect(s.heir.seat).toBe(BOT_HEIR_SEAT_ORDER.find((seat) => s.heir.seats.includes(seat)));
+      expect(s.kartTests).toBeLessThanOrEqual(s.children);
+      expect(s.racingChildren).toBeLessThanOrEqual(s.children);
+      expect(s.childTraitsRevealed).toBeLessThanOrEqual(s.childTraits);
+      // Quando um filho herda, os outros viram parentes com caminho próprio.
+      const relatives = s.relatives.engineer + s.relatives.business + s.relatives.sportingDirector;
+      expect(relatives).toBe(s.heir.kind === 'child' ? s.children - 1 : 0);
+      if (s.cause === 'handover') expect(s.formerAge).toBeGreaterThanOrEqual(SIM_DYNASTY.RETIRE_AGE);
+      expect(s.formerAge).toBeLessThanOrEqual(SIM_DYNASTY.HANDOVER_AGE);
+    }
+  });
+
+  it('o robô escolhe o herdeiro de maior pontuação e a vaga pela ordem da política; sem a opção nova, vale a escolha de sempre', () => {
+    const state = opened[0];
+    expect(state?.succession).toBeTruthy();
+    if (!state?.succession) return;
+    const drivers = state.succession.heirs.filter((h) => h.canDrive);
+    const choice = botChooseHeir(state);
+    const chosen = drivers.find((h) => h.id === choice?.heirId);
+    expect(chosen).toBeDefined();
+    if (!choice || !chosen) return;
+    const score = botHeirScore(heirOutlook(state, chosen));
+    for (const heir of drivers) expect(botHeirScore(heirOutlook(state, heir))).toBeLessThanOrEqual(score);
+    const available = heirSeatOptions(state, chosen.id).filter((o) => o.available);
+    expect(choice.seat).toBe(BOT_HEIR_SEAT_ORDER.find((seat) => available.some((o) => o.id === seat)));
+    expect(botSuccession(state, { heirChoice: 'outlook' })).toEqual(resolveSuccession(state, choice.heirId, 'driver', choice.seat));
+    // A escolha de sempre (testes e receitas dos saves de exemplo): o primeiro filho que corre, na equipe em que já corria.
+    const first = state.succession.heirs.find((h) => h.kind === 'child' && h.canDrive) ?? drivers[0];
+    if (first) expect(botSuccession(state)).toEqual(resolveSuccession(state, first.id, 'driver'));
+    // Toda avaliação que os treinadores podem dar tem pontuação no robô.
+    const child = state.family.children[0];
+    if (child) {
+      const labels = new Set(Array.from({ length: 60 }, (_, n) => childScoutReport({ ...child, stage: 'racing', talent: 40 + n })));
+      for (const label of labels) expect(label === null || label in BOT_HEIR_SCORE.SCOUT, String(label)).toBe(true);
+    }
+  });
+
+  it('o bônus de talento do simulador vale também para o herdeiro, ao assumir o carro', () => {
+    const state = opened[0];
+    if (!state) throw new Error('Nenhuma sucessão aberta na amostra.');
+    const policy = dynastyPolicy(SIM_CHOICES);
+    const plain = getPlayer(heirTakesOver(state, policy, 0));
+    const gifted = getPlayer(heirTakesOver(state, policy, 4));
+    expect(gifted.id).toBe(plain.id);
+    expect(gifted.attributes.pace).toBe(Math.min(99, plain.attributes.pace + 4));
+    expect(gifted.potential).toBe(Math.min(99, plain.potential + 2));
+  });
+
+  it('é determinística: a mesma semente dá a mesma dinastia', () => {
+    expect(simulateCareer(SEEDS[0], OPTIONS)).toEqual(samples[0]);
+  }, 60_000);
+
+  it('o relatório ganha a seção 11, sem número quebrado', () => {
+    const text = formatReport(summarize(samples, { seeds: 2, seasons: 15, firstSeed: SEEDS[0], talent: 0, generations: 2 }));
+    expect(text).toContain('11. DINASTIA');
+    expect(text).toContain('Chegaram à 2ª geração: 2 de 2 carreiras.');
+    expect(text).not.toMatch(/NaN|undefined|Infinity/);
+  });
+
+  it('um estado inválido no meio da dinastia para a simulação com a semente e a temporada', () => {
+    const state = opened[0];
+    if (!state) throw new Error('Nenhuma sucessão aberta na amostra.');
+    const twin: Relative = {
+      id: 'parente-repetido',
+      firstName: 'Alex',
+      lastName: 'Repetido',
+      generation: 1,
+      bornYear: state.year - 20,
+      path: 'engineer',
+      skill: 50,
+      traits: ['studious'],
+      bond: 50,
+      racedTo: null,
+      sinceSeason: state.season,
+    };
+    const broken: CareerState = { ...state, dynasty: { ...state.dynasty, relatives: [...state.dynasty.relatives, twin, twin] } };
+    expect(() => continueDynasty(99, broken, { firstSeasons: [], startAge: 16, choices: SIM_CHOICES, talent: 0 })).toThrow(
+      /^A dinastia da semente 99 falhou na temporada \d+ \(2ª geração\): estado inválido: Parentes com id duplicado/,
+    );
   });
 });
