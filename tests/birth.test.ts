@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { APTITUDE_LINKS, BIRTH, TRAIT_EFFECTS } from '@/config/balance';
 import { TRAIT_IDS, type Birth, type CareerState, type RaceEvent, type RoundRecord, type TraitId } from '@/domain/schemas';
-import { BIRTH_TRAITS, FATHER_PROFESSIONS, HOMETOWNS, MOTHER_PROFESSIONS } from '@/data/birth';
+import { BIRTH_ORIGIN_INFO, BIRTH_ORIGIN_ORDER, BIRTH_TRAITS, FATHER_PROFESSIONS, HOMETOWNS, MOTHER_PROFESSIONS } from '@/data/birth';
 import { getTrack } from '@/data/tracks';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { exportCareer, importCareer } from '@/persistence/saveService';
@@ -118,6 +118,16 @@ describe('sorteio do nascimento', () => {
       expect(BIRTH_TRAITS[opposite].kind).not.toBe(BIRTH_TRAITS[id].kind);
       expect(revealTriggers[id]).toBeTypeOf('function');
       expect(TRAIT_EFFECTS[id]).toBeDefined();
+    }
+  });
+
+  it('as origens da família são ditas sem gênero (o jogo não sabe o de quem nasce)', () => {
+    // A origem `racer-parent` é também a do herdeiro de sangue (Fase 6): o texto não supõe se quem nasce é filho ou filha.
+    expect(BIRTH_ORIGIN_INFO['racer-parent'].name).toBe('Família de piloto');
+    for (const id of BIRTH_ORIGIN_ORDER) {
+      const { name, summary, perks, drawbacks } = BIRTH_ORIGIN_INFO[id];
+      const text = [name, summary, ...perks, ...drawbacks].join(' ');
+      expect(text, id).not.toMatch(/\b(filh[oa]s?|filhinh[oa]|pai|mãe|papai|herdeir[oa])\b|\((a|o)\)/i);
     }
   });
 

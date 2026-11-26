@@ -7,9 +7,9 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { FAMILY_TEAM, HEIR_START, RELATIVES } from '@/config/balance';
-import { CareerStateSchema, type CareerState, type Child, type ChildRacing, type TeamStake } from '@/domain/schemas';
+import { CHILD_TRAITS, CareerStateSchema, type CareerState, type Child, type ChildRacing, type TeamStake } from '@/domain/schemas';
 import { ASSET_RULES } from '@/data/assets';
-import { CHILD_FIRST_NAMES, FAMILY } from '@/data/family';
+import { CHILD_FIRST_NAMES, FAMILY, getTrait } from '@/data/family';
 import { RELATIVE_PATH_INFO } from '@/data/dynasty';
 import { TEAM_TARGETS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
@@ -456,6 +456,32 @@ describe('a lista de herdeiros e a parte dos irmãos', () => {
   it('a fase de um filho pequeno é dita sem gênero', () => {
     const [kid] = withChildren(founder(), [{ id: 'kid', age: FAMILY.KART_START_AGE - 2, stage: 'child' }]).family.children.slice(-1);
     expect(engine.childSummary(kid!)).toBe('Ainda sem idade para o kart');
+  });
+
+  it('os herdeiros são descritos sem gênero: pelo nome, pelo parentesco neutro e pelo perfil em substantivos', () => {
+    const c = withChildren(founder(), [
+      { id: 'kid-a', firstName: 'Alex', age: FAMILY.ADULT_AGE + 2, traits: ['calm', 'charismatic'], stage: 'other' },
+      { id: 'kid-b', firstName: 'Bia', age: FAMILY.KART_START_AGE - 2, traits: ['rebel'], stage: 'child' },
+    ]);
+    const former = engine.getPlayer(c).firstName;
+    const descriptions = (x: CareerState) => Object.fromEntries(engine.beginSuccession(x, 'death').succession!.heirs.map((h) => [h.id, h.description]));
+    const married = descriptions(c);
+    expect(married['kid-a']).toBe('Alex: Seguiu outro caminho. Perfil: sangue-frio e carisma.');
+    expect(married['kid-b']).toBe(
+      `Bia: Ainda sem idade para o kart. Perfil: rebeldia. Tem ${FAMILY.KART_START_AGE - 2} anos (mínimo ${FAMILY.ADULT_AGE} para assumir os negócios) e não corre: precisa de tutela até lá.`,
+    );
+    expect(married.partner).toBe(`Cônjuge de ${former}. Pode cuidar dos negócios e dos filhos até um deles assumir.`);
+    expect(married['relative-driver']).toBe(`Parente jovem de ${former}, promessa do kart regional. Assume a carreira nas pistas do começo.`);
+    expect(married['relative-adult']).toBe(`Parente de ${former}, da mesma geração. Não corre, mas pode cuidar do patrimônio e dos negócios da família.`);
+    const together = descriptions({ ...c, family: { ...c.family, partner: { ...c.family.partner!, married: false } } });
+    expect(together.partner).toBe(`Divide a vida com ${former}. Pode cuidar dos negócios e dos filhos até um deles assumir.`);
+    for (const text of [...Object.values(married), together.partner]) {
+      expect(text).not.toMatch(/\((a|o)\)|\b(filh[oa]|sobrinh[oa]|irmã|irmão|companheir[oa]|tutor)\b/i);
+    }
+    // Cada traço de personalidade tem o seu substantivo, sem repetir.
+    const qualities = CHILD_TRAITS.map((t) => getTrait(t).quality);
+    expect(new Set(qualities).size).toBe(CHILD_TRAITS.length);
+    for (const quality of qualities) expect(quality).toMatch(/^[a-zà-ú][a-zà-ú -]+$/);
   });
 });
 

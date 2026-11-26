@@ -11,6 +11,8 @@ import type { ChildTrait, SupportLevel } from '@/domain/schemas';
 export interface TraitDefinition {
   id: ChildTrait;
   name: string;
+  /** O traço como substantivo, para as frases sem gênero ("Perfil: sangue-frio e carisma"). */
+  quality: string;
   description: string;
   /** Multiplicador da evolução por temporada. */
   development: number;
@@ -29,6 +31,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'determined',
     name: 'Determinado',
+    quality: 'determinação',
     description: 'Treina mais que os outros e não desiste.',
     development: 1.15,
     talent: 0,
@@ -40,6 +43,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'gifted',
     name: 'Talentoso',
+    quality: 'talento natural',
     description: 'Nasceu com um teto mais alto.',
     development: 1,
     talent: 4,
@@ -51,6 +55,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'calm',
     name: 'Frio',
+    quality: 'sangue-frio',
     description: 'Erra pouco sob pressão; resultados regulares.',
     development: 1,
     talent: 0,
@@ -62,6 +67,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'aggressive',
     name: 'Agressivo',
+    quality: 'agressividade',
     description: 'Ataca sempre: alterna vitórias e acidentes.',
     development: 1.03,
     talent: 1,
@@ -73,6 +79,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'charismatic',
     name: 'Carismático',
+    quality: 'carisma',
     description: 'Atrai patrocinadores com facilidade.',
     development: 1,
     talent: 0,
@@ -84,6 +91,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'rebel',
     name: 'Rebelde',
+    quality: 'rebeldia',
     description: 'Bate de frente com a família e pode largar tudo.',
     development: 0.95,
     talent: 2,
@@ -95,6 +103,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'studious',
     name: 'Estudioso',
+    quality: 'método',
     description: 'Entende o carro e aprende com método.',
     development: 1.08,
     talent: 0,
@@ -106,6 +115,7 @@ export const TRAITS: readonly TraitDefinition[] = [
   {
     id: 'intuitive',
     name: 'Intuitivo',
+    quality: 'intuição',
     description: 'Sente a pista; brilha em condições difíceis.',
     development: 1,
     talent: 2,

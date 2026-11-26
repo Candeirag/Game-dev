@@ -572,7 +572,7 @@ export default function CatalogScreen() {
             />
           </div>
           <div className="grid gap-2 md:grid-cols-2">
-            <LockedCard title="Filho de ex-piloto" summary="O sobrenome abre portas no paddock.">
+            <LockedCard title="Família de piloto" summary="O sobrenome abre portas no paddock.">
               <span className="text-xs text-ink-300">O que a opção daria, sem botão de compra.</span>
             </LockedCard>
           </div>

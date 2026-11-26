@@ -170,7 +170,7 @@ function relativeHeirs(career: CareerState): HeirOption[] {
       kind: 'relative',
       name: fullName(driver),
       age: driver.age,
-      description: `Sobrinho(a) de ${former.firstName}, promessa do kart regional. Assume a carreira nas pistas do começo.`,
+      description: `Parente jovem de ${former.firstName}, promessa do kart regional. Assume a carreira nas pistas do começo.`,
       canDrive: true,
       canManage: false,
       childId: null,
@@ -182,7 +182,7 @@ function relativeHeirs(career: CareerState): HeirOption[] {
       kind: 'relative',
       name: adultName,
       age: Math.max(28, former.age - 6),
-      description: `Irmã(o) de ${former.firstName}. Não corre, mas pode cuidar do patrimônio e dos negócios da família.`,
+      description: `Parente de ${former.firstName}, da mesma geração. Não corre, mas pode cuidar do patrimônio e dos negócios da família.`,
       canDrive: false,
       canManage: true,
       childId: null,
@@ -192,18 +192,22 @@ function relativeHeirs(career: CareerState): HeirOption[] {
   ];
 }
 
+/**
+ * Um filho como herdeiro. A descrição não tem gênero (o jogo não sabe o de ninguém): vai pelo nome, e
+ * o perfil, pelos traços em substantivo ("sangue-frio e carisma").
+ */
 function childHeir(child: Child): HeirOption {
-  const traits = child.traits.map((t) => getTrait(t).name.toLowerCase()).join(', ');
+  const profile = joinList(child.traits.map((t) => getTrait(t).quality));
   const canDrive = child.stage === 'racing' && child.driver !== null && child.racing !== null;
   const canManage = child.age >= FAMILY.ADULT_AGE;
   const limits =
-    !canDrive && !canManage ? ` Tem ${child.age} anos (mínimo ${FAMILY.ADULT_AGE} para assumir os negócios) e não corre: precisa de um tutor até lá.` : '';
+    !canDrive && !canManage ? ` Tem ${child.age} anos (mínimo ${FAMILY.ADULT_AGE} para assumir os negócios) e não corre: precisa de tutela até lá.` : '';
   return {
     id: child.id,
     kind: 'child',
     name: fullName(child),
     age: child.age,
-    description: `Filho(a): ${childSummary(child)}. Perfil: ${traits}.${limits}`,
+    description: `${child.firstName}: ${childSummary(child)}.${profile ? ` Perfil: ${profile}.` : ''}${limits}`,
     canDrive,
     canManage,
     childId: child.id,
@@ -228,7 +232,7 @@ export function beginSuccession(original: CareerState, cause: 'death' | 'acciden
       kind: 'partner',
       name: `${partner.firstName} ${partner.lastName}`,
       age: partner.age,
-      description: `${partner.married ? 'Cônjuge' : 'Companheiro(a)'} de ${former.firstName}. Pode cuidar dos negócios e dos filhos até um deles assumir.`,
+      description: `${partner.married ? 'Cônjuge de' : 'Divide a vida com'} ${former.firstName}. Pode cuidar dos negócios e dos filhos até um deles assumir.`,
       canDrive: false,
       canManage: true,
       childId: null,
