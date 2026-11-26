@@ -69,7 +69,7 @@ export function ManagementScreen() {
   const team = managedTeam(career);
   if (!m || !team) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <PageHeader eyebrow="Gestão" title="Sem equipe" />
         <EmptyState title="Você não comanda nenhuma equipe">
           No fechamento de cada temporada, a tela Carreira traz as propostas para chefiar uma equipe, as equipes à venda e a opção de fundar a sua.
@@ -86,7 +86,7 @@ export function ManagementScreen() {
   const position = managedTeamPosition(career);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageHeader
         eyebrow={
           <>
@@ -130,8 +130,8 @@ function Overview({ m }: { m: ManagedTeam }) {
   ];
   const extra = Object.keys(m.ledger).filter((key) => !rows.some((r) => r.key === key));
   return (
-    <div className="space-y-3">
-      <Card bodyClassName="grid grid-cols-2 gap-3 !p-3 md:grid-cols-4">
+    <div className="space-y-4">
+      <Card bodyClassName="grid grid-cols-2 gap-4 !p-4 md:grid-cols-4">
         <Stat
           label="Caixa da equipe"
           value={<span className={m.budget < 0 ? 'text-gold-400' : ''}>{formatMoney(m.budget)}</span>}
@@ -151,7 +151,7 @@ function Overview({ m }: { m: ManagedTeam }) {
         />
       </Card>
 
-      <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <Card title="Receitas e despesas" padded={false}>
           <div className="px-2">
             <table className="w-full">
@@ -190,7 +190,7 @@ function Overview({ m }: { m: ManagedTeam }) {
           </p>
         </Card>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Card
             title="Patrocinadores"
             action={
@@ -198,14 +198,14 @@ function Overview({ m }: { m: ManagedTeam }) {
                 {m.sponsors.length} de {MANAGEMENT.SPONSOR_SLOTS} cotas
               </span>
             }
-            bodyClassName="!p-3"
+            bodyClassName="!p-4"
           >
             {m.sponsors.length === 0 ? (
               <p className="text-sm text-ink-400">Nenhum patrocinador. As propostas chegam no fechamento da temporada.</p>
             ) : (
               <ul className="space-y-2">
                 {m.sponsors.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-3 pr-1 text-sm">
+                  <li key={s.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-2 pr-1 text-sm">
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-2">
                         <span className="truncate font-semibold">{s.name}</span>
@@ -228,7 +228,7 @@ function Overview({ m }: { m: ManagedTeam }) {
           </Card>
 
           {m.position === 'owner' && (
-            <Card title="Caixa do dono" bodyClassName="!p-3">
+            <Card title="Caixa do dono" bodyClassName="!p-4">
               <div className="flex flex-wrap items-end gap-2">
                 <label className="text-xs text-ink-300">
                   Valor ({currencySymbol()})
@@ -238,7 +238,7 @@ function Overview({ m }: { m: ManagedTeam }) {
                     step={10000}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="mt-1 block min-h-11 w-32 border border-ink-500 bg-ink-850 px-3 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none"
+                    className="mt-1 block min-h-11 w-32 border border-ink-500 bg-ink-850 px-2 text-sm tabular text-ink-100 focus:border-apex-500 focus:outline-none"
                   />
                 </label>
                 <Button disabled={value <= 0 || value > career.finance.cash} onClick={() => ownerTransfer(value)}>
@@ -282,8 +282,8 @@ function Staff({ m }: { m: ManagedTeam }) {
   /** O parente por trás de um profissional da família (o caminho dele, para a linha de detalhe). */
   const relativeOf = (member: StaffMember) => career.dynasty.relatives.find((r) => r.id === familyStaffRelativeId(member)) ?? null;
   return (
-    <div className="space-y-3">
-      <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+    <div className="space-y-4">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
         <Card title="Funções" padded={false}>
           <ul className="divide-y divide-ink-800">
             {STAFF_ROLES.map((r) => {
@@ -295,7 +295,7 @@ function Staff({ m }: { m: ManagedTeam }) {
                     aria-pressed={role === r}
                     onClick={() => setRole(r)}
                     className={cx(
-                      'flex min-h-11 w-full items-center gap-3 py-1 pl-4 pr-3 text-left transition-colors',
+                      'flex min-h-11 w-full items-center gap-2 py-1 pl-4 pr-2 text-left transition-colors',
                       role === r ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
                     )}
                   >
@@ -318,7 +318,7 @@ function Staff({ m }: { m: ManagedTeam }) {
         <Card
           title={STAFF_ROLE_LABELS[role]}
           action={<span className="font-display text-xl font-bold tabular">{Math.round(selected.rating)}</span>}
-          bodyClassName="!p-3"
+          bodyClassName="!p-4"
         >
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -349,7 +349,7 @@ function Staff({ m }: { m: ManagedTeam }) {
               {selected.market.map((candidate) => {
                 const relative = relativeOf(candidate);
                 return (
-                  <li key={candidate.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-3 pr-1 text-sm">
+                  <li key={candidate.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-2 pr-1 text-sm">
                     <span className="min-w-0">
                       <span className="flex min-w-0 flex-wrap items-center gap-x-2">
                         <span className="truncate">
@@ -373,10 +373,10 @@ function Staff({ m }: { m: ManagedTeam }) {
         </Card>
       </div>
 
-      <Card title="Departamentos" bodyClassName="grid gap-x-6 gap-y-3 !p-3 md:grid-cols-2">
+      <Card title="Departamentos" bodyClassName="grid gap-x-6 gap-y-4 !p-4 md:grid-cols-2">
         {(['engineers', 'mechanics'] as const).map((department) => (
           <div key={department}>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <div className="font-semibold">{department === 'engineers' ? 'Engenharia' : 'Mecânicos'}</div>
                 <div className="text-xs text-ink-400">
@@ -420,8 +420,8 @@ function Facilities({ m }: { m: ManagedTeam }) {
   const economy = TEAM_ECONOMY[m.categoryId];
   const closed = !REGULATIONS[m.categoryId].open.aero;
   return (
-    <div className="space-y-3">
-      <div className="grid gap-3 md:grid-cols-3">
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-3">
         {FACILITY_KEYS.map((key) => {
           const level = m.facilities[key];
           const cost = facilityUpgradeCost(m, key);
@@ -431,7 +431,7 @@ function Facilities({ m }: { m: ManagedTeam }) {
               key={key}
               title={FACILITY_INFO[key].name}
               action={<span className="font-display text-xl font-bold tabular">Nível {level}</span>}
-              bodyClassName="flex flex-col !p-3"
+              bodyClassName="flex flex-col !p-4"
             >
               <div className="flex gap-1" aria-hidden>
                 {[1, 2, 3, 4, 5].map((i) => (
@@ -440,7 +440,7 @@ function Facilities({ m }: { m: ManagedTeam }) {
               </div>
               <p className="mt-2 flex-1 text-sm leading-snug text-ink-300">{FACILITY_INFO[key].effect}</p>
               {useless && <p className="mt-2 text-xs text-gold-400">O regulamento desta categoria não permite desenvolvimento aerodinâmico.</p>}
-              <Button className="mt-3 w-full" disabled={level >= 5 || cost > m.budget || useless} onClick={() => upgradeFacility(key)}>
+              <Button className="mt-4 w-full" disabled={level >= 5 || cost > m.budget || useless} onClick={() => upgradeFacility(key)}>
                 {level >= 5 ? 'Nível máximo' : `Ampliar (${formatMoney(cost)})`}
               </Button>
             </Card>
@@ -468,10 +468,10 @@ function Development({ m }: { m: ManagedTeam }) {
   const allowance = windTunnelAllowance(m);
   const setShare = (area: DevArea, value: number) => setAreaShare(area, value);
   return (
-    <div className="space-y-3">
-      <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-        <div className="space-y-3">
-          <Card title="Ritmo da pesquisa" bodyClassName="!p-3">
+    <div className="space-y-4">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+        <div className="space-y-4">
+          <Card title="Ritmo da pesquisa" bodyClassName="!p-4">
             <div className="grid grid-cols-3 gap-2">
               {RESEARCH_SPENDS.map((spend) => {
                 const selected = m.development.spend === spend;
@@ -496,12 +496,12 @@ function Development({ m }: { m: ManagedTeam }) {
                 );
               })}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-4">
               <Stat label="Pesquisa por etapa" value={`${number(rate)} pts`} />
               <Stat label="Custo por etapa" value={formatMoney(cost)} />
             </div>
             {economy.budgetCap !== null && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <Meter
                   label="Teto de gastos usado"
                   value={(m.development.spent / economy.budgetCap) * 100}
@@ -513,7 +513,7 @@ function Development({ m }: { m: ManagedTeam }) {
           </Card>
 
           {team && (
-            <Card title="Equipamento" bodyClassName="grid grid-cols-2 gap-3 !p-3">
+            <Card title="Equipamento" bodyClassName="grid grid-cols-2 gap-4 !p-4">
               <Stat label="Motor" value={number(team.car.engine)} hint={`Base do ano: ${number(m.baseCar.engine)}`} />
               <Stat label="Chassi" value={number(team.car.chassis)} hint={`Base do ano: ${number(m.baseCar.chassis)}`} />
               <Stat label="Confiabilidade" value={number(team.car.reliability)} hint={`Base do ano: ${number(m.baseCar.reliability)}`} />
@@ -525,7 +525,7 @@ function Development({ m }: { m: ManagedTeam }) {
         <Card
           title="Áreas de desenvolvimento"
           action={<span className="text-xs text-ink-400">Até {rules.maxGainsPerArea} melhorias por área no ano</span>}
-          bodyClassName="!px-3 !py-1"
+          bodyClassName="!px-4 !py-1"
         >
           <div className="divide-y divide-ink-800">
             {DEV_AREAS.map((area) => {
@@ -558,7 +558,7 @@ function Development({ m }: { m: ManagedTeam }) {
                   </div>
                   {open ? (
                     <>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <input
                           aria-label={`Esforço em ${DEV_AREA_LABELS[area]}`}
                           type="range"
@@ -601,7 +601,7 @@ function Development({ m }: { m: ManagedTeam }) {
         </Card>
       </div>
 
-      <Card title="Regulamento técnico" bodyClassName="space-y-2 !p-3 text-xs text-ink-400">
+      <Card title="Regulamento técnico" bodyClassName="space-y-2 !p-4 text-xs text-ink-400">
         <p className="text-sm text-ink-300">
           {rules.summary}
           {economy.budgetCap !== null && ` Teto de gastos com desenvolvimento: ${formatMoney(economy.budgetCap)} por temporada.`}

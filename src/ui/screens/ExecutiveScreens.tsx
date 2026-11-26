@@ -75,7 +75,7 @@ import { ExportReminder } from '../components/SaveNotices';
 import { TransitionOfferChoices, TransitionPanel, transitionLaterText, transitionWaitsForClosing } from './executive/Transition';
 
 /** Campo de formulário: reto, com 44 px de altura para o toque. */
-const field = 'min-h-11 border border-ink-500 bg-ink-850 px-3 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
+const field = 'min-h-11 border border-ink-500 bg-ink-850 px-2 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
 /** Ação discreta na barra de título de um cartão (a área de toque passa da barra, sem aumentá-la). */
 const headerLink = '-my-1 flex min-h-11 items-center gap-1 text-xs font-semibold text-ink-300 transition-colors hover:text-ink-100';
 /** Rótulo pequeno acima de um grupo de opções. */
@@ -102,7 +102,7 @@ export function ExecutiveDashboardScreen() {
   const offerWindow = transitionWindow(career);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageHeader eyebrow={`${category.shortName} · ${team ? team.name : 'Sem equipe'} · ${career.year}`} title={`Olá, ${player.firstName}`}>
         <span className="text-sm text-ink-400">
           Reputação <b className="tabular text-ink-100">{Math.floor(career.reputation)}</b>/100
@@ -118,8 +118,8 @@ export function ExecutiveDashboardScreen() {
         <EventsPanel />
       </div>
 
-      <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <div className="space-y-3">
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div className="space-y-4">
           {seasonOver && career.executiveOffseason && (
             <Card title={`Fim da temporada ${career.year}`} tone="attention">
               <p className="text-sm text-ink-300">
@@ -132,7 +132,7 @@ export function ExecutiveDashboardScreen() {
               </p>
               {/* No formato largo, o botão de avançar (na barra do pé da tela) já leva à tela Carreira. */}
               {!wide && (
-                <Button variant="primary" className="mt-3" onClick={() => navigate('/career')}>
+                <Button variant="primary" className="mt-4" onClick={() => navigate('/career')}>
                   Decidir a próxima temporada
                 </Button>
               )}
@@ -141,7 +141,7 @@ export function ExecutiveDashboardScreen() {
 
           {!seasonOver && next && track && (
             <section className="chamfer bg-ink-700 p-px" aria-label="Próxima etapa">
-              <div className="chamfer flex items-center gap-3 bg-ink-900 py-3 pl-4 pr-3">
+              <div className="chamfer flex items-center gap-4 bg-ink-900 py-2 pl-4 pr-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-xs font-semibold text-ink-300">
                     <span className="h-3 w-1 shrink-0 bg-apex-500" aria-hidden />
@@ -158,7 +158,7 @@ export function ExecutiveDashboardScreen() {
                     <WeatherBadge weather={next.weather.race} />
                   </div>
                   {!wide && (
-                    <Button variant="primary" className="mt-3" disabled={pending} onClick={() => navigate('/weekend')}>
+                    <Button variant="primary" className="mt-4" disabled={pending} onClick={() => navigate('/weekend')}>
                       {pending ? 'Resolva as decisões pendentes' : m ? 'Ir para o muro dos boxes' : 'Acompanhar a etapa'}
                     </Button>
                   )}
@@ -176,9 +176,9 @@ export function ExecutiveDashboardScreen() {
                   Gestão <ChevronRight size={14} aria-hidden />
                 </button>
               }
-              bodyClassName="!p-3"
+              bodyClassName="!p-4"
             >
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <Stat label="Campeonato" value={position ? `${position}º` : '-'} hint={`Meta: ${m.boardTarget}º`} accent />
                 <Stat
                   label="Caixa"
@@ -200,9 +200,9 @@ export function ExecutiveDashboardScreen() {
                   hint={`Pesquisa em ritmo ${m.development.spend === 'high' ? 'agressivo' : m.development.spend === 'low' ? 'contido' : 'normal'}`}
                 />
               </div>
-              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                 {lineup.map((d) => (
-                  <li key={d.id} className="min-w-0 bg-ink-850 px-3 py-2">
+                  <li key={d.id} className="min-w-0 bg-ink-850 px-2 py-2">
                     <div className="truncate text-sm font-semibold">{fullName(d)}</div>
                     <div className="text-xs text-ink-400">
                       moral {Math.round(d.condition.morale)} · confiança {Math.round(d.condition.confidence)}
@@ -245,7 +245,7 @@ export function ExecutiveDashboardScreen() {
                   Família <ChevronRight size={14} aria-hidden />
                 </button>
               }
-              bodyClassName="!p-3"
+              bodyClassName="!p-4"
             >
               <ul className="space-y-2 text-sm">
                 {racing.map((c) => {
@@ -350,7 +350,7 @@ export function ExecutiveWeekendScreen() {
         : 'Acompanhando o campeonato';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageHeader eyebrow={who} title={seasonOver ? 'Temporada encerrada' : next && track ? `Etapa ${next.round}: ${track.name}` : 'Fim de semana'}>
         {planning && (
           <>
@@ -392,7 +392,7 @@ export function ExecutiveWeekendScreen() {
                 Corrida: <WeatherBadge weather={next.weather.race} />
               </span>
             }
-            bodyClassName="!p-3"
+            bodyClassName="!p-4"
           >
             {m ? (
               <div className="space-y-2">
@@ -534,7 +534,7 @@ export function ExecutiveCareerScreen() {
 
   if (!off) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         <PageHeader eyebrow={`Temporada ${career.year}`} title="Carreira de dirigente" />
         {offerWindow === 'midseason' && (
           <Card title="Ano de transição" tone="attention">
@@ -566,7 +566,7 @@ export function ExecutiveCareerScreen() {
             <p className="text-sm text-ink-300">{transitionLaterText()}</p>
           </Card>
         )}
-        <Card bodyClassName="grid grid-cols-3 gap-3 !p-3">
+        <Card bodyClassName="grid grid-cols-3 gap-4 !p-4">
           <Stat
             label="Prestígio como dirigente"
             value={Math.round(executiveStanding(career))}
@@ -580,7 +580,7 @@ export function ExecutiveCareerScreen() {
           />
           <Stat label="Temporadas no comando" value={career.executiveLog.length} hint={m && m.strikes > 0 ? 'Advertido pela diretoria' : undefined} />
         </Card>
-        <div className={cx('grid items-start gap-3', career.executiveLog.length > 0 && 'md:grid-cols-2')}>
+        <div className={cx('grid items-start gap-4', career.executiveLog.length > 0 && 'md:grid-cols-2')}>
           <Card title="Como funciona">
             <ul className="list-disc space-y-2 pl-4 text-sm text-ink-300">
               <li>
@@ -616,7 +616,7 @@ export function ExecutiveCareerScreen() {
   const listingGroups = CATEGORY_IDS.map((id) => ({ id, items: off.listings.filter((l) => l.categoryId === id) })).filter((g) => g.items.length > 0);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <PageHeader eyebrow={`Fim da temporada ${career.year}`} title="Próxima temporada">
         <Tabs value={tab} options={tabs} onChange={setTab} />
         {/* O passo que começa a temporada vai para a barra do pé da tela. Com decisões pendentes, ela mostra o atalho para resolvê-las. */}
@@ -671,10 +671,10 @@ export function ExecutiveCareerScreen() {
               )}
             </Card>
           )}
-          <div className="grid items-start gap-3 md:grid-cols-2">
+          <div className="grid items-start gap-4 md:grid-cols-2">
             <Card title="Balanço do ano">
               {off.teamPosition !== null && (
-                <div className="mb-3 grid grid-cols-2 gap-3">
+                <div className="mb-4 grid grid-cols-2 gap-4">
                   <Stat label="Posição da equipe" value={`${off.teamPosition}º`} hint={`Meta: ${off.target}º`} accent />
                   <Stat
                     label="Meta"
@@ -701,11 +701,11 @@ export function ExecutiveCareerScreen() {
                     : 'Você encerrou a carreira de piloto. Escolha o próximo passo: um cargo, uma equipe à venda ou fundar a sua.'}
                 </p>
               )}
-              {off.dismissed && <p className="mt-3 text-sm font-semibold text-gold-400">Você foi demitido e precisa de um novo rumo.</p>}
+              {off.dismissed && <p className="mt-4 text-sm font-semibold text-gold-400">Você foi demitido e precisa de um novo rumo.</p>}
             </Card>
 
             {keepsTeam && m ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Card title="Antes de seguir">
                   <ul className="space-y-2">
                     <Check met={off.lineup.length === 2}>Dupla de pilotos: {off.lineup.length} de 2 escolhidos</Check>
@@ -721,7 +721,7 @@ export function ExecutiveCareerScreen() {
                       ? `Valor de mercado da ${team?.name}: ${formatMoney(ownedTeamValue(career))} (inclui o caixa e parte do custo das instalações; sobe com a posição e a reputação da equipe). Há imposto de 15% sobre o ganho em relação aos ${formatMoney(m.purchasePrice)} pagos.`
                       : 'Você pode pedir demissão para aceitar outra proposta, comprar uma equipe ou ficar um ano fora.'}
                   </p>
-                  <Button variant="danger" className="mt-3" onClick={() => store.leaveTeam()}>
+                  <Button variant="danger" className="mt-4" onClick={() => store.leaveTeam()}>
                     {m.position === 'owner' ? 'Vender' : 'Pedir demissão'}
                   </Button>
                 </Card>
@@ -730,14 +730,14 @@ export function ExecutiveCareerScreen() {
               <Card
                 title="Propostas para chefiar uma equipe"
                 action={<span className="text-xs text-ink-400">Prestígio {Math.round(executiveStanding(career))}</span>}
-                bodyClassName="!p-3"
+                bodyClassName="!p-4"
               >
                 {off.jobOffers.length === 0 ? (
                   <p className="text-sm text-ink-400">Nenhuma equipe procurou você neste ano.</p>
                 ) : (
                   <ul className="space-y-2">
                     {off.jobOffers.map((o) => (
-                      <li key={o.id} className="flex items-center justify-between gap-3 bg-ink-850 py-2 pl-3 pr-2">
+                      <li key={o.id} className="flex items-center justify-between gap-2 bg-ink-850 py-2 pl-2 pr-2">
                         <div className="min-w-0">
                           <div className="font-display text-lg font-bold uppercase leading-tight">{o.teamName}</div>
                           <div className="text-xs text-ink-300">
@@ -763,7 +763,7 @@ export function ExecutiveCareerScreen() {
             )}
           </div>
           {career.executiveLog.length > 0 && <LogTable />}
-          <div className="flex flex-wrap items-center gap-x-3">
+          <div className="flex flex-wrap items-center gap-x-4">
             <ExportReminder link={false} className="min-w-0 flex-1 basis-72" />
             <Link to="/saves" className="inline-flex min-h-11 items-center text-xs font-semibold text-ink-200 underline underline-offset-2 hover:text-ink-100">
               Exportar agora
@@ -776,7 +776,7 @@ export function ExecutiveCareerScreen() {
         <Card
           title="Pilotos para a próxima temporada"
           action={<span className="text-xs text-ink-400">{off.lineup.length} de 2 escolhidos</span>}
-          bodyClassName="!p-3"
+          bodyClassName="!p-4"
         >
           {/* Sem esticar a linha: o aviso de favorecimento deixa o cartão do filho mais alto que o vizinho. */}
           <ul className="grid items-start gap-2 md:grid-cols-2 xl:grid-cols-3">
@@ -789,7 +789,7 @@ export function ExecutiveCareerScreen() {
                 return (
                   <li
                     key={c.driverId}
-                    className={cx('flex flex-wrap items-center gap-x-3 py-1 pl-3 pr-1', slot >= 0 ? 'bg-apex-500/10 shadow-ring-accent' : 'bg-ink-850')}
+                    className={cx('flex flex-wrap items-center gap-x-2 py-1 pl-2 pr-1', slot >= 0 ? 'bg-apex-500/10 shadow-ring-accent' : 'bg-ink-850')}
                   >
                     <span className="w-8 shrink-0 text-center font-display text-2xl font-bold leading-none" title="Nota">
                       <span className="sr-only">Nota </span>
@@ -802,7 +802,7 @@ export function ExecutiveCareerScreen() {
                           <Pill tone={c.origin === 'child' ? 'good' : 'neutral'}>{ORIGIN_LABELS[c.origin]}</Pill>
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-x-3 text-xs text-ink-400">
+                      <div className="flex flex-wrap gap-x-4 text-xs text-ink-400">
                         {/* A idade do candidato já é a da temporada para a qual ele assina. */}
                         <span className="whitespace-nowrap">{c.age} anos na próxima temporada</span>
                         <span className="whitespace-nowrap">Contrato de {counted(c.years, 'temporada', 'temporadas')}</span>
@@ -815,7 +815,7 @@ export function ExecutiveCareerScreen() {
                         {slot === 0 ? '1º piloto' : slot === 1 ? '2º piloto' : 'Escalar'}
                       </Button>
                     ) : (
-                      <span className="flex min-h-11 shrink-0 items-center px-3 text-xs text-ink-400">Não aceita</span>
+                      <span className="flex min-h-11 shrink-0 items-center px-2 text-xs text-ink-400">Não aceita</span>
                     )}
                     {favoritism && (
                       <div className="flex basis-full flex-wrap items-start gap-x-2 gap-y-1 pb-2 pr-2 text-xs text-ink-300">
@@ -829,7 +829,7 @@ export function ExecutiveCareerScreen() {
                 );
               })}
           </ul>
-          <p className="mt-3 text-xs text-ink-400">
+          <p className="mt-4 text-xs text-ink-400">
             O primeiro escolhido é o primeiro piloto. Pilotos melhores pedem salário maior ({categoryRef(TOP_CATEGORY_ID, 'em')}) ou pagam menos pela vaga (nas
             categorias de base), e só aceitam equipes à altura da ambição deles. Quem recusa quer uma equipe mais forte, ou chegou à idade-limite da categoria.
             Um filho corre pela equipe da família sem salário e sem pagar pela vaga, mas a imprensa fala em favorecimento.
@@ -849,9 +849,9 @@ export function ExecutiveCareerScreen() {
           {off.sponsorOffers.length === 0 ? (
             <p className="text-sm text-ink-400">Sem propostas novas.</p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
               {off.sponsorOffers.map((s) => (
-                <div key={s.id} className="bg-ink-850 p-3 text-sm">
+                <div key={s.id} className="bg-ink-850 p-2 text-sm">
                   <div className="font-semibold">{s.name}</div>
                   <div className="font-display text-xl font-bold tabular">
                     {formatMoney(s.perSeason)}
@@ -866,7 +866,7 @@ export function ExecutiveCareerScreen() {
             </div>
           )}
           {m.sponsors.length > 0 && (
-            <p className="mt-3 text-xs text-ink-400">
+            <p className="mt-4 text-xs text-ink-400">
               Atuais: {m.sponsors.map((s) => `${s.name} (${formatMoney(s.perSeason)}, ${amongTheFirst(s.targetPosition)})`).join(' · ')}. Para trocar, dispense
               um na tela Gestão.
             </p>
@@ -882,9 +882,9 @@ export function ExecutiveCareerScreen() {
               Seu caixa: <b className="tabular text-ink-100">{formatMoney(cash)}</b>
             </span>
           }
-          bodyClassName="!p-3"
+          bodyClassName="!p-4"
         >
-          <div className="grid items-start gap-x-6 gap-y-3 md:grid-cols-2">
+          <div className="grid items-start gap-x-6 gap-y-4 md:grid-cols-2">
             {listingGroups.map((group) => (
               <section key={group.id}>
                 <h3 className={groupLabel}>{getCategory(group.id).shortName}</h3>
@@ -910,7 +910,7 @@ export function ExecutiveCareerScreen() {
               </section>
             ))}
           </div>
-          <p className="mt-3 text-xs text-ink-400">
+          <p className="mt-4 text-xs text-ink-400">
             Ao lado do nome, a força da equipe no grid da categoria; em cinza, as que o seu caixa não paga. A compra é paga com o seu caixa pessoal (um
             empréstimo, na tela Finanças, pode completar o valor). Dono fica com o lucro, cobre o prejuízo e deixa a equipe para os herdeiros.
           </p>
@@ -926,7 +926,7 @@ export function ExecutiveCareerScreen() {
             </span>
           }
         >
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-end gap-4">
             <label className="text-xs text-ink-300">
               Categoria
               <select value={foundCategory} onChange={(e) => setFoundCategory(e.target.value as CategoryId)} className={cx(field, 'mt-1 block')}>
@@ -958,7 +958,7 @@ export function ExecutiveCareerScreen() {
               {foundingCost(foundCategory) > cash ? 'Sem caixa' : `Fundar (${formatMoney(foundingCost(foundCategory))})`}
             </Button>
           </div>
-          <p className="mt-3 text-xs text-ink-400">
+          <p className="mt-4 text-xs text-ink-400">
             A equipe nova ocupa a inscrição da mais fraca da categoria e herda o equipamento dela, um pouco pior. Começa sem instalações, sem equipe técnica e
             com reputação baixa: tudo por construir.
           </p>

@@ -52,7 +52,7 @@ export function FinanceScreen() {
           <PageHeader
             title="Finanças"
             eyebrow={
-              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
                 <LifeBackLink />
                 <span>
                   temporada {career.year}
@@ -68,7 +68,7 @@ export function FinanceScreen() {
             }
           />
         </div>
-        <div className="mb-3 xl:shrink-0">
+        <div className="mb-4 xl:shrink-0">
           <Tabs value={tab} options={tabs} onChange={setTab} />
         </div>
       </div>
@@ -116,7 +116,7 @@ function SummaryTab() {
 
   return (
     <>
-      <Card padded={false} bodyClassName="grid grid-cols-2 gap-x-4 gap-y-3 px-4 py-3 md:grid-cols-4">
+      <Card padded={false} bodyClassName="grid grid-cols-2 gap-x-4 gap-y-4 px-4 py-4 md:grid-cols-4">
         <Stat
           label="Caixa"
           value={<span className={f.cash < 0 ? 'text-gold-400' : ''}>{formatMoney(f.cash)}</span>}
@@ -138,7 +138,7 @@ function SummaryTab() {
           hint="Receitas menos despesas"
         />
         {/* Caixa por temporada: o saldo no fechamento de cada ano e o de hoje. */}
-        <div className="col-span-2 border-t border-ink-700 pt-3 md:col-span-4">
+        <div className="col-span-2 border-t border-ink-700 pt-4 md:col-span-4">
           <TrendLine
             title="Caixa"
             values={cashSeries(career)}
@@ -277,12 +277,12 @@ function SponsorsTab() {
           {sponsors.length} de {maxSponsors(career)} cotas
         </span>
       }
-      bodyClassName="space-y-3"
+      bodyClassName="space-y-4"
     >
       {sponsors.length > 0 && (
         <div className="grid gap-4 md:grid-cols-3">
           {sponsors.map((s) => (
-            <div key={s.id} className="min-w-0 space-y-2 border-ink-700 border-l pl-3">
+            <div key={s.id} className="min-w-0 space-y-2 border-ink-700 border-l pl-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold leading-tight">{s.name}</span>

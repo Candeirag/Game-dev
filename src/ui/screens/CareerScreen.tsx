@@ -106,7 +106,7 @@ function LadderTab() {
     <>
       {/* Sem barra de título: a aba "Escada" já diz o que é, e os 40 px fazem a escada caber acima da barra
           do passo principal em 844×390. O título continua para leitores de tela. */}
-      <Card bodyClassName="p-3">
+      <Card bodyClassName="p-2">
         <h2 className="sr-only">Escada do automobilismo</h2>
         {/*
           O desenho do carro tem tamanho fixo (`--u` é quantos pixels vale cada unidade de comprimento
@@ -207,7 +207,7 @@ function LadderTab() {
                     : 'nenhuma proposta neste fim de temporada'}
               </Check>
             </ul>
-            <p className="mt-3 text-xs text-ink-400">
+            <p className="mt-4 text-xs text-ink-400">
               Você também precisa bancar a vaga (veja Finanças e as propostas no fim do ano); os três primeiros do campeonato ganham bolsa de 60%, 35% e 20% na
               vaga do degrau de cima.
             </p>
@@ -232,12 +232,12 @@ function LicenseTab() {
   return (
     <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
       <Card title="Licença">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           <Stat label="Pontos de licença" value={points} hint={`Últimas ${LICENSE_WINDOW_SEASONS} temporadas`} accent />
           <Stat label="Pontos de punição" value={`${career.license.penaltyPoints}/${PENALTY_POINTS_BAN}`} hint="Zeram a cada temporada" />
           <Stat label="Suspensões" value={career.license.banRounds} hint="Etapas a cumprir" />
         </div>
-        <p className="mt-3 text-xs text-ink-400">
+        <p className="mt-4 text-xs text-ink-400">
           Cada temporada rende pontos pela posição final. Toques e infrações rendem pontos de punição; com {PENALTY_POINTS_BAN}, você é suspenso por uma etapa.
         </p>
       </Card>
@@ -246,7 +246,7 @@ function LicenseTab() {
         {history.length > 0 ? (
           <ul className="divide-y divide-ink-800 text-sm text-ink-300">
             {history.map((h) => (
-              <li key={h.season} className="flex items-baseline justify-between gap-3 px-4 py-2">
+              <li key={h.season} className="flex items-baseline justify-between gap-4 px-4 py-2">
                 <span>
                   Temporada {h.season} · {getCategory(h.categoryId).shortName} · {h.position}º
                 </span>
@@ -309,7 +309,7 @@ function OffersTab({ offseason }: { offseason: Offseason }) {
       </p>
 
       <Card title={`Fechamento da temporada ${career.year}`} tone="attention">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 md:grid-cols-6">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 md:grid-cols-6">
           <Stat label="Sua posição" value={`${offseason.playerPosition}º`} accent />
           <Stat label="Meta" value={`${offseason.target}º`} hint={offseason.objectiveMet ? 'Cumprida' : 'Não cumprida'} />
           <Stat
@@ -331,7 +331,7 @@ function OffersTab({ offseason }: { offseason: Offseason }) {
           <Stat label="Campeão" value={<span className="block pt-1 text-lg leading-[1.1]">{champion ? fullName(champion) : '-'}</span>} />
         </div>
         {offseason.notes.length > 0 && (
-          <ul className="mt-3 space-y-1 text-sm text-gold-400">
+          <ul className="mt-2 space-y-1 text-sm text-gold-400">
             {offseason.notes.map((note) => (
               <li key={note} className="flex items-start gap-2">
                 <TriangleAlert size={14} strokeWidth={2} className="mt-1 shrink-0" aria-hidden />
@@ -340,7 +340,7 @@ function OffersTab({ offseason }: { offseason: Offseason }) {
             ))}
           </ul>
         )}
-        <div className="mt-2 flex flex-wrap items-center gap-x-3">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4">
           <ExportReminder link={false} className="min-w-0 flex-1 basis-72" />
           <Link to="/saves" className="inline-flex min-h-11 items-center text-xs font-semibold text-ink-200 underline underline-offset-2 hover:text-ink-100">
             Exportar agora
@@ -367,7 +367,7 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
       onClick={onSelect}
       aria-pressed={selected}
       className={cx(
-        'flex min-h-12 w-full flex-col justify-center gap-1 px-3 py-2 text-left transition-colors',
+        'flex min-h-12 w-full flex-col justify-center gap-1 px-4 py-2 text-left transition-colors',
         selected ? 'bg-ink-800 shadow-[inset_3px_0_0_0_var(--color-apex-500)]' : 'hover:bg-ink-850',
         withdrawn && 'opacity-50',
       )}
@@ -448,7 +448,7 @@ const KIND_TEXT: Record<ReturnType<typeof kindTone>, string> = { good: 'text-go-
 
 function Term({ label, children, stacked }: { label: string; children: ReactNode; stacked?: boolean }) {
   return (
-    <div className={cx(!stacked && 'flex items-baseline justify-between gap-3')}>
+    <div className={cx(!stacked && 'flex items-baseline justify-between gap-4')}>
       <dt className="shrink-0 text-ink-400">{label}</dt>
       <dd className={cx(!stacked && 'text-right')}>{children}</dd>
     </div>
@@ -489,12 +489,12 @@ function OfferDetail({ offer }: { offer: Offer }) {
           {withdrawn && <Pill tone="bad">Retirada</Pill>}
         </span>
       }
-      bodyClassName="p-3"
+      bodyClassName="p-4"
     >
       <div className="mb-2 text-xs text-ink-400">
         {category.name} · {rank}ª força do grid
       </div>
-      <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+      <div className="grid gap-x-4 gap-y-4 sm:grid-cols-2">
         <div>
           <dl className="space-y-1 text-sm">
             <Term label="Papel">
@@ -581,7 +581,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
       </div>
 
       {negotiating && negotiable && (
-        <div className="mt-3 border-t border-ink-700 pt-3">
+        <div className="mt-4 border-t border-ink-700 pt-4">
           <div className="grid gap-2 sm:grid-cols-2">
             {DEMANDS.filter((d) => d.available(offer)).map((d) => (
               <Button key={d.id} onClick={() => negotiateOffer(offer.id, d.id)} className="justify-start text-left text-xs">
@@ -604,7 +604,7 @@ function MarketCard() {
   const { career, player } = useCareerView();
   const groups = reachableCategories(career);
   return (
-    <Card title="Interesse das equipes" action={<span className="text-xs text-ink-400">Atualizado a cada etapa</span>} bodyClassName="p-3">
+    <Card title="Interesse das equipes" action={<span className="text-xs text-ink-400">Atualizado a cada etapa</span>} bodyClassName="p-4">
       <div className={cx('grid gap-x-6 gap-y-4', groups.length >= 3 ? 'md:grid-cols-3' : groups.length === 2 && 'md:grid-cols-2')}>
         {groups.map((group) => {
           const teams = rankTeams(teamsOfCategory(career, group.id))
@@ -645,7 +645,7 @@ function MarketCard() {
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-ink-400">
+      <p className="mt-4 text-xs text-ink-400">
         Cada equipe avalia você pelo que ela mesma espera: a sua posição diante da meta dela, o seu nível diante do dos pilotos dela, a reputação e a idade. A
         partir de cerca de 50 de interesse, ela faz proposta no fim do ano; acima disso, crescem o desconto na vaga e a margem de negociação.
       </p>
@@ -660,7 +660,7 @@ function Retirement() {
   const retire = useGameStore((s) => s.retire);
   const [confirming, setConfirming] = useState(false);
   return (
-    <section aria-label="Aposentadoria das pistas" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-ink-700 pt-3">
+    <section aria-label="Aposentadoria das pistas" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-ink-700 pt-4">
       <p className="min-w-0 flex-1 basis-80 text-xs text-ink-400">
         <b className="font-semibold text-ink-300">Aposentadoria das pistas.</b> Pendurar o capacete é definitivo para este personagem, mas a carreira continua.
         O primeiro ano fora do carro pode ter um papel (mentoria de um jovem piloto, comentários na TV ou a imagem de uma marca), com cachê e um legado; depois,
