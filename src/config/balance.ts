@@ -821,7 +821,8 @@ export const TRANSITION = {
   MENTOR_MAX_AGE: 21,
   // Legado do mentor: o pupilo aceita a equipe do ex-mentor mais facilmente (pontos de atração).
   MENTOR_LOYALTY: 15,
-  // Legado do comentarista: prestígio extra no mercado de dirigentes no fechamento do ano.
+  // Legado do comentarista: prestígio extra no mercado de dirigentes, a partir do fechamento do ano de
+  // transição (como os outros legados, vale pelo resto da vida do personagem).
   COMMENTATOR_PRESTIGE: 6,
   // Legado do embaixador: a marca patrocina o herdeiro que correr (fração do custo da vaga da
   // categoria dele, por temporada) durante estas temporadas.
