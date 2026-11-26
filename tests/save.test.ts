@@ -739,6 +739,8 @@ describe('migração da versão 9 para a 10 (dinastia e ano de transição)', ()
       family: { ...family, children: family.children.map((c) => ({ ...c, birthTraits: [], kartTest: null })) },
       dynasty: { ...dynasty, lineage: dynasty.lineage.map((l) => ({ ...l, traits: [], partnerName: null, path: null })), relatives: [], elders: [] },
       transition: null,
+      // Nenhum save de exemplo da versão 9 está na temporada da aposentadoria.
+      retiredSeason: null,
     });
     // Rodar de novo sobre o resultado não muda nada.
     expect(migrateStep({ ...after, schemaVersion: 9 }, 9)).toEqual(after);
@@ -774,6 +776,25 @@ describe('migração da versão 9 para a 10 (dinastia e ano de transição)', ()
       { type: 'child', child: { ...child, birthTraits: [], kartTest: null } },
       { type: 'marry' },
     ]);
+  });
+
+  it('a temporada da aposentadoria é conhecida quando o save está nela', () => {
+    const base = read('dirigente-no-meio-da-temporada.json');
+    const season = base.season as number;
+    const player = base.playerDriverId as string;
+    const round = (driverId: string) => ({ race: { entries: [{ driverId, position: 1 }] } });
+    const off = (mode: 'driver' | 'executive') => ({ summary: { mode } });
+    const retiredSeason = (patch: Loose) => (migrateStep({ ...base, ...patch }, 9) as Loose).retiredSeason;
+    // No fechamento que veio da aposentadoria, o resumo do ano é de piloto.
+    expect(retiredSeason({ executiveOffseason: off('driver'), rounds: [] })).toBe(season);
+    // Parou no meio do ano: as etapas da temporada têm o resultado dele, antes e depois do fechamento.
+    expect(retiredSeason({ executiveOffseason: null, rounds: [round('outro'), round(player)] })).toBe(season);
+    expect(retiredSeason({ executiveOffseason: off('executive'), rounds: [round(player)] })).toBe(season);
+    // Um ano inteiro fora das pistas, ou alguém que ainda corre: não se sabe (ou não houve) aposentadoria.
+    expect(retiredSeason({ executiveOffseason: off('executive'), rounds: [round('outro')] })).toBeNull();
+    expect(retiredSeason({ mode: 'driver', executiveOffseason: null, rounds: [round(player)] })).toBeNull();
+    // Um valor já gravado passa intacto.
+    expect(retiredSeason({ retiredSeason: 3 })).toBe(3);
   });
 
   it('dados da versão 10 já gravados passam intactos pela migração', () => {

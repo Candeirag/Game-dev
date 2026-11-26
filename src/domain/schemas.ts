@@ -479,6 +479,8 @@ export const LEDGER_KEYS = [
   'job',
   'investor',
   'crowdfund',
+  // Fase 6: os cachês do ano de transição (mentor, comentarista, embaixador).
+  'transition',
 ] as const;
 export const LedgerKeySchema = z.enum(LEDGER_KEYS);
 export type LedgerKey = z.infer<typeof LedgerKeySchema>;
@@ -1457,8 +1459,8 @@ export type StoryMemory = z.infer<typeof StoryMemorySchema>;
  * Saves antigos ficam com a memória vazia. Patrocinadores, escolhas e cartões ganham campos opcionais.
  * Versão 10 (Fase 6): dinastia. Filhos com talentos e defeitos herdados e teste no kart; linhagem com
  * traços, parceiro e caminho; parentes que seguiram outro caminho e o personagem anterior vivo
- * (`dynasty.relatives`, `dynasty.elders`); ano de transição (`transition`); efeito `kartTest` e a
- * categoria de evento `transition`. Saves antigos ficam com tudo vazio.
+ * (`dynasty.relatives`, `dynasty.elders`); ano de transição (`transition`, `retiredSeason`); efeito
+ * `kartTest`, a categoria de evento e o lançamento `transition`. Saves antigos ficam com tudo vazio.
  */
 export const CAREER_SCHEMA_VERSION = 10;
 
@@ -1599,6 +1601,12 @@ export const CareerStateSchema = z.object({
   story: StoryMemorySchema,
   /** Ano de transição do personagem atual: o papel, o andamento e, depois de terminado, o legado (Fase 6). */
   transition: TransitionSchema.nullable(),
+  /**
+   * Temporada em que o personagem atual pendurou o capacete (Fase 6). Abre a janela do ano de
+   * transição: logo depois de parar, no meio do ano, e no primeiro fechamento. Null: ainda corre,
+   * nunca correu (herdeiro dos negócios) ou parou antes da versão 10.
+   */
+  retiredSeason: z.number().int().min(1).nullable(),
 });
 export type CareerState = z.infer<typeof CareerStateSchema>;
 

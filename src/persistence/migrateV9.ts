@@ -9,7 +9,11 @@
  *   `path`), vazios nos saves antigos;
  * - na dinastia, os parentes que seguiram outro caminho e os personagens anteriores vivos
  *   (`relatives`, `elders`), vazios;
- * - o ano de transição do personagem (`transition`), nulo.
+ * - o ano de transição do personagem (`transition`), nulo, e a temporada em que ele parou de correr
+ *   (`retiredSeason`). Ela só é conhecida quando o save está na temporada da aposentadoria: no
+ *   fechamento que veio da aposentadoria (o resumo do ano é de piloto) ou no resto de um ano em que
+ *   o personagem correu algumas etapas antes de parar. Nos outros saves fica nula (quem parou antes
+ *   já passou do primeiro ano fora do carro).
  *
  * O filho aparece também dentro do efeito `child` dos eventos pendentes (a escolha de ter um filho):
  * esses recebem os mesmos campos, para o cartão continuar resolvível.
@@ -58,6 +62,19 @@ function migrateLineageEntry(entry: unknown): unknown {
   };
 }
 
+/** A temporada da aposentadoria, quando o save está nela (ver o comentário do arquivo). */
+function retiredSeasonOf(data: Loose): number | null {
+  if (typeof data.retiredSeason === 'number') return data.retiredSeason;
+  if (data.mode !== 'executive' || typeof data.season !== 'number') return null;
+  const off = isObject(data.executiveOffseason) ? data.executiveOffseason : null;
+  if (off && isObject(off.summary) && off.summary.mode === 'driver') return data.season;
+  // Parou no meio do ano: as etapas da temporada (até o fechamento dela) têm o resultado dele.
+  const raced = list(data.rounds).some(
+    (round) => isObject(round) && isObject(round.race) && list(round.race.entries).some((entry) => isObject(entry) && entry.driverId === data.playerDriverId),
+  );
+  return raced ? data.season : null;
+}
+
 export function migrateV9(data: Loose): Loose {
   const family = isObject(data.family) ? data.family : {};
   const dynasty = isObject(data.dynasty) ? data.dynasty : {};
@@ -72,5 +89,6 @@ export function migrateV9(data: Loose): Loose {
       elders: Array.isArray(dynasty.elders) ? dynasty.elders : [],
     },
     transition: isObject(data.transition) ? data.transition : null,
+    retiredSeason: retiredSeasonOf(data),
   };
 }

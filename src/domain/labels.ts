@@ -167,6 +167,7 @@ export const LEDGER_LABELS: Record<import('./schemas').LedgerKey, string> = {
   job: 'Trabalho paralelo',
   investor: 'Investidor',
   crowdfund: 'Vaquinha da cidade',
+  transition: 'Ano de transição',
 };
 
 export const ROLE_LABELS: Record<import('./schemas').DriverRole, string> = {

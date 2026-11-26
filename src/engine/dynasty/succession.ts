@@ -696,6 +696,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
       // transição também (Fase 6: o herdeiro tem o dele, quando parar de correr).
       story: emptyStory(base.id),
       transition: null,
+      retiredSeason: null,
       family,
       birth,
       dynasty: dynasty(newEntry(base.id, option.name, option.age, state.year, midSeason ? state.season : state.season + 1)),
@@ -849,6 +850,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     // também (Fase 6: o herdeiro tem o dele, quando parar de correr).
     story: emptyStory(player.id),
     transition: null,
+    retiredSeason: null,
     marketInterest: {},
     pendingEvents: [],
     offseason: null,

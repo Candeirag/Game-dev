@@ -145,9 +145,10 @@ export function retireFromDriving(career: CareerState): CareerState {
     date: seasonDate(career),
     category: 'season',
     title: 'Aposentadoria das pistas',
-    body: `${fullName(player)} pendurou o capacete aos ${player.age} anos. A carreira continua fora do carro: você pode investir, aceitar o comando de uma equipe, comprar ou fundar a sua e acompanhar a carreira dos filhos.`,
+    body: `${fullName(player)} pendurou o capacete aos ${player.age} anos. A carreira continua fora do carro: você pode investir, aceitar o comando de uma equipe, comprar ou fundar a sua e acompanhar a carreira dos filhos. O primeiro ano fora do carro pode ser de transição: mentoria de um jovem piloto, comentários na TV ou a imagem de uma marca.`,
   };
-  const state = convertToExecutive(career);
+  // A temporada da aposentadoria abre a janela do ano de transição (Fase 6).
+  const state = { ...convertToExecutive(career), retiredSeason: career.season };
   return { ...state, inbox: pushMessages(state.inbox, [message]) };
 }
 

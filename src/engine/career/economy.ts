@@ -214,8 +214,9 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
   // O que o investidor levou na temporada (o extrato soma no mesmo lançamento o aporte, que não é renda).
   const investorPaid = f.transactions.filter((x) => x.season === season && x.key === 'investor' && x.amount < 0).reduce((sum, x) => sum - x.amount, 0);
   // Renda do trabalho (líquida do custo da vaga, das viagens, do equipamento, do aluguel do polo e da
-  // parte do investidor) mais a renda do patrimônio: dividendos, aluguéis e lucro das empresas. O
-  // aporte do investidor e a vaquinha não são renda: não pagam imposto.
+  // parte do investidor) mais a renda do patrimônio: dividendos, aluguéis e lucro das empresas. Os
+  // cachês do ano de transição (Fase 6) são renda do trabalho. O aporte do investidor e a vaquinha
+  // não são renda: não pagam imposto.
   const taxable = Math.max(
     0,
     (t.salary ?? 0) +
@@ -227,6 +228,7 @@ export function closeSeasonFinance(career: CareerState): { finance: Finance; rep
       (t.rent ?? 0) +
       (t.business ?? 0) +
       (t.job ?? 0) +
+      (t.transition ?? 0) +
       (t.travel ?? 0) +
       (t.equipment ?? 0) +
       (t.housing ?? 0) -

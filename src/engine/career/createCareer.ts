@@ -276,6 +276,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
     noDoorSeasons: 0,
     story: emptyStory(PLAYER_DRIVER_ID),
     transition: null,
+    retiredSeason: null,
     inbox: [
       {
         id: 's1-welcome',
