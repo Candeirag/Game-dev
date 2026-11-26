@@ -4,17 +4,21 @@
  * Uma aba por assunto, guardada no endereço (`?tab=`), e cada aba em duas ou três colunas
  * para caber na tela deitada (844×390).
  */
-import { Check, Minus, Plus } from 'lucide-react';
+import { Check, Minus, Plus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { DEV_AREAS, FACILITY_KEYS, RESEARCH_SPENDS, STAFF_ROLES, type DevArea, type ManagedTeam, type StaffRole } from '@/domain/schemas';
+import { DEV_AREAS, FACILITY_KEYS, RESEARCH_SPENDS, STAFF_ROLES, type DevArea, type ManagedTeam, type StaffMember, type StaffRole } from '@/domain/schemas';
 import { DEV_AREA_LABELS, RESEARCH_SPEND_LABELS, ROLE_LABELS, STAFF_ROLE_LABELS, TEAM_LEDGER_LABELS } from '@/domain/labels';
 import { getCategory } from '@/data/categories';
+import { RELATIVE_PATH_INFO } from '@/data/dynasty';
 import { DEV_EFFECTS, FACILITY_INFO, MANAGEMENT, REGULATIONS, STAFF_ROLE_EFFECTS, TEAM_ECONOMY } from '@/data/management';
 import {
   VACANT_RATING,
   facilityUpgradeCost,
+  familyStaffRelativeId,
+  favoritismNote,
   fullName,
+  isFamilyStaff,
   managedTeam,
   managedTeamPosition,
   overallRating,
@@ -31,6 +35,15 @@ import { Button, Card, Chip, cx, EmptyState, Meter, PageHeader, Pill, RatingBar,
 import { currencySymbol, formatMoney } from '../format';
 import { useCareer } from '../hooks/useCareer';
 import { amongTheFirst, counted } from '@/domain/text';
+
+/** A marca de quem é da família (palavra e ícone, além da cor): os parentes no mercado e na equipe técnica, os filhos entre os pilotos. */
+function FamilyChip() {
+  return (
+    <Chip tone="good" size="sm" icon={<Users size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />}>
+      Família
+    </Chip>
+  );
+}
 
 type Tab = 'overview' | 'staff' | 'facilities' | 'development' | 'drivers';
 const TABS: { value: Tab; label: string }[] = [
@@ -266,6 +279,8 @@ function Staff({ m }: { m: ManagedTeam }) {
     };
   };
   const selected = describe(role);
+  /** O parente por trás de um profissional da família (o caminho dele, para a linha de detalhe). */
+  const relativeOf = (member: StaffMember) => career.dynasty.relatives.find((r) => r.id === familyStaffRelativeId(member)) ?? null;
   return (
     <div className="space-y-3">
       <div className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
@@ -286,7 +301,10 @@ function Staff({ m }: { m: ManagedTeam }) {
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block text-2xs leading-tight text-ink-400">{STAFF_ROLE_LABELS[r]}</span>
-                      <span className={cx('block truncate text-sm font-semibold', !info.current && !info.self && 'text-gold-400')}>{info.name}</span>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className={cx('truncate text-sm font-semibold', !info.current && !info.self && 'text-gold-400')}>{info.name}</span>
+                        {info.current && isFamilyStaff(info.current) && <FamilyChip />}
+                      </span>
                     </span>
                     {info.market.length > 0 && <span className="shrink-0 text-2xs text-ink-400">{info.market.length} no mercado</span>}
                     <span className="w-7 shrink-0 text-right font-display text-xl font-bold leading-none">{Math.round(info.rating)}</span>
@@ -304,7 +322,10 @@ function Staff({ m }: { m: ManagedTeam }) {
         >
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="truncate font-semibold">{selected.name}</div>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-semibold">{selected.name}</span>
+                {selected.current && isFamilyStaff(selected.current) && <FamilyChip />}
+              </div>
               <div className="text-xs text-ink-400">
                 {selected.current
                   ? `${formatMoney(selected.current.salary)} por temporada · contrato até ${career.year + (selected.current.contractEnd - career.season)}`
@@ -325,19 +346,28 @@ function Staff({ m }: { m: ManagedTeam }) {
           <p className="mt-2 text-xs text-ink-400">{STAFF_ROLE_EFFECTS[role]}</p>
           {selected.market.length > 0 && (
             <ul className="mt-2 space-y-2 border-t border-ink-800 pt-2">
-              {selected.market.map((candidate) => (
-                <li key={candidate.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-3 pr-1 text-sm">
-                  <span className="min-w-0">
-                    <span className="block truncate">
-                      {candidate.name} · nota <b className="tabular">{candidate.rating}</b>
+              {selected.market.map((candidate) => {
+                const relative = relativeOf(candidate);
+                return (
+                  <li key={candidate.id} className="flex items-center justify-between gap-2 bg-ink-850 py-1 pl-3 pr-1 text-sm">
+                    <span className="min-w-0">
+                      <span className="flex min-w-0 flex-wrap items-center gap-x-2">
+                        <span className="truncate">
+                          {candidate.name} · nota <b className="tabular">{candidate.rating}</b>
+                        </span>
+                        {isFamilyStaff(candidate) && <FamilyChip />}
+                      </span>
+                      <span className="block text-xs text-ink-400">
+                        {formatMoney(candidate.salary)} por temporada
+                        {relative && ` · ${RELATIVE_PATH_INFO[relative.path].label}, salário de família`}
+                      </span>
                     </span>
-                    <span className="block text-xs text-ink-400">{formatMoney(candidate.salary)} por temporada</span>
-                  </span>
-                  <Button className="shrink-0" onClick={() => hireStaff(candidate.id)}>
-                    Contratar
-                  </Button>
-                </li>
-              ))}
+                    <Button className="shrink-0" onClick={() => hireStaff(candidate.id)}>
+                      Contratar
+                    </Button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
@@ -594,6 +624,11 @@ function Drivers({ m }: { m: ManagedTeam }) {
     .filter((d) => d.teamId === m.teamId)
     .sort((a, b) => (a.role === 'first' ? 0 : a.role === 'second' ? 1 : 2) - (b.role === 'first' ? 0 : b.role === 'second' ? 1 : 2));
   const children = new Set(career.family.children.map((c) => c.driver?.id));
+  // O aviso de favorecimento de cada filho na equipe (o texto é do motor).
+  const notes = lineup.flatMap((d) => {
+    const note = children.has(d.id) && d.role !== 'reserve' ? favoritismNote(career, { origin: 'child', name: fullName(d) }) : null;
+    return note ? [{ id: d.id, note }] : [];
+  });
   return (
     <Card title="Pilotos da equipe" padded={false}>
       <div className="px-4">
@@ -618,7 +653,7 @@ function Drivers({ m }: { m: ManagedTeam }) {
                 return (
                   <tr key={d.id} className="border-t border-ink-800">
                     <td className={cx(td, 'whitespace-nowrap font-semibold')}>
-                      {fullName(d)} {children.has(d.id) && <Pill tone="good">Família</Pill>} {d.injury && <Pill tone="bad">Lesionado</Pill>}
+                      {fullName(d)} {children.has(d.id) && <FamilyChip />} {d.injury && <Pill tone="bad">Lesionado</Pill>}
                     </td>
                     <td className={cx(td, 'whitespace-nowrap text-ink-300')}>{d.role ? ROLE_LABELS[d.role] : '-'}</td>
                     <td className={cx(td, 'text-right tabular')}>{d.age}</td>
@@ -635,6 +670,18 @@ function Drivers({ m }: { m: ManagedTeam }) {
           </table>
         </TableWrap>
       </div>
+      {notes.length > 0 && (
+        <ul className="space-y-2 border-t border-ink-800 px-4 py-2">
+          {notes.map((n) => (
+            <li key={n.id} className="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs text-ink-300">
+              <Chip tone="attention" size="sm">
+                Favorecimento
+              </Chip>
+              <span className="min-w-0 flex-1 basis-60">{n.note}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="border-t border-ink-800 px-4 py-2 text-xs text-ink-400">
         A dupla da próxima temporada é escolhida no fechamento do ano, na tela Carreira. No fim de semana, você define o programa de treino e a abordagem de
         classificação dos dois pilotos. O simulador da equipe acelera a evolução deles.
