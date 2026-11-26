@@ -31,6 +31,14 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
    npm run sim --silent > /tmp/agora.txt && diff docs/simulador/fase-0.txt /tmp/agora.txt
    ```
 
+   Desde a Fase 6, o comando joga duas gerações por padrão, e o relatório ganha a linha "Dinastia:"
+   no cabeçalho e a seção 11. Para comparar com os relatórios da Fase 0 à Fase 5, que têm uma
+   geração só, rode com `--generations 1` (sai idêntico ao formato antigo):
+
+   ```
+   npm run sim --silent -- --generations 1 > /tmp/agora.txt && diff docs/simulador/fase-5.txt /tmp/agora.txt
+   ```
+
 2. Depois da mudança, gere o relatório da fase (`--out docs/simulador/fase-N.txt`) e cole no PR
    o que mudou em relação ao anterior. Mudança que afeta as categorias de cima aparece melhor
    com `--talent 4` e `--talent 8`, em que mais carreiras chegam lá.
@@ -90,22 +98,32 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
   robô. A 1ª geração corre até os 36 anos, faz o ano de transição, vira dirigente (compra uma
   equipe se o caixa permitir, aceita um cargo ou acompanha de fora) e passa o comando em vida quando
   um filho com carreira de piloto chega aos 16 anos; sem filho piloto, aos 60, e o parente jovem
-  herda (morrer antes também abre a sucessão). O robô escolhe o herdeiro pelo que se vê (degrau,
-  teste no kart, avaliação dos treinadores, talentos e defeitos revelados, idade) e a vaga (uma
-  equipe da frente, se o patrimônio cobrir; senão, a da família; senão, a equipe em que já corria),
-  e a 2ª geração corre até os 36 anos ou 22 temporadas. O bônus de talento (`--talent`) vale para o
-  piloto de cada geração: o herdeiro o recebe ao assumir o carro, como o piloto da semente na
-  criação. As seções 1 a 10 continuam medindo só as temporadas pedidas da 1ª geração: com
-  `--generations 1`, o relatório traz só as seções 1 a 10, como até a Fase 5, e leva uns 25 s; com
-  as duas gerações, cerca de 2 min (quase 3 com `--talent 8`, em que as carreiras vão mais longe).
+  herda (morrer antes também abre a sucessão). O robô escolhe o herdeiro entre os filhos que já
+  correm, pelo que se vê (degrau, teste no kart, avaliação dos treinadores, talentos e defeitos
+  revelados, idade); o parente jovem só herda quando nenhum filho corre. A vaga: uma equipe da
+  frente, se o patrimônio cobrir; senão, a da família; senão, a equipe em que já corria. A 2ª
+  geração corre até os 36 anos ou 22 temporadas e, no fim de cada uma, fica com a proposta da
+  equipe da família quando ela está no degrau mais alto ao alcance (senão, a equipe mais forte,
+  como o robô de sempre). O bônus de talento (`--talent`) vale para o piloto de cada geração: o
+  herdeiro o recebe ao assumir o carro, como o piloto da semente na criação. As seções 1 a 10
+  continuam medindo só as temporadas pedidas da 1ª geração: com `--generations 1`, o relatório
+  traz só as seções 1 a 10, como até a Fase 5, e leva uns 25 s; com as duas gerações, cerca de
+  2 min (quase 3 com `--talent 8`, em que as carreiras vão mais longe).
   O que conferir:
   - na tabela das gerações, a 1ª conta a vida de piloto inteira (até parar), e não só as
     temporadas da amostra; o critério da fase é a 2ª geração chegar mais longe em média ("degrau
     mais alto", "monopostos", "topo" e a comparação pela semente) sem ganhar tudo ("não ganha
     tudo": a parcela das temporadas da 2ª geração com título e o máximo numa carreira);
-  - a herança (patrimônio deixado, imposto, parte dos irmãos e o que ficou com o herdeiro), a vaga
-    do herdeiro, o que se sabia dele na escolha, os filhos por família, os testes no kart, os
-    traços revelados antes da escolha, os parentes por caminho, o papel do ano de transição e as
+  - as linhas "2ª: filho herdeiro" e "2ª: parente jovem" separam a 2ª geração por quem herdou. O
+    parente jovem nasce na sucessão, com potencial próprio, sem herança de traços nem teste no
+    kart: são os filhos herdeiros que medem as regras da dinastia;
+  - a comparação pela semente é uma tabela de quatro medidas (degrau mais alto, títulos, vitórias
+    e temporadas no topo), com todas as carreiras e só as de filho herdeiro. Com `--talent 8`,
+    quase toda carreira chega ao topo e o degrau mais alto empata: aí valem as outras medidas;
+  - a herança por quem herdou (patrimônio deixado, imposto, parte dos irmãos e o que ficou com o
+    herdeiro; quando o parente herda, os filhos não recebem parte), a vaga do herdeiro, o que se
+    sabia do filho herdeiro na escolha, os filhos por família, os testes no kart, os traços
+    revelados antes da escolha, os parentes por caminho, o papel do ano de transição e as
     temporadas pela equipe da família;
   - em cada fechamento da dinastia o simulador confere a integridade da carreira e o formato do
     save: um estado inválido para o comando com a semente e a temporada.
