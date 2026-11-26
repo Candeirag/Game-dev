@@ -60,8 +60,8 @@ const cards: Card[] = [
 const allEffects = (spec: StoryCardSpec): StoryEffect[] => spec.choices.flatMap((c) => c.outcomes.flatMap((o) => o.effects));
 const allConditions = (spec: StoryCardSpec): StoryCondition[] => [...spec.when, ...spec.choices.flatMap((c) => c.requires ?? [])];
 
-/** Marcadores sempre disponíveis (sem vínculo). */
-const FREE_PLACEHOLDERS = new Set(['nome', 'piloto', 'equipe', 'categoria', 'pista', 'cidade', 'ano']);
+/** Marcadores sempre disponíveis (sem vínculo). `{sobrenome}` é o da família (Fase 6). */
+const FREE_PLACEHOLDERS = new Set(['nome', 'piloto', 'equipe', 'categoria', 'pista', 'cidade', 'ano', 'sobrenome']);
 /** Marcador → vínculos que o liberam. */
 const BOUND_PLACEHOLDERS: Readonly<Record<string, readonly StoryNeed[]>> = {
   companheiro: ['teammate'],
@@ -108,6 +108,11 @@ const flagsSet = new Set(cards.flatMap((c) => allEffects(c.spec).flatMap((e) => 
 const flagsRead = new Set(cards.flatMap((c) => allConditions(c.spec).flatMap((x) => (x.c === 'flag' || x.c === 'noFlag' ? [x.flag] : []))));
 
 const has = (spec: StoryCardSpec, ...needs: StoryNeed[]) => needs.some((n) => spec.needs?.includes(n));
+/** O cartão só sai da segunda geração em diante (quem veio antes existe na linhagem): Fase 6. */
+const fromSecondGeneration = (spec: StoryCardSpec) =>
+  spec.when.some((c) => (c.c === 'generation' && (c.min ?? 1) >= 2) || (c.c === 'has' && (c.what === 'famousParent' || c.what === 'familyTeam')));
+/** O cartão faz nascer um filho (efeito `child`, Fase 6). */
+const bornHere = (spec: StoryCardSpec) => allEffects(spec).some((e) => e.e === 'child');
 const personNeed = (spec: StoryCardSpec, key: string) => spec.needs?.includes(`person:${key}`) ?? false;
 const metHere = (spec: StoryCardSpec, key: string) => allEffects(spec).some((e) => e.e === 'meet' && e.key === key);
 
@@ -117,8 +122,9 @@ function checkCondition(where: string, c: StoryCondition, problems: string[]): v
   const bad = (what: string) => problems.push(`${where}: condição ${c.c} com ${what}.`);
   switch (c.c) {
     case 'tier':
-    case 'careerSeason': {
-      const lo = c.c === 'tier' ? 1 : 1;
+    case 'careerSeason':
+    case 'generation': {
+      const lo = 1;
       const hi = c.c === 'tier' ? 7 : 99;
       for (const v of [c.min, c.max]) if (v !== undefined && (!Number.isInteger(v) || v < lo || v > hi)) bad(`valor fora de ${lo} a ${hi} (${v})`);
       if (c.min !== undefined && c.max !== undefined && c.min > c.max) bad('mínimo maior que o máximo');
@@ -273,6 +279,9 @@ function checkEffect(card: Card, e: StoryEffect, problems: string[]): void {
       if (e.team === 'interested' && !has(spec, 'interestedTeam')) bad('sem o vínculo interestedTeam');
       if (e.team === 'other' && !has(spec, 'otherTeam')) bad('sem o vínculo otherTeam');
       break;
+    case 'child':
+      if (!spec.when.some((c) => c.c === 'has' && c.what === 'roomForChild')) bad('faz nascer um filho sem a condição has roomForChild');
+      break;
     case 'follow': {
       if (!personNeed(spec, e.key) && !metHere(spec, e.key)) bad(`mexe com a pessoa "${e.key}" sem o vínculo person:${e.key}`);
       const drivers = cards.flatMap((c) => allEffects(c.spec)).filter((x) => x.e === 'meet' && x.key === e.key);
@@ -354,6 +363,12 @@ function checkCard(card: Card, problems: string[]): void {
           if (p.arg && !CATEGORY_LINKS.has(p.arg)) bad(`variante ${i}: ligação de categoria desconhecida em ${p.raw}`);
         } else if (FREE_PLACEHOLDERS.has(p.name)) {
           if (p.arg) bad(`variante ${i}: ${p.raw} não leva argumento`);
+        } else if (p.name === 'antecessor') {
+          if (p.arg) bad(`variante ${i}: ${p.raw} não leva argumento`);
+          if (!fromSecondGeneration(spec)) bad(`variante ${i}: ${p.raw} num cartão que pode sair na primeira geração (sem generation min 2 nem famousParent)`);
+        } else if (p.name === 'bebe') {
+          if (p.arg) bad(`variante ${i}: ${p.raw} não leva argumento`);
+          if (!bornHere(spec)) bad(`variante ${i}: ${p.raw} num cartão que não faz nascer um filho`);
         } else if (p.name in BOUND_PLACEHOLDERS) {
           if (!has(spec, ...(BOUND_PLACEHOLDERS[p.name] ?? []))) bad(`variante ${i}: ${p.raw} sem o vínculo ${(BOUND_PLACEHOLDERS[p.name] ?? []).join('/')}`);
         } else if (PERSON_PLACEHOLDERS.has(p.name)) {
@@ -567,5 +582,50 @@ describe('dados dos eventos encadeados (Fase 5)', () => {
 
   it('os perfis de patrocinador dão para 15 temporadas sem repetir: vários por porte', () => {
     for (const tier of [1, 2, 3]) expect(SPONSOR_PROFILES.filter((p) => p.tier === tier && !p.chainOnly).length, `porte ${tier}`).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe('dados dos cartões da dinastia (Fase 6)', () => {
+  const events = STORY_EVENT_CATALOG;
+  const variantsOf = (id: string) => events.find((e) => e.id === id)?.variants.length ?? 0;
+
+  it('filhos que nascem pela vida pessoal: pelo menos dois eventos comuns, com três variantes ou mais', () => {
+    const births = events.filter((e) => bornHere(e));
+    expect(births.length).toBeGreaterThanOrEqual(2);
+    for (const e of births) {
+      expect(e.category, e.id).toBe('personal');
+      expect(e.frequency, e.id).toBe('common');
+      expect(e.variants.length, e.id).toBeGreaterThanOrEqual(3);
+      // A escolha natural (a primeira) faz o filho nascer.
+      expect(
+        e.choices[0]?.outcomes.every((o) => o.effects.some((x) => x.e === 'child')),
+        e.id,
+      ).toBe(true);
+    }
+    // Nenhuma cadeia faz nascer filho: o bebê é sempre de um cartão avulso.
+    expect(STORY_CHAINS.flatMap((c) => c.steps).filter(bornHere)).toEqual([]);
+  });
+
+  it('imprensa e sobrenome: pelo menos seis eventos de carreira só da segunda geração', () => {
+    const press = events.filter((e) => e.category === 'career' && fromSecondGeneration(e));
+    expect(press.length).toBeGreaterThanOrEqual(6);
+    for (const e of press) expect(e.variants.length, e.id).toBeGreaterThanOrEqual(2);
+  });
+
+  it('favorecimento: pelo menos três cartões de quem corre pela equipe da família', () => {
+    const favoritism = events.filter((e) => e.when.some((c) => c.c === 'has' && c.what === 'familyTeam'));
+    expect(favoritism.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('os cartões que presumem pais pobres e anônimos ficam na primeira geração', () => {
+    for (const id of ['pais-brigam-por-dinheiro', 'irmao-quer-correr', 'mudanca-de-casa', 'bicho-de-estimacao']) {
+      const spec = events.find((e) => e.id === id);
+      expect(spec, id).toBeDefined();
+      expect(
+        spec?.when.some((c) => c.c === 'generation' && c.max === 1),
+        id,
+      ).toBe(true);
+      expect(variantsOf(id), id).toBeGreaterThan(0);
+    }
   });
 });

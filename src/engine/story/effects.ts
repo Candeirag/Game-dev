@@ -201,5 +201,7 @@ export function concreteEffects(ctx: StoryContext, b: StoryBindings, effect: Sto
     }
     case 'follow':
       return [{ type: 'storyFollow', key: effect.key, follow: effect.on }];
+    case 'child':
+      return career.family.partner && b.baby ? [{ type: 'child', child: b.baby }] : [];
   }
 }

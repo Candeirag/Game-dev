@@ -143,6 +143,12 @@ export const STORY_HAS = [
   'interestedTeam',
   'debt',
   'loan',
+  // Fase 6: quem veio antes era famoso (o peso do sobrenome passa de zero), corre pela equipe da
+  // família, ou há espaço para mais um filho (parceiro, idades, menos que o máximo, nenhum bebê
+  // nascido nesta temporada nem esperando resposta).
+  'famousParent',
+  'familyTeam',
+  'roomForChild',
 ] as const;
 export type StoryHas = (typeof STORY_HAS)[number];
 
@@ -167,7 +173,7 @@ export type AttitudeLevel = (typeof ATTITUDE_LEVELS)[number];
 /**
  * Uma condição. Todas as condições de uma lista precisam valer. Nenhuma traz número de equilíbrio:
  * as faixas têm nome e os limites estão em `src/config/balance.ts`. Os únicos números são os degraus
- * da escada (1 a 7) e a temporada da carreira, que são posições, não ajustes.
+ * da escada (1 a 7), a temporada da carreira e a geração da dinastia, que são posições, não ajustes.
  */
 export type StoryCondition =
   /** Degrau da categoria: 1 a 3 são os karts, 4 a 7 as fórmulas (7 é o topo). */
@@ -210,7 +216,9 @@ export type StoryCondition =
   /** O piloto lembrado está no grid da categoria atual, com equipe. */
   | { c: 'onGrid'; key: string }
   /** A pessoa trabalha na equipe atual do piloto. */
-  | { c: 'personAtTeam'; key: string };
+  | { c: 'personAtTeam'; key: string }
+  /** Geração da dinastia (1 = o fundador): de (`min`) e/ou até (`max`). Fase 6. */
+  | { c: 'generation'; min?: number; max?: number };
 
 /* ---------------- Vínculos ---------------- */
 
@@ -323,7 +331,12 @@ export type StoryEffect =
   /** A pessoa passa a trabalhar na equipe vinculada (`other` = `{outraEquipe}`, `interested`, `current`). */
   | { e: 'joinTeam'; key: string; team: 'current' | 'interested' | 'other' }
   /** O piloto lembrado acompanha a carreira: entra no grid quando o jogador sobe de categoria. */
-  | { e: 'follow'; key: string; on: boolean };
+  | { e: 'follow'; key: string; on: boolean }
+  /**
+   * Nasce um filho (Fase 6). O bebê é sorteado antes do texto (marcador `{bebe}`, o primeiro nome);
+   * o cartão precisa da condição `{ c: 'has', what: 'roomForChild' }`.
+   */
+  | { e: 'child' };
 
 /* ---------------- Escolhas, desfechos e textos ---------------- */
 

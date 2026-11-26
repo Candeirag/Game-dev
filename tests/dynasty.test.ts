@@ -26,9 +26,14 @@ const lerp = (range: readonly [number, number], t: number) => range[0] + (range[
 const roundSeat = (value: number) => Math.round(value / 500) * 500;
 const withCash = (career: CareerState, cash: number): CareerState => ({ ...career, finance: { ...career.finance, cash } });
 
+/**
+ * Uma carreira com parceiro. Desde a etapa D, os cartões de vida pessoal também fazem nascer filhos;
+ * aqui o parceiro passa da idade-limite (FAMILY.PARTNER_MAX_CHILD_AGE) para os filhos de cada teste
+ * serem só os que o próprio teste põe.
+ */
 function careerWithPartner(seed: number): CareerState {
   const c = newCareer(seed);
-  const partner = { ...engine.generatePartner(seed, 28, 1), relationship: 80, married: true };
+  const partner = { ...engine.generatePartner(seed, 28, 1), relationship: 80, married: true, age: FAMILY.PARTNER_MAX_CHILD_AGE + 1 };
   return { ...c, family: { ...c.family, partner } };
 }
 

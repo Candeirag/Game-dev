@@ -7,7 +7,8 @@ import { STORY_EVENTS } from '@/config/balance';
 import type { Effect, EventChoice, PendingEvent, StoryPerson } from '@/domain/schemas';
 import type { StoryCardSpec, StoryChainSpec, StoryChoice, StoryDelay, StoryEffect, StoryOutcome } from '@/domain/storyEvents';
 import { fullName } from '../career/selectors';
-import type { Rng } from '../rng';
+import { hashSeed, type Rng } from '../rng';
+import { generateChild } from '../dynasty/family';
 import type { StoryBindings } from './bindings';
 import { allHold } from './conditions';
 import type { StoryContext } from './context';
@@ -80,6 +81,18 @@ function withNewPeople(ctx: StoryContext, b: StoryBindings, source: CardSource):
   return { ...b, persons };
 }
 
+/**
+ * O bebê de um cartão que faz nascer um filho (efeito `child`, Fase 6), sorteado antes do texto para
+ * o cartão poder citá-lo (`{bebe}`). Sorteio próprio por cartão e momento ('story-child'), que não
+ * mexe nos sorteios do cartão.
+ */
+function withNewBaby(ctx: StoryContext, b: StoryBindings, source: CardSource): StoryBindings {
+  const born = source.spec.choices.some((c) => c.outcomes.some((o) => o.effects.some((e) => e.e === 'child')));
+  if (!born || b.baby) return b;
+  const seed = hashSeed(ctx.career.seed, 'story-child', source.key, ctx.career.season, ctx.round);
+  return { ...b, baby: generateChild(ctx.career, seed) };
+}
+
 function outcomeEffects(ctx: StoryContext, b: StoryBindings, source: CardSource, choice: StoryChoice, outcome: StoryOutcome, label: string): Effect[] {
   const effects = outcome.effects.flatMap((e: StoryEffect) => concreteEffects(ctx, b, e, label, source.key));
   if (source.chain && outcome.next) {
@@ -95,7 +108,7 @@ function outcomeEffects(ctx: StoryContext, b: StoryBindings, source: CardSource,
 export function instantiateCard(ctx: StoryContext, bindings: StoryBindings, source: CardSource, variant: number): PendingEvent | null {
   const text = source.spec.variants[variant];
   if (!text) return null;
-  const b = withNewPeople(ctx, bindings, source);
+  const b = withNewBaby(ctx, withNewPeople(ctx, bindings, source), source);
   const title = renderText(text.title, ctx, b);
   const choices: EventChoice[] = [];
   for (const choice of source.spec.choices) {

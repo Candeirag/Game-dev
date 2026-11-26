@@ -2598,4 +2598,208 @@ export const TRACK_EVENTS: readonly StoryEventSpec[] = [
       },
     ],
   },
+  /* ---------------- Correndo pela equipe da família (Fase 6) ---------------- */
+
+  {
+    id: 'companheiro-reclama-de-favorecimento',
+    category: 'track',
+    frequency: 'normal',
+    when: [
+      { c: 'has', what: 'familyTeam' },
+      { c: 'race', tag: 'beatTeammate' },
+    ],
+    needs: ['teammate'],
+    choices: [
+      {
+        id: 'abrir-os-dados',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'teammateRelation', size: 2 },
+              { e: 'stat', stat: 'confidence', size: -1 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'responder-na-pista',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'confidence', size: 1 },
+              { e: 'stat', stat: 'teammateRelation', size: -2 },
+            ],
+          },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'Carro igual?',
+        body: '{companheiro} terminou atrás de você em {pista} e reclamou no rádio, para quem quisesse ouvir, que o carro da família não é igual para os dois.',
+        choices: {
+          'abrir-os-dados': {
+            label: 'Oferecer a {companheiro} acesso a todos os seus dados',
+            outcomes: ['Os dados mostram carros iguais e uma diferença de pilotagem. A relação melhora, mas a dúvida fica na sua cabeça.'],
+          },
+          'responder-na-pista': {
+            label: 'Dizer que a resposta vem na pista',
+            outcomes: ['A frase rende manchete e confiança, mas {companheiro} passa a evitar você no box.'],
+          },
+        },
+      },
+      {
+        title: 'Suspeita no box',
+        body: 'Depois da corrida em {pista}, {companheiro} pede uma reunião para conferir se as peças novas foram só para o seu carro. A equipe é da sua família, e a suspeita pega mal.',
+        choices: {
+          'abrir-os-dados': {
+            label: 'Pedir aos engenheiros que mostrem tudo a {companheiro}',
+            outcomes: ['A transparência acalma o box. A reunião termina sem argumento contra você, e com a sensação de ter que provar algo a cada etapa.'],
+          },
+          'responder-na-pista': {
+            label: 'Deixar a reunião acontecer sem você',
+            outcomes: ['A reunião termina sem conclusão. A confiança no seu ritmo aumenta, e o clima com {companheiro} esfria.'],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'atras-do-companheiro-na-equipe-da-familia',
+    category: 'track',
+    frequency: 'normal',
+    when: [
+      { c: 'has', what: 'familyTeam' },
+      { c: 'race', tag: 'behindTeammate' },
+    ],
+    needs: ['teammate'],
+    choices: [
+      {
+        id: 'admitir-o-dia-ruim',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'reputation', size: 1 },
+              { e: 'stat', stat: 'morale', size: -1 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'culpar-o-acerto',
+        outcomes: [
+          { odds: 'even', effects: [{ e: 'stat', stat: 'morale', size: 1 }] },
+          {
+            odds: 'rest',
+            effects: [
+              { e: 'stat', stat: 'teamTrust', size: -2 },
+              { e: 'stat', stat: 'reputation', size: -1 },
+            ],
+          },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'Atrás do companheiro, na equipe da família',
+        body: '{companheiro} terminou na sua frente em {pista}. Na equipe que é da sua família, o resultado vira pergunta: quem está ali por mérito?',
+        choices: {
+          'admitir-o-dia-ruim': {
+            label: 'Admitir que {companheiro} andou melhor hoje',
+            outcomes: ['A sinceridade ganha pontos com a imprensa, mas engolir a derrota em casa custa caro por dentro.'],
+          },
+          'culpar-o-acerto': {
+            label: 'Dizer que o seu acerto não estava bom',
+            outcomes: [
+              'Os engenheiros encontram de fato um problema no acerto, e a explicação convence.',
+              'A desculpa soa conveniente na equipe da família, e os mecânicos não gostam de levar a culpa.',
+            ],
+          },
+        },
+      },
+      {
+        title: 'O placar interno',
+        body: 'O quadro de tempos no box mostra {companheiro} à frente em {pista}. Alguém da imprensa pergunta se a escalação da equipe da família seria a mesma com um chefe de fora.',
+        choices: {
+          'admitir-o-dia-ruim': {
+            label: 'Responder que escalação se discute com resultado',
+            outcomes: ['A resposta honesta é bem recebida, e a pressão passa a ser sua de vez.'],
+          },
+          'culpar-o-acerto': {
+            label: 'Apontar a estratégia de pneus como o problema',
+            outcomes: [
+              'A análise mostra que a estratégia pesou mesmo, e a conversa muda de rumo.',
+              'A estratégia era igual para os dois carros, e a imprensa não perdoa a desculpa.',
+            ],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'box-dividido-na-equipe-da-familia',
+    category: 'track',
+    frequency: 'normal',
+    when: [{ c: 'has', what: 'familyTeam' }],
+    needs: ['teammate'],
+    choices: [
+      {
+        id: 'juntar-o-box',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'teamTrust', size: 2 },
+              { e: 'cash', size: -1, cap: true },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'manter-distancia',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'confidence', size: 1 },
+              { e: 'stat', stat: 'teamTrust', size: -1 },
+            ],
+          },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'O box dividido',
+        body: 'Na equipe da família, os mecânicos cochicham: uns acham que você manda mais do que devia, outros acham que você nem precisava estar ali. {companheiro} finge que não ouve.',
+        choices: {
+          'juntar-o-box': {
+            label: 'Pagar um jantar para todo o box e conversar',
+            outcomes: ['O jantar quebra o gelo. As piadas sobre o sobrenome viram brincadeira de verdade, e a conta fica com você.'],
+          },
+          'manter-distancia': {
+            label: 'Manter a distância e deixar o volante falar',
+            outcomes: ['O foco no carro traz confiança, mas o cochicho no box não para.'],
+          },
+        },
+      },
+      {
+        title: 'Quem manda no box?',
+        body: 'Um mecânico antigo da equipe da família pergunta, meio de brincadeira, se agora precisa pedir autorização a você para trocar um pneu. O box inteiro ri, menos {companheiro}.',
+        choices: {
+          'juntar-o-box': {
+            label: 'Rir junto e chamar todo mundo para um churrasco',
+            outcomes: ['O churrasco aproxima o box, e até {companheiro} aparece no fim. O carvão e a carne saem do seu bolso.'],
+          },
+          'manter-distancia': {
+            label: 'Responder que manda só no próprio carro',
+            outcomes: ['A resposta encerra a brincadeira e reforça a sua confiança. O box, porém, fica mais frio.'],
+          },
+        },
+      },
+    ],
+  },
 ];

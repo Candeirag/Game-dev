@@ -10,6 +10,7 @@ import { capitalize, counted } from '@/domain/text';
 import { HOMETOWNS } from '@/data/birth';
 import { getTrack } from '@/data/tracks';
 import { fullName, money } from '../career/selectors';
+import { predecessor } from '../dynasty/surname';
 import type { StoryBindings } from './bindings';
 import type { StoryContext } from './context';
 
@@ -90,6 +91,13 @@ function value(ctx: StoryContext, b: StoryBindings, extras: StoryExtras, name: s
       return person().firstName;
     case 'org':
       return person().org ?? person().role;
+    // Fase 6: o sobrenome da família, quem veio antes na linhagem e o bebê que o cartão faz nascer.
+    case 'sobrenome':
+      return ctx.career.dynasty.surname;
+    case 'antecessor':
+      return need(predecessor(ctx.career)?.name, name);
+    case 'bebe':
+      return need(b.baby, name).firstName;
     default:
       throw new Error(`Marcador desconhecido: {${name}}`);
   }

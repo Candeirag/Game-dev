@@ -2953,4 +2953,419 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
       },
     ],
   },
+  /* ---------------- O peso do sobrenome (Fase 6) ---------------- */
+
+  {
+    id: 'comparacao-com-o-antecessor',
+    category: 'career',
+    frequency: 'normal',
+    when: [
+      { c: 'has', what: 'famousParent' },
+      { c: 'race', tag: 'noPoints' },
+    ],
+    choices: [
+      {
+        id: 'aceitar-a-comparacao',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'reputation', size: 1 },
+              { e: 'stat', stat: 'confidence', size: -1 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'pedir-espaco',
+        outcomes: [
+          {
+            odds: 'even',
+            effects: [
+              { e: 'stat', stat: 'reputation', size: 1 },
+              { e: 'stat', stat: 'morale', size: 1 },
+            ],
+          },
+          {
+            odds: 'rest',
+            effects: [
+              { e: 'stat', stat: 'reputation', size: -1 },
+              { e: 'stat', stat: 'teamTrust', size: -1 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'carisma',
+        requires: [{ c: 'aptitude', aptitude: 'charisma', level: 'high' }],
+        outcomes: [{ odds: 'sure', effects: [{ e: 'stat', stat: 'reputation', size: 2 }] }],
+      },
+    ],
+    variants: [
+      {
+        title: 'Na sua idade, {antecessor}...',
+        body: 'Depois da corrida sem pontos em {pista}, um repórter abre o caderno e lê os números de {antecessor} na mesma idade. A pergunta vem em seguida: o sobrenome {sobrenome} pesa?',
+        choices: {
+          'aceitar-a-comparacao': {
+            label: 'Admitir que a comparação existe e faz parte',
+            outcomes: ['A resposta honesta agrada aos jornalistas, mas a frase fica ecoando na sua cabeça a semana inteira.'],
+          },
+          'pedir-espaco': {
+            label: 'Pedir que a comparação fique fora das perguntas',
+            outcomes: [
+              'O pedido é respeitado, e as matérias seguintes falam só da sua corrida.',
+              'O pedido vira manchete sobre o peso do sobrenome, e a equipe pede mais calma nas entrevistas.',
+            ],
+          },
+          carisma: {
+            label: 'Brincar que {antecessor} também perdeu muita corrida',
+            outcomes: ['A risada é geral, até de quem fez a pergunta. A comparação vira elogio à sua leveza.'],
+          },
+        },
+      },
+      {
+        title: 'O vídeo lado a lado',
+        body: 'Nas redes, alguém montou um vídeo lado a lado: {antecessor} vencendo em {pista}, anos atrás, e você terminando fora dos pontos no mesmo lugar. O vídeo corre o paddock.',
+        choices: {
+          'aceitar-a-comparacao': {
+            label: 'Assistir ao vídeo e guardar a lição',
+            outcomes: ['Dói, mas você descobre onde {antecessor} ganhava tempo naquela curva.'],
+          },
+          'pedir-espaco': {
+            label: 'Responder ao vídeo com uma mensagem firme',
+            outcomes: [
+              'A mensagem é elogiada pela firmeza, e o vídeo some das conversas.',
+              'A resposta parece irritação, e o vídeo ganha ainda mais visualizações.',
+            ],
+          },
+          carisma: {
+            label: 'Repostar o vídeo com uma legenda bem-humorada',
+            outcomes: ['A legenda faz mais sucesso que o vídeo, e até os críticos riem junto.'],
+          },
+        },
+      },
+      {
+        title: 'A tabela que ninguém pediu',
+        body: 'Uma revista publica a tabela das primeiras temporadas de {antecessor} ao lado das suas, e a corrida sem pontos em {pista} entra na conta. O título pergunta se a família {sobrenome} ainda tem o mesmo fôlego.',
+        choices: {
+          'aceitar-a-comparacao': {
+            label: 'Dizer que a tabela é justa e que o jogo é longo',
+            outcomes: ['A maturidade da resposta rende elogios, e a revista faz uma matéria mais simpática na edição seguinte.'],
+          },
+          'pedir-espaco': {
+            label: 'Lembrar que cada carreira tem o seu tempo',
+            outcomes: [
+              'A frase vira bordão no paddock, e a revista corrige o tom.',
+              'A frase soa como desculpa depois de uma corrida ruim, e a revista não perdoa.',
+            ],
+          },
+          carisma: {
+            label: 'Mandar à revista a sua própria versão da tabela, com notas de rodapé engraçadas',
+            outcomes: ['A revista publica a sua versão, e a edição esgota nas bancas.'],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'sobrenome-abre-portas',
+    category: 'career',
+    frequency: 'normal',
+    when: [{ c: 'has', what: 'famousParent' }],
+    needs: ['otherTeam'],
+    choices: [
+      {
+        id: 'aceitar-o-convite',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'interest', team: 'other', size: 2 },
+              { e: 'stat', stat: 'morale', size: 1 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'recusar-por-orgulho',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'confidence', size: 2 },
+              { e: 'interest', team: 'other', size: -1 },
+            ],
+          },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'Um telefonema pelo sobrenome',
+        body: 'O chefe da {outraEquipe} liga sem rodeio: trabalhou com {antecessor} anos atrás e quer conhecer quem carrega o sobrenome {sobrenome}. Um café, sem compromisso.',
+        choices: {
+          'aceitar-o-convite': {
+            label: 'Aceitar o café e ouvir',
+            outcomes: ['O café vira uma conversa longa sobre o passado e sobre o futuro. A {outraEquipe} passa a acompanhar os seus resultados de perto.'],
+          },
+          'recusar-por-orgulho': {
+            label: 'Responder que prefere uma conversa pelos resultados',
+            outcomes: ['A recusa educada esfria o contato, mas a decisão traz uma confiança que nenhum café traria.'],
+          },
+        },
+      },
+      {
+        title: 'Portas que abrem antes de você bater',
+        body: 'Na saída do autódromo, um diretor da {outraEquipe} se apresenta e diz que a família {sobrenome} sempre foi bem-vinda lá. Entrega um cartão e pede uma visita à fábrica.',
+        choices: {
+          'aceitar-o-convite': {
+            label: 'Marcar a visita para a semana seguinte',
+            outcomes: ['A visita rende fotos, apertos de mão e um interesse que antes não existia.'],
+          },
+          'recusar-por-orgulho': {
+            label: 'Guardar o cartão e não ligar',
+            outcomes: ['O cartão fica na gaveta. Você não quer uma vaga emprestada pelo sobrenome, e a decisão reforça a sua confiança.'],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'manchete-com-o-sobrenome',
+    category: 'career',
+    frequency: 'normal',
+    when: [
+      { c: 'has', what: 'famousParent' },
+      { c: 'race', tag: 'podium' },
+    ],
+    choices: [
+      { id: 'dividir-o-merito', outcomes: [{ odds: 'sure', effects: [{ e: 'stat', stat: 'reputation', size: 1 }] }] },
+      {
+        id: 'falar-so-da-corrida',
+        outcomes: [
+          { odds: 'even', effects: [{ e: 'stat', stat: 'confidence', size: 2 }] },
+          { odds: 'rest', effects: [{ e: 'stat', stat: 'reputation', size: -1 }] },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'O sobrenome na manchete',
+        body: 'O pódio em {pista} rende a manchete do dia, mas a foto maior é de {antecessor}, de arquivo. O título fala na volta do sobrenome {sobrenome} ao alto do pódio.',
+        choices: {
+          'dividir-o-merito': {
+            label: 'Agradecer a {antecessor} em todas as entrevistas',
+            outcomes: ['A gratidão comove os leitores e a reputação sobe junto. Por dentro, fica a vontade de ver a sua foto maior.'],
+          },
+          'falar-so-da-corrida': {
+            label: 'Falar só do seu fim de semana',
+            outcomes: [
+              'As entrevistas mudam de tom: pela primeira vez, a corrida é sua.',
+              'A imprensa lê a resposta como ingratidão, e as matérias seguintes cobram humildade.',
+            ],
+          },
+        },
+      },
+      {
+        title: 'Herança ou talento?',
+        body: 'Depois do pódio em {pista}, um colunista escreve que o resultado é metade talento, metade sobrenome. A pergunta corre o paddock.',
+        choices: {
+          'dividir-o-merito': {
+            label: 'Responder que o sobrenome ajuda e que o volante é seu',
+            outcomes: ['A resposta equilibrada agrada, e o colunista volta atrás no texto seguinte.'],
+          },
+          'falar-so-da-corrida': {
+            label: 'Ignorar o colunista e comemorar com a equipe',
+            outcomes: [
+              'A festa com os mecânicos responde melhor do que qualquer frase.',
+              'O silêncio é lido como irritação, e a coluna da semana seguinte é ainda mais dura.',
+            ],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'entrevista-sobre-o-antecessor',
+    category: 'career',
+    frequency: 'normal',
+    when: [
+      { c: 'has', what: 'famousParent' },
+      { c: 'tier', min: 3 },
+    ],
+    choices: [
+      {
+        id: 'contar-historias',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'reputation', size: 1 },
+              { e: 'stat', stat: 'form', size: -1 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'falar-da-propria-carreira',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'confidence', size: 1 },
+              { e: 'stat', stat: 'reputation', size: -1 },
+            ],
+          },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'A entrevista que não era sobre você',
+        body: 'Um programa de esporte convida você para uma entrevista longa. Na hora, metade das perguntas é sobre {antecessor}: as vitórias, as brigas, os bastidores.',
+        choices: {
+          'contar-historias': {
+            label: 'Contar as histórias de família com gosto',
+            outcomes: ['O programa bate recorde de audiência. A gravação toma o tempo do simulador, mas o nome {sobrenome} ganha mais brilho.'],
+          },
+          'falar-da-propria-carreira': {
+            label: 'Puxar a conversa para a sua carreira',
+            outcomes: ['A produção corta metade das perguntas, e você sai do estúdio com a sensação de ter defendido o próprio espaço.'],
+          },
+        },
+      },
+      {
+        title: 'Especial de família',
+        body: 'Uma emissora prepara um especial sobre a família {sobrenome} e quer você contando como era crescer perto de {antecessor}.',
+        choices: {
+          'contar-historias': {
+            label: 'Abrir o álbum de fotos para as câmeras',
+            outcomes: ['As fotos antigas rendem o melhor trecho do especial. A gravação toma dois dias de treino, e a fama da família cresce.'],
+          },
+          'falar-da-propria-carreira': {
+            label: 'Participar só com um depoimento curto',
+            outcomes: ['O depoimento curto passa quase despercebido, e você volta ao treino com a cabeça mais leve.'],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'torcedores-antigos-da-familia',
+    category: 'career',
+    frequency: 'normal',
+    when: [{ c: 'has', what: 'famousParent' }],
+    choices: [
+      {
+        id: 'atender-todo-mundo',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'morale', size: 1 },
+              { e: 'stat', stat: 'form', size: -1 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 'seguir-para-o-box',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'form', size: 1 },
+              { e: 'stat', stat: 'reputation', size: -1 },
+            ],
+          },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'Bandeiras antigas na arquibancada',
+        body: 'Em {pista}, um grupo de torcedores aparece com bandeiras desbotadas de {antecessor}. Eles esperam por você na saída do box, com fotos para autografar.',
+        choices: {
+          'atender-todo-mundo': {
+            label: 'Parar e atender um por um',
+            outcomes: ['Cada foto vem com uma história de {antecessor}. Você chega ao briefing com atraso, mas com o coração cheio.'],
+          },
+          'seguir-para-o-box': {
+            label: 'Acenar e seguir direto para o box',
+            outcomes: [
+              'O aceno não convence os torcedores antigos, e alguém comenta nas redes que o sobrenome merecia mais. O briefing, ao menos, começa na hora.',
+            ],
+          },
+        },
+      },
+      {
+        title: 'Alguém que viu tudo',
+        body: 'Um senhor de boné antigo para você no paddock: viu todas as corridas de {antecessor} e diz que você guia do mesmo jeito. Ele tem uma pergunta e muito tempo.',
+        choices: {
+          'atender-todo-mundo': {
+            label: 'Ouvir a história inteira',
+            outcomes: ['A conversa dura meia hora e termina num abraço. A cabeça sai mais leve, e a preparação sai mais curta.'],
+          },
+          'seguir-para-o-box': {
+            label: 'Agradecer e pedir licença para trabalhar',
+            outcomes: ['O senhor sorri sem jeito, e a história fica para outro dia. A preparação sai completa, mas a cena circula nas redes.'],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'perto-do-recorde-da-familia',
+    category: 'career',
+    frequency: 'normal',
+    when: [
+      { c: 'has', what: 'famousParent' },
+      { c: 'race', tag: 'fastestLap' },
+    ],
+    choices: [
+      {
+        id: 'mirar-o-recorde',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [
+              { e: 'stat', stat: 'confidence', size: 1 },
+              { e: 'stat', stat: 'morale', size: 1 },
+            ],
+          },
+        ],
+      },
+      { id: 'olhar-para-a-frente', outcomes: [{ odds: 'sure', effects: [{ e: 'stat', stat: 'form', size: 1 }] }] },
+    ],
+    variants: [
+      {
+        title: 'Perto do recorde da família',
+        body: 'A sua volta mais rápida em {pista} fica a um piscar de olhos da marca que {antecessor} deixou ali. A equipe imprime as duas voltas lado a lado.',
+        choices: {
+          'mirar-o-recorde': {
+            label: 'Pendurar a folha na parede do box',
+            outcomes: ['A folha vira motivação diária. Cada treino passa a ser uma conversa com o passado.'],
+          },
+          'olhar-para-a-frente': {
+            label: 'Guardar a folha e pensar na próxima etapa',
+            outcomes: ['Sem olhar para trás, a preparação para a próxima etapa sai mais limpa.'],
+          },
+        },
+      },
+      {
+        title: 'Duas voltas, um sobrenome',
+        body: 'Os engenheiros sobrepõem a telemetria da sua volta mais rápida em {pista} à de {antecessor}, de anos atrás. Em algumas curvas, a sua linha já ganha tempo.',
+        choices: {
+          'mirar-o-recorde': {
+            label: 'Estudar curva por curva onde ainda dá para ganhar',
+            outcomes: ['O estudo rende ideias novas, e a confiança cresce junto com elas.'],
+          },
+          'olhar-para-a-frente': {
+            label: 'Agradecer e voltar ao acerto da próxima corrida',
+            outcomes: ['A comparação fica no computador dos engenheiros, e a cabeça fica na próxima corrida.'],
+          },
+        },
+      },
+    ],
+  },
 ];

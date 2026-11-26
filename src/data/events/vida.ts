@@ -489,9 +489,11 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     id: 'pais-brigam-por-dinheiro',
     category: 'personal',
     frequency: 'normal',
+    // Pais sem dinheiro e anônimos: não serve para quem herdou o sobrenome (Fase 6).
     when: [
       { c: 'age', to: 'young' },
       { c: 'cash', atMost: 'tight' },
+      { c: 'generation', max: 1 },
     ],
     choices: [
       {
@@ -578,7 +580,11 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     id: 'irmao-quer-correr',
     category: 'personal',
     frequency: 'normal',
-    when: [{ c: 'age', to: 'young' }],
+    // A família mal paga uma carreira: não serve para quem herdou o sobrenome (Fase 6).
+    when: [
+      { c: 'age', to: 'young' },
+      { c: 'generation', max: 1 },
+    ],
     choices: [
       {
         id: 'ensinar-o-cacula',
@@ -1617,7 +1623,11 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     id: 'mudanca-de-casa',
     category: 'personal',
     frequency: 'normal',
-    when: [{ c: 'age', from: 'young' }],
+    // Os pais vendem a casa para um apartamento menor: não serve para quem herdou o sobrenome (Fase 6).
+    when: [
+      { c: 'age', from: 'young' },
+      { c: 'generation', max: 1 },
+    ],
     choices: [
       {
         id: 'encarar-a-mudanca',
@@ -1799,7 +1809,8 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
     id: 'bicho-de-estimacao',
     category: 'personal',
     frequency: 'normal',
-    when: [],
+    // Os pais não têm como pagar o veterinário: não serve para quem herdou o sobrenome (Fase 6).
+    when: [{ c: 'generation', max: 1 }],
     choices: [
       {
         id: 'cuidar-do-bicho',
@@ -1866,6 +1877,150 @@ export const PERSONAL_EVENTS: readonly StoryEventSpec[] = [
           'seguir-o-treino': {
             label: 'Fechar a porta do quarto e esconder o equipamento',
             outcomes: ['O equipamento fica a salvo, e a sua concentração também, apesar do miado indignado na porta toda noite.'],
+          },
+        },
+      },
+    ],
+  },
+  /* ---------------- Filhos que nascem pela vida pessoal (Fase 6) ---------------- */
+
+  {
+    id: 'conversa-sobre-um-filho',
+    category: 'personal',
+    frequency: 'common',
+    when: [
+      { c: 'has', what: 'roomForChild' },
+      { c: 'age', from: 'young' },
+    ],
+    choices: [
+      {
+        id: 'aumentar-a-familia',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [{ e: 'child' }, { e: 'relationship', size: 1 }, { e: 'stat', stat: 'morale', size: 2 }],
+          },
+        ],
+      },
+      { id: 'esperar-mais-um-pouco', outcomes: [{ odds: 'sure', effects: [{ e: 'relationship', size: -1 }] }] },
+    ],
+    variants: [
+      {
+        title: 'A conversa que faltava',
+        body: 'Numa noite sem treino nem viagem, a conversa em casa chega aonde vinha rondando faz tempo: um filho. A agenda da temporada está aberta em cima da mesa, e ninguém olha para ela.',
+        choices: {
+          'aumentar-a-familia': {
+            label: 'Dizer que sim, com o calendário e tudo',
+            outcomes: ['Meses depois, {bebe} chega ao mundo no meio de uma semana de corrida. O cansaço vem, e a alegria vem junto.'],
+          },
+          'esperar-mais-um-pouco': {
+            label: 'Pedir para esperar a temporada acabar',
+            outcomes: ['O assunto volta para a gaveta, mas deixa um silêncio estranho na mesa do jantar.'],
+          },
+        },
+      },
+      {
+        title: 'O quarto dos capacetes',
+        body: 'O quarto de hóspedes vive cheio de capacetes e caixas de peças. Hoje a pergunta veio meio de brincadeira, meio a sério: e se ele virasse um quarto de bebê?',
+        choices: {
+          'aumentar-a-familia': {
+            label: 'Começar a esvaziar o quarto naquele mesmo dia',
+            outcomes: ['{bebe} nasce num domingo de corrida, e o quarto dos capacetes ganha um berço. A coleção vai para a garagem sem reclamação.'],
+          },
+          'esperar-mais-um-pouco': {
+            label: 'Responder que ainda não é a hora',
+            outcomes: ['As caixas de peças continuam no quarto, e a conversa termina mais curta do que começou.'],
+          },
+        },
+      },
+      {
+        title: 'Contas que não são de corrida',
+        body: 'Entre uma viagem e outra, vocês passam uma tarde fazendo contas que não são de vaga nem de patrocínio: escola, pediatra, quem fica em casa nas semanas de corrida.',
+        choices: {
+          'aumentar-a-familia': {
+            label: 'Fechar as contas e decidir que vale a pena',
+            outcomes: ['As contas não fecham com perfeição, mas {bebe} chega e faz todas elas parecerem pequenas.'],
+          },
+          'esperar-mais-um-pouco': {
+            label: 'Deixar as contas para o ano que vem',
+            outcomes: ['As planilhas voltam para a pasta. O assunto fica, à espera de uma temporada mais calma.'],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'bebe-a-caminho',
+    category: 'personal',
+    frequency: 'common',
+    when: [
+      { c: 'has', what: 'roomForChild' },
+      { c: 'age', from: 'young' },
+    ],
+    choices: [
+      {
+        id: 'contar-para-a-equipe',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [{ e: 'child' }, { e: 'stat', stat: 'teamTrust', size: 1 }, { e: 'stat', stat: 'morale', size: 1 }],
+          },
+        ],
+      },
+      {
+        id: 'guardar-a-noticia',
+        outcomes: [
+          {
+            odds: 'sure',
+            effects: [{ e: 'child' }, { e: 'relationship', size: 2 }, { e: 'stat', stat: 'form', size: -1 }],
+          },
+        ],
+      },
+    ],
+    variants: [
+      {
+        title: 'Notícia boa no meio da semana',
+        body: 'O telefone toca entre dois treinos no simulador: a família vai crescer. Do outro lado da linha, uma voz que mistura riso e choro.',
+        choices: {
+          'contar-para-a-equipe': {
+            label: 'Contar para todo mundo na equipe',
+            outcomes: ['A equipe faz festa no box, e meses depois {bebe} ganha um macacão minúsculo com o número do seu carro.'],
+          },
+          'guardar-a-noticia': {
+            label: 'Guardar a notícia só para a família por enquanto',
+            outcomes: [
+              'O segredo dura até o nascimento de {bebe}. Em casa, os meses de espera aproximam ainda mais a família, e os treinos ficam em segundo plano.',
+            ],
+          },
+        },
+      },
+      {
+        title: 'Um exame que muda o ano',
+        body: 'O resultado do exame chega por mensagem, com três pontos de exclamação: vem um bebê aí. A temporada inteira ganha outro sentido.',
+        choices: {
+          'contar-para-a-equipe': {
+            label: 'Espalhar a novidade no grupo da equipe',
+            outcomes: ['O grupo da equipe explode em mensagens. No dia em que {bebe} nasce, os mecânicos mandam um vídeo cantando parabéns.'],
+          },
+          'guardar-a-noticia': {
+            label: 'Esperar o momento certo para contar',
+            outcomes: [
+              'Só a família sabe até o fim. {bebe} nasce numa semana sem corrida, como quem escolhe a data, e o ritmo dos treinos sente os meses de espera.',
+            ],
+          },
+        },
+      },
+      {
+        title: 'Vem aí mais alguém',
+        body: 'A família recebe a notícia num jantar comum, entre o arroz e a salada: vem aí um bebê. Ninguém termina o prato.',
+        choices: {
+          'contar-para-a-equipe': {
+            label: 'Brindar na hora e avisar a equipe no dia seguinte',
+            outcomes: ['O brinde vira tradição de jantar até a chegada de {bebe}, e a equipe manda flores para a maternidade.'],
+          },
+          'guardar-a-noticia': {
+            label: 'Combinar de contar só depois de alguns meses',
+            outcomes: ['O segredo pesa e alegra ao mesmo tempo. Quando {bebe} chega, a notícia corre mais rápido que qualquer volta lançada.'],
           },
         },
       },

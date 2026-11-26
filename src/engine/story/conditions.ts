@@ -12,6 +12,8 @@ import { teamKey } from '../career/selectors';
 import type { StoryContext } from './context';
 import { freshRivalryThisRound, seasonPart } from './context';
 import { findPerson, hasFlag } from './memory';
+import { roomForChild } from '../dynasty/family';
+import { racesForFamilyTeam, surnameWeight } from '../dynasty/surname';
 
 export function ageStage(age: number): AgeStage {
   let stage: AgeStage = 'teen';
@@ -117,6 +119,12 @@ function has(ctx: StoryContext, what: StoryHas): boolean {
       return career.finance.cash < 0;
     case 'loan':
       return career.finance.loans.length > 0;
+    case 'famousParent':
+      return surnameWeight(career) > 0;
+    case 'familyTeam':
+      return racesForFamilyTeam(career);
+    case 'roomForChild':
+      return roomForChild(career);
   }
 }
 
@@ -194,6 +202,10 @@ export function conditionHolds(ctx: StoryContext, condition: StoryCondition): bo
     case 'personAtTeam': {
       const person = findPerson(story, condition.key);
       return person?.teamKey != null && ctx.team !== null && person.teamKey === teamKey(career.categoryId, ctx.team.id);
+    }
+    case 'generation': {
+      const g = career.dynasty.generation;
+      return (condition.min === undefined || g >= condition.min) && (condition.max === undefined || g <= condition.max);
     }
   }
 }

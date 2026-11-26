@@ -3,7 +3,7 @@
  * poder sair; ele libera os marcadores de texto (`{rival}`, `{valor}`…) e os alvos dos efeitos.
  */
 import { ACADEMY_DOOR, STORY_EVENTS, TEAM_CASH_CALL } from '@/config/balance';
-import type { Academy, Driver, Sponsor, StoryPerson, Team } from '@/domain/schemas';
+import type { Academy, Child, Driver, Sponsor, StoryPerson, Team } from '@/domain/schemas';
 import type { StoryNeed } from '@/domain/storyEvents';
 import { TOP_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
@@ -27,6 +27,8 @@ export interface StoryBindings {
   roundPoints?: number;
   cashCall?: { amount: number; canPay: boolean; split: number };
   academy?: { academy: Academy; chance: number; topTeam: string };
+  /** O bebê que o cartão faz nascer (efeito `child`), sorteado antes do texto (Fase 6). */
+  baby?: Child;
   /** Pessoas da memória (e as que o próprio cartão vai guardar), pela chave. */
   persons: Record<string, StoryPerson>;
 }
