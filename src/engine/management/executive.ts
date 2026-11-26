@@ -27,6 +27,8 @@ import type {
   StaffMember,
   Team,
   TeamListing,
+  Transition,
+  TransitionRole,
 } from '@/domain/schemas';
 import { ASSET_RULES, LIFESTYLE_RULES } from '@/data/assets';
 import { CATEGORIES, getCategory, type CategoryDefinition } from '@/data/categories';
@@ -56,6 +58,17 @@ import { familyTrainingFactors } from '../dynasty/heritage';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { refreshElders } from '../dynasty/relatives';
 import { checkMortality } from '../dynasty/succession';
+import {
+  activeTransition,
+  addTransitionEvent,
+  closeTransitionYear,
+  mentorLoyalty,
+  requireTransitionOffer,
+  transitionFromOffer,
+  transitionPrestige,
+  transitionRound,
+  transitionStartText,
+} from '../dynasty/transition';
 import { closeAssetsYear, liquidateAssets, settleAssetsRound } from '../economy/assets';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
@@ -294,14 +307,17 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
       `${lines.join('. ')}. Vencedor: ${winner ? fullName(winner) : '-'}. A equipe é a ${position}ª no campeonato (meta: ${result.management.boardTarget}ª). Caixa: ${money(career, result.management.budget)}.`,
     );
   } else {
-    msg('race', 'race', `Etapa ${round}`, `Vencedor: ${winner ? fullName(winner) : '-'}. Você acompanha o campeonato de fora.`);
+    // No ano de transição (Fase 6), o papel paga o cachê da etapa e a mensagem é a dele.
+    const transition = transitionRound(career, record);
+    career = transition.career;
+    msg('race', 'race', `Etapa ${round}`, transition.body ?? `Vencedor: ${winner ? fullName(winner) : '-'}. Você acompanha o campeonato de fora.`);
   }
   career = { ...career, inbox: pushMessages(career.inbox, messages) };
 
-  /* 5. Eventos de gestão. */
+  /* 5. Eventos de gestão (com equipe) ou do ano de transição (sem ela). */
   const event = managementRoundEvent(career, record);
   if (event) career = { ...career, pendingEvents: [...career.pendingEvents, event] };
-  return career;
+  return addTransitionEvent(career, record);
 }
 
 /* ------------------------------------------------------------------ */
@@ -334,10 +350,13 @@ export function executiveSummary(career: CareerState): SeasonSummary {
   };
 }
 
-/** Prestígio do dirigente no mercado: reputação mais o retrospecto das três últimas temporadas no comando. */
+/**
+ * Prestígio do dirigente no mercado: reputação mais o retrospecto das três últimas temporadas no
+ * comando, mais o legado de um ano de transição nos comentários na TV (Fase 6).
+ */
 export function executiveStanding(career: CareerState): number {
   const record = career.executiveLog.slice(-3).reduce((sum, l) => sum + (l.position <= l.target ? 4 : -3), 0);
-  return career.reputation + record;
+  return career.reputation + record + transitionPrestige(career);
 }
 
 /**
@@ -431,7 +450,9 @@ export function buildDriverCandidates(career: CareerState): DriverCandidate[] {
     const t = driverTerms(m.categoryId, rank, driver, grid);
     const family = origin === 'child';
     const age = driver.age + (inWorld ? 1 : 0);
-    const willing = !tooOld(age) && (family || origin === 'rookie' || attractiveness + (origin === 'current' ? 18 : 8) >= t.ambition);
+    // Quem o personagem acompanhou na mentoria do ano de transição aceita a equipe dele mais facilmente (Fase 6).
+    const loyalty = mentorLoyalty(career, driver.id);
+    const willing = !tooOld(age) && (family || origin === 'rookie' || attractiveness + (origin === 'current' ? 18 : 8) + loyalty >= t.ambition);
     return {
       driverId: driver.id,
       name: fullName(driver),
@@ -649,8 +670,8 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
     };
     executiveLog = [...executiveLog, { season, categoryId: management.categoryId, teamName: team?.name ?? '', position, target, profit }].slice(-40);
     Object.assign(evaluation, { teamPosition: position, target, objectiveMet: met, prize, profit });
-  } else {
-    // Fora dos holofotes, a fama diminui devagar.
+  } else if (!activeTransition(career)) {
+    // Fora dos holofotes, a fama diminui devagar. No ano de transição, o papel mantém o nome em evidência.
     reputation = Math.max(0, reputation - 1);
   }
   if (career.family.partner?.background === 'media') reputation = Math.min(100, reputation + 1);
@@ -700,8 +721,18 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
       };
   }
   const family = closeFamilyYear(career, worldResults, new Set(Object.keys(worldResults)));
+  // O fechamento do ano de transição (Fase 6): reputação do papel, a vida em viagem e o legado.
+  const transitionClosing = closeTransitionYear(career, family.family, driverStandings);
+  let transition: Transition | null = career.transition;
+  let familyState = family.family;
+  if (transitionClosing) {
+    reputation = clamp(reputation + transitionClosing.reputation);
+    transition = transitionClosing.transition;
+    familyState = transitionClosing.family;
+    notes.push(transitionClosing.note);
+  }
 
-  let state: CareerState = { ...career, teams, finance: personal, reputation, management, executiveLog, family: family.family };
+  let state: CareerState = { ...career, teams, finance: personal, reputation, management, executiveLog, family: familyState, transition };
   state = syncManagedTeam(state);
   const champion = career.drivers.find((d) => d.id === driverStandings[0]?.driverId);
   const messages: InboxMessage[] = [
@@ -804,6 +835,8 @@ export function leaveTeam(career: CareerState): CareerState {
 export type ExecutivePlan =
   | { kind: 'continue' }
   | { kind: 'spectate' }
+  /** Fase 6: o ano de transição, sem equipe, num dos três papéis (só no primeiro fechamento depois de parar). */
+  | { kind: 'transition'; role: TransitionRole }
   | { kind: 'job'; offerId: string }
   | { kind: 'buy'; listingId: string }
   | { kind: 'found'; categoryId: CategoryId; name: string; color: string };
@@ -877,6 +910,9 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   if (plan.kind === 'continue' && !previous) throw new Error('Você não tem equipe para comandar.');
   if (plan.kind !== 'continue' && previous)
     throw new Error(previous.position === 'owner' ? 'Venda a sua equipe antes de mudar de rumo.' : 'Deixe o comando da equipe atual antes de mudar de rumo.');
+  // O ano de transição começa sem equipe, como quem só acompanha, com o papel escolhido.
+  const transition: Transition | null =
+    plan.kind === 'transition' ? transitionFromOffer(requireTransitionOffer(career, plan.role, 'closing'), nextSeason) : null;
 
   // Categoria e equipe de destino.
   let categoryId = career.categoryId;
@@ -1014,6 +1050,7 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
     management: null,
     history: trimHistory([...career.history, off.summary], familyDriverIds(career)),
     seasonTrend: recordSeasonTrend(career),
+    transition: transition ?? career.transition,
   };
 
   // Gestão: continua (com a virada de ano), começa em outra equipe ou não existe.
@@ -1078,7 +1115,9 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
       title: `Temporada ${nextYear}: ${category.shortName}`,
       body: managed
         ? `Você comanda a ${teamName} ${categoryRef(category.id, 'em')}. Meta: terminar entre as ${managed.boardTarget} primeiras equipes. Caixa da equipe: ${money(career, managed.budget)}.`
-        : `Você acompanha ${categoryRef(category.id, 'the')} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
+        : transition
+          ? `${transitionStartText(state, transition)} No fim da temporada, as propostas para comandar uma equipe voltam a aparecer.`
+          : `Você acompanha ${categoryRef(category.id, 'the')} sem cargo em nenhuma equipe. As propostas voltam a aparecer no fim da temporada.`,
     },
   ];
   if (news.length > 0) messages.push({ id: `s${nextSeason}-market`, date, category: 'contract', title: 'Movimentações', body: news.join(' ') });

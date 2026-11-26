@@ -20,6 +20,7 @@ export * from './dynasty/succession';
 export * from './dynasty/heritage';
 export * from './dynasty/relatives';
 export * from './dynasty/lineage';
+export * from './dynasty/transition';
 export * from './management/team';
 export * from './management/executive';
 export { MANAGEMENT_EVENT_CHANCE } from './management/events';

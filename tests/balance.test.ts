@@ -77,6 +77,14 @@ const NOT_BALANCE = new Set([
   // vida. Os números estão em RELATIVES, em src/config/balance.ts.
   'RELATIVE_PATH_INFO',
   'ELDER_ROLE_INFO',
+  // Ano de transição (Fase 6): os nomes dos papéis, as marcas inventadas, as mensagens e os eventos
+  // do ano. Os cachês, as chances e o tamanho de cada efeito estão em TRANSITION, em
+  // src/config/balance.ts; os eventos usam degraus e chances com nome.
+  'TRANSITION_ROLE_INFO',
+  'TRANSITION_BRANDS',
+  'TRANSITION_ROUND_TEXTS',
+  'TRANSITION_START_TEXTS',
+  'TRANSITION_EVENTS',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',

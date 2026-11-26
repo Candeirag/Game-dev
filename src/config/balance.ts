@@ -802,9 +802,10 @@ export const HERITAGE = {
  */
 export const TRANSITION = {
   // Cachê por etapa, em custos de vida anuais de referência. Comentarista e embaixador também
-  // ganham pela reputação (cada ponto acima de 30 soma esta fração, por etapa).
+  // ganham pela reputação (cada ponto acima de FEE_REPUTATION_FLOOR soma esta fração, por etapa).
   FEE_SHARE: { mentor: 0.04, commentator: 0.06, ambassador: 0.08 },
   FEE_PER_REPUTATION: { mentor: 0, commentator: 0.001, ambassador: 0.002 },
+  FEE_REPUTATION_FLOOR: 30,
   // Reputação mínima para cada papel (o embaixador precisa de um nome que venda).
   MIN_REPUTATION: { mentor: 0, commentator: 15, ambassador: 30 },
   // Reputação no fechamento do ano de transição: o comentarista fica em evidência, o embaixador
@@ -830,7 +831,9 @@ export const TRANSITION = {
   TRAVEL_RELATIONSHIP: { mentor: 2, commentator: -2, ambassador: -4 },
   // Chance de um evento do ano de transição depois de cada etapa (cada evento sai uma vez).
   EVENT_CHANCE: 0.45,
-  // Tamanho dos efeitos dos eventos: dinheiro em custos de vida anuais; reputação e moral em pontos.
+  // Tamanho dos efeitos dos eventos (o tamanho 1, 2 ou 3 do evento escolhe a posição na lista):
+  // dinheiro em custos de vida anuais; reputação e moral em pontos; relação com o parceiro e vínculo
+  // dos filhos em pontos (EVENT_BOND vale para os dois).
   EVENT_MONEY: [0.05, 0.15, 0.3],
   EVENT_REPUTATION: [1, 2, 3],
   EVENT_MORALE: [3, 6, 10],

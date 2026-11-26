@@ -35,6 +35,7 @@ import type {
   InboxMessage,
   LineageEntry,
   SeasonSummary,
+  Sponsor,
   Succession,
   Team,
   TeamStake,
@@ -74,6 +75,7 @@ import { beginSeasonFamily } from './familyEvents';
 import { ensureHeritage, heirBirth } from './heritage';
 import { drivingRecord, lastRaceTeam } from './lineage';
 import { businessSponsor, elderAfterHandover, refreshElders, relativeFromChild } from './relatives';
+import { ambassadorSponsor } from './transition';
 import { categoryRef } from '@/domain/categoryNames';
 import { joinList } from '@/domain/text';
 import { money } from '../career/selectors';
@@ -814,6 +816,10 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
   // Um parente nos negócios patrocina o herdeiro que corre.
   const backing = businessSponsor({ ...state, dynasty: nextDynasty }, category.id, nextSeason, nextYear);
   if (backing) notes.push(`A ${backing.name} apoia a carreira com ${money(career, backing.perSeason)} por temporada.`);
+  // Legado da imagem de marca no ano de transição de quem saiu (Fase 6): a marca patrocina o herdeiro.
+  const brand = ambassadorSponsor(state, category.id, nextSeason);
+  if (brand)
+    notes.push(`A ${brand.name} cumpre o que prometeu a ${fullName(former)} e patrocina a carreira com ${money(career, brand.perSeason)} por temporada.`);
 
   let next: CareerState = {
     ...state,
@@ -836,7 +842,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     trainingIntensity: 'normal',
     contract,
     finance: { ...state.finance, seasonTotals: {} },
-    sponsors: backing ? [backing] : [],
+    sponsors: [backing, brand].filter((sponsor): sponsor is Sponsor => sponsor !== null),
     academy: category.tier < 7 ? academyFor(heirRacing, nextSeason) : null,
     // O contrato com o investidor, a vaquinha e o trabalho paralelo eram do piloto que saiu; o herdeiro mora no polo do campeonato dele.
     hub: { id: CATEGORY_HUB[category.id], arrivedSeason: 0 },

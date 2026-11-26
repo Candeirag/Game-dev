@@ -37,6 +37,7 @@ import { fullName, getPlayer } from '../career/selectors';
 import { TRAINABLE_ATTRIBUTES } from '../career/training';
 import { hasPersonalProperty } from '../economy/assets';
 import { childTrainingFactor, ensureHeritage, heritageTraitsFor, revealSeasonTrait } from './heritage';
+import { mentorChildFactor } from './transition';
 import { createRng, gaussian, hashSeed, type Rng } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
@@ -337,11 +338,13 @@ export function closeChildSeason(
     wins = winsFor(position, rng);
     // Aprender rápido ou devagar (childTrainingFactor) vale também no campeonato do jogador: ali a
     // evolução é a das etapas (familyTrainingFactors, em developAfterRound).
+    // A mentoria do ano de transição (Fase 6) acelera o filho acompanhado.
     const multiplier =
       traitProduct(child, 'development') *
       HERITAGE.SUPPORT_DEVELOPMENT[child.support] *
       (racing.academy ? FAMILY.ACADEMY_DEVELOPMENT : 1) *
-      childTrainingFactor(child);
+      childTrainingFactor(child) *
+      mentorChildFactor(career, child);
     // Uma temporada equivale às etapas da categoria mais a pré-temporada, em três blocos:
     // a cada bloco, o treinador revê o foco do treino.
     const cycles = (category.rounds + 2) / 3;

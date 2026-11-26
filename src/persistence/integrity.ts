@@ -7,6 +7,7 @@ import type { CareerState } from '@/domain/schemas';
 import { BIRTH_TRAITS, HOMETOWNS } from '@/data/birth';
 import { CATEGORIES } from '@/data/categories';
 import { TRACKS } from '@/data/tracks';
+import { TRANSITION_EVENTS } from '@/data/transition';
 
 export function validateCareerIntegrity(career: CareerState): string[] {
   const problems: string[] = [];
@@ -148,6 +149,27 @@ export function validateCareerIntegrity(career: CareerState): string[] {
     const ids = entry.traits.map((t) => t.id);
     if (new Set(ids).size !== ids.length) problems.push(`Traço de nascença repetido na linhagem (${entry.driverId}).`);
     if (ids.some((id) => ids.includes(BIRTH_TRAITS[id].opposite))) problems.push(`Traços de nascença opostos na linhagem (${entry.driverId}).`);
+  }
+
+  // Ano de transição (Fase 6): só de quem parou de correr, na temporada da aposentadoria ou na
+  // seguinte; em andamento, só na temporada dele, fora das pistas, sem equipe e antes do fechamento;
+  // a mentoria tem quem acompanhar e a imagem de marca tem a marca; os eventos vistos são do papel e
+  // não se repetem.
+  if (career.retiredSeason !== null && career.mode === 'driver') problems.push('Piloto em atividade com temporada de aposentadoria.');
+  if (career.retiredSeason !== null && career.retiredSeason > career.season) problems.push('Aposentadoria numa temporada futura.');
+  const transition = career.transition;
+  if (transition) {
+    if (career.retiredSeason === null || (transition.season !== career.retiredSeason && transition.season !== career.retiredSeason + 1))
+      problems.push('Ano de transição fora da temporada da aposentadoria e da seguinte.');
+    if (transition.season > career.season) problems.push('Ano de transição numa temporada futura.');
+    if (!transition.done && (transition.season !== career.season || career.mode !== 'executive' || career.management || career.executiveOffseason))
+      problems.push('Ano de transição em andamento fora da temporada dele ou com equipe.');
+    if ((transition.role === 'mentor') !== (transition.protegeId !== null)) problems.push('Ano de transição: só a mentoria tem pupilo, e ela precisa de um.');
+    if ((transition.role === 'ambassador') !== (transition.brand !== null))
+      problems.push('Ano de transição: só a imagem de marca tem marca, e ela precisa de uma.');
+    if (new Set(transition.seen).size !== transition.seen.length) problems.push('Evento do ano de transição visto duas vezes.');
+    if (transition.seen.some((id) => !TRANSITION_EVENTS.some((e) => e.id === id && e.role === transition.role)))
+      problems.push('Evento do ano de transição desconhecido ou de outro papel.');
   }
 
   // Nascimento: de um personagem da linhagem, com traços sem repetição e sem os dois lados de um par.
