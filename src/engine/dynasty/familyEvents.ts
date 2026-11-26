@@ -6,7 +6,8 @@
  * (`src/data/familyTexts.ts`): cada vez que um tipo de evento aparece para o mesmo
  * personagem, sai uma variante nova; acabadas as variantes, o evento não aparece mais. Conhecer alguém, casar, ter filhos, lidar
  * com uma crise e decidir a formação dos filhos mexem com moral, fase,
- * dinheiro, patrimônio e, mais tarde, com a sucessão.
+ * dinheiro, patrimônio e, mais tarde, com a sucessão. Desde a Fase 6, o teste no
+ * kart da adolescência revela talentos e defeitos de nascença dos filhos.
  */
 import type { CareerState, Effect, EventChoice, PendingEvent } from '@/domain/schemas';
 import { LIFESTYLE_RULES } from '@/data/assets';
@@ -20,6 +21,8 @@ import { money } from '../career/selectors';
 import { counted } from '@/domain/text';
 import { FAMILY_EVENT_TEXTS } from '@/data/familyTexts';
 import { markSeen, storyOf } from '../story/memory';
+import { HERITAGE } from '@/config/balance';
+import { canTakeKartTest, ensureHeritage } from './heritage';
 
 const stat = (name: Extract<Effect, { type: 'stat' }>['stat'], value: number): Effect => ({ type: 'stat', stat: name, value });
 const cash = (value: number, label: string): Effect => ({ type: 'cash', value, ledger: 'family', label });
@@ -156,6 +159,32 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
   }
 
   for (const child of children) {
+    // Fase 6: o teste no kart da adolescência revela talentos e defeitos de nascença.
+    const testText = FAMILY_EVENT_TEXTS.kartTest[nextVariant('kartTest')];
+    if (testText && canTakeKartTest(child)) {
+      const cost = HERITAGE.KART_TEST_COST;
+      const t = testText({ child: child.firstName, age: child.age, full: money(career, cost.full), quick: money(career, cost.quick) });
+      add(`kart-test-${child.id}`, 'kartTest', nextVariant('kartTest'), t.title, t.body, [
+        choice(
+          'full',
+          t.full.label,
+          t.full.description,
+          sure(t.full.text, { type: 'kartTest', childId: child.id, depth: 'full' }, cash(-cost.full, 'Teste no kart')),
+        ),
+        choice(
+          'quick',
+          t.quick.label,
+          t.quick.description,
+          sure(t.quick.text, { type: 'kartTest', childId: child.id, depth: 'quick' }, cash(-cost.quick, 'Teste no kart')),
+        ),
+        choice(
+          'skip',
+          t.skip.label,
+          t.skip.description,
+          sure(t.skip.text, { type: 'childStat', childId: child.id, stat: 'bond', value: -HERITAGE.KART_TEST_SKIP_BOND }),
+        ),
+      ]);
+    }
     const kartText = FAMILY_EVENT_TEXTS.kart[nextVariant('kart')];
     if (
       kartText &&
@@ -245,9 +274,12 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
   return events;
 }
 
-/** Começo de temporada da família: define o caminho dos filhos e põe na fila os eventos do ano. */
+/**
+ * Começo de temporada da família: dá os traços de nascença a quem ainda não tem (saves antigos),
+ * define o caminho dos filhos e põe na fila os eventos do ano.
+ */
 export function beginSeasonFamily(career: CareerState): CareerState {
-  const settled = settleChildPaths(career);
+  const settled = settleChildPaths(ensureHeritage(career));
   const known = new Set(settled.pendingEvents.map((e) => e.id));
   const events = familySeasonEvents(settled).filter((e) => !known.has(e.id));
   if (events.length === 0) return settled;

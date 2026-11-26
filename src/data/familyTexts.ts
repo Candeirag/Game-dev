@@ -1,8 +1,8 @@
 /**
  * Textos dos eventos de família (começo de temporada), em variantes (Fase 5).
  *
- * Cada tipo de evento (conhecer alguém, casamento, crise, filho, kart do filho, carreira do filho)
- * tem várias variantes de texto inteiro. A cada vez que o evento aparece para o mesmo personagem,
+ * Cada tipo de evento (conhecer alguém, casamento, crise, filho, kart do filho, carreira do filho e,
+ * desde a Fase 6, o teste no kart do filho) tem várias variantes de texto inteiro. A cada vez que o evento aparece para o mesmo personagem,
  * sai a variante seguinte (a memória das histórias guarda quais já saíram): nenhum texto se repete
  * na carreira. Quando as variantes acabam, o evento deixa de aparecer para aquele personagem.
  *
@@ -116,6 +116,22 @@ export interface ChildCareerText {
   forbid: FamilyChoiceText & { text: string };
 }
 
+/** O teste no kart da adolescência (Fase 6). */
+export interface KartTestParams {
+  child: string;
+  age: number;
+  /** Custos do teste completo e do rápido, já formatados. */
+  full: string;
+  quick: string;
+}
+export interface KartTestText {
+  title: string;
+  body: string;
+  full: FamilyChoiceText & { text: string };
+  quick: FamilyChoiceText & { text: string };
+  skip: FamilyChoiceText & { text: string };
+}
+
 export const FAMILY_EVENT_TEXTS: {
   readonly partner: readonly ((p: PartnerParams) => PartnerText)[];
   readonly wedding: readonly ((p: WeddingParams) => WeddingText)[];
@@ -123,6 +139,7 @@ export const FAMILY_EVENT_TEXTS: {
   readonly child: readonly ((p: ChildParams) => ChildText)[];
   readonly kart: readonly ((p: KartParams) => KartText)[];
   readonly career: readonly ((p: CareerParams) => ChildCareerText)[];
+  readonly kartTest: readonly ((p: KartTestParams) => KartTestText)[];
 } = {
   partner: [
     (p) => ({
@@ -534,6 +551,156 @@ export const FAMILY_EVENT_TEXTS: {
         label: 'Não deixar correr',
         description: `${p.child} vai buscar outro futuro. O vínculo entre vocês sai abalado.`,
         text: `${p.child} arquivou o sonho de correr e se afastou um pouco de você.`,
+      },
+    }),
+  ],
+  kartTest: [
+    (p) => ({
+      title: `Teste no kart para ${p.child}`,
+      body: `${p.child} fez ${p.age} anos, e uma escola de pilotagem oferece um dia de teste com instrutores, cronômetro e telemetria. É a primeira vez que alguém de fora vai medir o que a criança traz de nascença: talentos e defeitos que ninguém viu ainda.`,
+      full: {
+        label: 'Teste completo',
+        description: `Um dia inteiro com os instrutores: custa ${p.full} e mostra mais.`,
+        text: `${p.child} passou o dia no kartódromo com os instrutores.`,
+      },
+      quick: {
+        label: 'Só uma tarde',
+        description: `Uma tarde de voltas cronometradas: custa ${p.quick} e mostra menos.`,
+        text: `${p.child} fez uma tarde de voltas cronometradas.`,
+      },
+      skip: { label: 'Deixar para lá', description: 'Sem custo, mas a decepção pesa no vínculo.', text: `${p.child} ficou em casa, de cara amarrada.` },
+    }),
+    (p) => ({
+      title: `O cronômetro espera por ${p.child}`,
+      body: `Um instrutor conhecido da família ligou: quer ver ${p.child}, ${p.age} anos, numa sessão de avaliação no kartódromo. Ninguém sabe ainda se a criança tem jeito para a chuva, para largar ou para poupar pneus; um teste de verdade começa a responder.`,
+      full: {
+        label: 'Avaliação de um dia inteiro',
+        description: `Instrutores, telemetria e várias baterias: ${p.full}. Revela mais coisas.`,
+        text: `Do café da manhã ao pôr do sol, ${p.child} acelerou sob o olhar dos instrutores.`,
+      },
+      quick: {
+        label: 'Uma bateria rápida',
+        description: `Poucas voltas e uma conversa no fim: ${p.quick}. Revela menos.`,
+        text: `${p.child} fez uma bateria curta e voltou para casa sem parar de falar.`,
+      },
+      skip: {
+        label: 'Agradecer e recusar',
+        description: `Nada a pagar. ${p.child} esperava ir, e o vínculo sente.`,
+        text: `O instrutor ficou sem resposta, e ${p.child} ficou sem o teste.`,
+      },
+    }),
+    (p) => ({
+      title: 'Dia de avaliação no kartódromo',
+      body: `A associação de kart da região abriu um dia de avaliação para quem tem ${p.age} anos, e ${p.child} quer muito ir. Os instrutores medem o tempo de volta e anotam tudo: a reação na largada, o jeito de guiar no molhado, o cuidado com o equipamento.`,
+      full: {
+        label: 'Fazer a avaliação inteira',
+        description: `Todas as baterias e o relatório escrito: ${p.full}. Mais respostas.`,
+        text: `${p.child} correu todas as baterias e saiu com o relatório debaixo do braço.`,
+      },
+      quick: {
+        label: 'Fazer só a primeira bateria',
+        description: `Uma bateria e uma conversa rápida: ${p.quick}. Menos respostas.`,
+        text: `${p.child} fez a primeira bateria e ouviu os comentários dos instrutores.`,
+      },
+      skip: {
+        label: 'Não fazer a inscrição',
+        description: `Sem custo. ${p.child} vai sentir a ausência, e o vínculo também.`,
+        text: `A inscrição não foi feita, e ${p.child} passou o sábado olhando pela janela.`,
+      },
+    }),
+    (p) => ({
+      title: `${p.child} contra o relógio`,
+      body: `Aos ${p.age} anos, ${p.child} pergunta quando vai poder andar num kart de verdade, com tempo marcado. Um treinador oferece um teste: é o jeito de descobrir, antes da carreira, o que vem de nascença e o que vai ser preciso treinar.`,
+      full: {
+        label: 'Teste com todos os exercícios',
+        description: `Largadas, pista molhada e voltas longas: ${p.full}. Mostra mais.`,
+        text: `${p.child} encarou largadas, pista molhada e voltas longas no mesmo dia.`,
+      },
+      quick: {
+        label: 'Teste só de volta rápida',
+        description: `Algumas voltas lançadas: ${p.quick}. Mostra menos.`,
+        text: `${p.child} fez as voltas lançadas e quis mais.`,
+      },
+      skip: {
+        label: 'Esperar mais um pouco',
+        description: `Não custa nada, mas ${p.child} esperava esse dia, e o vínculo sente.`,
+        text: `${p.child} ouviu o "mais para frente" e não insistiu.`,
+      },
+    }),
+    (p) => ({
+      title: `Convite para ${p.child}`,
+      body: `Uma equipe de kart que procura talentos convidou ${p.child}, ${p.age} anos, para uma tarde de testes. O cronômetro não mente: é ali que aparecem os primeiros talentos e defeitos de quem ainda nem começou a correr.`,
+      full: {
+        label: 'Aceitar o teste completo',
+        description: `Equipe, instrutores e um dia inteiro de pista: ${p.full}. Revela mais.`,
+        text: `${p.child} passou o dia no box da equipe, de capacete na mão entre uma bateria e outra.`,
+      },
+      quick: {
+        label: 'Aceitar só a tarde de voltas',
+        description: `Uma tarde de pista: ${p.quick}. Revela menos.`,
+        text: `${p.child} deu as voltas da tarde e voltou com o macacão sujo de borracha.`,
+      },
+      skip: {
+        label: 'Recusar o convite',
+        description: `Sem custo. ${p.child} queria ir, e o vínculo se ressente.`,
+        text: `O convite ficou sem resposta, e ${p.child} guardou a mágoa.`,
+      },
+    }),
+    (p) => ({
+      title: `Hora de medir ${p.child}`,
+      body: `${p.child} vive falando de kart, mas ninguém mediu o ritmo com seriedade. Com ${p.age} anos, é a idade certa para um teste com instrutores: dá para saber se há talento escondido, ou um defeito que vai custar caro lá na frente.`,
+      full: {
+        label: 'Pagar o teste completo',
+        description: `Dia inteiro, com relatório e conversa com a família: ${p.full}. Mais detalhes.`,
+        text: `${p.child} fez o teste completo, e a família ganhou um relatório de várias páginas.`,
+      },
+      quick: {
+        label: 'Pagar a versão curta',
+        description: `Uma tarde, com uma conversa no fim: ${p.quick}. Menos detalhes.`,
+        text: `${p.child} fez a versão curta, e os instrutores resumiram tudo numa conversa de corredor.`,
+      },
+      skip: {
+        label: 'Deixar o ritmo sem medida',
+        description: `Sem gasto. ${p.child} se decepciona, e o vínculo cai um pouco.`,
+        text: `${p.child} seguiu dando voltas por diversão, sem ninguém cronometrar.`,
+      },
+    }),
+    (p) => ({
+      title: `${p.child} pede um teste de verdade`,
+      body: `No jantar, ${p.child}, ${p.age} anos, mostrou um anúncio: um centro de treinamento faz testes de pilotagem para adolescentes. A pergunta é uma só: leva jeito ou não? Um bom teste revela o que vem de berço, para o bem e para o mal.`,
+      full: {
+        label: 'Marcar o pacote completo',
+        description: `Simulador, kart e avaliação física: ${p.full}. O retrato mais completo.`,
+        text: `${p.child} passou pelo simulador, pelo kart e pela avaliação física num dia só.`,
+      },
+      quick: {
+        label: 'Marcar só a parte do kart',
+        description: `Só as voltas no kart: ${p.quick}. Um retrato parcial.`,
+        text: `${p.child} fez só a parte do kart e saiu pedindo revanche contra o cronômetro.`,
+      },
+      skip: {
+        label: 'Dizer que não é o momento',
+        description: `Sem custo. ${p.child} esperava um sim, e o vínculo sofre.`,
+        text: `${p.child} guardou o anúncio na gaveta.`,
+      },
+    }),
+    (p) => ({
+      title: `Primeiro teste de ${p.child}`,
+      body: `O kartódromo da cidade vai receber instrutores de fora por um fim de semana. Eles testam jovens de ${p.age} anos e contam às famílias o que viram: quem nasce com talento costuma aparecer ali, e os defeitos também. ${p.child} já separou o macacão.`,
+      full: {
+        label: 'Inscrever para os dois dias',
+        description: `Sábado e domingo com os instrutores: ${p.full}. Eles veem mais.`,
+        text: `${p.child} passou o fim de semana inteiro com os instrutores.`,
+      },
+      quick: {
+        label: 'Inscrever só para a tarde de sábado',
+        description: `Algumas horas com os instrutores: ${p.quick}. Eles veem menos.`,
+        text: `${p.child} andou na tarde de sábado e assistiu ao resto da arquibancada.`,
+      },
+      skip: {
+        label: 'Pular o fim de semana dos instrutores',
+        description: `Nada a pagar. ${p.child} vai ver os colegas irem, e o vínculo sente.`,
+        text: `${p.child} viu os colegas irem ao teste e ficou em casa.`,
       },
     }),
   ],

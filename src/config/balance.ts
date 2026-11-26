@@ -763,13 +763,16 @@ export const HERITAGE = {
   KART_TEST_COST: { full: 3_000, quick: 900 },
   // Quantos traços ocultos cada teste revela.
   KART_TEST_REVEALS: { full: 2, quick: 1 },
-  // Diferença para o tempo de referência, em segundos: base, quanto cada ponto de teto abaixo de 90
-  // soma, quanto cada ano de formação no kart tira e o acaso do dia (desvio). Um teto 90 com seis
-  // anos de kart fica a 0,1 s; um teto 70 sem kart, a uns 1,4 s.
-  KART_TEST_GAP: { BASE: 0.6, PER_TALENT_POINT: 0.04, PER_KART_YEAR: 0.08, SD: 0.12 },
+  // Vínculo que o filho perde quando a família não o leva ao teste.
+  KART_TEST_SKIP_BOND: 4,
+  // Diferença para o tempo de referência, em segundos: base, quanto cada ponto de teto abaixo do
+  // teto de referência soma (acima dele, tira), quanto cada ano de formação no kart tira e o acaso
+  // do dia (desvio). Um teto 90 com seis anos de kart fica a 0,1 s; um teto 70 sem kart, a uns 1,4 s.
+  KART_TEST_GAP: { BASE: 0.6, REFERENCE_TALENT: 90, PER_TALENT_POINT: 0.04, PER_KART_YEAR: 0.08, SD: 0.12 },
   // Faixas da diferença para o veredito dos instrutores (até cada valor, em segundos).
   KART_TEST_VERDICTS: { outstanding: 0.2, promising: 0.45, average: 0.8 },
-  // Chance de cada temporada de carreira própria (fora do campeonato do jogador) revelar mais um traço.
+  // Chance de cada temporada de carreira própria (por fora ou no campeonato do jogador) revelar mais
+  // um traço.
   SEASON_REVEAL_CHANCE: 0.5,
   // Aptidões de corpo e mente do herdeiro: esta parte vem do pai ou da mãe e o resto da média 50,
   // com o desvio abaixo (um herdeiro não é cópia de ninguém).

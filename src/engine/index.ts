@@ -17,6 +17,7 @@ export * from './economy/summary';
 export * from './dynasty/family';
 export { familySeasonEvents, beginSeasonFamily } from './dynasty/familyEvents';
 export * from './dynasty/succession';
+export * from './dynasty/heritage';
 export * from './management/team';
 export * from './management/executive';
 export { MANAGEMENT_EVENT_CHANCE } from './management/events';

@@ -56,6 +56,7 @@ import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, rankTeams } from '../world/generation';
 import { childSummary, closeFamilyYear, emptyFamily } from './family';
 import { beginSeasonFamily } from './familyEvents';
+import { ensureHeritage } from './heritage';
 import { categoryRef } from '@/domain/categoryNames';
 import { money } from '../career/selectors';
 import { recordSeasonTrend } from '../career/trend';
@@ -191,8 +192,10 @@ function childHeir(child: Child): HeirOption {
   };
 }
 
-export function beginSuccession(career: CareerState, cause: 'death' | 'accident' | 'handover'): CareerState {
-  if (career.succession) return career;
+export function beginSuccession(original: CareerState, cause: 'death' | 'accident' | 'handover'): CareerState {
+  if (original.succession) return original;
+  // Fase 6: filhos de saves antigos ganham os traços de nascença antes da escolha do herdeiro.
+  const career = ensureHeritage(original);
   const former = getPlayer(career);
   const estate = estateValue(career);
   const rate = cause === 'handover' ? ASSET_RULES.HANDOVER_TAX : ASSET_RULES.INHERITANCE_TAX;

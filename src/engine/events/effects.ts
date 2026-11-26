@@ -14,6 +14,7 @@ import { getPlayer } from '../career/selectors';
 import { commercialSponsors, maxSponsors } from '../career/sponsors';
 import { relocate } from '../birth/move';
 import { setKartFunding, startChildCareer } from '../dynasty/family';
+import { applyKartTest } from '../dynasty/heritage';
 import { advanceChain, changeAttitude, personJoinsTeam, setFlag, setFollow, updateStory, upsertPerson } from '../story/memory';
 
 const clamp = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
@@ -144,7 +145,7 @@ export function applyEffect(career: CareerState, effect: Effect, round: number):
     case 'childCareer':
       return startChildCareer(career, effect.childId, effect.support);
     case 'kartTest':
-      return career;
+      return applyKartTest(career, effect.childId, effect.depth, career.season);
 
     /* ---------------- Gestão de equipe ---------------- */
     case 'teamBudget': {

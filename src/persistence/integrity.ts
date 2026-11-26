@@ -110,6 +110,15 @@ export function validateCareerIntegrity(career: CareerState): string[] {
   for (const child of career.family.children) {
     if (child.stage === 'racing' && (!child.driver || !child.racing)) problems.push(`Filho ${child.id} corre, mas não tem dados de piloto.`);
     if (child.driver?.isPlayer) problems.push(`Filho ${child.id} marcado como jogador.`);
+    // Herança (Fase 6): traços de nascença sem repetição nem par oposto; o teste no kart só revela
+    // traços que o filho tem, e eles ficam marcados como revelados.
+    const traitIds = child.birthTraits.map((t) => t.id);
+    if (new Set(traitIds).size !== traitIds.length) problems.push(`Filho ${child.id} com traço de nascença repetido.`);
+    if (traitIds.some((id) => traitIds.includes(BIRTH_TRAITS[id].opposite))) problems.push(`Filho ${child.id} com traços de nascença opostos.`);
+    for (const id of child.kartTest?.revealed ?? []) {
+      if (!child.birthTraits.some((t) => t.id === id && t.revealedSeason !== null))
+        problems.push(`Teste no kart de ${child.id} revelou um traço fora dos traços de nascença.`);
+    }
   }
   const lineage = career.dynasty.lineage;
   const current = lineage[lineage.length - 1];

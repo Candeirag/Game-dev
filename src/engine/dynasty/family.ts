@@ -35,6 +35,7 @@ import { reputationAfterSeason } from '../career/offseason';
 import { fullName, getPlayer } from '../career/selectors';
 import { TRAINABLE_ATTRIBUTES } from '../career/training';
 import { hasPersonalProperty } from '../economy/assets';
+import { childTrainingFactor, ensureHeritage, heritageTraitsFor, revealSeasonTrait } from './heritage';
 import { createRng, gaussian, hashSeed, type Rng } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
@@ -128,8 +129,9 @@ export function generateChild(career: CareerState, seed: number): Child {
   const used = new Set(career.family.children.map((c) => c.firstName));
   let firstName = pick(rng, CHILD_FIRST_NAMES);
   for (let i = 0; i < 20 && used.has(firstName); i++) firstName = pick(rng, CHILD_FIRST_NAMES);
+  const id = `child-g${career.dynasty.generation}-s${career.season}-${career.family.children.length}`;
   return {
-    id: `child-g${career.dynasty.generation}-s${career.season}-${career.family.children.length}`,
+    id,
     firstName,
     lastName: player.lastName,
     nationality: player.nationality,
@@ -144,7 +146,9 @@ export function generateChild(career: CareerState, seed: number): Child {
     support: 'none',
     driver: null,
     racing: null,
-    birthTraits: [],
+    // Fase 6: talentos e defeitos de nascença, parte herdada do nascimento ativo (sorteio próprio,
+    // que não mexe nos números acima).
+    birthTraits: heritageTraitsFor(career, { id, birthTraits: [] }),
     kartTest: null,
   };
 }
@@ -333,7 +337,8 @@ export function closeChildSeason(
     const multiplier =
       traitProduct(child, 'development') *
       (child.support === 'full' ? 1 : child.support === 'basic' ? 0.92 : 0.85) *
-      (racing.academy ? FAMILY.ACADEMY_DEVELOPMENT : 1);
+      (racing.academy ? FAMILY.ACADEMY_DEVELOPMENT : 1) *
+      childTrainingFactor(child);
     // Uma temporada equivale às etapas da categoria mais a pré-temporada, em três blocos:
     // a cada bloco, o treinador revê o foco do treino.
     const cycles = (category.rounds + 2) / 3;
@@ -350,9 +355,11 @@ export function closeChildSeason(
   const reputation = reputationAfterSeason(racing.reputation, position, wins, category.tier);
   const season: ChildSeason = { season: career.season, year: career.year, categoryId: category.id, teamName, position, wins, inWorld: world !== null };
   const note = `${child.firstName} terminou ${categoryRef(category.id, 'the')} em ${position}º${wins > 0 ? `, com ${counted(wins, 'vitória', 'vitórias')}` : ''}.`;
+  // Fase 6: a temporada pode revelar mais um talento ou defeito de nascença.
+  const revealed = revealSeasonTrait(child, career);
   return {
     child: {
-      ...child,
+      ...revealed.child,
       driver,
       racing: {
         ...racing,
@@ -361,7 +368,7 @@ export function closeChildSeason(
         seasons: [...racing.seasons, season].slice(-30),
       },
     },
-    note,
+    note: revealed.note ? `${note} ${revealed.note}` : note,
   };
 }
 
@@ -478,7 +485,8 @@ export function closeFamilyYear(
   const notes: string[] = [];
   const kartBoost = hasPersonalProperty(career.finance, 'kartodromo') ? 1.25 : 1;
   const lifestyleBond = LIFESTYLE_RULES[career.finance.lifestyle].relationship / 2;
-  const children = career.family.children.map((original) => {
+  // Filhos de saves antigos ganham os traços de nascença antes de a temporada poder revelar algum.
+  const children = ensureHeritage(career).family.children.map((original) => {
     let child = original;
     if (child.stage === 'racing') {
       const closed = closeChildSeason(child, career, child.driver ? (worldResults[child.driver.id] ?? null) : null);
@@ -528,20 +536,6 @@ export function closeFamilyYear(
     partner = { ...partner, age: partner.age + 1, relationship: Math.round(clamp(partner.relationship + drift)) };
   }
   return { family: { ...career.family, partner, children }, notes };
-}
-
-/**
- * Avaliação dos treinadores sobre o teto de um filho. Só existe depois de
- * pelo menos um ano de kart (com investimento) ou com a carreira em andamento:
- * antes disso, ninguém viu a criança pilotar.
- */
-export function childScoutReport(child: Child): string | null {
-  if (child.stage !== 'racing' && child.kartYears < 0.5) return null;
-  if (child.talent >= 90) return 'Fora de série';
-  if (child.talent >= 86) return 'Muito promissor';
-  if (child.talent >= 82) return 'Promissor';
-  if (child.talent >= 76) return 'Mediano';
-  return 'Limitado';
 }
 
 /** Texto curto sobre a fase de um filho, para a interface e as mensagens. */

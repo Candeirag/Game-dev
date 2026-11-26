@@ -227,6 +227,13 @@ export function describeEffects(before: CareerState, after: CareerState, effects
       case 'childCareer':
         views.push({ kind: 'note', topic: 'family', text: `${childName(e.childId)} estreia no kart regional: ${careerSupportText[e.support] ?? 'carreira'}` });
         break;
+      case 'kartTest': {
+        const test = after.family.children.find((c) => c.id === e.childId)?.kartTest;
+        const was = before.family.children.find((c) => c.id === e.childId)?.kartTest;
+        if (test && !was)
+          views.push({ kind: 'note', topic: 'family', text: `${childName(e.childId)}: teste no kart a +${test.gap.toFixed(3)} s do tempo de referência` });
+        break;
+      }
       case 'relocate':
         if (after.birth?.movedSeason !== before.birth?.movedSeason)
           views.push({ kind: 'note', topic: 'move', text: 'Mudança para São Paulo: acabam as viagens do interior' });

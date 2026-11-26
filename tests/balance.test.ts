@@ -69,6 +69,10 @@ const NOT_BALANCE = new Set([
   'STORY_LAST_NAMES',
   // Textos dos eventos de família em variantes (Fase 5): só palavras; os valores chegam prontos.
   'FAMILY_EVENT_TEXTS',
+  // Herança (Fase 6): os vereditos do teste no kart e os textos deles. As faixas de cada veredito
+  // estão em HERITAGE, em src/config/balance.ts.
+  'KART_TEST_VERDICT_IDS',
+  'KART_TEST_VERDICT_INFO',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',
