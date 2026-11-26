@@ -8,7 +8,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { FAMILY_TEAM, HEIR_START, RELATIVES } from '@/config/balance';
 import { CareerStateSchema, type CareerState, type Child, type ChildRacing, type TeamStake } from '@/domain/schemas';
-import { FAMILY } from '@/data/family';
+import { ASSET_RULES } from '@/data/assets';
+import { CHILD_FIRST_NAMES, FAMILY } from '@/data/family';
 import { RELATIVE_PATH_INFO } from '@/data/dynasty';
 import { TEAM_TARGETS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
@@ -339,6 +340,83 @@ describe('sucessão com vários filhos', () => {
     expect(engine.familyYear(next)).toBe(next.year);
     expect(engine.familyTree(next).generations[0]!.relatives[0]!.age).toBe(19);
   }, 60_000);
+});
+
+/* ------------------------------------------------------------------ */
+
+describe('a lista de herdeiros e a parte dos irmãos', () => {
+  it('a parte dos irmãos: cada um leva ASSET_RULES.SIBLING_SHARE, até ASSET_RULES.SIBLING_SHARE_MAX irmãos', () => {
+    const many = ASSET_RULES.SIBLING_SHARE_MAX + 2;
+    const kids = Array.from({ length: many }, (_, i): Partial<Child> => (i === 0 ? { id: 'kid-0', age: 25, stage: 'other' } : { id: `kid-${i}`, age: 10 }));
+    const opened = engine.beginSuccession(withChildren(founder(), kids), 'death');
+    const { estate, tax } = opened.succession!;
+    const heir = engine.resolveSuccession(opened, 'kid-0', 'executive');
+    const share = Math.round((estate - tax) * ASSET_RULES.SIBLING_SHARE * ASSET_RULES.SIBLING_SHARE_MAX);
+    expect(heir.finance.transactions).toContainEqual(expect.objectContaining({ key: 'inheritance', amount: -share }));
+    expect(heir.dynasty.lineage.at(-2)!.netWorthPassed).toBe(Math.round(estate - tax - share));
+  });
+
+  it('os parentes da lista não repetem o nome de ninguém da família; sem repetição, o sorteio de sempre', () => {
+    const c = founder();
+    const former = engine.getPlayer(c);
+    // Sem repetição: os mesmos nomes do sorteio 'relative' (o primeiro e o terceiro número dele).
+    const rng = engine.createRng(engine.hashSeed(c.seed, c.season, 'relative'));
+    const young = CHILD_FIRST_NAMES[Math.floor(rng.next() * CHILD_FIRST_NAMES.length)]!;
+    rng.next();
+    const adult = CHILD_FIRST_NAMES[Math.floor(rng.next() * CHILD_FIRST_NAMES.length)]!;
+    const names = (x: CareerState) =>
+      engine
+        .beginSuccession(x, 'death')
+        .succession!.heirs.filter((h) => h.kind === 'relative')
+        .map((h) => h.name.split(' ')[0]);
+    if (young !== adult && young !== former.firstName && adult !== former.firstName) expect(names(c)).toEqual([young, adult]);
+    // Com quase todos os nomes já na família (filhos e parentes da árvore), sobram dois, um para cada.
+    const free = CHILD_FIRST_NAMES.filter((n) => n !== former.firstName).slice(-2);
+    const taken = CHILD_FIRST_NAMES.filter((n) => n !== former.firstName && !free.includes(n));
+    const withKids = withChildren(
+      c,
+      taken.slice(0, 2).map((firstName, i) => ({ id: `kid-${i}`, firstName, age: 6 })),
+    );
+    const relative = {
+      id: 'rel-x',
+      lastName: former.lastName,
+      generation: 1,
+      bornYear: c.year - 30,
+      path: 'engineer' as const,
+      skill: 50,
+      traits: [],
+      bond: 50,
+      racedTo: null,
+      sinceSeason: 1,
+    };
+    const crowded: CareerState = {
+      ...withKids,
+      dynasty: { ...withKids.dynasty, relatives: taken.slice(2).map((firstName, i) => ({ ...relative, id: `rel-${i}`, firstName })) },
+    };
+    const chosen = names(crowded);
+    expect([...chosen].sort()).toEqual([...free].sort());
+    // E o mesmo resultado para a mesma semente.
+    expect(names(crowded)).toEqual(chosen);
+  });
+
+  it('a categoria da primeira temporada do herdeiro piloto é a das vagas, também no meio do ano', () => {
+    let c = midSeason(62);
+    c = withChildren(c, [{ id: 'kid', age: 17, kartYears: 6, talent: 90, interest: 90 }]);
+    const opened = engine.beginSuccession(engine.startChildCareer(c, 'kid', 'full'), 'accident');
+    const closed = engine.closeFamilyYear({ ...opened, succession: null }).family.children.find((k) => k.id === 'kid')!.racing!;
+    expect(engine.heirStartCategory(opened, 'kid')).toBe(closed.categoryId);
+    expect(engine.resolveSuccession(opened, 'kid', 'driver').categoryId).toBe(closed.categoryId);
+    expect(engine.heirStartCategory(opened, 'partner')).toBeNull();
+    // No fechamento, é a categoria em que já corre.
+    const offseason = withChildren(founder(), [{ id: 'kid', age: 17, kartYears: 6, talent: 90, interest: 90 }]);
+    const between = engine.beginSuccession(racingIn(offseason, 'kid', 'f4', 4), 'death');
+    expect(engine.heirStartCategory(between, 'kid')).toBe('f4');
+  });
+
+  it('a fase de um filho pequeno é dita sem gênero', () => {
+    const [kid] = withChildren(founder(), [{ id: 'kid', age: FAMILY.KART_START_AGE - 2, stage: 'child' }]).family.children.slice(-1);
+    expect(engine.childSummary(kid!)).toBe('Ainda sem idade para o kart');
+  });
 });
 
 /* ------------------------------------------------------------------ */

@@ -111,8 +111,20 @@ export function touchLineage(career: CareerState): CareerState {
 /* Abertura da sucessão                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * O nome de um parente, sem repetir o de ninguém da família (quem saiu, os filhos e os parentes da
+ * árvore). Só quando o nome sorteado já tem dono sai outro, entre os livres, por um sorteio próprio
+ * (`draw`): sem repetição, a sorte de quem já joga não muda.
+ */
+function freeRelativeName(career: CareerState, drawn: string, taken: ReadonlySet<string>, draw: string): string {
+  if (!taken.has(drawn)) return drawn;
+  const free = CHILD_FIRST_NAMES.filter((name) => !taken.has(name));
+  return free[Math.floor(createRng(hashSeed(career.seed, career.season, draw)).next() * free.length)] ?? drawn;
+}
+
 function relativeHeirs(career: CareerState): HeirOption[] {
   const former = getPlayer(career);
+  const taken = new Set([former.firstName, ...career.family.children.map((c) => c.firstName), ...career.dynasty.relatives.map((r) => r.firstName)]);
   const rng = createRng(hashSeed(career.seed, career.season, 'relative'));
   const category = getCategory('kart-regional');
   const young = generateDriver({
@@ -126,7 +138,7 @@ function relativeHeirs(career: CareerState): HeirOption[] {
     usedNames: new Set(),
     rookie: true,
   });
-  const firstName = CHILD_FIRST_NAMES[Math.floor(rng.next() * CHILD_FIRST_NAMES.length)] ?? 'Alex';
+  const firstName = freeRelativeName(career, CHILD_FIRST_NAMES[Math.floor(rng.next() * CHILD_FIRST_NAMES.length)] ?? 'Alex', taken, 'relative-driver-name');
   const driver: Driver = {
     ...young,
     firstName,
@@ -149,7 +161,8 @@ function relativeHeirs(career: CareerState): HeirOption[] {
     stalled: 0,
     familyCost: 0,
   };
-  const adultName = `${CHILD_FIRST_NAMES[Math.floor(rng.next() * CHILD_FIRST_NAMES.length)] ?? 'Sam'} ${former.lastName}`;
+  const adultFirst = CHILD_FIRST_NAMES[Math.floor(rng.next() * CHILD_FIRST_NAMES.length)] ?? 'Sam';
+  const adultName = `${freeRelativeName(career, adultFirst, new Set([...taken, firstName]), 'relative-adult-name')} ${former.lastName}`;
   return [
     {
       id: 'relative-driver',
@@ -351,11 +364,13 @@ export interface HeirSeatOption {
 
 /**
  * O que fica com o herdeiro: o caixa depois do imposto e da parte dos irmãos (que só existe quando o
- * herdeiro é um dos filhos).
+ * herdeiro é um dos filhos; cada irmão leva ASSET_RULES.SIBLING_SHARE, até SIBLING_SHARE_MAX irmãos).
  */
 function inheritanceSplit(career: CareerState, succession: Succession, option: HeirOption): { siblingsShare: number; cash: number } {
   const siblings = option.kind === 'child' ? career.family.children.filter((c) => c.id !== option.childId).length : 0;
-  const siblingsShare = Math.round(Math.max(0, succession.estate - succession.tax) * ASSET_RULES.SIBLING_SHARE * Math.min(3, siblings));
+  const siblingsShare = Math.round(
+    Math.max(0, succession.estate - succession.tax) * ASSET_RULES.SIBLING_SHARE * Math.min(ASSET_RULES.SIBLING_SHARE_MAX, siblings),
+  );
   return { siblingsShare, cash: career.finance.cash - succession.tax - siblingsShare };
 }
 
@@ -533,6 +548,21 @@ export function heirSeatOptions(career: CareerState, heirId: string): HeirSeatOp
   if (!driver || !racing) return [];
   const { cash } = inheritanceSplit(state, succession, option);
   return (['current', 'top', 'family'] as const).map((seat) => seatPlan(state, driver, racing, seat, cash).option);
+}
+
+/**
+ * A categoria em que o herdeiro piloto larga na primeira temporada, a das vagas de `heirSeatOptions`.
+ * No meio do ano, o ano dos filhos fecha antes da escolha (`successionStage`) e a temporada pode ter
+ * feito o herdeiro subir: a tela mostra a categoria ao lado das vagas. null para quem não corre.
+ */
+export function heirStartCategory(career: CareerState, heirId: string): CategoryId | null {
+  const succession = career.succession;
+  if (!succession) throw new Error('Não há sucessão em aberto.');
+  const option = succession.heirs.find((h) => h.id === heirId);
+  if (!option) throw new Error('Herdeiro não encontrado.');
+  if (!option.canDrive) return null;
+  const { driver, racing } = heirCareer(successionStage(career, 'driver'), option);
+  return driver && racing ? racing.categoryId : null;
 }
 
 export function resolveSuccession(career: CareerState, heirId: string, path: 'driver' | 'executive', seat: HeirSeat = 'current'): CareerState {

@@ -572,12 +572,12 @@ export function closeFamilyYear(
   return { family: { ...career.family, partner, children }, notes };
 }
 
-/** Texto curto sobre a fase de um filho, para a interface e as mensagens. */
+/** Texto curto sobre a fase de um filho, para a interface e as mensagens (sem gênero: o jogo não sabe o de ninguém). */
 export function childSummary(child: Child): string {
   if (child.stage === 'racing' && child.racing) return `${getCategory(child.racing.categoryId).shortName}, ${child.racing.teamName}`;
   if (child.stage === 'karting') return 'Formação no kart';
   if (child.stage === 'other') return child.racing ? 'Encerrou a carreira de piloto' : 'Seguiu outro caminho';
-  return child.age < FAMILY.KART_START_AGE ? 'Ainda pequeno' : 'Fora das pistas';
+  return child.age < FAMILY.KART_START_AGE ? 'Ainda sem idade para o kart' : 'Fora das pistas';
 }
 
 export const childName = (child: Pick<Child, 'firstName' | 'lastName'>) => fullName(child);
