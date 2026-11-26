@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { ATTRIBUTE_KEYS, type AttributeKey } from '@/domain/schemas';
 import { ATTRIBUTE_DESCRIPTIONS, ATTRIBUTE_LABELS } from '@/domain/labels';
 import { NATIONALITIES } from '@/data/rules';
-import { activeBirth, computeCareerStats, fullName, overallRating, predecessor } from '@/engine';
+import { activeBirth, computeCareerStats, fullName, isHeirBirth, overallRating, predecessor } from '@/engine';
 import { TrainingFocusPicker } from '../components/TrainingFocusPicker';
 import { Card, cx, Delta, EmptyState, Meter, PageHeader, Pill, PortraitOr, RatingBar, Ring, Stat, Tabs } from '@/ui/kit';
-import { BirthAptitudes, BirthFamily, BirthTraits, HeirBirthFamily, isDynastyBirth } from '../components/BirthSheet';
+import { BirthAptitudes, BirthFamily, BirthTraits, HeirBirthFamily } from '../components/BirthSheet';
 import { portraitUrl } from '../images';
 import { TrendLine, attributeSeries } from '../components/TrendLine';
 import { formatRating } from '../format';
@@ -147,12 +147,12 @@ export function DriverScreen() {
         (birth ? (
           <div className="grid items-start gap-4 md:grid-cols-2">
             <div className="space-y-4">
-              {isDynastyBirth(birth) ? (
+              {isHeirBirth(birth) ? (
                 <HeirBirthFamily birth={birth} surname={career.dynasty.surname} generation={career.dynasty.generation} predecessor={predecessor(career)} />
               ) : (
                 <BirthFamily birth={birth} />
               )}
-              <BirthTraits birth={birth} heirSince={isDynastyBirth(birth) ? career.dynasty.lineage.at(-1)?.fromSeason : undefined} />
+              <BirthTraits birth={birth} heirSince={isHeirBirth(birth) ? career.dynasty.lineage.at(-1)?.fromSeason : undefined} />
             </div>
             <BirthAptitudes birth={birth} />
           </div>

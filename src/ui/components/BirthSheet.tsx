@@ -42,14 +42,9 @@ function FamilyRow({ icon, label, children }: { icon: ReactNode; label: string; 
 }
 
 /**
- * O nascimento de quem herdou a carreira da família (filho ou parente jovem que assumiu na sucessão):
- * origem de filho de ex-piloto, com a família da dinastia no lugar das profissões dos pais.
+ * A família de quem herdou a carreira (filho ou parente jovem que assumiu na sucessão; o motor diz
+ * quem é por `isHeirBirth`): cidade, sobrenome e geração, quem veio antes e de onde vem o dinheiro.
  */
-export function isDynastyBirth(birth: Birth): boolean {
-  return birth.origin === 'racer-parent' && birth.parents.mother === 'dinastia';
-}
-
-/** A família de quem herdou a carreira: cidade, sobrenome e geração, quem veio antes e de onde vem o dinheiro. */
 export function HeirBirthFamily({
   birth,
   surname,
@@ -78,8 +73,8 @@ export function HeirBirthFamily({
         Sem economias próprias: o que a família tinha veio pela herança
       </FamilyRow>
       <p className="border-t border-ink-700 pt-2 text-xs text-ink-300">
-        Quem herda a carreira já nasce com os talentos e defeitos da família (parte herdada, parte sorteada) e com corpo e mente puxados em parte dos de quem
-        veio antes. O que o teste no kart e as temporadas de carreira própria revelaram continua revelado.
+        Quem herda a carreira já nasce com talentos e defeitos: os de um filho vêm em parte de quem veio antes, e o resto é sorteado; os de um parente são todos
+        sorteados. Corpo e mente puxam em parte os de quem veio antes. O que apareceu antes de assumir continua revelado.
       </p>
     </Card>
   );
