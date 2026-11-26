@@ -10,7 +10,7 @@ import { GraduationCap, Megaphone, Mic, TriangleAlert, type LucideIcon } from 'l
 import type { CareerState, Transition, TransitionRole } from '@/domain/schemas';
 import { TRANSITION } from '@/config/balance';
 import { TRANSITION_ROLE_INFO } from '@/data/transition';
-import { driverStandings, transitionFee, transitionWindow, type TransitionOffer } from '@/engine';
+import { driverStandings, mentorChildFactor, transitionFee, transitionWindow, type TransitionOffer } from '@/engine';
 import { Card, Chip, ChoiceCard, Stat } from '@/ui/kit';
 import { formatMoney } from '../../format';
 
@@ -130,9 +130,8 @@ export function TransitionPanel({ career, transition }: { career: CareerState; t
   const info = TRANSITION_ROLE_INFO[transition.role];
   const Icon = TRANSITION_ROLE_ICONS[transition.role];
   const protegePosition = transition.protegeId ? (driverStandings(career).find((s) => s.driverId === transition.protegeId)?.position ?? null) : null;
-  const child = transition.protegeId
-    ? career.family.children.some((c) => c.driver?.id === transition.protegeId || `dyn-${c.id}` === transition.protegeId)
-    : false;
+  // A mentoria acompanha um dos filhos quando o motor dá a ele o fator de evolução da mentoria.
+  const child = career.family.children.some((c) => mentorChildFactor(career, c) !== 1);
   return (
     <Card
       title="Ano de transição"
