@@ -16,7 +16,7 @@ import {
   VACANT_RATING,
   facilityUpgradeCost,
   familyStaffRelativeId,
-  favoritismNote,
+  favoritismNotes,
   fullName,
   isFamilyStaff,
   managedTeam,
@@ -624,11 +624,8 @@ function Drivers({ m }: { m: ManagedTeam }) {
     .filter((d) => d.teamId === m.teamId)
     .sort((a, b) => (a.role === 'first' ? 0 : a.role === 'second' ? 1 : 2) - (b.role === 'first' ? 0 : b.role === 'second' ? 1 : 2));
   const children = new Set(career.family.children.map((c) => c.driver?.id));
-  // O aviso de favorecimento de cada filho na equipe (o texto é do motor).
-  const notes = lineup.flatMap((d) => {
-    const note = children.has(d.id) && d.role !== 'reserve' ? favoritismNote(career, { origin: 'child', name: fullName(d) }) : null;
-    return note ? [{ id: d.id, note }] : [];
-  });
+  // Quem leva o aviso de favorecimento, e o texto, é o motor que diz.
+  const notes = favoritismNotes(career);
   return (
     <Card title="Pilotos da equipe" padded={false}>
       <div className="px-4">
@@ -673,7 +670,7 @@ function Drivers({ m }: { m: ManagedTeam }) {
       {notes.length > 0 && (
         <ul className="space-y-2 border-t border-ink-800 px-4 py-2">
           {notes.map((n) => (
-            <li key={n.id} className="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs text-ink-300">
+            <li key={n.driverId} className="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs text-ink-300">
               <Chip tone="attention" size="sm">
                 Favorecimento
               </Chip>

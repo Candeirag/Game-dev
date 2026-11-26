@@ -110,12 +110,50 @@ export function isFamilyTeamOffer(career: Pick<CareerState, 'finance'>, offer: P
 }
 
 /**
- * O aviso de favorecimento de um candidato a piloto que é filho do dirigente (para a tela do
- * fechamento). null para quem não é da família ou sem equipe.
+ * O aviso da proposta da equipe da família (para a tela), null para as outras propostas: o que a
+ * imprensa cobra de quem corre por ela (`pressureRound`, `pressureSeason`).
  */
-export function favoritismNote(career: CareerState, candidate: Pick<DriverCandidate, 'origin' | 'name'>): string | null {
+export function familyTeamOfferNote(career: Pick<CareerState, 'finance'>, offer: Pick<Offer, 'categoryId' | 'teamId'>): string | null {
+  if (!isFamilyTeamOffer(career, offer)) return null;
+  return 'Equipe da família: a imprensa vai falar em favorecimento. Cada etapa atrás do companheiro custa moral, e terminar o ano atrás dele custa reputação; terminar à frente cala a conversa.';
+}
+
+/** O aviso de favorecimento de um filho na equipe do dirigente (`favoritismExecutiveRound`, `favoritismExecutiveSeason`). */
+function favoritismText(name: string): string {
+  return `${name} é da família: a imprensa vai falar em favorecimento. Cada etapa atrás do companheiro custa reputação à equipe, e terminar o ano atrás dele custa reputação a você e à equipe; terminar à frente cala a conversa.`;
+}
+
+/** Os ids de piloto dos filhos do jogador. */
+function childDriverIds(career: Pick<CareerState, 'family'>): Set<string> {
+  return new Set(career.family.children.flatMap((c) => (c.driver ? [c.driver.id] : [])));
+}
+
+/**
+ * O aviso de favorecimento de um candidato a piloto que é filho do dirigente (para a tela do
+ * fechamento). null para quem não é da família, sem equipe, ou quando a dupla escolhida (`lineup`,
+ * ids de piloto) tem dois filhos: aí ninguém é favorecido em relação ao outro, como na temporada.
+ */
+export function favoritismNote(
+  career: CareerState,
+  candidate: Pick<DriverCandidate, 'origin' | 'name' | 'driverId'>,
+  lineup: readonly string[] = [],
+): string | null {
   if (candidate.origin !== 'child' || !career.management) return null;
-  return `${candidate.name} é da família: a imprensa vai falar em favorecimento. Cada etapa atrás do companheiro custa reputação à equipe, e terminar o ano atrás dele custa reputação a você e à equipe; terminar à frente cala a conversa.`;
+  const mate = lineup.length === 2 && lineup.includes(candidate.driverId) ? lineup.find((id) => id !== candidate.driverId) : undefined;
+  if (mate !== undefined && childDriverIds(career).has(mate)) return null;
+  return favoritismText(candidate.name);
+}
+
+/**
+ * Os filhos que correm pela equipe do dirigente e estão sob a conversa de favorecimento nesta
+ * temporada (titulares com um companheiro de fora da família), com o aviso de cada um (para a tela
+ * de gestão). Vazia sem equipe, sem filho na dupla ou com os dois pilotos da família.
+ */
+export function favoritismNotes(career: CareerState): { driverId: string; note: string }[] {
+  return childrenInManagedTeam(career).flatMap(({ childDriverId, mateId }) => {
+    const child = mateId ? career.drivers.find((d) => d.id === childDriverId) : undefined;
+    return child ? [{ driverId: child.id, note: favoritismText(fullName(child)) }] : [];
+  });
 }
 
 /** Ficou atrás do companheiro na corrida: o companheiro terminou, e na frente (ou o outro abandonou). */
@@ -183,7 +221,7 @@ export function pressureRound(career: CareerState, record: RoundRecord): Pressur
 function childrenInManagedTeam(career: CareerState): { childDriverId: string; mateId: string | null }[] {
   const m = career.management;
   if (!m) return [];
-  const childIds = new Set(career.family.children.flatMap((c) => (c.driver ? [c.driver.id] : [])));
+  const childIds = childDriverIds(career);
   const lineup = career.drivers.filter((d) => d.teamId === m.teamId && d.role !== 'reserve');
   return lineup
     .filter((d) => childIds.has(d.id))

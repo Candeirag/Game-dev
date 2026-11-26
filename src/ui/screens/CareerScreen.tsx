@@ -10,6 +10,7 @@ import {
   CONTRACT_RULES,
   canAcceptOffer,
   categoryRequirements,
+  familyTeamOfferNote,
   fullName,
   isFamilyTeamOffer,
   licensePointsTotal,
@@ -472,6 +473,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
   const rank = rankTeams(teamsOfCategory(career, offer.categoryId)).findIndex((t) => t.id === offer.teamId) + 1;
   const courted = offer.kind !== 'continue' && offer.kind !== 'fallback';
   const family = isFamilyTeamOffer(career, offer);
+  const familyNote = familyTeamOfferNote(career, offer);
 
   return (
     <Card
@@ -547,13 +549,10 @@ function OfferDetail({ offer }: { offer: Offer }) {
               Vaga de aluguel, sem exigências: custa dinheiro, mas pode ser paga a crédito. É a rede de segurança da carreira.
             </p>
           )}
-          {family && (
+          {familyNote && (
             <p className="flex items-start gap-1 text-xs text-gold-400">
               <TriangleAlert size={13} strokeWidth={2} aria-hidden className="mt-px shrink-0" />
-              <span className="min-w-0">
-                Equipe da família: a imprensa vai falar em favorecimento. Cada etapa atrás do companheiro custa moral, e terminar o ano atrás dele custa
-                reputação; terminar à frente cala a conversa.
-              </span>
+              <span className="min-w-0">{familyNote}</span>
             </p>
           )}
           {fee > 0 && <p className="text-xs text-gold-400">Aceitar esta proposta rompe o contrato vigente: multa de {formatMoney(fee)}.</p>}

@@ -785,7 +785,7 @@ export function ExecutiveCareerScreen() {
               .map((c) => {
                 const slot = off.lineup.indexOf(c.driverId);
                 const toggle = () => store.setLineup(slot >= 0 ? off.lineup.filter((id) => id !== c.driverId) : [...off.lineup, c.driverId].slice(-2));
-                const favoritism = favoritismNote(career, c);
+                const favoritism = favoritismNote(career, c, off.lineup);
                 return (
                   <li
                     key={c.driverId}

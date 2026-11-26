@@ -396,6 +396,9 @@ describe('equipe da família: propostas', () => {
     });
     expect(engine.isFamilyTeamOffer(family, own[0]!)).toBe(true);
     expect(offers.filter((o) => o.id !== own[0]!.id).every((o) => !engine.isFamilyTeamOffer(family, o))).toBe(true);
+    // O aviso da proposta (a tela só mostra o texto) é só da equipe da família.
+    expect(engine.familyTeamOfferNote(family, own[0]!)).toMatch(/favorecimento/);
+    expect(offers.filter((o) => o.id !== own[0]!.id).every((o) => engine.familyTeamOfferNote(family, o) === null)).toBe(true);
     // Sem a participação de 100% (ou com uma minoritária), as propostas são as de sempre.
     const baseline = engine.generateOffers(c, c.reputation, 'expired');
     expect(engine.generateOffers(withStake(c, stake(c, team.id, 0.49, above.id)), c.reputation, 'expired')).toEqual(baseline);
@@ -467,13 +470,43 @@ describe('equipe da família: o dirigente que põe um filho na própria equipe',
     expect(b.inbox.find((m) => m.id === `s${open.season}-end`)!.body).toContain(fav.notes[0]!);
   });
 
-  it('o aviso de favorecimento do candidato filho', () => {
+  it('o aviso de favorecimento do candidato filho; com dois filhos na dupla escolhida, nenhum', () => {
     const c = executive();
-    const note = engine.favoritismNote(c, { origin: 'child', name: 'Beto Teste' });
+    const [kid, mate] = lineupOf(c);
+    const candidate = { origin: 'child' as const, name: 'Beto Teste', driverId: kid!.id };
+    const note = engine.favoritismNote(c, candidate);
     expect(note).toContain('Beto Teste');
     expect(note).toContain('favorecimento');
-    expect(engine.favoritismNote(c, { origin: 'market', name: 'Beto Teste' })).toBeNull();
-    expect(engine.favoritismNote(played(), { origin: 'child', name: 'Beto Teste' })).toBeNull();
+    expect(engine.favoritismNote(c, { ...candidate, origin: 'market' })).toBeNull();
+    expect(engine.favoritismNote(played(), candidate)).toBeNull();
+    // Escolhido com um companheiro de fora da família, ou ainda sem dupla: o aviso vale.
+    const family = withChildInTeam(c, kid!.id);
+    expect(engine.favoritismNote(family, candidate, [kid!.id, mate!.id])).toBe(note);
+    expect(engine.favoritismNote(family, candidate, [kid!.id])).toBe(note);
+    // A dupla escolhida com dois filhos: ninguém é favorecido em relação ao outro (como nas etapas).
+    const twoKids = withChildInTeam(family, mate!.id, 'kid-two');
+    expect(engine.favoritismNote(twoKids, candidate, [kid!.id, mate!.id])).toBeNull();
+    expect(engine.favoritismNote(twoKids, { ...candidate, driverId: mate!.id }, [kid!.id, mate!.id])).toBeNull();
+    // Um dos filhos fora da dupla escolhida: o outro filho, escolhido com alguém de fora, leva o aviso.
+    const other = c.drivers.find((d) => d.teamId !== c.management!.teamId && d.teamId !== null)!;
+    expect(engine.favoritismNote(twoKids, candidate, [kid!.id, other.id])).toBe(note);
+  });
+
+  it('na gestão, o aviso vai para o filho titular com companheiro de fora da família; com dois filhos, para ninguém', () => {
+    const c = executive();
+    const [kid, mate] = lineupOf(c);
+    expect(engine.favoritismNotes(c)).toEqual([]);
+    const family = withChildInTeam(c, kid!.id);
+    const notes = engine.favoritismNotes(family);
+    expect(notes.map((n) => n.driverId)).toEqual([kid!.id]);
+    expect(notes[0]!.note).toBe(engine.favoritismNote(family, { origin: 'child', name: engine.fullName(kid!), driverId: kid!.id }));
+    // Os dois titulares são filhos: não há perda nas etapas nem no fechamento, e a tela não avisa.
+    expect(engine.favoritismNotes(withChildInTeam(family, mate!.id, 'kid-two'))).toEqual([]);
+    // Um filho na reserva não corre e não leva aviso.
+    const reserve = { ...family, drivers: family.drivers.map((d) => (d.id === kid!.id ? { ...d, role: 'reserve' as const } : d)) };
+    expect(engine.favoritismNotes(reserve)).toEqual([]);
+    // Sem equipe, nada.
+    expect(engine.favoritismNotes(played())).toEqual([]);
   });
 });
 
