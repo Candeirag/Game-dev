@@ -19,6 +19,8 @@ export function LifeScreen() {
   const teamValue = ownedTeamValue(career);
   const perRound = (value: number) => `${formatMoney(value, { sign: true })} por etapa`;
   const assets = life.property.count + life.business.count;
+  // Os apoios sem meta (porte 0): o da família (pais e empresa de parente, somados) e os outros, como a marca do legado do ano de transição.
+  const support = [...(life.sponsors.familySupport > 0 ? [{ name: 'família', perSeason: life.sponsors.familySupport }] : []), ...life.sponsors.otherSupport];
 
   return (
     <div>
@@ -47,13 +49,11 @@ export function LifeScreen() {
                 value={life.sponsors.count > 0 ? formatMoney(life.sponsors.perSeason) : '–'}
                 tag={life.sponsors.lowestSatisfaction !== null && life.sponsors.lowestSatisfaction < 40 ? <Tag tone="attention">Insatisfeito</Tag> : undefined}
                 summary={
-                  life.sponsors.count > 0 ? (
+                  life.sponsors.count > 0 || support.length > 0 ? (
                     <>
-                      {counted(life.sponsors.count, 'patrocinador', 'patrocinadores')} · por temporada
-                      {life.sponsors.familySupport > 0 && <> · família: {formatMoney(life.sponsors.familySupport)}</>}
+                      {life.sponsors.count > 0 ? <>{counted(life.sponsors.count, 'patrocinador', 'patrocinadores')} · por temporada</> : 'Nenhum patrocinador'}
+                      {support.length > 0 && <> · apoio por ano: {support.map((item) => `${item.name} ${formatMoney(item.perSeason)}`).join(', ')}</>}
                     </>
-                  ) : life.sponsors.familySupport > 0 ? (
-                    <>Nenhum patrocinador · apoio da família de {formatMoney(life.sponsors.familySupport)} por ano</>
                   ) : (
                     'Nenhum patrocinador. As propostas chegam como decisões no Painel.'
                   )

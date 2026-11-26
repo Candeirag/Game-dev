@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LEDGER_KEYS } from '@/domain/schemas';
 import { LEDGER_LABELS } from '@/domain/labels';
-import { ECONOMY, SPONSOR_RULES, commercialSponsors, expectedRoundResult, maxSponsors, netWorth, ownedTeamValue, stocksValue } from '@/engine';
-import { Card, cx, Delta, Meter, PageHeader, Pill, Stat, TableWrap, Tabs } from '@/ui/kit';
+import { ECONOMY, SPONSOR_RULES, commercialSponsors, expectedRoundResult, isFamilySupport, maxSponsors, netWorth, ownedTeamValue, stocksValue } from '@/engine';
+import { Award, Users } from 'lucide-react';
+import { Card, Chip, cx, Delta, Meter, PageHeader, Pill, Stat, TableWrap, Tabs } from '@/ui/kit';
 import { TrendLine, cashSeries } from '../components/TrendLine';
 import { formatMoney, formatMoneyFull } from '../format';
 import { useCareerView } from '../hooks/useCareer';
@@ -266,7 +267,8 @@ const TIER_NAMES = ['', 'Pequeno', 'Médio', 'Grande'];
 function SponsorsTab() {
   const { career } = useCareerView();
   const sponsors = commercialSponsors(career.sponsors);
-  const family = career.sponsors.find((s) => s.tier === 0);
+  // Apoios sem meta (porte 0): o da família, o da empresa de um parente e a marca do legado do ano de transição.
+  const support = career.sponsors.filter((s) => s.tier === 0);
   return (
     <Card
       title="Patrocinadores"
@@ -303,11 +305,26 @@ function SponsorsTab() {
           ))}
         </div>
       )}
-      {family && (
-        <p className="text-sm text-ink-300">
-          Apoio da família: <b className="text-ink-100">{formatMoney(family.perSeason)}</b> por ano, até o fim de{' '}
-          {career.year + (family.endSeason - career.season)}.
-        </p>
+      {support.length > 0 && (
+        <ul className="space-y-2">
+          {support.map((s) => (
+            <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-300">
+              {isFamilySupport(s) ? (
+                <Chip tone="good" size="sm" icon={<Users size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />}>
+                  Família
+                </Chip>
+              ) : (
+                <Chip size="sm" icon={<Award size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />}>
+                  Legado
+                </Chip>
+              )}
+              <span className="min-w-0">
+                {s.name}: <b className="text-ink-100">{formatMoney(s.perSeason)}</b> por ano, sem meta, até o fim de{' '}
+                {career.year + (s.endSeason - career.season)}.
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
       <p className="text-xs leading-snug text-ink-400">
         {sponsors.length === 0 ? 'Nenhum patrocinador. ' : `O contrato é renovado se a satisfação estiver em ${SPONSOR_RULES.RENEW_THRESHOLD} ou mais. `}
