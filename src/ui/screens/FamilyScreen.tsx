@@ -3,7 +3,7 @@
  * personalidade, os talentos e defeitos de nascença (ocultos até o teste no kart e as temporadas
  * de carreira própria revelarem) e o teste no kart. A tela só lê o motor e chama a store.
  */
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Timer } from 'lucide-react';
 import { type BirthTrait, type Child, SUPPORT_LEVELS, type SupportLevel } from '@/domain/schemas';
@@ -272,10 +272,22 @@ function ChildCard({ child }: { child: Child }) {
   );
 }
 
-/** Filhos: a lista à esquerda escolhe quem aparece em detalhe à direita. */
+/**
+ * Filhos: a lista à esquerda escolhe quem aparece em detalhe à direita. O filho aberto fica no
+ * endereço (?filho=...), como a aba: girar o aparelho troca o desenho da moldura, mas não a escolha.
+ */
 function ChildrenTab({ items, cost }: { items: Child[]; cost: number }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = items.find((c) => c.id === selectedId) ?? items[0];
+  const [params, setParams] = useSearchParams();
+  const selected = items.find((c) => c.id === params.get('filho')) ?? items[0];
+  const setSelectedId = (id: string) =>
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set('filho', id);
+        return next;
+      },
+      { replace: true },
+    );
   if (!selected) return <EmptyState title="Sem filhos">Com um relacionamento firme, a decisão de ter filhos aparece no começo de uma temporada.</EmptyState>;
   return (
     <div className="grid items-start gap-4 md:grid-cols-[15rem_minmax(0,1fr)]">
