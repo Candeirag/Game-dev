@@ -3025,11 +3025,11 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'O vídeo lado a lado',
-        body: 'Nas redes, alguém montou um vídeo lado a lado: {antecessor} vencendo em {pista}, anos atrás, e você terminando fora dos pontos no mesmo lugar. O vídeo corre o paddock.',
+        body: 'Nas redes, alguém montou um vídeo lado a lado: {antecessor} no auge, anos atrás, e você terminando fora dos pontos em {pista}. O vídeo corre o paddock.',
         choices: {
           'aceitar-a-comparacao': {
             label: 'Assistir ao vídeo e guardar a lição',
-            outcomes: ['Dói, mas você descobre onde {antecessor} ganhava tempo naquela curva.'],
+            outcomes: ['Dói, mas você repara em como {antecessor} contornava as curvas, e leva a lição para o simulador.'],
           },
           'pedir-espaco': {
             label: 'Responder ao vídeo com uma mensagem firme',
@@ -3151,7 +3151,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'O sobrenome na manchete',
-        body: 'O pódio em {pista} rende a manchete do dia, mas a foto maior é de {antecessor}, de arquivo. O título fala na volta do sobrenome {sobrenome} ao alto do pódio.',
+        body: 'O pódio em {pista} rende a manchete do dia, mas a foto maior é de {antecessor}, de arquivo. O título fala no sobrenome {sobrenome} de volta aos holofotes.',
         choices: {
           'dividir-o-merito': {
             label: 'Agradecer a {antecessor} em todas as entrevistas',
@@ -3222,7 +3222,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     variants: [
       {
         title: 'A entrevista que não era sobre você',
-        body: 'Um programa de esporte convida você para uma entrevista longa. Na hora, metade das perguntas é sobre {antecessor}: as vitórias, as brigas, os bastidores.',
+        body: 'Um programa de esporte convida você para uma entrevista longa. Na hora, metade das perguntas é sobre {antecessor}: as histórias, as brigas, os bastidores.',
         choices: {
           'contar-historias': {
             label: 'Contar as histórias de família com gosto',
@@ -3300,7 +3300,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
       },
       {
         title: 'Alguém que viu tudo',
-        body: 'Um senhor de boné antigo para você no paddock: viu todas as corridas de {antecessor} e diz que você guia do mesmo jeito. Ele tem uma pergunta e muito tempo.',
+        body: 'Um senhor de boné antigo para você no paddock: acompanhou {antecessor} a vida inteira e diz que você tem o mesmo jeito. Ele tem uma pergunta e muito tempo.',
         choices: {
           'atender-todo-mundo': {
             label: 'Ouvir a história inteira',
@@ -3315,7 +3315,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     ],
   },
   {
-    id: 'perto-do-recorde-da-familia',
+    id: 'volta-que-lembra-o-antecessor',
     category: 'career',
     frequency: 'normal',
     when: [
@@ -3339,22 +3339,22 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
     ],
     variants: [
       {
-        title: 'Perto do recorde da família',
-        body: 'A sua volta mais rápida em {pista} fica a um piscar de olhos da marca que {antecessor} deixou ali. A equipe imprime as duas voltas lado a lado.',
+        title: 'Melhor que {antecessor}?',
+        body: 'A sua volta mais rápida em {pista} vira manchete: um jornal garante que nem {antecessor}, no auge, fazia uma volta assim na sua idade. A equipe imprime a reportagem.',
         choices: {
           'mirar-o-recorde': {
-            label: 'Pendurar a folha na parede do box',
-            outcomes: ['A folha vira motivação diária. Cada treino passa a ser uma conversa com o passado.'],
+            label: 'Pendurar a reportagem na parede do box',
+            outcomes: ['A reportagem vira motivação diária. Cada treino passa a ser uma conversa com o passado.'],
           },
           'olhar-para-a-frente': {
-            label: 'Guardar a folha e pensar na próxima etapa',
+            label: 'Guardar a reportagem e pensar na próxima etapa',
             outcomes: ['Sem olhar para trás, a preparação para a próxima etapa sai mais limpa.'],
           },
         },
       },
       {
-        title: 'Duas voltas, um sobrenome',
-        body: 'Os engenheiros sobrepõem a telemetria da sua volta mais rápida em {pista} à de {antecessor}, de anos atrás. Em algumas curvas, a sua linha já ganha tempo.',
+        title: 'Uma volta, um sobrenome',
+        body: 'Os engenheiros brincam que a sua volta mais rápida em {pista} deixaria {antecessor} com inveja, e abrem a telemetria para mostrar onde ainda sobra tempo.',
         choices: {
           'mirar-o-recorde': {
             label: 'Estudar curva por curva onde ainda dá para ganhar',
@@ -3362,7 +3362,7 @@ export const CAREER_EVENTS: readonly StoryEventSpec[] = [
           },
           'olhar-para-a-frente': {
             label: 'Agradecer e voltar ao acerto da próxima corrida',
-            outcomes: ['A comparação fica no computador dos engenheiros, e a cabeça fica na próxima corrida.'],
+            outcomes: ['A telemetria fica no computador dos engenheiros, e a cabeça fica na próxima corrida.'],
           },
         },
       },
