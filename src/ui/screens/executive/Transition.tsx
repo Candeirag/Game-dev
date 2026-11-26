@@ -124,7 +124,8 @@ export function TransitionPanel({ career, transition }: { career: CareerState; t
   const Icon = TRANSITION_ROLE_ICONS[transition.role];
   const protegePosition = transition.protegeId ? (driverStandings(career).find((s) => s.driverId === transition.protegeId)?.position ?? null) : null;
   const child = transitionProtegeIsChild(career, transition);
-  const where = protegePosition !== null ? `${protegePosition}º no campeonato` : child ? 'Na carreira própria' : null;
+  const where = protegePosition !== null ? `${protegePosition}º no campeonato` : child ? 'na carreira própria' : null;
+  const protegeHint = child ? `Da família${where ? ` · ${where}` : ''}` : (where ?? undefined);
   return (
     <Card
       title="Ano de transição"
@@ -138,11 +139,7 @@ export function TransitionPanel({ career, transition }: { career: CareerState; t
         <Stat label="Cachê recebido" value={<span className="tabular">{formatMoney(transition.earnings)}</span>} hint="Nesta temporada" accent />
         <Stat label="Por etapa" value={<span className="tabular">{formatMoney(transitionFee(career, transition.role))}</span>} hint="Pela reputação de agora" />
         {transition.protegeName ? (
-          <Stat
-            label="Na mentoria"
-            value={<span className="block truncate text-lg leading-tight">{transition.protegeName}</span>}
-            hint={[child ? 'Da família' : null, where].filter(Boolean).join(' · ') || undefined}
-          />
+          <Stat label="Na mentoria" value={<span className="block truncate text-lg leading-tight">{transition.protegeName}</span>} hint={protegeHint} />
         ) : transition.brand ? (
           <Stat label="Marca" value={<span className="block truncate text-lg leading-tight">{transition.brand}</span>} />
         ) : null}
