@@ -295,6 +295,23 @@ describe('o ano de transição no meio da temporada', () => {
     expectValid(next);
   });
 
+  it('o motivo de o ano de transição ficar para o fechamento: pouco calendário ou etapa já sem o personagem', () => {
+    const open = retiredMidSeason();
+    expect(engine.transitionDeferral(open)).toBeNull();
+    expect(engine.transitionDeferral(playExecutiveRound(open))).toBe('missedRound');
+    // Um fim de semana começado sem papel também é o campeonato seguindo sem o personagem.
+    expect(engine.transitionDeferral(engine.startWeekend(open))).toBe('missedRound');
+    let c = newCareer(45);
+    const needed = Math.ceil(c.calendar.length * TRANSITION.MIDSEASON_MIN_SHARE);
+    while (c.calendar.length - c.nextRoundIndex >= needed) c = resolvePending(playRound(c));
+    expect(engine.transitionDeferral(engine.retireFromDriving({ ...c, reputation: 40 }))).toBe('late');
+    // Fora da temporada em que parou, no fechamento, com o papel escolhido ou ainda nas pistas: nada a adiar.
+    expect(engine.transitionDeferral(retiredAt())).toBeNull();
+    expect(engine.transitionDeferral(engine.beginTransition(open, 'commentator'))).toBeNull();
+    expect(engine.transitionDeferral(playRound(newCareer(45)))).toBeNull();
+    expect(engine.transitionDeferral(playExecutiveSeason(engine.startExecutiveSeason(retiredAt(), { kind: 'spectate' })))).toBeNull();
+  });
+
   it('fora da janela, ou num papel indisponível, não começa', () => {
     let driving = newCareer(45);
     driving = playRound(driving);
@@ -425,6 +442,10 @@ describe('a mentoria acelera o pupilo', () => {
     expect(engine.mentorChildFactor(c, kid)).toBe(TRANSITION.MENTOR_CHILD_DEVELOPMENT);
     expect(engine.mentorChildFactor({ ...c, transition: null }, kid)).toBe(1);
     expect(engine.mentorChildFactor(c, { id: 'outro', driver: null })).toBe(1);
+    // A tela pergunta ao motor se o pupilo é da família (não pelo multiplicador, que pode valer 1).
+    expect(engine.transitionProtegeIsChild(c, c.transition!)).toBe(true);
+    expect(engine.transitionProtegeIsChild(transitionYear('mentor'), transitionYear('mentor').transition!)).toBe(false);
+    expect(engine.transitionProtegeIsChild(c, { ...c.transition!, role: 'commentator', protegeId: null })).toBe(false);
     const helped = engine.closeChildSeason(kid, c, null).child.driver!;
     const alone = engine.closeChildSeason(kid, { ...c, transition: null }, null).child.driver!;
     const sum = (d: typeof helped) => Object.values(d.attributes).reduce((a, b) => a + b, 0);

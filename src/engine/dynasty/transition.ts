@@ -72,14 +72,35 @@ const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v))
  * quem para perto do fim da temporada faz o ano de transição na seguinte, inteiro, pelo fechamento.
  */
 export function transitionWindow(career: CareerState): 'closing' | 'midseason' | null {
-  if (career.mode !== 'executive' || career.transition !== null || career.retiredSeason !== career.season) return null;
-  if (career.succession || career.management) return null;
-  if (career.executiveOffseason) return 'closing';
-  if (career.weekend || career.nextRoundIndex >= career.calendar.length) return null;
+  return windowState(career).window;
+}
+
+/**
+ * Por que o ano de transição ficou para o fechamento (para a tela explicar): o personagem parou de
+ * correr nesta temporada e ainda não escolheu o papel, mas a janela do meio do ano não abre.
+ * 'late': sobrou menos de MIDSEASON_MIN_SHARE do calendário; 'missedRound': o campeonato já seguiu
+ * sem o personagem no carro (a etapa mais recente não tem o resultado dele, como a de quem parou
+ * lesionado, ou uma etapa começou depois de ele parar). null quando a janela está aberta ou quando
+ * não há ano de transição a adiar.
+ */
+export function transitionDeferral(career: CareerState): 'late' | 'missedRound' | null {
+  return windowState(career).deferral;
+}
+
+/** A janela do ano de transição e, quando ela não abre no meio do ano, o porquê. */
+function windowState(career: CareerState): { window: 'closing' | 'midseason' | null; deferral: 'late' | 'missedRound' | null } {
+  const shut = { window: null, deferral: null };
+  if (career.mode !== 'executive' || career.transition !== null || career.retiredSeason !== career.season) return shut;
+  if (career.succession || career.management) return shut;
+  if (career.executiveOffseason) return { window: 'closing', deferral: null };
+  if (career.weekend) return { window: null, deferral: 'missedRound' };
+  if (career.nextRoundIndex >= career.calendar.length) return { window: null, deferral: 'late' };
   const last = career.rounds[career.rounds.length - 1];
-  if (last && !last.race.entries.some((e) => e.driverId === career.playerDriverId)) return null;
+  if (last && !last.race.entries.some((e) => e.driverId === career.playerDriverId)) return { window: null, deferral: 'missedRound' };
   const left = career.calendar.length - career.nextRoundIndex;
-  return left >= Math.ceil(career.calendar.length * TRANSITION.MIDSEASON_MIN_SHARE) ? 'midseason' : null;
+  return left >= Math.ceil(career.calendar.length * TRANSITION.MIDSEASON_MIN_SHARE)
+    ? { window: 'midseason', deferral: null }
+    : { window: null, deferral: 'late' };
 }
 
 /** O ano de transição em andamento nesta temporada (null: nenhum, ou já terminou). */
@@ -413,6 +434,11 @@ export function addTransitionEvent(career: CareerState, record: RoundRecord): Ca
 /** O filho que a mentoria acompanha (pelo id de piloto que ele tem ou teve). */
 function protegeChild(children: readonly Child[], protegeId: string): Child | undefined {
   return children.find((c) => c.driver?.id === protegeId || `dyn-${c.id}` === protegeId);
+}
+
+/** A mentoria do registro acompanha um dos filhos (para a tela marcar "da família"). */
+export function transitionProtegeIsChild(career: Pick<CareerState, 'family'>, t: Transition): boolean {
+  return t.role === 'mentor' && t.protegeId !== null && protegeChild(career.family.children, t.protegeId) !== undefined;
 }
 
 /**

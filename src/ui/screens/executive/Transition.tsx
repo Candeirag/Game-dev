@@ -10,7 +10,7 @@ import { GraduationCap, Megaphone, Mic, TriangleAlert, type LucideIcon } from 'l
 import type { CareerState, Transition, TransitionRole } from '@/domain/schemas';
 import { TRANSITION } from '@/config/balance';
 import { TRANSITION_ROLE_INFO } from '@/data/transition';
-import { driverStandings, mentorChildFactor, transitionFee, transitionWindow, type TransitionOffer } from '@/engine';
+import { driverStandings, transitionDeferral, transitionFee, transitionProtegeIsChild, type TransitionOffer } from '@/engine';
 import { Card, Chip, ChoiceCard, Stat } from '@/ui/kit';
 import { formatMoney } from '../../format';
 
@@ -22,25 +22,18 @@ export const TRANSITION_ROLE_ICONS: Readonly<Record<TransitionRole, LucideIcon>>
 };
 
 /**
- * O personagem parou de correr nesta temporada e ainda não fez o ano de transição, mas a janela do
- * meio do ano não está aberta (sobrou pouco calendário, ou uma etapa já passou sem papel): o ano de
- * transição fica para o fechamento. Só para a tela explicar; quem decide é `transitionWindow`.
+ * Por que o ano de transição ficou para o fechamento, em texto (null quando não ficou: a janela do
+ * meio do ano está aberta, ou não há ano de transição a adiar). O motivo é do motor
+ * (`transitionDeferral`); a tela só escolhe a frase.
  */
-export function transitionWaitsForClosing(career: CareerState): boolean {
-  return (
-    career.mode === 'executive' &&
-    career.retiredSeason === career.season &&
-    career.transition === null &&
-    !career.management &&
-    !career.executiveOffseason &&
-    !career.succession &&
-    transitionWindow(career) === null
-  );
-}
-
-/** Texto que explica por que o ano de transição ficou para o fechamento. */
-export function transitionLaterText(): string {
-  return `O ano de transição só começa no meio do ano logo depois de parar, com pelo menos ${Math.round(TRANSITION.MIDSEASON_MIN_SHARE * 100)}% do calendário pela frente. Agora ele fica para o fechamento: no fim desta temporada, a tela Carreira traz os três papéis, que valem pela temporada seguinte inteira.`;
+export function transitionLaterText(career: CareerState): string | null {
+  const reason = transitionDeferral(career);
+  if (!reason) return null;
+  const why =
+    reason === 'late'
+      ? `O ano de transição só começa no meio do ano com pelo menos ${Math.round(TRANSITION.MIDSEASON_MIN_SHARE * 100)}% do calendário pela frente, e sobrou menos que isso.`
+      : 'O ano de transição só começa no meio do ano logo depois da sua última corrida, e o campeonato já seguiu sem você no carro.';
+  return `${why} Ele fica para o fechamento: no fim desta temporada, a tela Carreira traz os três papéis, que valem pela temporada seguinte inteira.`;
 }
 
 /** As três propostas como escolha. Indisponível não se escolhe: o cartão mostra o motivo. */
@@ -95,7 +88,7 @@ function OfferFacts({ offer }: { offer: TransitionOffer }) {
       {offer.protegeName && (
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span>
-            Pupilo: <b className="text-ink-100">{offer.protegeName}</b>
+            Na mentoria: <b className="text-ink-100">{offer.protegeName}</b>
           </span>
           {offer.protegeIsChild && (
             <Chip tone="good" size="sm">
@@ -130,8 +123,8 @@ export function TransitionPanel({ career, transition }: { career: CareerState; t
   const info = TRANSITION_ROLE_INFO[transition.role];
   const Icon = TRANSITION_ROLE_ICONS[transition.role];
   const protegePosition = transition.protegeId ? (driverStandings(career).find((s) => s.driverId === transition.protegeId)?.position ?? null) : null;
-  // A mentoria acompanha um dos filhos quando o motor dá a ele o fator de evolução da mentoria.
-  const child = career.family.children.some((c) => mentorChildFactor(career, c) !== 1);
+  const child = transitionProtegeIsChild(career, transition);
+  const where = protegePosition !== null ? `${protegePosition}º no campeonato` : child ? 'Na carreira própria' : null;
   return (
     <Card
       title="Ano de transição"
@@ -146,9 +139,9 @@ export function TransitionPanel({ career, transition }: { career: CareerState; t
         <Stat label="Por etapa" value={<span className="tabular">{formatMoney(transitionFee(career, transition.role))}</span>} hint="Pela reputação de agora" />
         {transition.protegeName ? (
           <Stat
-            label={child ? 'Pupilo (da família)' : 'Pupilo'}
+            label="Na mentoria"
             value={<span className="block truncate text-lg leading-tight">{transition.protegeName}</span>}
-            hint={protegePosition !== null ? `${protegePosition}º no campeonato` : child ? 'Na carreira própria' : undefined}
+            hint={[child ? 'Da família' : null, where].filter(Boolean).join(' · ') || undefined}
           />
         ) : transition.brand ? (
           <Stat label="Marca" value={<span className="block truncate text-lg leading-tight">{transition.brand}</span>} />

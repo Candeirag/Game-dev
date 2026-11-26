@@ -72,7 +72,7 @@ import { ScreenAction } from '../layout/ScreenAction';
 import { RaceBroadcast } from '../race/RaceBroadcast';
 import { TutorialCard } from './HelpScreen';
 import { ExportReminder } from '../components/SaveNotices';
-import { TransitionOfferChoices, TransitionPanel, transitionLaterText, transitionWaitsForClosing } from './executive/Transition';
+import { TransitionOfferChoices, TransitionPanel, transitionLaterText } from './executive/Transition';
 
 /** Campo de formulário: reto, com 44 px de altura para o toque. */
 const field = 'min-h-11 border border-ink-500 bg-ink-850 px-2 text-sm text-ink-100 focus:border-apex-500 focus:outline-none';
@@ -100,6 +100,7 @@ export function ExecutiveDashboardScreen() {
   const pending = career.pendingEvents.length > 0;
   const transition = activeTransition(career);
   const offerWindow = transitionWindow(career);
+  const later = transitionLaterText(career);
 
   return (
     <div className="space-y-4">
@@ -233,7 +234,7 @@ export function ExecutiveDashboardScreen() {
                 Você não comanda nenhuma equipe nesta temporada. O campeonato segue, o seu patrimônio rende e a família continua. No fim do ano, a tela Carreira
                 traz propostas de cargo e equipes à venda.
               </p>
-              {transitionWaitsForClosing(career) && <p className="mt-2 text-xs text-ink-400">{transitionLaterText()}</p>}
+              {later && <p className="mt-2 text-xs text-ink-400">{later}</p>}
             </Card>
           )}
 
@@ -531,6 +532,7 @@ export function ExecutiveCareerScreen() {
   const chosen = offers.find((o) => o.role === role && o.available) ?? null;
   const canTransition = offers.some((o) => o.available);
   const transition = activeTransition(career);
+  const later = transitionLaterText(career);
 
   if (!off) {
     return (
@@ -561,9 +563,9 @@ export function ExecutiveCareerScreen() {
             </div>
           </Card>
         )}
-        {transitionWaitsForClosing(career) && (
+        {later && (
           <Card title="Ano de transição">
-            <p className="text-sm text-ink-300">{transitionLaterText()}</p>
+            <p className="text-sm text-ink-300">{later}</p>
           </Card>
         )}
         <Card bodyClassName="grid grid-cols-3 gap-4 !p-4">
