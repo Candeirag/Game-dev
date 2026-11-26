@@ -155,6 +155,27 @@ export function generateChild(career: CareerState, seed: number): Child {
   };
 }
 
+/**
+ * Há espaço para mais um filho agora: com parceiro, dentro das idades-limite do casal
+ * (FAMILY.CHILD_MAX_PARENT_AGE e PARTNER_MAX_CHILD_AGE), abaixo de FAMILY.MAX_CHILDREN, sem filho
+ * nascido nesta temporada (todos com pelo menos um ano) e sem outro nascimento já à espera de
+ * resposta na fila de eventos. Vale para o evento de família do começo do ano e para os cartões de
+ * vida pessoal (Fase 6), que nunca disputam o mesmo bebê.
+ */
+export function roomForChild(career: CareerState): boolean {
+  const { partner, children } = career.family;
+  if (!partner) return false;
+  const youngest = children.reduce((min, c) => Math.min(min, c.age), 99);
+  const babyWaiting = career.pendingEvents.some((e) => e.choices.some((c) => c.outcomes.some((o) => o.effects.some((x) => x.type === 'child'))));
+  return (
+    getPlayer(career).age <= FAMILY.CHILD_MAX_PARENT_AGE &&
+    partner.age <= FAMILY.PARTNER_MAX_CHILD_AGE &&
+    children.length < FAMILY.MAX_CHILDREN &&
+    youngest >= 1 &&
+    !babyWaiting
+  );
+}
+
 const traitProduct = (child: Child, key: 'development') => child.traits.reduce((p, t) => p * getTrait(t)[key], 1);
 const traitSum = (child: Child, key: 'interest' | 'bond' | 'volatility' | 'sponsorAppeal') => child.traits.reduce((s, t) => s + getTrait(t)[key], 0);
 

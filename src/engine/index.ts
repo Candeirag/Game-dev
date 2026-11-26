@@ -15,7 +15,7 @@ export * from './career/paths';
 export * from './economy/assets';
 export * from './economy/summary';
 export * from './dynasty/family';
-export { familySeasonEvents, beginSeasonFamily } from './dynasty/familyEvents';
+export { familySeasonEvents, beginSeasonFamily, badInvestmentStake } from './dynasty/familyEvents';
 export * from './dynasty/succession';
 export * from './dynasty/heritage';
 export * from './dynasty/relatives';

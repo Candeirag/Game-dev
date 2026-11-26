@@ -2,7 +2,8 @@
  * Textos dos eventos de família (começo de temporada), em variantes (Fase 5).
  *
  * Cada tipo de evento (conhecer alguém, casamento, crise, filho, kart do filho, carreira do filho e,
- * desde a Fase 6, o teste no kart do filho) tem várias variantes de texto inteiro. A cada vez que o evento aparece para o mesmo personagem,
+ * desde a Fase 6, o teste no kart do filho e o negócio de um conhecido) tem várias variantes de
+ * texto inteiro. A cada vez que o evento aparece para o mesmo personagem,
  * sai a variante seguinte (a memória das histórias guarda quais já saíram): nenhum texto se repete
  * na carreira. Quando as variantes acabam, o evento deixa de aparecer para aquele personagem.
  *
@@ -132,6 +133,20 @@ export interface KartTestText {
   skip: FamilyChoiceText & { text: string };
 }
 
+/** O negócio de um conhecido para quem herdou dinheiro (Fase 6, da segunda geração em diante). */
+export interface BadInvestmentParams {
+  /** Quanto o negócio pede, quanto se perde se der errado e quanto se ganha se der certo, já formatados. */
+  stake: string;
+  loss: string;
+  gain: string;
+}
+export interface BadInvestmentText {
+  title: string;
+  body: string;
+  invest: FamilyChoiceText & { lost: string; won: string };
+  refuse: FamilyChoiceText & { text: string };
+}
+
 export const FAMILY_EVENT_TEXTS: {
   readonly partner: readonly ((p: PartnerParams) => PartnerText)[];
   readonly wedding: readonly ((p: WeddingParams) => WeddingText)[];
@@ -140,6 +155,7 @@ export const FAMILY_EVENT_TEXTS: {
   readonly kart: readonly ((p: KartParams) => KartText)[];
   readonly career: readonly ((p: CareerParams) => ChildCareerText)[];
   readonly kartTest: readonly ((p: KartTestParams) => KartTestText)[];
+  readonly badInvestment: readonly ((p: BadInvestmentParams) => BadInvestmentText)[];
 } = {
   partner: [
     (p) => ({
@@ -701,6 +717,128 @@ export const FAMILY_EVENT_TEXTS: {
         label: 'Pular o fim de semana dos instrutores',
         description: `Nada a pagar. ${p.child} vai ver os colegas irem, e o vínculo sente.`,
         text: `${p.child} viu os colegas irem ao teste e ficou em casa.`,
+      },
+    }),
+  ],
+  badInvestment: [
+    (p) => ({
+      title: 'Um restaurante na praia',
+      body: `Um velho conhecido da família quer abrir um restaurante numa praia da moda e procura sócios. Pede ${p.stake}, garante que o ponto é ouro e mostra uma planilha bonita.`,
+      invest: {
+        label: 'Entrar como sócio',
+        description: `Se der errado, vão embora ${p.loss}; se der certo, voltam ${p.gain} a mais.`,
+        lost: 'A planilha esqueceu o aluguel da temporada baixa. O restaurante fecha antes do segundo verão, e o dinheiro some junto.',
+        won: 'O restaurante lota desde a inauguração, e a parte da família volta com lucro no fim do ano.',
+      },
+      refuse: {
+        label: 'Desejar sorte e ficar de fora',
+        description: 'O dinheiro fica onde está.',
+        text: 'O conhecido torce o nariz, mas o dinheiro da família segue intacto.',
+      },
+    }),
+    (p) => ({
+      title: 'A empresa de aplicativo',
+      body: `O filho de um ex-patrocinador da família monta uma empresa de aplicativo de entregas e diz que só falta o dinheiro para crescer: ${p.stake}. O nome da família na lista de sócios, garante, abre todas as portas.`,
+      invest: {
+        label: 'Apostar na empresa',
+        description: `Dando errado, perde ${p.loss}; dando certo, ganha ${p.gain}.`,
+        lost: 'O aplicativo nunca passa da versão de teste. A empresa encerra as atividades, e o investimento vira uma linha no imposto.',
+        won: 'Um grupo maior compra a empresa no fim do ano, e a parte da família sai com lucro.',
+      },
+      refuse: {
+        label: 'Recusar com educação',
+        description: 'Sem risco e sem lucro.',
+        text: 'A mensagem de agradecimento sai curta, e a conversa morre ali.',
+      },
+    }),
+    (p) => ({
+      title: 'Uma revenda de carros',
+      body: `Um ex-mecânico da família quer abrir uma revenda de carros esportivos usados e precisa de ${p.stake} para o estoque inicial. Jura que conhece cada parafuso do que vai vender.`,
+      invest: {
+        label: 'Financiar o estoque',
+        description: `Se a revenda quebrar, perde ${p.loss}; se der certo, ganha ${p.gain}.`,
+        lost: 'Metade do estoque fica parada no pátio, e a outra metade sai com desconto. A revenda fecha, e o prejuízo fica com a família.',
+        won: 'Os carros saem rápido, e o ex-mecânico devolve a parte da família com lucro e um aperto de mão.',
+      },
+      refuse: {
+        label: 'Dizer que não mexe com isso',
+        description: 'O dinheiro não sai do lugar.',
+        text: 'O ex-mecânico entende e segue procurando outro sócio.',
+      },
+    }),
+    (p) => ({
+      title: 'O hotel fazenda',
+      body: `Uma prima distante quer transformar a fazenda da família dela num hotel e oferece sociedade por ${p.stake}. As fotos do projeto parecem de revista.`,
+      invest: {
+        label: 'Topar a sociedade',
+        description: `Se o hotel não encher, perde ${p.loss}; se encher, ganha ${p.gain}.`,
+        lost: 'A obra atrasa, o orçamento dobra e os hóspedes não aparecem. A sociedade termina sem lucro e com muito menos dinheiro.',
+        won: 'O hotel enche nos feriados desde o primeiro ano, e a prima manda a parte da família com um bilhete de agradecimento.',
+      },
+      refuse: {
+        label: 'Ficar só com as fotos',
+        description: 'Sem gasto nenhum.',
+        text: 'A prima não volta a tocar no assunto, e o almoço de domingo segue tranquilo.',
+      },
+    }),
+    (p) => ({
+      title: 'Cavalos de corrida',
+      body: `Um criador de cavalos que frequentava o paddock nos tempos de glória da família quer sócios para um potro promissor. A parte custa ${p.stake}, e ele fala em prêmios de outro mundo.`,
+      invest: {
+        label: 'Comprar parte do potro',
+        description: `Se o potro não render, perde ${p.loss}; se render, ganha ${p.gain}.`,
+        lost: 'O potro é bonito, mas lento. Os custos do haras comem o investimento antes da primeira vitória.',
+        won: 'O potro vence duas provas grandes, e a parte da família volta com lucro.',
+      },
+      refuse: {
+        label: 'Ficar nas corridas de carro',
+        description: 'O dinheiro fica com a família.',
+        text: 'O criador ri e diz que a família está perdendo a chance da vida.',
+      },
+    }),
+    (p) => ({
+      title: 'A marca de roupas esportivas',
+      body: `Uma estilista conhecida da família quer lançar uma linha de roupas inspirada nas pistas e pede ${p.stake} para a primeira coleção. O sobrenome da família estampado na campanha faz parte do pacote.`,
+      invest: {
+        label: 'Bancar a primeira coleção',
+        description: `Se não vender, perde ${p.loss}; se vender, ganha ${p.gain}.`,
+        lost: 'A coleção encalha no estoque. A marca não chega à segunda estação, e o investimento vai junto.',
+        won: 'As peças esgotam em poucas semanas, e a parte da família volta com lucro.',
+      },
+      refuse: {
+        label: 'Preferir o nome longe da campanha',
+        description: 'Sem risco para o dinheiro nem para o nome.',
+        text: 'A estilista procura outro sobrenome para a campanha.',
+      },
+    }),
+    (p) => ({
+      title: 'Uma escola de pilotagem',
+      body: `Um ex-instrutor quer abrir uma escola de pilotagem com o sobrenome da família no letreiro e pede ${p.stake} para comprar os karts e alugar a pista.`,
+      invest: {
+        label: 'Emprestar o nome e o dinheiro',
+        description: `Se a escola não vingar, perde ${p.loss}; se vingar, ganha ${p.gain}.`,
+        lost: 'Os alunos não aparecem, a pista cobra o aluguel e os karts envelhecem parados. A escola fecha no fim do ano.',
+        won: 'A fila de matrícula dobra no segundo mês, e a parte da família volta com lucro.',
+      },
+      refuse: {
+        label: 'Não emprestar nem o nome',
+        description: 'Nada sai do caixa.',
+        text: 'O ex-instrutor guarda o projeto na gaveta e promete voltar com outro sócio.',
+      },
+    }),
+    (p) => ({
+      title: 'O fundo do amigo da família',
+      body: `Um amigo de longa data da família administra um fundo que, diz ele, nunca perdeu dinheiro. Para entrar, pede ${p.stake} e um pouco de confiança.`,
+      invest: {
+        label: 'Confiar no amigo',
+        description: `Se o fundo afundar, perde ${p.loss}; se render, ganha ${p.gain}.`,
+        lost: 'O fundo nunca tinha perdido dinheiro até aquele ano. O amigo pede desculpas, e o dinheiro não volta.',
+        won: 'O fundo rende acima do prometido, e o amigo devolve a parte da família com lucro.',
+      },
+      refuse: {
+        label: 'Manter o dinheiro onde está',
+        description: 'Sem surpresas.',
+        text: 'O amigo diz que entende, e a amizade segue como antes.',
       },
     }),
   ],

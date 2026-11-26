@@ -130,9 +130,16 @@ export const FAMILY = {
   MARRIAGE_RELATIONSHIP: 65,
   /** Custo do casamento, em custos de vida anuais da categoria. */
   WEDDING_COST: 0.8,
-  /** Filhos: chance anual de o assunto surgir, idade-limite do casal e máximo de filhos. */
+  /**
+   * Filhos: chance anual de o assunto surgir, idade-limite do personagem e do parceiro, relação
+   * mínima do casal para o assunto surgir no começo do ano e máximo de filhos. Os dois números do
+   * meio estavam soltos no evento de família; a Fase 6 (filhos que nascem por cartões de vida
+   * pessoal) os trouxe para cá, sem mudar os valores.
+   */
   CHILD_CHANCE: 0.4,
   CHILD_MAX_PARENT_AGE: 48,
+  PARTNER_MAX_CHILD_AGE: 45,
+  CHILD_RELATIONSHIP: 55,
   MAX_CHILDREN: 4,
   /** Abaixo disto, a relação entra em crise. */
   CRISIS_RELATIONSHIP: 35,

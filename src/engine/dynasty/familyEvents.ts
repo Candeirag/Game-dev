@@ -7,7 +7,8 @@
  * personagem, sai uma variante nova; acabadas as variantes, o evento não aparece mais. Conhecer alguém, casar, ter filhos, lidar
  * com uma crise e decidir a formação dos filhos mexem com moral, fase,
  * dinheiro, patrimônio e, mais tarde, com a sucessão. Desde a Fase 6, o teste no
- * kart da adolescência revela talentos e defeitos de nascença dos filhos.
+ * kart da adolescência revela talentos e defeitos de nascença dos filhos, e quem herdou dinheiro
+ * atrai negócios de conhecidos (maus investimentos, da segunda geração em diante).
  */
 import type { CareerState, Effect, EventChoice, PendingEvent } from '@/domain/schemas';
 import { LIFESTYLE_RULES } from '@/data/assets';
@@ -16,12 +17,13 @@ import { FAMILY, PARTNER_BACKGROUND_INFO, getTrait } from '@/data/family';
 import { getPlayer } from '../career/selectors';
 import { createRng, hashSeed } from '../rng';
 import { livingCostBase } from '../management/executive';
-import { generateChild, generatePartner } from './family';
+import { netWorth } from '../career/economy';
+import { generateChild, generatePartner, roomForChild } from './family';
 import { money } from '../career/selectors';
 import { counted } from '@/domain/text';
 import { FAMILY_EVENT_TEXTS } from '@/data/familyTexts';
 import { markSeen, storyOf } from '../story/memory';
-import { HERITAGE } from '@/config/balance';
+import { BAD_INVESTMENT, HERITAGE } from '@/config/balance';
 import { canTakeKartTest, ensureHeritage } from './heritage';
 
 const stat = (name: Extract<Effect, { type: 'stat' }>['stat'], value: number): Effect => ({ type: 'stat', stat: name, value });
@@ -138,23 +140,35 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
       ]);
   }
 
-  const youngest = children.reduce((min, c) => Math.min(min, c.age), 99);
   const childText = FAMILY_EVENT_TEXTS.child[nextVariant('child')];
-  if (
-    partner &&
-    childText &&
-    partner.relationship >= 55 &&
-    player.age <= FAMILY.CHILD_MAX_PARENT_AGE &&
-    partner.age <= 45 &&
-    children.length < FAMILY.MAX_CHILDREN &&
-    youngest >= 1 &&
-    childRoll < FAMILY.CHILD_CHANCE
-  ) {
+  if (partner && childText && partner.relationship >= FAMILY.CHILD_RELATIONSHIP && roomForChild(career) && childRoll < FAMILY.CHILD_CHANCE) {
     const baby = generateChild(career, hashSeed(career.seed, career.season, 'child'));
     const t = childText({ first: partner.firstName, firstChild: children.length === 0, baby: `${baby.firstName} ${baby.lastName}` });
     add('child', 'child', nextVariant('child'), t.title, t.body, [
       choice('yes', t.yes.label, t.yes.description, sure(t.yes.text, { type: 'child', child: baby }, { type: 'relationship', value: 6 }, stat('morale', 8))),
       choice('no', t.no.label, t.no.description, sure(t.no.text, { type: 'relationship', value: -5 })),
+    ]);
+  }
+
+  // Fase 6: maus investimentos. Da segunda geração em diante, quem herdou dinheiro atrai propostas
+  // de negócio (sorteio próprio, que não existe na primeira geração).
+  const investText = FAMILY_EVENT_TEXTS.badInvestment[nextVariant('badInvestment')];
+  const stake = investText ? badInvestmentStake(career) : 0;
+  if (investText && stake > 0) {
+    const loss = Math.round((stake * BAD_INVESTMENT.LOSS_SHARE) / 100) * 100;
+    const gain = Math.round((stake * BAD_INVESTMENT.GAIN_SHARE) / 100) * 100;
+    const t = investText({ stake: money(career, stake), loss: money(career, loss), gain: money(career, gain) });
+    const label = 'Negócio de um conhecido';
+    add('bad-investment', 'badInvestment', nextVariant('badInvestment'), t.title, t.body, [
+      choice('invest', t.invest.label, t.invest.description, [
+        {
+          probability: BAD_INVESTMENT.LOSS_CHANCE,
+          text: t.invest.lost,
+          effects: [{ type: 'cash', value: -loss, ledger: 'investment', label, capToCash: true }],
+        },
+        { probability: 1 - BAD_INVESTMENT.LOSS_CHANCE, text: t.invest.won, effects: [{ type: 'cash', value: gain, ledger: 'investment', label }] },
+      ]),
+      choice('refuse', t.refuse.label, t.refuse.description, sure(t.refuse.text)),
     ]);
   }
 
@@ -272,6 +286,20 @@ export function familySeasonEvents(career: CareerState): PendingEvent[] {
     }
   }
   return events;
+}
+
+/**
+ * Quanto o negócio de um conhecido pede neste começo de ano (0: não há proposta). Só da segunda
+ * geração em diante, com patrimônio líquido de pelo menos BAD_INVESTMENT.MIN_WEALTH custos de vida
+ * de referência e com a chance BAD_INVESTMENT.CHANCE (sorteio 'bad-investment', que não acontece na
+ * primeira geração). O negócio pede BAD_INVESTMENT.STAKE_SHARE do caixa e das aplicações.
+ */
+export function badInvestmentStake(career: CareerState): number {
+  if (career.dynasty.generation < 2) return 0;
+  if (netWorth(career.finance) < livingCostBase(career) * BAD_INVESTMENT.MIN_WEALTH) return 0;
+  if (createRng(hashSeed(career.seed, career.season, 'bad-investment')).next() >= BAD_INVESTMENT.CHANCE) return 0;
+  const liquid = Math.max(0, career.finance.cash) + career.finance.fixedIncome + career.finance.equityFund;
+  return Math.round((liquid * BAD_INVESTMENT.STAKE_SHARE) / 100) * 100;
 }
 
 /**
