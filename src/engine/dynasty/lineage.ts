@@ -10,13 +10,14 @@
 import type { BirthTrait, CareerState, CategoryId, ChildTrait, Elder, LineageEntry, Relative, RoundRecord, SeasonSummary, TraitId } from '@/domain/schemas';
 import { BIRTH_TRAITS } from '@/data/birth';
 import { getCategory } from '@/data/categories';
+import { initialTeams } from '@/data/teams';
 import { activeBirth } from '../birth/effects';
 import { computeDriverStandings } from '../championship/standings';
 import { archiveSeason } from '../career/offseason';
 import { fullName, getPlayer } from '../career/selectors';
 import { managedTeam } from '../management/team';
 import { heritageTraitsFor } from './heritage';
-import { relativeAge } from './relatives';
+import { familyYear, relativeAge } from './relatives';
 
 /** Títulos e vitórias de um personagem como piloto, a partir das temporadas arquivadas. */
 export function drivingRecord(seasons: readonly SeasonSummary[], driverId: string): { titles: number; wins: number } {
@@ -32,9 +33,19 @@ export function drivingRecord(seasons: readonly SeasonSummary[], driverId: strin
   return { titles, wins };
 }
 
+/** A equipe pela qual um piloto correu a última etapa que disputou nas etapas dadas (null: nenhuma). */
+export function lastRaceTeam(rounds: readonly RoundRecord[], driverId: string): string | null {
+  for (let i = rounds.length - 1; i >= 0; i--) {
+    const entry = rounds[i]?.race.entries.find((e) => e.driverId === driverId);
+    if (entry) return entry.teamId;
+  }
+  return null;
+}
+
 /** Uma temporada vista pelo placar: arquivada, fechada ou em curso (`closed: false`, sem título). */
 interface SeasonView {
   season: number;
+  categoryId: CategoryId;
   mode: 'driver' | 'executive';
   teamName: string | null;
   standings: readonly { driverId: string; position: number; wins: number }[];
@@ -45,6 +56,7 @@ interface SeasonView {
 function viewOf(summary: SeasonSummary): SeasonView {
   return {
     season: summary.season,
+    categoryId: summary.categoryId,
     mode: summary.mode,
     teamName: summary.playerTeamId ? summary.playerTeamName : null,
     standings: summary.driverStandings,
@@ -63,7 +75,21 @@ function seasonViews(career: CareerState): SeasonView[] {
   // Em curso (ou, num save antigo, fechada sem a vaga do jogador): a classificação até aqui.
   const teamName = career.mode === 'driver' ? (playerTeam?.name ?? null) : (managedTeam(career)?.name ?? null);
   const standings = computeDriverStandings(career.rounds, career.drivers, career.adjustments);
-  return [...views, { season: career.season, mode: career.mode, teamName, standings, rounds: career.rounds, closed: career.offseason !== null }];
+  return [
+    ...views,
+    { season: career.season, categoryId: career.categoryId, mode: career.mode, teamName, standings, rounds: career.rounds, closed: career.offseason !== null },
+  ];
+}
+
+/**
+ * A temporada em que quem saiu no meio do ano (acidente) deixou o resto para quem assumiu os negócios,
+ * vista por quem saiu: uma temporada de piloto, pela equipe das etapas que correu. O nome vem das
+ * equipes da temporada em curso ou, numa arquivada, das equipes da categoria.
+ */
+function asDriverSeason(career: CareerState, view: SeasonView, driverId: string): SeasonView {
+  const teamId = lastRaceTeam(view.rounds, driverId);
+  const teams = view.season === career.season ? career.teams : initialTeams(view.categoryId);
+  return { ...view, mode: 'driver', teamName: teams.find((t) => t.id === teamId)?.name ?? null };
 }
 
 const unique = (names: readonly (string | null)[]) => names.filter((n, i, all): n is string => n !== null && all.indexOf(n) === i);
@@ -104,9 +130,13 @@ export interface GenerationRecord {
 
 /**
  * O placar de cada geração, da primeira à atual. Títulos e vitórias de quem já passou a família
- * adiante são os gravados na linhagem quando a geração terminou (a mesma conta de `drivingRecord`);
- * os da geração atual saem das temporadas arquivadas e da fechada agora, e as vitórias contam
- * também as da temporada em curso. Um título só conta com a temporada fechada.
+ * adiante são os gravados na linhagem quando a geração terminou (a mesma conta de `drivingRecord`,
+ * com as vitórias de uma temporada interrompida por acidente); os da geração atual saem das
+ * temporadas arquivadas e da fechada agora, e as vitórias contam também as da temporada em curso. Um
+ * título só conta com a temporada fechada. Os pódios saem sempre das etapas.
+ *
+ * Quando alguém sai no meio do ano e quem assume vai para os negócios, a temporada é das duas
+ * gerações: de piloto para quem saiu (com a equipe das etapas) e de dirigente para quem entrou.
  */
 export function generationRecords(career: CareerState): GenerationRecord[] {
   const views = seasonViews(career);
@@ -115,7 +145,11 @@ export function generationRecords(career: CareerState): GenerationRecord[] {
   return lineage.map((entry, index) => {
     const current = index === lineage.length - 1;
     const to = entry.toSeason ?? career.season;
-    const mine = views.filter((v) => v.season >= entry.fromSeason && v.season <= to);
+    const next = lineage[index + 1];
+    const shared = next && entry.toSeason !== null && next.fromSeason === entry.toSeason ? entry.toSeason : null;
+    const mine = views
+      .filter((v) => v.season >= entry.fromSeason && v.season <= to)
+      .map((v) => (v.season === shared ? asDriverSeason(career, v, entry.driverId) : v));
     const driving = mine.filter((v) => v.mode === 'driver');
     const managing = mine.filter((v) => v.mode === 'executive');
     const row = (v: SeasonView) => v.standings.find((s) => s.driverId === entry.driverId);
@@ -213,7 +247,7 @@ export interface FamilyTreeGeneration {
   path: LineageEntry['path'];
   endReason: LineageEntry['endReason'];
   current: boolean;
-  /** Vivo: a geração atual ou quem passou o comando em vida e segue vivo. */
+  /** Vivo: a geração atual ou quem passou o comando em vida e segue vivo (está em `dynasty.elders`). */
   alive: boolean;
   /** O papel de quem passou o comando em vida (null: não é o caso). */
   elderRole: Elder['role'] | null;
@@ -227,16 +261,22 @@ export interface FamilyTreeGeneration {
 export interface FamilyTree {
   surname: string;
   generations: FamilyTreeGeneration[];
-  elder: Elder | null;
+  /** Quem passou o comando em vida e segue vivo, do mais antigo ao mais recente. */
+  elders: Elder[];
 }
 
-/** A árvore da família: as gerações em ordem, com parceiro, filhos e parentes de cada uma. */
+/**
+ * A árvore da família: as gerações em ordem, com parceiro, filhos e parentes de cada uma. As idades
+ * dos parentes seguem a mesma referência que as dos filhos (`familyYear`: o ano seguinte, no
+ * fechamento da temporada).
+ */
 export function familyTree(career: CareerState): FamilyTree {
   const { dynasty } = career;
   const partner = career.family.partner;
+  const year = familyYear(career);
   const generations = dynasty.lineage.map((entry, index): FamilyTreeGeneration => {
     const current = index === dynasty.lineage.length - 1;
-    const elder = dynasty.elder?.driverId === entry.driverId ? dynasty.elder : null;
+    const elder = dynasty.elders.find((e) => e.driverId === entry.driverId) ?? null;
     const children = current
       ? career.family.children.map((child): FamilyTreeChild => {
           const traits = heritageTraitsFor(career, child);
@@ -258,7 +298,7 @@ export function familyTree(career: CareerState): FamilyTree {
         (r): FamilyTreeRelative => ({
           id: r.id,
           name: fullName(r),
-          age: relativeAge(r, career.year),
+          age: relativeAge(r, year),
           path: r.path,
           skill: r.skill,
           bond: r.bond,
@@ -280,5 +320,5 @@ export function familyTree(career: CareerState): FamilyTree {
       relatives,
     };
   });
-  return { surname: dynasty.surname, generations, elder: dynasty.elder };
+  return { surname: dynasty.surname, generations, elders: dynasty.elders };
 }

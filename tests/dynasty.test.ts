@@ -10,6 +10,7 @@ import { FAMILY_TEAM, HEIR_START, RELATIVES } from '@/config/balance';
 import { CareerStateSchema, type CareerState, type Child, type ChildRacing, type TeamStake } from '@/domain/schemas';
 import { FAMILY } from '@/data/family';
 import { RELATIVE_PATH_INFO } from '@/data/dynasty';
+import { TEAM_TARGETS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
 import { exportCareer, importCareer } from '@/persistence/saveService';
 import * as engine from './engineApi';
@@ -61,6 +62,27 @@ function racingIn(career: CareerState, id: string, categoryId: ChildRacing['cate
       : child,
   );
   return { ...c, family: { ...c.family, children } };
+}
+
+/** Dá ao jogador a vitória da etapa indicada: ele troca de posição com quem tinha vencido. */
+function withWin(career: CareerState, index: number): CareerState {
+  const id = career.playerDriverId;
+  const rounds = career.rounds.map((r, i) => {
+    const mine = r.race.entries.find((e) => e.driverId === id);
+    if (i !== index || !mine) return r;
+    const entries = r.race.entries.map((e) =>
+      e.driverId === id ? { ...e, position: 1, status: 'finished' as const } : e.position === 1 ? { ...e, position: mine.position } : e,
+    );
+    return { ...r, race: { ...r.race, entries } };
+  });
+  return { ...career, rounds };
+}
+
+/** Uma carreira com parceiro no meio da primeira temporada (quatro etapas), com uma vitória na segunda. */
+function midSeason(seed: number): CareerState {
+  let c = careerWithPartner(seed);
+  for (let i = 0; i < 4; i++) c = playRound(c);
+  return withWin(c, 1);
 }
 
 /** Fechamento da primeira temporada de um piloto com parceiro e muito dinheiro (memorizado). */
@@ -188,7 +210,7 @@ describe('sucessão com vários filhos', () => {
     expect(heir.dynasty.lineage[0]).toMatchObject({ traits: c.birth!.traits, partnerName: `${partner.firstName} ${partner.lastName}` });
     expect(heir.dynasty.lineage[1]).toMatchObject({ generation: 2, driverId: 'dyn-kid-heir', path: 'driver', traits: [], partnerName: null });
     // Morte: ninguém passou o comando em vida.
-    expect(heir.dynasty.elder).toBeNull();
+    expect(heir.dynasty.elders).toEqual([]);
     expectValid(heir);
     expectValid(playRound(heir));
   });
@@ -287,6 +309,31 @@ describe('sucessão com vários filhos', () => {
     expect(loaded.birth).toEqual(heir.birth);
     expect(loaded.sponsors).toEqual(heir.sponsors);
   });
+
+  it('o ano de transição é de quem o viveu: o herdeiro começa sem ele, nos dois caminhos', () => {
+    const c = bigFamily();
+    const transition = { role: 'mentor' as const, season: c.season, protegeId: null, protegeName: null, brand: null, earnings: 1000, seen: [], done: true };
+    const opened = engine.beginSuccession({ ...c, transition }, 'death');
+    expect(opened.transition).toEqual(transition);
+    expect(engine.resolveSuccession(opened, 'kid-heir', 'driver').transition).toBeNull();
+    expect(engine.resolveSuccession(opened, 'kid-eng', 'executive').transition).toBeNull();
+  });
+
+  it('no fechamento, a idade dos parentes na árvore é a mesma que tinham como filhos', () => {
+    const c = withChildren(retired(83, 2_000_000), [
+      { id: 'kid-adult', age: 24, stage: 'other' },
+      { id: 'kid-b', age: 19, stage: 'other' },
+    ]);
+    // No fechamento, o ano da família já fechou: as idades dos filhos são as do ano seguinte.
+    expect(engine.familyYear(c)).toBe(c.year + 1);
+    const heir = engine.resolveSuccession(engine.beginHandover(c), 'kid-adult', 'executive');
+    expect(heir.executiveOffseason).not.toBeNull();
+    expect(engine.familyTree(heir).generations[0]!.relatives.map((r) => [r.id, r.age])).toEqual([['kid-b', 19]]);
+    // Virado o ano, a idade é a mesma até o próximo fechamento.
+    const next = engine.startExecutiveSeason(resolvePending(heir), { kind: 'spectate' });
+    expect(engine.familyYear(next)).toBe(next.year);
+    expect(engine.familyTree(next).generations[0]!.relatives[0]!.age).toBe(19);
+  }, 60_000);
 });
 
 /* ------------------------------------------------------------------ */
@@ -296,24 +343,26 @@ describe('quem passa o comando em vida', () => {
     const c = ownerAtSeasonEnd('f3');
     const team = engine.managedTeam(c)!;
     const heir = engine.resolveSuccession(engine.beginHandover(resolvePending(c)), 'relative-driver', 'driver');
-    expect(heir.dynasty.elder).toEqual({
-      driverId: 'player',
-      name: c.dynasty.lineage[0]!.name,
-      generation: 1,
-      bornYear: c.dynasty.lineage[0]!.bornYear,
-      role: 'owner',
-      teamName: team.name,
-      sinceSeason: c.season + 1,
-    });
+    expect(heir.dynasty.elders).toEqual([
+      {
+        driverId: 'player',
+        name: c.dynasty.lineage[0]!.name,
+        generation: 1,
+        bornYear: c.dynasty.lineage[0]!.bornYear,
+        role: 'owner',
+        teamName: team.name,
+        sinceSeason: c.season + 1,
+      },
+    ]);
     expect(heir.finance.stakes.find((s) => s.teamId === team.id)).toMatchObject({ share: 1 });
-    expect(heir.inbox.find((m) => m.id === `s${heir.season}-heir-g2`)!.body).toContain(`continua sob o controle de ${heir.dynasty.elder!.name}`);
+    expect(heir.inbox.find((m) => m.id === `s${heir.season}-heir-g2`)!.body).toContain(`continua sob o controle de ${heir.dynasty.elders[0]!.name}`);
     expectValid(heir);
 
     // A árvore mostra o fundador vivo, no controle da equipe.
     const tree = engine.familyTree(heir);
     expect(tree.generations[0]).toMatchObject({ alive: true, elderRole: 'owner', current: false });
     expect(tree.generations[1]).toMatchObject({ alive: true, current: true });
-    expect(tree.elder).toEqual(heir.dynasty.elder);
+    expect(tree.elders).toEqual(heir.dynasty.elders);
     // E o placar, a temporada como dono da equipe.
     expect(engine.generationRecords(heir)[0]).toMatchObject({ driverSeasons: 1, executiveSeasons: 1, managedTeams: [team.name], endReason: 'handover' });
   }, 60_000);
@@ -332,35 +381,35 @@ describe('quem passa o comando em vida', () => {
       lastDividend: 0,
     };
     const investor = engine.resolveSuccession(engine.beginHandover({ ...c, finance: { ...c.finance, stakes: [stake] } }), 'partner', 'executive');
-    expect(investor.dynasty.elder).toMatchObject({ role: 'investor', teamName: stake.teamName, generation: 1 });
+    expect(investor.dynasty.elders).toMatchObject([{ role: 'investor', teamName: stake.teamName, generation: 1 }]);
     expect(investor.inbox[0]!.body).toContain('participações');
     expectValid(investor);
 
     const quiet = engine.resolveSuccession(engine.beginHandover(c), 'partner', 'executive');
-    expect(quiet.dynasty.elder).toMatchObject({ role: 'retired', teamName: null });
+    expect(quiet.dynasty.elders).toMatchObject([{ role: 'retired', teamName: null }]);
     expectValid(quiet);
 
     const death = engine.resolveSuccession(engine.beginSuccession(c, 'death'), 'partner', 'executive');
-    expect(death.dynasty.elder).toBeNull();
+    expect(death.dynasty.elders).toEqual([]);
 
     // A morte do personagem seguinte não muda quem já estava nesse papel (a avó segue viva).
     const next = engine.resolveSuccession(engine.beginSuccession(quiet, 'death'), 'relative-adult', 'executive');
     expect(next.dynasty.generation).toBe(3);
-    expect(next.dynasty.elder).toEqual(quiet.dynasty.elder);
+    expect(next.dynasty.elders).toEqual(quiet.dynasty.elders);
     expectValid(next);
   });
 
   it('envelhece e morre pela tábua de mortalidade, com sorteio próprio', () => {
     const c = engine.resolveSuccession(engine.beginHandover(retired(83, 2_000_000)), 'partner', 'executive');
-    const elder = c.dynasty.elder!;
+    const elder = c.dynasty.elders[0]!;
     // Sem ninguém nesse papel (a primeira geração), nada muda e nada é sorteado.
     const first = founder();
     expect(engine.checkElderMortality(first)).toBe(first);
 
     // Com 100 anos, a tábua não perdoa.
-    const old = { ...c, dynasty: { ...c.dynasty, elder: { ...elder, bornYear: c.year - 100 } } };
+    const old = { ...c, dynasty: { ...c.dynasty, elders: [{ ...elder, bornYear: c.year - 100 }] } };
     const after = engine.checkElderMortality(old);
-    expect(after.dynasty.elder).toBeNull();
+    expect(after.dynasty.elders).toEqual([]);
     const message = after.inbox.find((m) => m.id === `s${c.season}-elder-${elder.driverId}`)!;
     expect(message).toMatchObject({ category: 'family' });
     expect(message.body).toContain(`${elder.name}, que passou o comando da família em vida, morreu aos 100 anos.`);
@@ -369,26 +418,105 @@ describe('quem passa o comando em vida', () => {
     // A frequência segue a tábua (aos 85 anos).
     let deaths = 0;
     for (let i = 0; i < 2000; i++) {
-      const probe = { ...c, season: c.season + i, dynasty: { ...c.dynasty, elder: { ...elder, bornYear: c.year - 85 } } };
-      if (engine.checkElderMortality(probe).dynasty.elder === null) deaths++;
+      const probe = { ...c, season: c.season + i, dynasty: { ...c.dynasty, elders: [{ ...elder, bornYear: c.year - 85 }] } };
+      if (engine.checkElderMortality(probe).dynasty.elders.length === 0) deaths++;
     }
     expect(deaths / 2000).toBeGreaterThan(engine.mortalityRisk(85) - 0.03);
     expect(deaths / 2000).toBeLessThan(engine.mortalityRisk(85) + 0.03);
   });
 
+  /** Uma participação na equipe de índice `index` da carreira dada. */
+  const stakeIn = (c: CareerState, index: number, value: number): TeamStake => ({
+    id: `stake-${c.categoryId}-${c.teams[index]!.id}`,
+    teamId: c.teams[index]!.id,
+    teamName: c.teams[index]!.name,
+    categoryId: c.categoryId,
+    share: 0.2,
+    cost: 40_000,
+    value,
+    lastPosition: 4,
+    lastDividend: 0,
+  });
+
+  /** Duas passagens de comando em vida seguidas, numa família com duas participações. */
+  function twoHandovers() {
+    const c = retired(83, 2_000_000);
+    const big = stakeIn(c, 0, 120_000);
+    const small = stakeIn(c, 1, 50_000);
+    const first = engine.resolveSuccession(engine.beginHandover({ ...c, finance: { ...c.finance, stakes: [big, small] } }), 'partner', 'executive');
+    const second = engine.resolveSuccession(engine.beginHandover(first), 'relative-adult', 'executive');
+    return { big, small, first, second };
+  }
+
+  it('duas passagens em vida seguidas: quem já tinha passado o comando segue vivo, e cada um tem o seu papel e o seu sorteio', () => {
+    const { big, small, first, second } = twoHandovers();
+    expect(second.dynasty.generation).toBe(3);
+    expect(second.dynasty.elders.map((e) => [e.driverId, e.generation, e.role, e.teamName])).toEqual([
+      ['player', 1, 'investor', big.teamName],
+      [first.playerDriverId, 2, 'investor', small.teamName],
+    ]);
+    // Ninguém morreu: nenhuma mensagem de luto, e a árvore mostra as três gerações vivas.
+    expect(second.inbox.some((m) => m.id.includes('-elder-'))).toBe(false);
+    expect(engine.familyTree(second).generations.map((g) => [g.generation, g.alive, g.elderRole])).toEqual([
+      [1, true, 'investor'],
+      [2, true, 'investor'],
+      [3, true, null],
+    ]);
+    expectValid(second);
+    expect(importCareer(exportCareer(second, NOW)).dynasty).toEqual(second.dynasty);
+
+    // Cada um com o seu sorteio: com 100 anos, só o fundador morre, e a participação dele segue com a família.
+    const aged = (founder: number, next: number): CareerState => ({
+      ...second,
+      dynasty: { ...second.dynasty, elders: second.dynasty.elders.map((e, i) => ({ ...e, bornYear: second.year - (i === 0 ? founder : next) })) },
+    });
+    const founderGone = engine.checkElderMortality(aged(100, 40));
+    expect(founderGone.dynasty.elders.map((e) => e.driverId)).toEqual([first.playerDriverId]);
+    const message = founderGone.inbox.find((m) => m.id === `s${second.season}-elder-player`)!;
+    expect(message.body).toContain(`morreu aos 100 anos. A participação na ${big.teamName} segue com a família.`);
+    expectValid(founderGone);
+    const bothGone = engine.checkElderMortality(aged(100, 100));
+    expect(bothGone.dynasty.elders).toEqual([]);
+    expect(bothGone.inbox.filter((m) => m.id.startsWith(`s${second.season}-elder-`))).toHaveLength(2);
+    expectValid(bothGone);
+  });
+
+  it('vendida a participação de quem passou o comando, essa pessoa cuida de outra livre ou só acompanha a família', () => {
+    const { big, small, first, second } = twoHandovers();
+    const role = (c: CareerState) => c.dynasty.elders.map((e) => [e.role, e.teamName]);
+    // Só o fundador: passa a cuidar da outra participação.
+    expect(role(engine.sellStake(first, big.id))).toEqual([['investor', small.teamName]]);
+    // Com os dois: a outra já tem quem cuide, então quem perdeu a sua só acompanha.
+    const soldBig = engine.sellStake(second, big.id);
+    expect(role(soldBig)).toEqual([
+      ['retired', null],
+      ['investor', small.teamName],
+    ]);
+    expect(engine.familyTree(soldBig).generations[0]!.elderRole).toBe('retired');
+    expectValid(soldBig);
+    expect(role(engine.sellStake(second, small.id))).toEqual([
+      ['investor', big.teamName],
+      ['retired', null],
+    ]);
+    // A morte de quem só acompanha não fala de participação.
+    const old = { ...soldBig, dynasty: { ...soldBig.dynasty, elders: soldBig.dynasty.elders.map((e) => ({ ...e, bornYear: soldBig.year - 100 })) } };
+    const gone = engine.checkElderMortality(old);
+    expect(gone.inbox.find((m) => m.id === `s${soldBig.season}-elder-player`)!.body).not.toContain('participação');
+  });
+
   it('o sorteio entra no fechamento da temporada, nos dois modos', () => {
     const exec = engine.resolveSuccession(engine.beginHandover(retired(83, 2_000_000)), 'partner', 'executive');
     const started = engine.startExecutiveSeason(resolvePending(exec), { kind: 'spectate' });
-    const aged = { ...started, dynasty: { ...started.dynasty, elder: { ...started.dynasty.elder!, bornYear: started.year - 100 } } };
+    const aged = { ...started, dynasty: { ...started.dynasty, elders: [{ ...started.dynasty.elders[0]!, bornYear: started.year - 100 }] } };
     const closed = playExecutiveSeason(aged);
-    expect(closed.dynasty.elder).toBeNull();
+    expect(closed.dynasty.elders).toEqual([]);
     expectValid(closed);
 
     const driver = engine.resolveSuccession(engine.beginHandover(retired(85, 2_000_000)), 'relative-driver', 'driver');
-    expect(driver.dynasty.elder).toMatchObject({ role: 'retired' });
-    const old = { ...driver, dynasty: { ...driver.dynasty, elder: { ...driver.dynasty.elder!, bornYear: driver.year - 100 } } };
+    expect(driver.dynasty.elders).toMatchObject([{ role: 'retired' }]);
+    const old = { ...driver, dynasty: { ...driver.dynasty, elders: [{ ...driver.dynasty.elders[0]!, bornYear: driver.year - 100 }] } };
     const end = playSeason(old);
-    expect(end.dynasty.elder).toBeNull();
+    expect(end.dynasty.elders).toEqual([]);
     expectValid(end);
   }, 60_000);
 });
@@ -429,8 +557,54 @@ describe('vaga do herdeiro piloto', () => {
     expect(options[2]!.reason).toMatch(/não é dona/);
     // Quem não corre não tem vaga a escolher.
     expect(engine.heirSeatOptions(opened, 'partner')).toEqual([]);
-    // A vaga atual é a de sempre.
-    expect(engine.resolveSuccession(opened, 'kid', 'driver', 'current')).toEqual(engine.resolveSuccession(opened, 'kid', 'driver'));
+
+    // A vaga atual segue a regra de antes da Fase 6: o grid gerado como está, a equipe na força em que o
+    // herdeiro já corria, a vaga de tabela dessa força cobrada no contrato (nada pago na hora) e o
+    // contrato do primeiro ano pela mesma força (HEIR_START.CONTRACT).
+    const heir = engine.resolveSuccession(opened, 'kid', 'driver', 'current');
+    const player = engine.getPlayer(heir);
+    expect(heir.teams).toEqual(engine.buildCategoryField('f4', opened.seed, opened.season + 1).teams);
+    expect(player.teamId).toBe(ranked[5]!.id);
+    const t = 5 / 9;
+    const terms = HEIR_START.CONTRACT;
+    const win = Math.round(f4.economy.winBonus * (terms.WIN_BONUS[0] - terms.WIN_BONUS[1] * t));
+    expect(heir.contract).toMatchObject({
+      teamId: ranked[5]!.id,
+      categoryId: 'f4',
+      startSeason: heir.season,
+      endSeason: heir.season,
+      seatCost: roundSeat(lerp(f4.economy.seatCost, t)),
+      salary: Math.round((lerp(f4.economy.salary, t) * terms.SALARY_SHARE) / 1000) * 1000,
+      bonuses: { win, podium: Math.round(win * terms.PODIUM_SHARE), point: Math.round(win * terms.POINT_SHARE), title: win * terms.TITLE_MULTIPLIER },
+    });
+    const seats = (x: CareerState) => x.finance.transactions.filter((tx) => tx.key === 'seat');
+    expect(seats(heir)).toEqual(seats(opened));
+    expect(heir.inbox.find((m) => m.id === `s${heir.season}-heir-favoritism`)).toBeUndefined();
+    // Sem escolher, é a vaga atual.
+    expect(engine.resolveSuccession(opened, 'kid', 'driver')).toEqual(heir);
+  });
+
+  it('numa sucessão no meio do ano (acidente), as opções já levam em conta o fim do ano do herdeiro', () => {
+    let c = midSeason(62);
+    c = withChildren(c, [
+      { id: 'kid', age: 17, kartYears: 6, talent: 90, interest: 90 },
+      { id: 'sib', age: 10 },
+    ]);
+    const opened = engine.beginSuccession(engine.startChildCareer(c, 'kid', 'full'), 'accident');
+    const before = opened.family.children.find((k) => k.id === 'kid')!.racing!;
+    // O ano do herdeiro fecha antes da escolha: a temporada dele pode mudar a força da equipe e o degrau.
+    const closed = engine.closeFamilyYear({ ...opened, succession: null }).family.children.find((k) => k.id === 'kid')!.racing!;
+    expect([closed.categoryId, closed.teamRank]).not.toEqual([before.categoryId, before.teamRank]);
+    const current = engine.heirSeatOptions(opened, 'kid')[0]!;
+    const ranked = engine.rankTeams(engine.buildCategoryField(closed.categoryId, opened.seed, opened.season + 1).teams);
+    const rank = Math.min(ranked.length - 1, closed.teamRank);
+    expect(current).toMatchObject({ rank, teamName: ranked[rank]!.name, available: true });
+    // E a escolha dá exatamente o que a opção mostrou.
+    const heir = engine.resolveSuccession(opened, 'kid', 'driver', 'current');
+    expect(heir.categoryId).toBe(closed.categoryId);
+    expect(heir.teams.find((t) => t.id === engine.getPlayer(heir).teamId)!.name).toBe(current.teamName);
+    expect(heir.contract.seatCost).toBe(current.seatCost);
+    expectValid(heir);
   });
 
   it('a equipe da frente: paga na hora com o patrimônio herdado, e o contrato do ano não cobra de novo', () => {
@@ -479,8 +653,14 @@ describe('vaga do herdeiro piloto', () => {
     const heir = engine.resolveSuccession(inF3, 'kid', 'driver', 'family');
     const player = engine.getPlayer(heir);
     expect(player.teamId).toBe(own.id);
-    expect(heir.teams.find((t) => t.id === own.id)).toMatchObject({ name: own.name, color: own.color, car: own.car });
+    // O carro é o do fim do ano com o acerto da virada: a média do campo sai e só parte do ganho da
+    // pesquisa acima dela fica (o mesmo que a equipe levaria para o ano seguinte com o dirigente).
+    const settled = engine.normalizeFieldDevelopment(c).find((t) => t.id === own.id)!;
+    expect(settled.car).not.toEqual(own.car);
+    expect(heir.teams.find((t) => t.id === own.id)).toMatchObject({ name: own.name, color: own.color, car: settled.car });
     expect(engine.rankTeams(heir.teams).findIndex((t) => t.id === own.id)).toBe(family.rank);
+    // A meta de cada equipe segue a ordem de forças do grid novo.
+    expect(engine.rankTeams(heir.teams).map((t) => t.driverTarget)).toEqual(TEAM_TARGETS.slice(0, heir.teams.length));
     const f3 = engine.getCategory('f3');
     expect(heir.contract.seatCost).toBe(roundSeat(lerp(f3.economy.seatCost, family.rank! / 9) * FAMILY_TEAM.SEAT_SHARE));
     expect(heir.inbox.find((m) => m.id === `s${heir.season}-heir-favoritism`)).toMatchObject({ category: 'media', title: 'Favorecimento?' });
@@ -509,6 +689,30 @@ describe('vaga do herdeiro piloto', () => {
     expect(heir.teams.find((t) => t.id === own.id)).toMatchObject({ name: 'Equipe Raiz', color: '#335577' });
     expect(engine.getPlayer(heir).teamId).toBe(own.id);
     expectValid(heir);
+  }, 60_000);
+
+  it('a equipe que ficou com quem passou o comando (participação de 100%) também é a equipe da família', () => {
+    const c = ownerAtSeasonEnd('f3');
+    const own = engine.managedTeam(c)!;
+    const second = engine.resolveSuccession(engine.beginHandover(resolvePending(c)), 'relative-driver', 'driver');
+    expect(second.management).toBeNull();
+    expect(second.finance.stakes.find((s) => s.teamId === own.id)).toMatchObject({ share: 1 });
+    const closed = withChildren(resolvePending(playSeason(second)), [{ id: 'kid', age: 17, kartYears: 6, talent: 90, interest: 90 }]);
+    const opened = engine.beginSuccession(racingIn(closed, 'kid', 'f3', 6), 'death');
+    const family = engine.heirSeatOptions(opened, 'kid')[2]!;
+    expect(family).toMatchObject({ id: 'family', teamName: own.name, available: true, reason: null });
+
+    const heir = engine.resolveSuccession(opened, 'kid', 'driver', 'family');
+    expect(engine.getPlayer(heir).teamId).toBe(own.id);
+    expect(engine.rankTeams(heir.teams).findIndex((t) => t.id === own.id)).toBe(family.rank);
+    // Ninguém da família desenvolveu o carro: a equipe vem do grid novo, como as rivais.
+    expect(heir.teams).toEqual(engine.buildCategoryField('f3', opened.seed, opened.season + 1).teams);
+    expect(heir.inbox.find((m) => m.id === `s${heir.season}-heir-favoritism`)).toBeDefined();
+    expectValid(heir);
+
+    // Vendida a participação, não há mais equipe da família.
+    const stake = opened.finance.stakes.find((s) => s.teamId === own.id)!;
+    expect(engine.heirSeatOptions(engine.sellStake(opened, stake.id), 'kid')[2]!.reason).toMatch(/não é dona/);
   }, 60_000);
 });
 
@@ -578,6 +782,79 @@ describe('placar e árvore da dinastia', () => {
     expect(live.driverSeasons).toBe(1);
   });
 
+  it('acidente no meio do ano, com quem assume indo para os negócios: a temporada é de piloto para quem saiu e de dirigente para quem entrou', () => {
+    const c = withChildren(midSeason(61), [
+      { id: 'kid-adult', age: 20, stage: 'other' },
+      { id: 'kid-small', age: 7 },
+    ]);
+    const team = c.teams.find((t) => t.id === engine.getPlayer(c).teamId)!;
+    const partial = engine.computeDriverStandings(c.rounds, c.drivers, c.adjustments).find((s) => s.driverId === 'player')!;
+    expect(partial.wins).toBeGreaterThan(0);
+    const exec = engine.resolveSuccession(engine.beginSuccession(c, 'accident'), 'kid-adult', 'executive');
+    // A geração nova começa nesta temporada; a que saiu leva as vitórias dela (o título, não).
+    expect(exec.dynasty.lineage.map((l) => [l.fromSeason, l.toSeason])).toEqual([
+      [1, 1],
+      [1, null],
+    ]);
+    expect(exec.dynasty.lineage[0]).toMatchObject({ wins: partial.wins, titles: 0 });
+    // O ano da família não fechou: o parente tem a idade deste ano, na linhagem e na árvore.
+    const small = c.family.children.find((k) => k.id === 'kid-small')!;
+    expect(exec.dynasty.relatives).toMatchObject([{ id: 'kid-small', bornYear: c.year - small.age }]);
+    expect(engine.familyTree(exec).generations[0]!.relatives[0]!.age).toBe(small.age);
+    expectValid(exec);
+
+    const former = (career: CareerState) => engine.generationRecords(career)[0]!;
+    const asDriver = {
+      driverSeasons: 1,
+      executiveSeasons: 0,
+      drivenTeams: [team.name],
+      managedTeams: [],
+      wins: partial.wins,
+      podiums: partial.podiums,
+      titles: 0,
+    };
+    // Em curso, fechada e já arquivada (com o nome da equipe tirado das equipes da categoria).
+    expect(former(exec)).toMatchObject(asDriver);
+    expect(engine.generationRecords(exec)[1]).toMatchObject({ fromSeason: 1, driverSeasons: 0, executiveSeasons: 1, wins: 0, podiums: 0 });
+    const closed = playExecutiveSeason(exec);
+    expect(former(closed)).toMatchObject(asDriver);
+    expect(engine.generationRecords(closed)[1]).toMatchObject({ driverSeasons: 0, executiveSeasons: 1 });
+    expectValid(closed);
+    const next = engine.startExecutiveSeason(resolvePending(closed), { kind: 'spectate' });
+    expect(former(next)).toMatchObject(asDriver);
+    expect(engine.generationRecords(next)[1]).toMatchObject({ driverSeasons: 0, executiveSeasons: 2 });
+    expect(engine.dynastyTotals(next)).toMatchObject({ wins: partial.wins, podiums: partial.podiums, driverSeasons: 1, executiveSeasons: 2 });
+  }, 60_000);
+
+  it('acidente no meio do ano, com herdeiro piloto: a temporada interrompida fica com a equipe e as vitórias de quem saiu', () => {
+    const c = engine.startChildCareer(withChildren(midSeason(62), [{ id: 'kid', age: 17, kartYears: 6, talent: 90, interest: 90 }]), 'kid', 'full');
+    const team = c.teams.find((t) => t.id === engine.getPlayer(c).teamId)!;
+    const partial = engine.computeDriverStandings(c.rounds, c.drivers, c.adjustments).find((s) => s.driverId === 'player')!;
+    expect(partial.wins).toBeGreaterThan(0);
+    const heir = engine.resolveSuccession(engine.beginSuccession(c, 'accident'), 'kid', 'driver');
+    // A temporada é arquivada como de piloto de quem saiu: equipe, posição, pontos e meta até ali.
+    expect(heir.history.at(-1)).toMatchObject({
+      season: 1,
+      mode: 'driver',
+      playerTeamId: team.id,
+      playerTeamName: team.name,
+      playerPosition: partial.position,
+      playerPoints: partial.points,
+      objectiveTarget: team.driverTarget,
+      objectiveMet: partial.position <= team.driverTarget,
+    });
+    expect(heir.dynasty.lineage[0]).toMatchObject({ wins: partial.wins, titles: 0, toSeason: 1 });
+    expect(engine.generationRecords(heir)[0]).toMatchObject({
+      driverSeasons: 1,
+      executiveSeasons: 0,
+      drivenTeams: [team.name],
+      wins: partial.wins,
+      podiums: partial.podiums,
+      titles: 0,
+    });
+    expectValid(heir);
+  });
+
   it('o placar e a árvore abrem em todos os saves gravados', () => {
     const files = readdirSync('tests/fixtures')
       .filter((name) => /^v\d+$/.test(name))
@@ -640,15 +917,20 @@ describe('integridade da dinastia', () => {
     );
 
     const elder = { driverId: 'player', name: 'Ana Teste', generation: 1, bornYear: 1990, role: 'retired' as const, teamName: null, sinceSeason: 2 };
-    expect(problems((c) => dynasty(c, { elder }))).toEqual([]);
-    expect(problems((c) => dynasty(c, { elder: { ...elder, generation: 2 } }))).toContain(
-      'Quem passou o comando em vida é de geração igual ou maior que a atual.',
+    // O fundador da carreira de teste morreu; para estar vivo, teria de ter passado o comando.
+    const handedOver = (c: CareerState, elders: (typeof elder)[]) =>
+      dynasty(c, { elders, lineage: c.dynasty.lineage.map((l, i) => (i === 0 ? { ...l, endReason: 'handover' as const } : l)) });
+    expect(problems((c) => handedOver(c, [elder]))).toEqual([]);
+    expect(problems((c) => dynasty(c, { elders: [elder] }))).toContain('Quem passou o comando em vida (player) não saiu por uma passagem de comando.');
+    expect(problems((c) => handedOver(c, [elder, elder]))).toContain('Quem passou o comando em vida aparece duas vezes.');
+    expect(problems((c) => handedOver(c, [{ ...elder, generation: 2 }]))).toContain(
+      'Quem passou o comando em vida (player) é de geração igual ou maior que a atual.',
     );
-    expect(problems((c) => dynasty(c, { elder: { ...elder, driverId: 'ninguem' } }))).toContain(
-      'Quem passou o comando em vida não é um personagem anterior da linhagem.',
+    expect(problems((c) => handedOver(c, [{ ...elder, driverId: 'ninguem' }]))).toContain(
+      'Quem passou o comando em vida (ninguem) não é um personagem anterior da linhagem.',
     );
-    expect(problems((c) => dynasty(c, { elder: { ...elder, driverId: c.playerDriverId } }))).toContain(
-      'Quem passou o comando em vida não é um personagem anterior da linhagem.',
+    expect(problems((c) => handedOver(c, [{ ...elder, driverId: c.playerDriverId }]))).toContain(
+      `Quem passou o comando em vida (${heir.playerDriverId}) não é um personagem anterior da linhagem.`,
     );
 
     const trait = (id: 'rainMaster' | 'rainFear') => ({ id, revealedSeason: null, revealedRound: null });

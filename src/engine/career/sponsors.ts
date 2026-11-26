@@ -43,18 +43,22 @@ const NAMES: readonly (readonly string[])[] = [
 /**
  * Apoio da família: um valor por temporada, até a temporada `seasons`. Sem argumentos, é o apoio
  * de antes dos nascimentos sorteados (usado pela migração dos saves antigos); numa carreira nova,
- * o valor e a duração vêm do nascimento.
+ * o valor e a duração vêm do nascimento. `identity` dá nome a outro apoio do mesmo tipo (porte 0,
+ * sem meta de verdade), como a empresa de um parente (Fase 6).
  */
-export function familySupport(perSeason: number = ECONOMY.FAMILY_SUPPORT, seasons: number = ECONOMY.FAMILY_SUPPORT_SEASONS): Sponsor {
+export function familySupport(
+  perSeason: number = ECONOMY.FAMILY_SUPPORT,
+  seasons: number = ECONOMY.FAMILY_SUPPORT_SEASONS,
+  identity: Pick<Sponsor, 'id' | 'name'> = { id: 'family', name: 'Apoio da família' },
+): Sponsor {
   return {
-    id: 'family',
-    name: 'Apoio da família',
+    ...identity,
     tier: 0,
     perSeason,
     podiumBonus: 0,
     endSeason: Math.max(1, seasons),
     satisfaction: 100,
-    targetPosition: 20,
+    targetPosition: SPONSOR_RULES.TIER_TARGET[0],
   };
 }
 

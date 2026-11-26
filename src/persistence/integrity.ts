@@ -126,18 +126,23 @@ export function validateCareerIntegrity(career: CareerState): string[] {
   if (current && current.generation !== career.dynasty.generation) problems.push('Geração da dinastia incoerente com a linhagem.');
   if (career.succession && !career.succession.heirs.some((h) => h.canDrive || h.canManage)) problems.push('Sucessão sem herdeiro que possa assumir.');
   // Dinastia (Fase 6): os parentes têm id único, diferente do de qualquer filho, e são de uma geração
-  // anterior à atual; quem passou o comando em vida é um personagem anterior da linhagem; os traços de
-  // nascença gravados na linhagem não se repetem nem trazem os dois lados de um par.
+  // anterior à atual; cada um dos que passaram o comando em vida aparece uma vez só e é um personagem
+  // anterior da linhagem que saiu por uma passagem de comando (não morreu); os traços de nascença
+  // gravados na linhagem não se repetem nem trazem os dois lados de um par.
   const relativeIds = career.dynasty.relatives.map((r) => r.id);
   if (new Set(relativeIds).size !== relativeIds.length) problems.push('Parentes com id duplicado.');
   if (relativeIds.some((id) => childIds.has(id))) problems.push('Parente com o mesmo id de um filho.');
   for (const relative of career.dynasty.relatives)
     if (relative.generation >= career.dynasty.generation) problems.push(`Parente ${relative.id} de geração igual ou maior que a atual.`);
-  const elder = career.dynasty.elder;
-  if (elder) {
-    if (elder.generation >= career.dynasty.generation) problems.push('Quem passou o comando em vida é de geração igual ou maior que a atual.');
-    if (elder.driverId === career.playerDriverId || !lineage.some((entry) => entry.driverId === elder.driverId))
-      problems.push('Quem passou o comando em vida não é um personagem anterior da linhagem.');
+  const elderIds = career.dynasty.elders.map((e) => e.driverId);
+  if (new Set(elderIds).size !== elderIds.length) problems.push('Quem passou o comando em vida aparece duas vezes.');
+  for (const elder of career.dynasty.elders) {
+    if (elder.generation >= career.dynasty.generation)
+      problems.push(`Quem passou o comando em vida (${elder.driverId}) é de geração igual ou maior que a atual.`);
+    const entry = lineage.find((l) => l.driverId === elder.driverId);
+    if (elder.driverId === career.playerDriverId || !entry)
+      problems.push(`Quem passou o comando em vida (${elder.driverId}) não é um personagem anterior da linhagem.`);
+    else if (entry.endReason !== 'handover') problems.push(`Quem passou o comando em vida (${elder.driverId}) não saiu por uma passagem de comando.`);
   }
   for (const entry of lineage) {
     const ids = entry.traits.map((t) => t.id);

@@ -737,7 +737,7 @@ describe('migração da versão 9 para a 10 (dinastia e ano de transição)', ()
       ...before,
       schemaVersion: 10,
       family: { ...family, children: family.children.map((c) => ({ ...c, birthTraits: [], kartTest: null })) },
-      dynasty: { ...dynasty, lineage: dynasty.lineage.map((l) => ({ ...l, traits: [], partnerName: null, path: null })), relatives: [], elder: null },
+      dynasty: { ...dynasty, lineage: dynasty.lineage.map((l) => ({ ...l, traits: [], partnerName: null, path: null })), relatives: [], elders: [] },
       transition: null,
     });
     // Rodar de novo sobre o resultado não muda nada.
@@ -748,7 +748,7 @@ describe('migração da versão 9 para a 10 (dinastia e ano de transição)', ()
     const career = importCareer(readFileSync(`tests/fixtures/v9/${name}`, 'utf8'));
     expect(career.schemaVersion).toBe(CAREER_SCHEMA_VERSION);
     expect(career.transition).toBeNull();
-    expect(career.dynasty).toMatchObject({ relatives: [], elder: null });
+    expect(career.dynasty).toMatchObject({ relatives: [], elders: [] });
     expect(validateCareerIntegrity(career)).toEqual([]);
     let c = career;
     while (c.pendingEvents.length > 0) {
@@ -783,13 +783,13 @@ describe('migração da versão 9 para a 10 (dinastia e ano de transição)', ()
       transition: { role: 'commentator', season: career.season, protegeId: null, protegeName: null, brand: null, earnings: 1000, seen: ['x'], done: false },
       dynasty: {
         ...career.dynasty,
-        elder: { driverId: 'd', name: 'Nome Antigo', generation: 1, bornYear: 1990, role: 'retired', teamName: null, sinceSeason: 2 },
+        elders: [{ driverId: 'd', name: 'Nome Antigo', generation: 1, bornYear: 1990, role: 'retired', teamName: null, sinceSeason: 2 }],
       },
     };
     const raw = { ...(JSON.parse(JSON.stringify(written)) as Loose), schemaVersion: 9 };
     const after = migrateStep(raw, 9) as unknown as CareerState;
     expect(after.transition).toEqual(written.transition);
-    expect(after.dynasty.elder).toEqual(written.dynasty.elder);
+    expect(after.dynasty.elders).toEqual(written.dynasty.elders);
   });
 });
 

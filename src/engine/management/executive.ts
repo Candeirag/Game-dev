@@ -54,6 +54,7 @@ import { familyDriverIds, formerCharacterIds, fullName, getPlayer } from '../car
 import { closeFamilyYear, planChildSeason } from '../dynasty/family';
 import { familyTrainingFactors } from '../dynasty/heritage';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
+import { refreshElders } from '../dynasty/relatives';
 import { checkMortality } from '../dynasty/succession';
 import { closeAssetsYear, liquidateAssets, settleAssetsRound } from '../economy/assets';
 import { createRng, gaussian, hashSeed } from '../rng';
@@ -1082,5 +1083,6 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
   if (news.length > 0) messages.push({ id: `s${nextSeason}-market`, date, category: 'contract', title: 'Movimentações', body: news.join(' ') });
   if (childNotes.length > 0)
     messages.push({ id: `s${nextSeason}-children`, date, category: 'family', title: 'Carreira dos filhos', body: childNotes.join(' ') });
-  return beginSeasonFamily({ ...state, inbox: pushMessages(career.inbox, messages) });
+  // A compra pode ter absorvido a participação de que alguém que passou o comando cuidava (Fase 6).
+  return beginSeasonFamily(refreshElders({ ...state, inbox: pushMessages(career.inbox, messages) }));
 }

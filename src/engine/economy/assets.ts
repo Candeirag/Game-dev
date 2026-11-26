@@ -21,6 +21,7 @@ import { teamValue } from '@/data/management';
 import { initialTeams } from '@/data/teams';
 import { computeTeamStandings } from '../championship/standings';
 import { netWorth, post } from '../career/economy';
+import { refreshElders } from '../dynasty/relatives';
 import { createRng, gaussian, hashSeed } from '../rng';
 import { rankTeams } from '../world/generation';
 import { money } from '../career/selectors';
@@ -267,12 +268,13 @@ export function buyStake(career: CareerState, teamId: string, share: number): Ca
   return { ...career, finance: { ...finance, stakes: [...finance.stakes.filter((s) => s.id !== stake.id), stake] } };
 }
 
+/** Vende uma participação. Quem passou o comando em vida e cuidava dela passa a cuidar de outra ou só acompanha a família (Fase 6). */
 export function sellStake(career: CareerState, stakeId: string): CareerState {
   const stake = career.finance.stakes.find((s) => s.id === stakeId);
   if (!stake) throw new Error('Participação não encontrada.');
   let finance = post(career.finance, career.season, round(career), 'assets', stake.value, `Venda da participação na ${stake.teamName}`);
   finance = post(finance, career.season, round(career), 'tax', -capitalGainsTax(stake.value, stake.cost), 'Imposto sobre ganho de capital');
-  return { ...career, finance: { ...finance, stakes: finance.stakes.filter((s) => s.id !== stakeId) } };
+  return refreshElders({ ...career, finance: { ...finance, stakes: finance.stakes.filter((s) => s.id !== stakeId) } });
 }
 
 /**

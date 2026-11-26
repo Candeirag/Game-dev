@@ -30,6 +30,7 @@ import { BIRTH_TRAITS, HOMETOWNS } from '@/data/birth';
 import { getCategory } from '@/data/categories';
 import { FAMILY } from '@/data/family';
 import { KART_TEST_VERDICT_INFO, type KartTestVerdict } from '@/data/heritage';
+import { joinList } from '@/domain/text';
 import { activeBirth, traitEffect } from '../birth/effects';
 import { fillTraits, type TraitComposition } from '../birth/draw';
 import { pushMessages } from '../career/inbox';
@@ -38,12 +39,6 @@ import { createRng, gaussian, hashSeed, type Rng } from '../rng';
 const heritageComposition: TraitComposition = { talents: HERITAGE.TALENTS, defects: HERITAGE.DEFECTS, extra: HERITAGE.EXTRA_TRAITS };
 
 const countKind = (ids: readonly TraitId[], kind: 'talent' | 'defect') => ids.filter((id) => BIRTH_TRAITS[id].kind === kind).length;
-
-/** "A", "A e B", "A, B e C". */
-function joinList(items: readonly string[]): string {
-  if (items.length <= 1) return items[0] ?? '';
-  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
-}
 
 /* ------------------------------------------------------------------ */
 /* Herança                                                             */

@@ -941,8 +941,11 @@ export const DynastySchema = z.object({
   lineage: z.array(LineageEntrySchema).min(1),
   /** Filhos de todas as gerações que não herdaram a carreira (Fase 6). */
   relatives: z.array(RelativeSchema),
-  /** O personagem anterior, quando passou o comando em vida e segue vivo (Fase 6). */
-  elder: ElderSchema.nullable(),
+  /**
+   * Os personagens anteriores que passaram o comando em vida e seguem vivos, do mais antigo ao mais
+   * recente (Fase 6). Podem ser vários: quem assumiu também pode passar o comando adiante em vida.
+   */
+  elders: z.array(ElderSchema),
 });
 export type Dynasty = z.infer<typeof DynastySchema>;
 
@@ -1454,7 +1457,7 @@ export type StoryMemory = z.infer<typeof StoryMemorySchema>;
  * Saves antigos ficam com a memória vazia. Patrocinadores, escolhas e cartões ganham campos opcionais.
  * Versão 10 (Fase 6): dinastia. Filhos com talentos e defeitos herdados e teste no kart; linhagem com
  * traços, parceiro e caminho; parentes que seguiram outro caminho e o personagem anterior vivo
- * (`dynasty.relatives`, `dynasty.elder`); ano de transição (`transition`); efeito `kartTest` e a
+ * (`dynasty.relatives`, `dynasty.elders`); ano de transição (`transition`); efeito `kartTest` e a
  * categoria de evento `transition`. Saves antigos ficam com tudo vazio.
  */
 export const CAREER_SCHEMA_VERSION = 10;

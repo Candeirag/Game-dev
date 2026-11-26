@@ -867,6 +867,17 @@ export const HEIR_START = {
   TOP_SEAT_PREMIUM: 0.25,
   // A compra da vaga tem de deixar pelo menos esta reserva, em custos de vida anuais da categoria.
   TOP_SEAT_RESERVE: 1,
+  // Contrato do primeiro ano do herdeiro piloto, pela força da equipe em que ele larga (t = força / 9:
+  // 0 na melhor, 1 na mais fraca). Salário: esta fração da tabela da categoria naquela força. Bônus
+  // por vitória: o da categoria × (WIN_BONUS[0] − WIN_BONUS[1] × t); pódio e ponto valem estas frações
+  // do bônus por vitória, e o título, TITLE_MULTIPLIER vezes ele.
+  CONTRACT: {
+    SALARY_SHARE: 0.7,
+    WIN_BONUS: [1.2, 0.7],
+    PODIUM_SHARE: 0.35,
+    POINT_SHARE: 0.02,
+    TITLE_MULTIPLIER: 5,
+  },
 } as const;
 
 export const FAMILY_TEAM = {

@@ -261,7 +261,7 @@ export function createCareer(input: NewCareerInput, seed: number, now: string): 
         },
       ],
       relatives: [],
-      elder: null,
+      elders: [],
     },
     management: null,
     executiveOffseason: null,

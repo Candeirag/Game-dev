@@ -53,3 +53,9 @@ export function amongTheFirst(position: number): string {
 export function counted(count: number | string, singular: string, plural: string): string {
   return `${count} ${pluralWord(count, singular, plural)}`;
 }
+
+/** Itens em frase: "A", "A e B", "A, B e C" (vazio para nenhum). */
+export function joinList(items: readonly string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
+}

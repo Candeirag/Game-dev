@@ -7,8 +7,8 @@
  *   com a semente do próprio filho, e todos começam ocultos;
  * - em cada geração da linhagem, os traços, o parceiro e o caminho (`traits`, `partnerName`,
  *   `path`), vazios nos saves antigos;
- * - na dinastia, os parentes que seguiram outro caminho e o personagem anterior vivo
- *   (`relatives`, `elder`), vazios;
+ * - na dinastia, os parentes que seguiram outro caminho e os personagens anteriores vivos
+ *   (`relatives`, `elders`), vazios;
  * - o ano de transição do personagem (`transition`), nulo.
  *
  * O filho aparece também dentro do efeito `child` dos eventos pendentes (a escolha de ter um filho):
@@ -69,7 +69,7 @@ export function migrateV9(data: Loose): Loose {
       ...dynasty,
       lineage: list(dynasty.lineage).map(migrateLineageEntry),
       relatives: Array.isArray(dynasty.relatives) ? dynasty.relatives : [],
-      elder: isObject(dynasty.elder) ? dynasty.elder : null,
+      elders: Array.isArray(dynasty.elders) ? dynasty.elders : [],
     },
     transition: isObject(data.transition) ? data.transition : null,
   };

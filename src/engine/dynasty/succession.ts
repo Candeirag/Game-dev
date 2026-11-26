@@ -17,12 +17,14 @@
  * Desde a Fase 6, a sucessão também cuida da família que fica: o herdeiro que é filho (ou o parente
  * jovem piloto) ganha um nascimento próprio, com os talentos e defeitos que herdou; os outros filhos
  * viram parentes com caminho próprio (`relatives.ts`); quem passa o comando em vida segue vivo como
- * dono, investidor ou aposentado; e o herdeiro piloto pode começar na equipe em que já corria, numa
- * equipe da frente paga pela família ou na equipe da família (`heirSeatOptions`).
+ * dono, investidor ou aposentado (podem ser vários: quem assumiu também pode passar o comando em
+ * vida); e o herdeiro piloto pode começar na equipe em que já corria, numa equipe da frente paga pela
+ * família ou na equipe da família (`heirSeatOptions`).
  */
 import type {
   Academy,
   CareerState,
+  CategoryId,
   Child,
   ChildRacing,
   Contract,
@@ -44,7 +46,7 @@ import { NEUTRAL_CONDITION } from '@/data/drivers';
 import { CATEGORY_HUB } from '@/data/hubs';
 import { CHILD_FIRST_NAMES, FAMILY, getTrait } from '@/data/family';
 import { RELATIVE_PATH_INFO } from '@/data/dynasty';
-import { F1_TEAM_NAMES, f1TeamId } from '@/data/teams';
+import { F1_TEAM_NAMES, TEAM_TARGETS, f1TeamId } from '@/data/teams';
 import { buildCalendar } from '../career/createCareer';
 import { netWorth, post } from '../career/economy';
 import { pushMessages } from '../career/inbox';
@@ -66,12 +68,14 @@ import { ownedTeamValue } from '../management/team';
 import { createRng, hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { buildCategoryField, generateDriver, rankTeams } from '../world/generation';
+import { computeDriverStandings } from '../championship/standings';
 import { childSummary, closeFamilyYear, emptyFamily } from './family';
 import { beginSeasonFamily } from './familyEvents';
 import { ensureHeritage, heirBirth } from './heritage';
-import { drivingRecord } from './lineage';
-import { businessSponsor, elderAfterHandover, relativeFromChild } from './relatives';
+import { drivingRecord, lastRaceTeam } from './lineage';
+import { businessSponsor, elderAfterHandover, refreshElders, relativeFromChild } from './relatives';
 import { categoryRef } from '@/domain/categoryNames';
+import { joinList } from '@/domain/text';
 import { money } from '../career/selectors';
 import { recordSeasonTrend } from '../career/trend';
 
@@ -239,30 +243,42 @@ export function beginSuccession(original: CareerState, cause: 'death' | 'acciden
 }
 
 /**
- * Quem passou o comando em vida envelhece e segue a mesma tábua de mortalidade, com sorteio próprio
- * (`elder-mortality`). Ao morrer, sai da família com uma mensagem; a equipe ou as participações que
- * ele cuidava continuam da família. Sem ninguém nesse papel (a primeira geração), nada é sorteado.
+ * Quem passou o comando em vida envelhece e segue a mesma tábua de mortalidade, cada um com o seu
+ * sorteio (`elder-mortality`, pelo id). Ao morrer, sai da família com uma mensagem; a equipe ou as
+ * participações de que cuidava continuam da família. Antes, o papel de cada um é posto em dia com o
+ * que a família ainda tem (`refreshElders`). Sem ninguém nesse papel (a primeira geração), nada é
+ * sorteado e a carreira volta como veio.
  */
-export function checkElderMortality(career: CareerState): CareerState {
-  const elder = career.dynasty.elder;
-  if (!elder || career.succession) return career;
-  const age = career.year - elder.bornYear;
-  const roll = createRng(hashSeed(career.seed, career.season, 'elder-mortality', elder.driverId)).next();
-  if (roll >= mortalityRisk(age)) return career;
+export function checkElderMortality(original: CareerState): CareerState {
+  if (original.succession) return original;
+  const career = refreshElders(original);
+  const { elders } = career.dynasty;
+  if (elders.length === 0) return career;
   const date = career.calendar[career.calendar.length - 1]?.date ?? `${career.year}-12-01`;
-  const keeps = elder.teamName !== null && career.finance.stakes.some((s) => s.teamName === elder.teamName);
-  const legacy = keeps ? ` A participação na ${elder.teamName} segue com a família.` : '';
-  const message: InboxMessage = {
-    id: `s${career.season}-elder-${elder.driverId}`,
-    date,
-    category: 'family',
-    title: `Luto na família ${career.dynasty.surname}`,
-    body: `${elder.name}, que passou o comando da família em vida, morreu aos ${age} anos.${legacy}`,
-  };
-  return { ...career, dynasty: { ...career.dynasty, elder: null }, inbox: pushMessages(career.inbox, [message]) };
+  const living: Elder[] = [];
+  const messages: InboxMessage[] = [];
+  for (const elder of elders) {
+    const age = career.year - elder.bornYear;
+    const roll = createRng(hashSeed(career.seed, career.season, 'elder-mortality', elder.driverId)).next();
+    if (roll >= mortalityRisk(age)) {
+      living.push(elder);
+      continue;
+    }
+    const keeps = elder.teamName !== null && career.finance.stakes.some((s) => s.teamName === elder.teamName);
+    const legacy = keeps ? ` A participação na ${elder.teamName} segue com a família.` : '';
+    messages.push({
+      id: `s${career.season}-elder-${elder.driverId}`,
+      date,
+      category: 'family',
+      title: `Luto na família ${career.dynasty.surname}`,
+      body: `${elder.name}, que passou o comando da família em vida, morreu aos ${age} anos.${legacy}`,
+    });
+  }
+  if (messages.length === 0) return career;
+  return { ...career, dynasty: { ...career.dynasty, elders: living }, inbox: pushMessages(career.inbox, messages) };
 }
 
-/** Sorteio anual de mortalidade, feito no fechamento de cada temporada (de quem passou o comando, depois do personagem). */
+/** Sorteio anual de mortalidade, feito no fechamento de cada temporada (de quem passou o comando e, depois, do personagem). */
 export function checkMortality(original: CareerState): CareerState {
   if (original.succession) return original;
   const career = checkElderMortality(original);
@@ -315,12 +331,6 @@ function academyFor(racing: ChildRacing, season: number): Academy | null {
   return { f1TeamId: f1TeamId(index), name: racing.academy, joinedSeason: season, supportShare: FAMILY.ACADEMY_SHARE, targetPosition: 6, strikes: 0 };
 }
 
-/** "A", "A e B", "A, B e C". */
-function joinList(items: readonly string[]): string {
-  if (items.length <= 1) return items[0] ?? '';
-  return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`;
-}
-
 /** De onde o herdeiro piloto larga na primeira temporada (Fase 6). */
 export type HeirSeat = 'current' | 'top' | 'family';
 
@@ -358,6 +368,27 @@ function successionStage(career: CareerState, path: 'driver' | 'executive'): Car
   return midSeason && path === 'driver' ? { ...state, family: closeFamilyYear(state).family } : state;
 }
 
+/**
+ * A temporada interrompida por um acidente, arquivada como de piloto de quem saiu: a equipe pela qual
+ * correu (a das etapas), a posição, os pontos e a meta dele até ali. Até a Fase 6 ela era arquivada
+ * sem equipe e em 1º lugar.
+ */
+function interruptedSeason(state: CareerState, driverId: string): SeasonSummary {
+  const summary: SeasonSummary = { ...executiveSummary(state), mode: 'driver' };
+  const team = state.teams.find((t) => t.id === lastRaceTeam(state.rounds, driverId));
+  const row = summary.driverStandings.find((s) => s.driverId === driverId);
+  if (!team || !row) return summary;
+  return {
+    ...summary,
+    playerTeamId: team.id,
+    playerTeamName: team.name,
+    playerPosition: row.position,
+    playerPoints: row.points,
+    objectiveTarget: team.driverTarget,
+    objectiveMet: row.position <= team.driverTarget,
+  };
+}
+
 function heirCareer(state: CareerState, option: HeirOption): { child: Child | undefined; driver: Driver | null; racing: ChildRacing | null } {
   const child = option.childId ? state.family.children.find((c) => c.id === option.childId) : undefined;
   return { child, driver: child?.driver ?? option.driver, racing: child?.racing ?? option.racing };
@@ -378,14 +409,39 @@ interface SeatPlan {
 const roundSeat = (value: number) => Math.round(value / 500) * 500;
 
 /**
+ * A equipe da família, se houver: a que o personagem comanda como dono ou uma de que a família tem
+ * 100% (a que ficou com quem passou o comando em vida), de preferência na categoria dada. A comandada
+ * vem com o carro do fim do ano e o ganho da pesquisa acertado como na virada do ano
+ * (`normalizeFieldDevelopment`: a média do campo sai e a equipe própria leva só parte do que passou da
+ * média). A das participações, que ninguém da família desenvolveu, vem do grid novo (`field`) como as
+ * rivais ou, fundada pela família e sem inscrição nele, das equipes do campeonato acompanhado; null
+ * em `team` se não estiver em nenhum dos dois.
+ */
+function familyTeam(state: CareerState, categoryId: CategoryId, field: readonly Team[]): { name: string; categoryId: CategoryId; team: Team | null } | null {
+  const teams = normalizeFieldDevelopment(state);
+  const m = state.management;
+  const candidates: { name: string; categoryId: CategoryId; team: Team | null }[] = [];
+  const own = m?.position === 'owner' ? teams.find((t) => t.id === m.teamId) : undefined;
+  if (m && own) candidates.push({ name: own.name, categoryId: m.categoryId, team: own });
+  for (const stake of state.finance.stakes) {
+    if (stake.share < 1) continue;
+    const fresh = stake.categoryId === categoryId ? field.find((t) => t.id === stake.teamId) : undefined;
+    const followed = stake.categoryId === state.categoryId ? teams.find((t) => t.id === stake.teamId) : undefined;
+    candidates.push({ name: stake.teamName, categoryId: stake.categoryId, team: fresh ?? followed ?? null });
+  }
+  return candidates.find((c) => c.categoryId === categoryId) ?? candidates[0] ?? null;
+}
+
+/**
  * Onde o herdeiro corre e quanto paga, em cada opção:
  * - `current`: na força da equipe em que já corria (como sempre foi);
  * - `top`: numa equipe da frente (HEIR_START.TOP_SEAT_RANK), com ágio sobre a tabela, paga na hora com
  *   o patrimônio herdado, que tem de cobrir a vaga e uma reserva para viver. Só existe para herdeiros
  *   (a primeira geração nunca começa numa equipe boa) e onde as vagas são vendidas;
- * - `family`: pela equipe da família, se ela é dona de uma equipe da categoria do herdeiro. A equipe
- *   entra no grid novo como está (mesmo id, nome, cor e carro); sem inscrição nele, ocupa a da mais
- *   fraca. A vaga custa FAMILY_TEAM.SEAT_SHARE da tabela.
+ * - `family`: pela equipe da família (`familyTeam`), se ela é da categoria do herdeiro. A equipe entra
+ *   no grid novo com o mesmo id, nome e cor e o carro acertado da virada do ano; sem inscrição nele,
+ *   ocupa a da mais fraca. A meta de cada equipe segue a nova ordem de forças. A vaga custa
+ *   FAMILY_TEAM.SEAT_SHARE da tabela.
  */
 function seatPlan(state: CareerState, heirDriver: Driver, heirRacing: ChildRacing, seat: HeirSeat, cash: number): SeatPlan {
   const category: CategoryDefinition = getCategory(heirRacing.categoryId);
@@ -402,12 +458,15 @@ function seatPlan(state: CareerState, heirDriver: Driver, heirRacing: ChildRacin
     contractSeat: 0,
   });
 
-  const m = state.management;
-  const own = m?.position === 'owner' ? state.teams.find((t) => t.id === m.teamId) : undefined;
+  let familyId: string | null = null;
   if (seat === 'family') {
-    if (!m || !own) return unavailable('A família não é dona de uma equipe.');
-    if (m.categoryId !== category.id)
-      return unavailable(`A ${own.name} corre ${categoryRef(m.categoryId, 'em')}, não ${categoryRef(category.id, 'em')}.`, own.name);
+    const family = familyTeam(state, category.id, teams);
+    if (!family) return unavailable('A família não é dona de uma equipe.');
+    if (family.categoryId !== category.id)
+      return unavailable(`A ${family.name} corre ${categoryRef(family.categoryId, 'em')}, não ${categoryRef(category.id, 'em')}.`, family.name);
+    const own = family.team;
+    if (!own) return unavailable(`A ${family.name} não tem inscrição ${categoryRef(category.id, 'em')} na próxima temporada.`, family.name);
+    familyId = own.id;
     if (teams.some((t) => t.id === own.id)) {
       teams = teams.map((t) => (t.id === own.id ? own : t));
     } else {
@@ -416,6 +475,8 @@ function seatPlan(state: CareerState, heirDriver: Driver, heirRacing: ChildRacin
       teams = teams.map((t) => (t.id === weakest.id ? own : t));
       drivers = drivers.map((d) => (d.teamId === weakest.id ? { ...d, teamId: own.id } : d));
     }
+    const order = rankTeams(teams).map((t) => t.id);
+    teams = teams.map((t) => ({ ...t, driverTarget: TEAM_TARGETS[order.indexOf(t.id)] ?? t.driverTarget }));
   }
   const ranked = rankTeams(teams);
   const last = ranked.length - 1;
@@ -424,7 +485,7 @@ function seatPlan(state: CareerState, heirDriver: Driver, heirRacing: ChildRacin
       ? Math.min(last, heirRacing.teamRank)
       : seat === 'top'
         ? Math.min(last, HEIR_START.TOP_SEAT_RANK)
-        : ranked.findIndex((t) => t.id === own?.id);
+        : ranked.findIndex((t) => t.id === familyId);
   const team = ranked[rank];
   if (!team) throw new Error('Categoria sem equipes.');
   const table = lerp(category.economy.seatCost, rank / 9);
@@ -507,19 +568,22 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
   finance = post(finance, state.season, round, 'inheritance', -siblingsShare, 'Parte dos irmãos na herança');
   state = { ...state, finance };
 
-  // Linhagem: quem sai leva os traços de nascença e o nome do parceiro; quem entra, o caminho.
+  // Linhagem: quem sai leva os traços de nascença e o nome do parceiro; quem entra, o caminho. Numa
+  // sucessão no meio do ano (acidente), a temporada interrompida conta para quem saiu como as outras
+  // (o degrau e as vitórias, como os pódios no placar), menos o título: ela não terminou.
   const peak = Math.max(...state.dynasty.lineage.map((l) => l.peakReputation), state.reputation);
   const closing = state.offseason ? archiveSeason(state) : state.executiveOffseason?.summary;
   const record = drivingRecord([...state.history, ...(closing ? [closing] : [])], former.id);
+  const partialWins = midSeason ? (computeDriverStandings(state.rounds, state.drivers, state.adjustments).find((s) => s.driverId === former.id)?.wins ?? 0) : 0;
   const partner = state.family.partner;
-  const lineage: LineageEntry[] = state.dynasty.lineage.map((entry, index, all) =>
+  const lineage: LineageEntry[] = (midSeason ? touchLineage(state) : state).dynasty.lineage.map((entry, index, all) =>
     index === all.length - 1
       ? {
           ...entry,
           toSeason: state.season,
           endReason: succession.cause,
           titles: record.titles,
-          wins: record.wins,
+          wins: record.wins + partialWins,
           peakReputation: Math.max(entry.peakReputation, state.reputation),
           netWorthPassed: Math.round(succession.estate - succession.tax - siblingsShare),
           traits: formerBirth?.traits ?? entry.traits,
@@ -527,12 +591,13 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
         }
       : entry,
   );
-  const newEntry = (driverId: string, name: string, age: number, year: number): LineageEntry => ({
+  // Quem assume os negócios no meio do ano dirige o resto da temporada: ela já é dele.
+  const newEntry = (driverId: string, name: string, age: number, year: number, fromSeason = state.season + 1): LineageEntry => ({
     generation,
     driverId,
     name,
     bornYear: year - age,
-    fromSeason: state.season + 1,
+    fromSeason,
     toSeason: null,
     endReason: null,
     bestCategoryId: null,
@@ -557,22 +622,21 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
       `Quem não herdou a carreira segue caminho próprio: ${joinList(newRelatives.map((r) => `${r.firstName} (${RELATIVE_PATH_INFO[r.path].label.toLowerCase()})`))}.`,
     );
 
-  // Quem passa o comando em vida segue vivo: no controle da equipe, se ela vira participação porque o
-  // herdeiro vai para as pistas; senão, nas participações ou longe das pistas. Uma morte não muda quem
-  // já estava nesse papel.
+  // Quem passa o comando em vida segue vivo e entra na lista dos que passaram o comando: no controle
+  // da equipe, se ela vira participação porque o herdeiro vai para as pistas; senão, nas
+  // participações ou longe das pistas. Quem já estava nessa lista continua nela (só sai ao morrer,
+  // pela tábua de mortalidade), também quando o personagem morre.
   const m = state.management;
   const ownedTeamName = m?.position === 'owner' ? (state.teams.find((t) => t.id === m.teamId)?.name ?? 'Equipe da família') : null;
-  const elder: Elder | null =
-    succession.cause === 'handover' ? elderAfterHandover(state, former, path === 'driver' ? ownedTeamName : null) : state.dynasty.elder;
-  if (succession.cause === 'handover' && elder?.role === 'investor') notes.push(`${elder.name} segue cuidando das participações da família.`);
-  if (succession.cause === 'handover' && elder?.role === 'retired')
-    notes.push(`${elder.name} deixa a linha de frente e passa a acompanhar a família de longe.`);
+  const elder: Elder | null = succession.cause === 'handover' ? elderAfterHandover(state, former, path === 'driver' ? ownedTeamName : null) : null;
+  if (elder?.role === 'investor') notes.push(`${elder.name} segue cuidando das participações da família.`);
+  if (elder?.role === 'retired') notes.push(`${elder.name} deixa a linha de frente e passa a acompanhar a família de longe.`);
   const dynasty = (entry: LineageEntry) => ({
     ...state.dynasty,
     generation,
     lineage: [...lineage, entry],
     relatives: [...state.dynasty.relatives, ...newRelatives],
-    elder,
+    elders: elder ? [...state.dynasty.elders, elder] : state.dynasty.elders,
   });
 
   // O herdeiro filho começa a própria família. O parceiro que assume deixa de ser parceiro de alguém, e
@@ -628,11 +692,13 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
       executiveLog: [],
       license: { history: heirRacing?.license ?? [], penaltyPoints: 0, banRounds: 0 },
       relations: { teamTrust: 50, teammate: 50, rivalries: {}, rivalryLog: [] },
-      // A memória das histórias é do personagem: o herdeiro começa a dele (Fase 5).
+      // A memória das histórias é do personagem: o herdeiro começa a dele (Fase 5); o ano de
+      // transição também (Fase 6: o herdeiro tem o dele, quando parar de correr).
       story: emptyStory(base.id),
+      transition: null,
       family,
       birth,
-      dynasty: dynasty(newEntry(base.id, option.name, option.age, state.year)),
+      dynasty: dynasty(newEntry(base.id, option.name, option.age, state.year, midSeason ? state.season : state.season + 1)),
     };
     if (state.executiveOffseason) {
       // O fechamento é refeito para o novo personagem: propostas de cargo pelo prestígio dele e,
@@ -673,7 +739,7 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
   const plan = seatPlan(state, heirDriver, heirRacing, seat, state.finance.cash);
   const team = plan.team;
   if (!plan.option.available || !team) throw new Error(plan.option.reason ?? 'Vaga indisponível.');
-  const summary: SeasonSummary = state.executiveOffseason?.summary ?? (state.offseason ? archiveSeason(state) : { ...executiveSummary(state), mode: 'driver' });
+  const summary: SeasonSummary = state.executiveOffseason?.summary ?? (state.offseason ? archiveSeason(state) : interruptedSeason(state, former.id));
   const nextSeason = state.season + 1;
   const nextYear = state.year + 1;
   const category = getCategory(heirRacing.categoryId);
@@ -721,8 +787,9 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     age: option.kind === 'child' ? heirDriver.age : heirDriver.age + 1,
   };
   const drivers = [player, ...plan.drivers.filter((d) => !(d.teamId === team.id && d.role === role))];
-  const win = Math.round(category.economy.winBonus * (1.2 - 0.7 * t));
-  const salary = Math.round((lerp(category.economy.salary, t) * 0.7) / 1000) * 1000;
+  const terms = HEIR_START.CONTRACT;
+  const win = Math.round(category.economy.winBonus * (terms.WIN_BONUS[0] - terms.WIN_BONUS[1] * t));
+  const salary = Math.round((lerp(category.economy.salary, t) * terms.SALARY_SHARE) / 1000) * 1000;
   const seatCost = plan.contractSeat;
   const contract: Contract = {
     teamId: team.id,
@@ -732,7 +799,12 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     endSeason: nextSeason,
     salary,
     seatCost,
-    bonuses: { win, podium: Math.round(win * 0.35), point: Math.round(win * 0.02), title: win * 5 },
+    bonuses: {
+      win,
+      podium: Math.round(win * terms.PODIUM_SHARE),
+      point: Math.round(win * terms.POINT_SHARE),
+      title: win * terms.TITLE_MULTIPLIER,
+    },
     clauses: { releaseFee: 0, performanceTarget: null },
   };
   const calendar = buildCalendar(state.seed, nextSeason, nextYear, category);
@@ -773,8 +845,10 @@ export function resolveSuccession(career: CareerState, heirId: string, path: 'dr
     noDoorSeasons: 0,
     license: { history: heirRacing.license, penaltyPoints: 0, banRounds: 0 },
     relations: { teamTrust: 50, teammate: 50, rivalries: {}, rivalryLog: [] },
-    // A memória das histórias é do personagem: o herdeiro começa a dele (Fase 5).
+    // A memória das histórias é do personagem: o herdeiro começa a dele (Fase 5); o ano de transição
+    // também (Fase 6: o herdeiro tem o dele, quando parar de correr).
     story: emptyStory(player.id),
+    transition: null,
     marketInterest: {},
     pendingEvents: [],
     offseason: null,
