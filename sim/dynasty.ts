@@ -379,25 +379,64 @@ export interface GenerationStats {
   titleSeasonShare: number;
 }
 
+/** Quem herdou as pistas: um filho ou uma filha que já corria, ou o parente jovem. */
+export type HeirKind = HeirSample['kind'];
+export const HEIR_KINDS = ['child', 'relative'] as const satisfies readonly HeirKind[];
+
+/** O que a comparação pela semente põe lado a lado nas duas gerações da mesma carreira. */
+export const PAIRED_MEASURES = ['tier', 'titles', 'wins', 'topSeasons'] as const;
+export type PairedMeasure = (typeof PAIRED_MEASURES)[number];
+
+/** Carreiras em que a 2ª geração ficou acima da 1ª numa medida, igual ou abaixo. */
+export interface PairedCount {
+  more: number;
+  same: number;
+  less: number;
+}
+
+/** Medianas da herança num grupo de sucessões. */
+export interface InheritanceStats {
+  successions: number;
+  estate: number;
+  tax: number;
+  siblingsShare: number;
+  inherited: number;
+}
+
 export interface DynastyStats {
   careers: number;
   /** Carreiras que chegaram à 2ª geração: herdeiro filho ou filha que já corria, ou o parente jovem (sem filho piloto). */
   reached: number;
   childHeir: number;
   relativeHeir: number;
+  /** Sucessões em que o parente jovem herdou com um filho piloto na família (a política do robô não deixa: tem de dar zero). */
+  relativeOverRacingChild: number;
   /** Como a 1ª geração passou a família adiante, e com que idade em média. */
   causes: Record<Succession['cause'], number>;
   averageFormerAge: number;
   gen1: GenerationStats;
   gen2: GenerationStats;
-  /** Comparação pareada pela semente (carreiras com as duas gerações): a 2ª chegou a um degrau mais alto, ao mesmo ou a um mais baixo. */
-  paired: { further: number; same: number; shorter: number };
-  /** Medianas da herança. */
-  inheritance: { estate: number; tax: number; siblingsShare: number; inherited: number };
-  /** De onde o herdeiro largou, e em quantas sucessões cada vaga estava ao alcance. */
-  seats: Record<engine.HeirSeat, number> & { topAvailable: number; familyAvailable: number };
-  /** O herdeiro escolhido, na hora da escolha (médias). */
-  heir: { age: number; tier: number; ownSeasons: number; revealed: number; hidden: number; kartTested: number };
+  /**
+   * A 2ª geração por quem herdou. O parente jovem nasce na sucessão, com potencial próprio, sem herança
+   * de traços nem teste no kart: só os filhos herdeiros medem as regras da dinastia.
+   */
+  gen2ByHeir: Record<HeirKind, GenerationStats>;
+  /**
+   * Comparação pareada pela semente (carreiras com as duas gerações), em cada medida: degrau mais alto,
+   * títulos, vitórias e temporadas no topo. `pairedChild`, só nas carreiras em que um filho herdou.
+   */
+  paired: Record<PairedMeasure, PairedCount>;
+  pairedChild: Record<PairedMeasure, PairedCount>;
+  /** Medianas da herança, por quem herdou (com o parente herdeiro, o motor não dá parte aos filhos). */
+  inheritance: Record<HeirKind, InheritanceStats>;
+  /**
+   * De onde o herdeiro largou, e em quantas sucessões cada vaga estava ao alcance. `current` conta
+   * também o parente jovem, que não corria: `relativeCurrent` diz quantos (largam numa equipe do kart
+   * regional).
+   */
+  seats: Record<engine.HeirSeat, number> & { relativeCurrent: number; topAvailable: number; familyAvailable: number };
+  /** Os filhos herdeiros na hora da escolha (médias; do parente jovem não se sabe nada). */
+  heir: { heirs: number; age: number; tier: number; ownSeasons: number; revealed: number; hidden: number; kartTested: number };
   /** A família na sucessão: filhos por família, famílias sem filhos, filhos com carreira, testes no kart e traços conhecidos. */
   family: {
     childrenPerFamily: number;
@@ -429,8 +468,41 @@ function median(values: readonly number[]): number {
 /** O degrau mais alto em que a geração correu (o da estreia conta, mesmo sem temporada completa). */
 export const highestTierOf = (gen: GenerationSample) => Math.max(gen.startTier, ...gen.seasons.map((s) => s.tier));
 
+const TOP_TIER = Math.max(...CATEGORIES.map((c) => c.tier));
+
+/** O valor de uma geração numa medida da comparação pela semente. */
+export function pairedValue(gen: GenerationSample, measure: PairedMeasure): number {
+  switch (measure) {
+    case 'tier':
+      return highestTierOf(gen);
+    case 'titles':
+      return gen.seasons.filter((s) => s.title).length;
+    case 'wins':
+      return sum(gen.seasons.map((s) => s.wins));
+    case 'topSeasons':
+      return gen.seasons.filter((s) => s.tier >= TOP_TIER).length;
+  }
+}
+
+function pairedCounts(dynasties: readonly { gen1: GenerationSample; gen2: GenerationSample }[]): Record<PairedMeasure, PairedCount> {
+  const count = (measure: PairedMeasure): PairedCount => {
+    const deltas = dynasties.map((d) => pairedValue(d.gen2, measure) - pairedValue(d.gen1, measure));
+    return { more: deltas.filter((x) => x > 0).length, same: deltas.filter((x) => x === 0).length, less: deltas.filter((x) => x < 0).length };
+  };
+  return Object.fromEntries(PAIRED_MEASURES.map((measure) => [measure, count(measure)])) as Record<PairedMeasure, PairedCount>;
+}
+
+function inheritanceStats(successions: readonly SuccessionSample[]): InheritanceStats {
+  return {
+    successions: successions.length,
+    estate: median(successions.map((s) => s.estate)),
+    tax: median(successions.map((s) => s.tax)),
+    siblingsShare: median(successions.map((s) => s.siblingsShare)),
+    inherited: median(successions.map((s) => s.inherited)),
+  };
+}
+
 export function generationStats(gens: readonly GenerationSample[]): GenerationStats {
-  const topTier = Math.max(...CATEGORIES.map((c) => c.tier));
   const highest = gens.map(highestTierOf);
   const titles = gens.map((g) => g.seasons.filter((s) => s.title).length);
   const seasons = gens.flatMap((g) => g.seasons);
@@ -442,7 +514,7 @@ export function generationStats(gens: readonly GenerationSample[]): GenerationSt
     averageHighestTier: mean(highest),
     highestTier: CATEGORIES.map((category) => highest.filter((tier) => tier === category.tier).length),
     formulaShare: gens.length ? highest.filter((tier) => tier >= 4).length / gens.length : 0,
-    topShare: gens.length ? highest.filter((tier) => tier >= topTier).length / gens.length : 0,
+    topShare: gens.length ? highest.filter((tier) => tier >= TOP_TIER).length / gens.length : 0,
     titlesPerCareer: mean(titles),
     winsPerCareer: mean(gens.map((g) => sum(g.seasons.map((s) => s.wins)))),
     maxTitles: Math.max(0, ...titles),
@@ -452,14 +524,19 @@ export function generationStats(gens: readonly GenerationSample[]): GenerationSt
 
 export function dynastyStats(dynasties: readonly DynastySample[]): DynastyStats {
   const reached = dynasties.filter((d): d is DynastySample & { gen2: GenerationSample } => d.gen2 !== null);
+  const reachedBy = (kind: HeirKind) => reached.filter((d) => d.succession?.heir.kind === kind);
   const successions = dynasties.flatMap((d) => d.succession ?? []);
+  const successionsBy = (kind: HeirKind) => successions.filter((s) => s.heir.kind === kind);
   const heirs = successions.map((s) => s.heir);
+  const childHeirs = heirs.filter((h) => h.kind === 'child');
   const transitions = dynasties.map((d) => d.afterDriving.transition);
+  const byHeir = <T>(build: (kind: HeirKind) => T) => Object.fromEntries(HEIR_KINDS.map((kind) => [kind, build(kind)])) as Record<HeirKind, T>;
   return {
     careers: dynasties.length,
     reached: reached.length,
-    childHeir: heirs.filter((h) => h.kind === 'child').length,
-    relativeHeir: heirs.filter((h) => h.kind === 'relative').length,
+    childHeir: childHeirs.length,
+    relativeHeir: heirs.length - childHeirs.length,
+    relativeOverRacingChild: successions.filter((s) => s.heir.kind === 'relative' && s.racingChildren > 0).length,
     causes: {
       handover: successions.filter((s) => s.cause === 'handover').length,
       death: successions.filter((s) => s.cause === 'death').length,
@@ -468,31 +545,26 @@ export function dynastyStats(dynasties: readonly DynastySample[]): DynastyStats 
     averageFormerAge: mean(successions.map((s) => s.formerAge)),
     gen1: generationStats(dynasties.map((d) => d.gen1)),
     gen2: generationStats(reached.map((d) => d.gen2)),
-    paired: {
-      further: reached.filter((d) => highestTierOf(d.gen2) > highestTierOf(d.gen1)).length,
-      same: reached.filter((d) => highestTierOf(d.gen2) === highestTierOf(d.gen1)).length,
-      shorter: reached.filter((d) => highestTierOf(d.gen2) < highestTierOf(d.gen1)).length,
-    },
-    inheritance: {
-      estate: median(successions.map((s) => s.estate)),
-      tax: median(successions.map((s) => s.tax)),
-      siblingsShare: median(successions.map((s) => s.siblingsShare)),
-      inherited: median(successions.map((s) => s.inherited)),
-    },
+    gen2ByHeir: byHeir((kind) => generationStats(reachedBy(kind).map((d) => d.gen2))),
+    paired: pairedCounts(reached),
+    pairedChild: pairedCounts(reachedBy('child')),
+    inheritance: byHeir((kind) => inheritanceStats(successionsBy(kind))),
     seats: {
       current: heirs.filter((h) => h.seat === 'current').length,
       top: heirs.filter((h) => h.seat === 'top').length,
       family: heirs.filter((h) => h.seat === 'family').length,
+      relativeCurrent: heirs.filter((h) => h.seat === 'current' && h.kind === 'relative').length,
       topAvailable: heirs.filter((h) => h.seats.includes('top')).length,
       familyAvailable: heirs.filter((h) => h.seats.includes('family')).length,
     },
     heir: {
-      age: mean(heirs.map((h) => h.age)),
-      tier: mean(heirs.map((h) => h.tier)),
-      ownSeasons: mean(heirs.map((h) => h.ownSeasons)),
-      revealed: mean(heirs.map((h) => h.revealed)),
-      hidden: mean(heirs.map((h) => h.hidden)),
-      kartTested: heirs.filter((h) => h.kartTest !== null).length,
+      heirs: childHeirs.length,
+      age: mean(childHeirs.map((h) => h.age)),
+      tier: mean(childHeirs.map((h) => h.tier)),
+      ownSeasons: mean(childHeirs.map((h) => h.ownSeasons)),
+      revealed: mean(childHeirs.map((h) => h.revealed)),
+      hidden: mean(childHeirs.map((h) => h.hidden)),
+      kartTested: childHeirs.filter((h) => h.kartTest !== null).length,
     },
     family: {
       childrenPerFamily: mean(successions.map((s) => s.children)),

@@ -8,6 +8,7 @@ import { SPONSOR_PROFILES, STORY_CHAINS } from '@/data/events';
 import { PLAYER_BACKGROUNDS, PLAYER_MAX_AGE, PLAYER_MIN_AGE } from '@/data/rules';
 import { ROOKIE_TEAM_IDS } from '@/data/teams';
 import { validateCareerIntegrity } from '@/persistence/integrity';
+import { formatMoney } from '@/domain/money';
 import { type CareerState, CareerStateSchema, type MomentRecord, type PendingEvent, type Relative, type TeamStake } from '@/domain/schemas';
 import {
   type HeirOutlook,
@@ -1286,18 +1287,60 @@ describe('dinastia nos agregados (Fase 6)', () => {
     expect(dynasty?.gen2.topShare).toBeCloseTo(1 / 3);
   });
 
+  it('a 2ª geração separada por quem herdou: um filho que já corria ou o parente jovem', () => {
+    expect(dynasty?.gen2ByHeir.child).toMatchObject({
+      careers: 2,
+      seasonsPerCareer: 2.5,
+      averageStartAge: 16.5,
+      averageStartTier: 2,
+      averageHighestTier: 4.5,
+      highestTier: [0, 1, 0, 0, 0, 0, 1],
+      formulaShare: 0.5,
+      topShare: 0.5,
+      titlesPerCareer: 1,
+      winsPerCareer: 5,
+      maxTitles: 2,
+      titleSeasonShare: 2 / 5,
+    });
+    expect(dynasty?.gen2ByHeir.relative).toMatchObject({
+      careers: 1,
+      seasonsPerCareer: 2,
+      averageHighestTier: 3,
+      highestTier: [0, 0, 1, 0, 0, 0, 0],
+      titlesPerCareer: 0,
+    });
+  });
+
   it('comparação pela semente, herdeiros, causas e herança', () => {
     expect(dynasty).toMatchObject({
       careers: 4,
       reached: 3,
       childHeir: 2,
       relativeHeir: 1,
+      relativeOverRacingChild: 0,
       causes: { handover: 2, death: 1, accident: 0 },
-      paired: { further: 1, same: 1, shorter: 1 },
-      // Medianas de três sucessões.
-      inheritance: { estate: 500_000, tax: 50_000, siblingsShare: 90_000, inherited: 360_000 },
-      seats: { current: 1, top: 1, family: 1, topAvailable: 1, familyAvailable: 1 },
-      heir: { kartTested: 2 },
+      // A: mais longe em tudo; B (parente): mesmo degrau, sem título, menos vitórias; D: menos longe, o resto empata.
+      paired: {
+        tier: { more: 1, same: 1, less: 1 },
+        titles: { more: 1, same: 2, less: 0 },
+        wins: { more: 1, same: 1, less: 1 },
+        topSeasons: { more: 1, same: 2, less: 0 },
+      },
+      // Só A e D (um filho herdou).
+      pairedChild: {
+        tier: { more: 1, same: 0, less: 1 },
+        titles: { more: 1, same: 1, less: 0 },
+        wins: { more: 1, same: 1, less: 0 },
+        topSeasons: { more: 1, same: 1, less: 0 },
+      },
+      // Medianas por quem herdou: duas sucessões de filho (A e D, fica a menor) e uma de parente (B).
+      inheritance: {
+        child: { successions: 2, estate: 500_000, tax: 50_000, siblingsShare: 90_000, inherited: 360_000 },
+        relative: { successions: 1, estate: 200_000, tax: 0, siblingsShare: 0, inherited: 200_000 },
+      },
+      seats: { current: 1, top: 1, family: 1, relativeCurrent: 1, topAvailable: 1, familyAvailable: 1 },
+      // O herdeiro na escolha: só os filhos (A e D).
+      heir: { heirs: 2, age: 16, tier: 2, ownSeasons: 2, revealed: 2, hidden: 1, kartTested: 2 },
       family: { childrenPerFamily: 2, childless: 1, children: 6, kartTests: 4, traitsRevealed: 8, traits: 18 },
       relatives: { engineer: 2, business: 0, sportingDirector: 2 },
       transition: { commentator: 2, ambassador: 0, mentor: 0, none: 2 },
@@ -1305,8 +1348,18 @@ describe('dinastia nos agregados (Fase 6)', () => {
       familyTeam: { seasons: 1, careers: 1 },
     });
     expect(dynasty?.averageFormerAge).toBeCloseTo(149 / 3);
-    expect(dynasty?.heir.age).toBeCloseTo(47 / 3);
-    expect(dynasty?.heir.hidden).toBeCloseTo(5 / 3);
+  });
+
+  it('conta o parente jovem que herdou com um filho piloto na família (a política do robô não deixa)', () => {
+    const passedOver = career(5, {
+      ...(b.dynasty as DynastySample),
+      succession: succession({ heir: heir({ kind: 'relative', age: 15, tier: 1, ownSeasons: 0, revealed: 0, hidden: 3, kartTest: null }), racingChildren: 1 }),
+    });
+    const stats = summarize([a, passedOver], { seeds: 2, seasons: 3, firstSeed: 1, talent: 0, generations: 2 }).dynasty;
+    expect(stats?.relativeOverRacingChild).toBe(1);
+    expect(formatReport(summarize([a, passedOver], { seeds: 2, seasons: 3, firstSeed: 1, talent: 0, generations: 2 }))).toContain(
+      'sem filho piloto, o parente jovem em 1 (com um filho piloto preterido: 1).',
+    );
   });
 
   it('a seção 11 mostra esses números', () => {
@@ -1319,10 +1372,28 @@ describe('dinastia nos agregados (Fase 6)', () => {
     expect(section).toContain('em vida, 2 · por morte, 1 · por acidente, 0 (aos 49,7 anos, em média).');
     expect(section).toMatch(/1ª geração +4 +2,3 +15,3 +1,0 +3,25 +50% +0% +0,25 +2,0 +1 +11%/);
     expect(section).toMatch(/2ª geração +3 +2,3 +16,0 +1,7 +4,00 +33% +33% +0,67 +3,3 +2 +29%/);
+    expect(section).toMatch(/2ª: filho herdeiro +2 +2,5 +16,5 +2,0 +4,50 +50% +50% +1,00 +5,0 +2 +40%/);
+    expect(section).toMatch(/2ª: parente jovem +1 +2,0 +15,0 +1,0 +3,00 +0% +0% +0,00 +0,0 +0 +0%/);
     expect(section).toContain('Degrau mais alto, 2ª geração: 1º 0 · 2º 1 · 3º 1 · 4º 0 · 5º 0 · 6º 0 · 7º 1.');
-    expect(section).toContain('Pela semente (degrau mais alto): a 2ª geração foi mais longe em 1, ficou no mesmo degrau em 1 e foi menos longe em 1.');
+    // A comparação pela semente: todas as carreiras com as duas gerações e, nas três últimas colunas, só as de filho herdeiro.
+    expect(section).toMatch(/Pela semente \(2ª contra a 1ª\) +Mais +Igual +Menos +Filho herdeiro: mais +Igual +Menos/);
+    expect(section).toMatch(/Degrau mais alto +1 +1 +1 +1 +0 +1\n/);
+    expect(section).toMatch(/Títulos +1 +2 +0 +1 +1 +0\n/);
+    expect(section).toMatch(/Vitórias +1 +1 +1 +1 +1 +0\n/);
+    expect(section).toMatch(/Temporadas no topo +1 +2 +0 +1 +1 +0\n/);
     expect(section).toContain('Não ganha tudo: a 2ª geração foi campeã em 29% das temporadas; o máximo numa carreira foi 2 títulos.');
+    expect(section).toContain(
+      `Herança (medianas), filho herdeiro (2 sucessões): patrimônio deixado ${formatMoney(500_000, 'BRL', { compact: true })} · imposto ${formatMoney(50_000, 'BRL', { compact: true })} · parte dos irmãos ${formatMoney(90_000, 'BRL', { compact: true })} · com o herdeiro ${formatMoney(360_000, 'BRL', { compact: true })}.`,
+    );
+    expect(section).toContain('Herança (medianas), parente jovem (1 sucessão): patrimônio deixado');
+    expect(section).toContain('(os filhos não recebem parte quando o parente herda)');
+    expect(section).toContain(
+      'Vaga do herdeiro: a equipe em que já corria em 0 · uma equipe do kart regional (o parente jovem, que não corria) em 1 · uma equipe da frente, paga pela família, em 1 · a equipe da família em 1.',
+    );
     expect(section).toContain('A da frente estava ao alcance em 1 sucessão; a da família, em 1.');
+    expect(section).toContain(
+      'Filho herdeiro na escolha (médias): 16,0 anos, degrau 2,0, 2,0 temporadas de carreira própria; 2,0 traços de nascença revelados e 1,0 ocultos. Fez o teste no kart: 2 de 2.',
+    );
     expect(section).toContain('Engenharia: 2 · Negócios: 0 · Direção esportiva: 2.');
     expect(section).toContain('Comentários na TV: 2 · Imagem de uma marca: 0 · Mentoria: 0 · sem ano de transição: 2.');
     expect(section).toContain('Equipe da família: a 2ª geração correu por ela em 1 temporada, em 1 de 3 carreiras.');
@@ -1337,14 +1408,23 @@ describe('dinastia nos agregados (Fase 6)', () => {
       averageFormerAge: 0,
       gen1: { careers: 0, averageHighestTier: 0, formulaShare: 0, topShare: 0, titlesPerCareer: 0, maxTitles: 0, titleSeasonShare: 0 },
       gen2: { careers: 0, highestTier: [0, 0, 0, 0, 0, 0, 0] },
-      paired: { further: 0, same: 0, shorter: 0 },
-      inheritance: { estate: 0, tax: 0, siblingsShare: 0, inherited: 0 },
+      paired: { tier: { more: 0, same: 0, less: 0 }, wins: { more: 0, same: 0, less: 0 } },
+      pairedChild: { titles: { more: 0, same: 0, less: 0 } },
+      inheritance: {
+        child: { successions: 0, estate: 0, tax: 0, siblingsShare: 0, inherited: 0 },
+        relative: { successions: 0, estate: 0, tax: 0, siblingsShare: 0, inherited: 0 },
+      },
+      heir: { heirs: 0, age: 0, kartTested: 0 },
       family: { childrenPerFamily: 0, children: 0 },
     });
     const section = formatReport(empty).split('11. DINASTIA')[1] ?? '';
     expect(section).toContain('Chegaram à 2ª geração: 0 de 0 carreiras.');
     expect(section).toContain('por acidente, 0.');
     expect(section).toMatch(/2ª geração +0 +- +- +- +- +- +- +0,00 +0,0 +0 +0%/);
+    expect(section).toMatch(/2ª: filho herdeiro +0 +- +- +- +- +- +- +0,00 +0,0 +0 +0%/);
+    expect(section).toContain('Herança (medianas), filho herdeiro: nenhuma sucessão.');
+    expect(section).toContain('Herança (medianas), parente jovem: nenhuma sucessão.');
+    expect(section).toContain('Fez o teste no kart: 0 de 0.');
     expect(section).not.toMatch(/NaN|undefined|Infinity/);
     // Sem dinastia pedida, o resumo não traz nada dela.
     expect(summarize([], SMALL).dynasty).toBeNull();

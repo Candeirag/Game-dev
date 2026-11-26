@@ -13,7 +13,7 @@ import { CATEGORIES, getCategory } from '@/data/categories';
 import { RELATIVE_PATH_INFO } from '@/data/dynasty';
 import { MOMENT_TEXTS } from '@/data/raceMoments';
 import { TRANSITION_ROLE_INFO } from '@/data/transition';
-import { type DynastyStats, type GenerationStats, SIM_DYNASTY } from './dynasty';
+import { type DynastyStats, type GenerationStats, type InheritanceStats, PAIRED_MEASURES, type PairedMeasure, SIM_DYNASTY } from './dynasty';
 import { BOT_TRANSITION_ORDER, type MomentPolicy } from './policy';
 import type { BirthGroupStats, EventCountStats, MomentCountStats, MomentEdgeStats, SimSummary, UnlockSample } from './run';
 
@@ -424,6 +424,19 @@ export function formatReport(summary: SimSummary): string {
 /** Os degraus mais altos de uma geração, no formato da seção 4. */
 const tierSpread = (g: GenerationStats) => CATEGORIES.map((c, i) => `${c.tier}º ${g.highestTier[i] ?? 0}`).join(' · ');
 
+const PAIRED_LABELS: Readonly<Record<PairedMeasure, string>> = {
+  tier: 'Degrau mais alto',
+  titles: 'Títulos',
+  wins: 'Vitórias',
+  topSeasons: 'Temporadas no topo',
+};
+
+/** As medianas da herança de um grupo de sucessões, numa linha. */
+function inheritanceLine(label: string, i: InheritanceStats, note = ''): string {
+  if (i.successions === 0) return `Herança (medianas), ${label}: nenhuma sucessão.`;
+  return `Herança (medianas), ${label} (${counted(i.successions, 'sucessão', 'sucessões')}): patrimônio deixado ${cash(i.estate)} · imposto ${cash(i.tax)} · parte dos irmãos ${cash(i.siblingsShare)}${note} · com o herdeiro ${cash(i.inherited)}.`;
+}
+
 /** A seção 11 (Fase 6): as duas gerações de cada carreira, a sucessão e a família. */
 function dynastySection(d: DynastyStats): string[] {
   const careers = counted(d.careers, 'carreira', 'carreiras');
@@ -447,8 +460,9 @@ function dynastySection(d: DynastyStats): string[] {
   };
   const transitionOrder = [...BOT_TRANSITION_ORDER, ...TRANSITION_ROLES.filter((role) => !BOT_TRANSITION_ORDER.some((r) => r === role))];
   const share = (count: number, total: number) => (total ? ` (${percent(count / total)})` : '');
+  const childCurrent = d.seats.current - d.seats.relativeCurrent;
   return [
-    `Chegaram à 2ª geração: ${d.reached} de ${careers}. Herdeiro piloto: um filho ou uma filha que já corria em ${d.childHeir}; sem filho piloto, o parente jovem em ${d.relativeHeir}.`,
+    `Chegaram à 2ª geração: ${d.reached} de ${careers}. Herdeiro piloto: um filho ou uma filha que já corria em ${d.childHeir}; sem filho piloto, o parente jovem em ${d.relativeHeir}${d.relativeOverRacingChild ? ` (com um filho piloto preterido: ${d.relativeOverRacingChild})` : ''}.`,
     `Como a 1ª geração passou a família adiante: em vida, ${d.causes.handover} · por morte, ${d.causes.death} · por acidente, ${d.causes.accident}${heirs ? ` (aos ${decimal(d.averageFormerAge)} anos, em média)` : ''}.`,
     '',
     ...table(
@@ -466,17 +480,36 @@ function dynastySection(d: DynastyStats): string[] {
         'Máximo de títulos',
         'Temporadas com título',
       ],
-      [generationRow('1ª geração', d.gen1), generationRow('2ª geração', d.gen2)],
+      [
+        generationRow('1ª geração', d.gen1),
+        generationRow('2ª geração', d.gen2),
+        generationRow('2ª: filho herdeiro', d.gen2ByHeir.child),
+        generationRow('2ª: parente jovem', d.gen2ByHeir.relative),
+      ],
     ),
     '',
     `Degrau mais alto, 1ª geração: ${tierSpread(d.gen1)}.`,
     `Degrau mais alto, 2ª geração: ${tierSpread(d.gen2)}.`,
-    `Pela semente (degrau mais alto): a 2ª geração foi mais longe em ${d.paired.further}, ficou no mesmo degrau em ${d.paired.same} e foi menos longe em ${d.paired.shorter}.`,
+    '',
+    ...table(
+      ['Pela semente (2ª contra a 1ª)', 'Mais', 'Igual', 'Menos', 'Filho herdeiro: mais', 'Igual', 'Menos'],
+      PAIRED_MEASURES.map((m) => [
+        PAIRED_LABELS[m],
+        String(d.paired[m].more),
+        String(d.paired[m].same),
+        String(d.paired[m].less),
+        String(d.pairedChild[m].more),
+        String(d.pairedChild[m].same),
+        String(d.pairedChild[m].less),
+      ]),
+    ),
+    '',
     `Não ganha tudo: a 2ª geração foi campeã em ${percent(d.gen2.titleSeasonShare)} das temporadas; o máximo numa carreira foi ${counted(d.gen2.maxTitles, 'título', 'títulos')}.`,
     '',
-    `Herança (medianas): patrimônio deixado ${cash(d.inheritance.estate)} · imposto ${cash(d.inheritance.tax)} · parte dos irmãos ${cash(d.inheritance.siblingsShare)} · com o herdeiro ${cash(d.inheritance.inherited)}.`,
-    `Vaga do herdeiro: a equipe em que já corria em ${d.seats.current} · uma equipe da frente, paga pela família, em ${d.seats.top} · a equipe da família em ${d.seats.family}. A da frente estava ao alcance em ${counted(d.seats.topAvailable, 'sucessão', 'sucessões')}; a da família, em ${d.seats.familyAvailable}.`,
-    `Herdeiro na escolha (médias): ${decimal(d.heir.age)} anos, degrau ${decimal(d.heir.tier)}, ${counted(decimal(d.heir.ownSeasons), 'temporada', 'temporadas')} de carreira própria; ${decimal(d.heir.revealed)} traços de nascença revelados e ${decimal(d.heir.hidden)} ocultos. Fez o teste no kart: ${d.heir.kartTested} de ${heirs}.`,
+    inheritanceLine('filho herdeiro', d.inheritance.child),
+    inheritanceLine('parente jovem', d.inheritance.relative, ' (os filhos não recebem parte quando o parente herda)'),
+    `Vaga do herdeiro: a equipe em que já corria em ${childCurrent} · uma equipe do kart regional (o parente jovem, que não corria) em ${d.seats.relativeCurrent} · uma equipe da frente, paga pela família, em ${d.seats.top} · a equipe da família em ${d.seats.family}. A da frente estava ao alcance em ${counted(d.seats.topAvailable, 'sucessão', 'sucessões')}; a da família, em ${d.seats.familyAvailable}.`,
+    `Filho herdeiro na escolha (médias): ${decimal(d.heir.age)} anos, degrau ${decimal(d.heir.tier)}, ${counted(decimal(d.heir.ownSeasons), 'temporada', 'temporadas')} de carreira própria; ${decimal(d.heir.revealed)} traços de nascença revelados e ${decimal(d.heir.hidden)} ocultos. Fez o teste no kart: ${d.heir.kartTested} de ${d.heir.heirs}.`,
     `Família na sucessão: ${decimal(d.family.childrenPerFamily)} filhos por família (sem filhos: ${d.family.childless}); com carreira de piloto, ${decimal(d.family.racingChildrenPerFamily)} por família. Fizeram o teste no kart: ${d.family.kartTests} de ${counted(d.family.children, 'filho', 'filhos')}. Traços de nascença dos filhos já revelados na escolha: ${d.family.traitsRevealed} de ${d.family.traits}${share(d.family.traitsRevealed, d.family.traits)}.`,
     `Parentes por caminho (os filhos que não herdaram): ${RELATIVE_PATHS.map((path) => `${RELATIVE_PATH_INFO[path].label}: ${d.relatives[path]}`).join(' · ')}.`,
     `Ano de transição da 1ª geração: ${transitionOrder.map((role) => `${TRANSITION_ROLE_INFO[role].label}: ${d.transition[role]}`).join(' · ')} · sem ano de transição: ${d.transition.none}.`,
@@ -489,17 +522,23 @@ function dynastySection(d: DynastyStats): string[] {
         `A 1ª geração corre até os ${SIM_DYNASTY.RETIRE_AGE} anos, faz o ano de transição (o primeiro papel ao alcance, na ordem da linha do ano de transição),`,
         'vira dirigente (compra uma equipe se o preço couber no caixa com folga, senão aceita um cargo, senão acompanha de fora) e',
         `passa o comando em vida quando um filho com carreira de piloto chega aos ${SIM_DYNASTY.HEIR_RACING_AGE} anos; sem filho piloto, aos`,
-        `${SIM_DYNASTY.HANDOVER_AGE} anos, e o parente jovem herda. Morrer antes também abre a sucessão. O robô escolhe o herdeiro pelo que`,
-        'se vê (degrau, teste no kart, avaliação dos treinadores, talentos e defeitos revelados e idade) e a vaga: uma equipe da',
-        'frente, se o patrimônio herdado cobrir; senão, a da família; senão, a equipe em que o herdeiro já corria. A 2ª geração',
-        `corre até os ${SIM_DYNASTY.RETIRE_AGE} anos ou ${SIM_DYNASTY.GEN2_MAX_SEASONS} temporadas. Aqui a 1ª geração conta a vida de piloto inteira: as temporadas`,
-        'da amostra e as que vieram até parar (as seções 1 a 10 contam só as da amostra). "Temporadas" são as completas',
-        'como piloto da família, em média; "idade de estreia" e "degrau de estreia", os da primeira temporada como piloto da',
-        'família (o herdeiro já vinha de uma carreira própria, que aparece na linha do herdeiro na escolha); "degrau mais alto"',
-        'conta o da estreia; "monopostos" e "topo", a parcela que chegou ao 4º degrau e ao último. A comparação pela semente põe',
-        'lado a lado as duas gerações da mesma carreira. A herança é o patrimônio de quem passou a família adiante (com a',
-        'equipe própria, se houver), o imposto, a parte dos irmãos e o que ficou com o herdeiro. O bônus de talento vale para',
-        'o piloto de cada geração: o herdeiro o recebe ao assumir o carro, como o piloto da semente na criação.',
+        `${SIM_DYNASTY.HANDOVER_AGE} anos, e o parente jovem herda. Morrer antes também abre a sucessão. O robô escolhe o herdeiro entre os`,
+        'filhos que já correm, pelo que se vê (degrau, teste no kart, avaliação dos treinadores, talentos e defeitos revelados e',
+        'idade); o parente jovem só herda quando nenhum filho corre. A vaga: uma equipe da frente, se o patrimônio herdado cobrir;',
+        'senão, a da família; senão, a equipe em que o herdeiro já corria. A 2ª geração corre até os',
+        `${SIM_DYNASTY.RETIRE_AGE} anos ou ${SIM_DYNASTY.GEN2_MAX_SEASONS} temporadas e, no fim de cada uma, fica com a proposta da equipe da família quando ela está`,
+        'no degrau mais alto ao alcance (senão, a equipe mais forte, como sempre). Aqui a 1ª geração conta a vida de piloto',
+        'inteira: as temporadas da amostra e as que vieram até parar (as seções 1 a 10 contam só as da amostra). "Temporadas"',
+        'são as completas como piloto da família, em média; "idade de estreia" e "degrau de estreia", os da primeira temporada',
+        'como piloto da família (o herdeiro já vinha de uma carreira própria, que aparece na linha do filho herdeiro na',
+        'escolha); "degrau mais alto" conta o da estreia; "monopostos" e "topo", a parcela que chegou ao 4º degrau e ao último.',
+        'As linhas "filho herdeiro" e "parente jovem" separam a 2ª geração por quem herdou: o parente jovem nasce na sucessão,',
+        'com potencial próprio, sem herança de traços nem teste no kart, e só os filhos medem as regras da dinastia. A tabela',
+        'pela semente põe lado a lado as duas gerações da mesma carreira em quatro medidas (com o talento alto, quase todas as',
+        'carreiras chegam ao topo e o degrau mais alto empata: aí valem os títulos, as vitórias e as temporadas no topo); as',
+        'três últimas colunas contam só as carreiras em que um filho herdou. A herança é o patrimônio de quem passou a família',
+        'adiante (com a equipe própria, se houver), o imposto, a parte dos irmãos e o que ficou com o herdeiro. O bônus de',
+        'talento vale para o piloto de cada geração: o herdeiro o recebe ao assumir o carro, como o piloto da semente na criação.',
       ].join(' '),
     ),
   ];
