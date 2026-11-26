@@ -24,6 +24,7 @@ import {
   EmptyState,
   EVENT_CATEGORY_ICONS,
   Gauge,
+  GenerationTree,
   LockedCard,
   LowerThird,
   Meter,
@@ -48,6 +49,9 @@ import {
   th,
   Tower,
   type TowerRow,
+  TreeBranch,
+  TreeBranches,
+  TreeGeneration,
   TyreBadge,
   TyreGauge,
   TyreLegend,
@@ -575,6 +579,48 @@ export default function CatalogScreen() {
           <p className="text-xs text-ink-400">
             A revelação entra item por item (cada um em 300 ms, só o atraso cresce); com menos movimento, tudo aparece de uma vez. O segredo escondido mostra só
             o "?"; revelado, talento e defeito vêm com ícone e palavra, nunca só com a cor.
+          </p>
+        </Section>
+
+        <Section title="Árvore da família" wide>
+          <GenerationTree label="Gerações da família Duarte">
+            <TreeGeneration marker="1ª" markerLabel="1ª geração">
+              <div className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+                <div>
+                  <div className="font-display text-xl font-bold uppercase leading-tight text-ink-100">Rita Duarte</div>
+                  <p className="text-sm text-ink-300">1998 a 2049 · À frente da família de 2014 a 2049</p>
+                </div>
+                <TreeBranches title="Seguiram outro caminho" label="Filhos de Rita Duarte que seguiram outro caminho">
+                  <TreeBranch>
+                    <span className="text-sm font-semibold text-ink-100">Caio Duarte</span>
+                    <span className="block text-xs text-ink-300">Engenharia · nível no ofício: 64</span>
+                  </TreeBranch>
+                  <TreeBranch>
+                    <span className="text-sm font-semibold text-ink-100">Lia Duarte</span>
+                    <span className="block text-xs text-ink-300">Negócios · nunca correu</span>
+                  </TreeBranch>
+                </TreeBranches>
+              </div>
+            </TreeGeneration>
+            <TreeGeneration marker="2ª" markerLabel="2ª geração" current>
+              <div className="grid gap-x-6 gap-y-2 md:grid-cols-2">
+                <div>
+                  <div className="font-display text-xl font-bold uppercase leading-tight text-ink-100">Téo Duarte</div>
+                  <p className="text-sm text-ink-300">Nascimento em 2027 · 22 anos</p>
+                </div>
+                <TreeBranches title="Filhos" label="Filhos de Téo Duarte">
+                  <TreeBranch>
+                    <span className="text-sm font-semibold text-ink-100">Nina Duarte</span>
+                    <span className="block text-xs text-ink-300">3 anos · Criança</span>
+                  </TreeBranch>
+                </TreeBranches>
+              </div>
+            </TreeGeneration>
+          </GenerationTree>
+          <p className="text-xs text-ink-400">
+            O tronco (2 px, linha forte) desce do marcador de uma geração até o da seguinte; os ramos (1 px) prendem filhos e parentes no desenho de "├─" e
+            "└─". A geração atual tem o marcador vermelho e a palavra "Atual" embaixo. São listas aninhadas (`ol` das gerações, `ul` dos ramos), sem nada
+            clicável dentro; o conteúdo de cada geração é livre.
           </p>
         </Section>
 

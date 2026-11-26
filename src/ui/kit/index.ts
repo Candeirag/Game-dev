@@ -17,6 +17,7 @@ export { LowerThird } from './LowerThird';
 export { ChanceOption, DecisionBar } from './Decision';
 export { PositionBadge, TableWrap, TeamSwatch, Tower, td, th, type TowerRow } from './Table';
 export { WholeRows } from './WholeRows';
+export { GenerationTree, TreeBranch, TreeBranches, TreeGeneration } from './Tree';
 export { Check, ChoiceCard, EmptyState, PageHeader, Stat, Tabs } from './layout';
 export { Segmented, Slider, Switch } from './controls';
 export { Portrait, PortraitOr } from './Portrait';
