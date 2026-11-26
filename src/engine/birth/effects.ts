@@ -2,8 +2,11 @@
  * O que o nascimento muda ao longo da carreira: perfil de corrida (aptidões e talentos e
  * defeitos), treino, patrocinadores e a vida no interior.
  *
- * O nascimento só vale para o personagem que o sorteou. Um herdeiro e uma carreira de save
- * anterior à versão 6 (`birth: null`) correm com tudo neutro.
+ * O nascimento só vale para o personagem de quem ele é (`activeBirth`). Desde a Fase 6, o herdeiro que
+ * é filho (ou o parente jovem piloto) ganha na sucessão um nascimento próprio, com os talentos e
+ * defeitos que herdou, e tudo aqui passa a valer para ele; o do fundador fica na linhagem. Quem
+ * assume sem ser de sangue (o parceiro, o parente adulto) e uma carreira de save anterior à versão 6
+ * (`birth: null`) correm com tudo neutro.
  */
 import { APTITUDE_EFFECTS, BIRTH, TRAIT_EFFECTS } from '@/config/balance';
 import type { AptitudeKey, Birth, CareerState, TraitId } from '@/domain/schemas';

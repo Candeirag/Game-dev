@@ -196,7 +196,7 @@ export const FAMILY = {
   /** Idade mínima para assumir os negócios da família. */
   ADULT_AGE: 18,
   /** Parte da melhor reputação da família que o herdeiro carrega no sobrenome. */
-  NAME_PRESTIGE: 0.2,
+  NAME_PRESTIGE: 0.35,
 } as const;
 
 export const PARTNER_FIRST_NAMES = [

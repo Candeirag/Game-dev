@@ -73,6 +73,10 @@ const NOT_BALANCE = new Set([
   // estão em HERITAGE, em src/config/balance.ts.
   'KART_TEST_VERDICT_IDS',
   'KART_TEST_VERDICT_INFO',
+  // Dinastia (Fase 6): os nomes dos caminhos dos parentes e dos papéis de quem passou o comando em
+  // vida. Os números estão em RELATIVES, em src/config/balance.ts.
+  'RELATIVE_PATH_INFO',
+  'ELDER_ROLE_INFO',
   // Ids e estrutura.
   'PLAYER_DRIVER_ID',
   'ROOKIE_SEAT_DRIVER',

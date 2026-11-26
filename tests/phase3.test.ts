@@ -824,6 +824,10 @@ describe('morte e sucessão', () => {
     expect(heir.categoryId).toBe('f4');
     expect(engine.rankTeams(heir.teams).findIndex((t) => t.id === player.teamId)).toBe(2);
     expect(heir.contract).toMatchObject({ teamId: player.teamId, categoryId: 'f4' });
+    // O sobrenome: vale a reputação do herdeiro ou a parte da fama da família (FAMILY.NAME_PRESTIGE),
+    // a maior. Aqui a família ainda é pouco conhecida e vale a do próprio herdeiro.
+    const peak = Math.max(...opened.dynasty.lineage.map((l) => l.peakReputation), opened.reputation);
+    expect(Math.round(peak * FAMILY.NAME_PRESTIGE)).toBeLessThan(40);
     expect(heir.reputation).toBe(40);
     expect(heir.license.history).toEqual(racing.license);
     expect(heir.finance.cash).toBe(10_000_000 - tax - Math.round((estate - tax) * ASSET_RULES.SIBLING_SHARE));

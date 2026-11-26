@@ -125,6 +125,25 @@ export function validateCareerIntegrity(career: CareerState): string[] {
   if (!current || current.driverId !== career.playerDriverId) problems.push('A linhagem não termina no personagem atual.');
   if (current && current.generation !== career.dynasty.generation) problems.push('Geração da dinastia incoerente com a linhagem.');
   if (career.succession && !career.succession.heirs.some((h) => h.canDrive || h.canManage)) problems.push('Sucessão sem herdeiro que possa assumir.');
+  // Dinastia (Fase 6): os parentes têm id único, diferente do de qualquer filho, e são de uma geração
+  // anterior à atual; quem passou o comando em vida é um personagem anterior da linhagem; os traços de
+  // nascença gravados na linhagem não se repetem nem trazem os dois lados de um par.
+  const relativeIds = career.dynasty.relatives.map((r) => r.id);
+  if (new Set(relativeIds).size !== relativeIds.length) problems.push('Parentes com id duplicado.');
+  if (relativeIds.some((id) => childIds.has(id))) problems.push('Parente com o mesmo id de um filho.');
+  for (const relative of career.dynasty.relatives)
+    if (relative.generation >= career.dynasty.generation) problems.push(`Parente ${relative.id} de geração igual ou maior que a atual.`);
+  const elder = career.dynasty.elder;
+  if (elder) {
+    if (elder.generation >= career.dynasty.generation) problems.push('Quem passou o comando em vida é de geração igual ou maior que a atual.');
+    if (elder.driverId === career.playerDriverId || !lineage.some((entry) => entry.driverId === elder.driverId))
+      problems.push('Quem passou o comando em vida não é um personagem anterior da linhagem.');
+  }
+  for (const entry of lineage) {
+    const ids = entry.traits.map((t) => t.id);
+    if (new Set(ids).size !== ids.length) problems.push(`Traço de nascença repetido na linhagem (${entry.driverId}).`);
+    if (ids.some((id) => ids.includes(BIRTH_TRAITS[id].opposite))) problems.push(`Traços de nascença opostos na linhagem (${entry.driverId}).`);
+  }
 
   // Nascimento: de um personagem da linhagem, com traços sem repetição e sem os dois lados de um par.
   if (career.birth) {
