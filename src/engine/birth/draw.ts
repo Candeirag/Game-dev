@@ -30,20 +30,37 @@ function drawAptitude(rng: Rng): number {
   return Math.min(BIRTH.APTITUDE_MAX, Math.max(BIRTH.APTITUDE_MIN, value));
 }
 
+/** Quantos talentos, defeitos e traços de qualquer tipo um piloto traz de nascença. */
+export interface TraitComposition {
+  talents: number;
+  defects: number;
+  extra: number;
+}
+
 /**
- * Um talento, um defeito e um terceiro de qualquer tipo, sem os dois lados de um mesmo par. O
- * candidato é escolhido entre os que ainda cabem, sempre com um número do gerador por escolha.
+ * Completa os traços que já vieram (`start`, os herdados; vazio no nascimento sorteado) até a
+ * composição: primeiro os talentos que faltam, depois os defeitos que faltam e, por fim, os de
+ * qualquer tipo, sem repetir e sem os dois lados de um mesmo par. O candidato é escolhido entre os
+ * que ainda cabem, sempre com um número do gerador por escolha. Com `start` vazio, é exatamente o
+ * sorteio do nascimento (a sequência de números não muda).
  */
-function drawTraits(rng: Rng): BirthTrait[] {
-  const chosen: TraitId[] = [];
+export function fillTraits(rng: Rng, start: readonly TraitId[], composition: TraitComposition): BirthTrait[] {
+  const chosen: TraitId[] = [...start];
   const fits = (id: TraitId) => !chosen.includes(id) && !chosen.includes(BIRTH_TRAITS[id].opposite);
   const take = (pool: readonly TraitId[]) => chosen.push(pick(rng, pool.filter(fits)));
   const talents = TRAIT_IDS.filter((id) => BIRTH_TRAITS[id].kind === 'talent');
   const defects = TRAIT_IDS.filter((id) => BIRTH_TRAITS[id].kind === 'defect');
-  for (let i = 0; i < BIRTH.TALENTS; i++) take(talents);
-  for (let i = 0; i < BIRTH.DEFECTS; i++) take(defects);
-  for (let i = 0; i < BIRTH.EXTRA_TRAITS; i++) take(TRAIT_IDS);
+  const has = (kind: 'talent' | 'defect') => chosen.filter((id) => BIRTH_TRAITS[id].kind === kind).length;
+  const total = composition.talents + composition.defects + composition.extra;
+  for (let i = has('talent'); i < composition.talents; i++) take(talents);
+  for (let i = has('defect'); i < composition.defects; i++) take(defects);
+  while (chosen.length < total) take(TRAIT_IDS);
   return chosen.map((id) => ({ id, revealedSeason: null, revealedRound: null }));
+}
+
+/** Um talento, um defeito e um terceiro de qualquer tipo (ver BIRTH). */
+function drawTraits(rng: Rng): BirthTrait[] {
+  return fillTraits(rng, [], { talents: BIRTH.TALENTS, defects: BIRTH.DEFECTS, extra: BIRTH.EXTRA_TRAITS });
 }
 
 /** O nascimento da tentativa `attempt` (0 = o primeiro sorteio) para a semente da carreira. */
