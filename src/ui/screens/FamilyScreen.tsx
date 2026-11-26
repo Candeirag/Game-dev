@@ -1,16 +1,37 @@
-/** Família e dinastia: parceiro, filhos, linhagem e passagem de comando. */
-import { useState } from 'react';
+/**
+ * Família e dinastia: parceiro, filhos, linhagem e passagem de comando. Cada filho mostra a
+ * personalidade, os talentos e defeitos de nascença (ocultos até o teste no kart e as temporadas
+ * de carreira própria revelarem) e o teste no kart. A tela só lê o motor e chama a store.
+ */
+import { type ReactNode, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { type Child, SUPPORT_LEVELS, type SupportLevel } from '@/domain/schemas';
+import { Timer } from 'lucide-react';
+import { type BirthTrait, type Child, SUPPORT_LEVELS, type SupportLevel } from '@/domain/schemas';
 import { CHILD_STAGE_LABELS, SUPPORT_LABELS } from '@/domain/labels';
 import { counted } from '@/domain/text';
+import { HERITAGE } from '@/config/balance';
+import { ASSET_RULES } from '@/data/assets';
+import { BIRTH_TRAITS } from '@/data/birth';
 import { getCategory } from '@/data/categories';
 import { FAMILY, PARTNER_BACKGROUND_INFO, getTrait } from '@/data/family';
-import { childScoutReport, childSummary, familyAnnualCost, fullName, mortalityRisk, overallRating, partnerMoraleEffect } from '@/engine';
+import { KART_TEST_VERDICT_INFO, type KartTestVerdict } from '@/data/heritage';
+import {
+  activeBirth,
+  canTakeKartTest,
+  childScoutReport,
+  childSummary,
+  familyAnnualCost,
+  fullName,
+  heritageTraitsFor,
+  kartTestVerdict,
+  mortalityRisk,
+  overallRating,
+  partnerMoraleEffect,
+} from '@/engine';
 import { useGameStore } from '@/store/gameStore';
-import { Button, Card, cx, EmptyState, Meter, PageHeader, Pill, Stat, TableWrap, Tabs, td, th } from '@/ui/kit';
-import { formatMoney } from '../format';
-import { useCareerView } from '../hooks/useCareer';
+import { Button, Card, Chip, cx, EmptyState, Meter, PageHeader, Pill, SecretCard, Segmented, Stat, TableWrap, Tabs, td, th } from '@/ui/kit';
+import { formatInterval, formatMoney } from '../format';
+import { useCareer, useCareerView } from '../hooks/useCareer';
 import { DynastyLink } from './DynastyScreen';
 import { LifeBackLink } from './life/LifeBackLink';
 
@@ -24,30 +45,119 @@ const TABS: { value: FamilyTab; label: string }[] = [
 /** Linhas compactas das tabelas de leitura. */
 const cell = 'px-2 py-2 text-sm';
 
+/** "40%": as frações das tabelas, em porcentagem. */
+const percent = (share: number) => `${Math.round(share * 100)}%`;
+
 const stagePill = (stage: Child['stage']) => (
   <Pill tone={stage === 'racing' ? 'good' : stage === 'other' ? 'neutral' : 'warn'}>{CHILD_STAGE_LABELS[stage]}</Pill>
 );
 
+/** Nível de apoio da família (nenhum, parcial ou total), pelo seletor do kit. */
 function SupportPicker({ value, onChange, label }: { value: SupportLevel; onChange: (v: SupportLevel) => void; label: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
       <span className="text-ink-300">{label}</span>
-      <div className="inline-flex bg-ink-900 shadow-frame">
-        {SUPPORT_LEVELS.map((level) => (
-          <button
-            key={level}
-            type="button"
-            aria-pressed={value === level}
-            onClick={() => onChange(level)}
-            className={cx(
-              'min-h-11 min-w-11 px-3 text-sm font-semibold transition-colors',
-              value === level ? 'bg-ink-700 text-ink-100 shadow-[inset_0_-3px_0_0_var(--color-apex-500)]' : 'text-ink-400 hover:text-ink-100',
-            )}
-          >
-            {SUPPORT_LABELS[level]}
-          </button>
-        ))}
+      <Segmented
+        label={label.replace(/:$/, '')}
+        value={value}
+        options={SUPPORT_LEVELS.map((level) => ({ value: level, label: SUPPORT_LABELS[level] }))}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+/** Como um talento ou defeito oculto deste filho pode aparecer, pela fase em que ele está. */
+function hiddenHint(child: Child): string {
+  const young = child.stage === 'child' || child.stage === 'karting';
+  if (young && child.kartTest === null && child.age < FAMILY.CAREER_START_AGE)
+    return `Aparece no teste no kart, aos ${HERITAGE.KART_TEST_AGE} anos, ou nas temporadas de carreira própria.`;
+  if (young) return `Pode aparecer nas temporadas de carreira própria, a partir dos ${FAMILY.CAREER_START_AGE} anos.`;
+  if (child.stage === 'racing') return 'Pode aparecer a cada temporada de carreira própria.';
+  return 'Longe das pistas, fica oculto.';
+}
+
+/** Quando e onde um traço foi revelado: no teste no kart ou numa temporada de carreira própria. */
+function revealedMeta(child: Child, trait: BirthTrait): string | undefined {
+  if (trait.revealedSeason === null) return undefined;
+  return `Temporada ${trait.revealedSeason} · ${child.kartTest?.revealed.includes(trait.id) ? 'teste no kart' : 'carreira própria'}`;
+}
+
+const VERDICT_TONE: Record<KartTestVerdict, 'good' | 'neutral' | 'attention'> = {
+  outstanding: 'good',
+  promising: 'good',
+  average: 'neutral',
+  limited: 'attention',
+};
+
+/** O teste no kart: o resultado, se já foi feito, ou quando ele acontece. */
+function KartTestLine({ child }: { child: Child }) {
+  const test = child.kartTest;
+  const cost = HERITAGE.KART_TEST_COST;
+  const reveals = HERITAGE.KART_TEST_REVEALS;
+  let text: ReactNode;
+  if (test) {
+    const verdict = kartTestVerdict(test.gap);
+    text = (
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>
+          <b className="tabular-nums text-ink-100">{formatInterval(test.gap)} s</b> do tempo de referência dos instrutores
+        </span>
+        <Chip size="sm" tone={VERDICT_TONE[verdict]} icon={null}>
+          {KART_TEST_VERDICT_INFO[verdict].label}
+        </Chip>
+        <span className="text-ink-400">
+          Teste {test.depth === 'full' ? 'completo' : 'rápido'}, temporada {test.season}
+        </span>
+      </span>
+    );
+  } else if (canTakeKartTest(child)) {
+    text = `Na idade do teste: a família decide no começo da temporada, até os ${FAMILY.CAREER_START_AGE - 1} anos. O completo custa ${formatMoney(cost.full)} e revela ${counted(reveals.full, 'talento ou defeito', 'talentos ou defeitos')}; o rápido, ${formatMoney(cost.quick)} e ${counted(reveals.quick, 'talento ou defeito', 'talentos ou defeitos')}.`;
+  } else if ((child.stage === 'child' || child.stage === 'karting') && child.age < HERITAGE.KART_TEST_AGE) {
+    text = `O teste vem no começo da temporada em que ${child.firstName} tiver ${HERITAGE.KART_TEST_AGE} anos (daqui a ${counted(HERITAGE.KART_TEST_AGE - child.age, 'ano', 'anos')}). O completo custa ${formatMoney(cost.full)} e revela ${counted(reveals.full, 'talento ou defeito', 'talentos ou defeitos')}; o rápido, ${formatMoney(cost.quick)} e ${counted(reveals.quick, 'talento ou defeito', 'talentos ou defeitos')}.`;
+  } else {
+    text = 'Não fez o teste no kart.';
+  }
+  return (
+    <div className="flex items-start gap-2 text-xs leading-snug text-ink-300">
+      <Timer size={16} aria-hidden className="mt-1 shrink-0 text-ink-400" />
+      <div className="min-w-0">
+        <div className="text-2xs font-medium text-ink-400">Teste no kart</div>
+        {text}
       </div>
+    </div>
+  );
+}
+
+/** Talentos e defeitos de nascença: os ocultos com "?" e a dica de como aparecem; os revelados com nome e quando. */
+function ChildHeritage({ child }: { child: Child }) {
+  const career = useCareer();
+  const traits = heritageTraitsFor(career, child);
+  const hidden = traits.filter((t) => t.revealedSeason === null).length;
+  const hint = hiddenHint(child);
+  return (
+    <div className="space-y-2 border-ink-800 border-t pt-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h3 className="text-sm font-semibold text-ink-100">Talentos e defeitos de nascença</h3>
+        <span className="text-xs text-ink-400">{hidden > 0 ? counted(hidden, 'oculto', 'ocultos') : 'Todos revelados'}</span>
+      </div>
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
+        {traits.map((trait) => {
+          const info = BIRTH_TRAITS[trait.id];
+          return (
+            <SecretCard
+              key={trait.id}
+              hidden={trait.revealedSeason === null}
+              kind={info.kind}
+              title={info.name}
+              description={info.description}
+              meta={revealedMeta(child, trait)}
+              hint={hint}
+            />
+          );
+        })}
+      </div>
+      <KartTestLine child={child} />
     </div>
   );
 }
@@ -58,9 +168,9 @@ function ChildCard({ child }: { child: Child }) {
   const racing = child.stage === 'racing' ? child.racing : null;
   const canKart = (child.stage === 'child' || child.stage === 'karting') && child.age >= FAMILY.KART_START_AGE && child.age < FAMILY.CAREER_START_AGE;
   return (
-    <Card title={fullName(child)} action={stagePill(child.stage)} bodyClassName="space-y-3">
-      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-        <div className="space-y-1">
+    <Card title={fullName(child)} action={stagePill(child.stage)} bodyClassName="space-y-4">
+      <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+        <div className="space-y-2">
           <div className="text-sm text-ink-300">
             {child.age} anos · {childSummary(child)}
           </div>
@@ -69,15 +179,18 @@ function ChildCard({ child }: { child: Child }) {
               Avaliação dos treinadores: <b className="text-ink-100">{childScoutReport(child) ?? 'ainda não avaliado'}</b>
             </div>
           )}
-          <ul className="space-y-1 text-xs leading-snug text-ink-400">
-            {child.traits.map((t) => (
-              <li key={t}>
-                <b className="text-ink-200">{getTrait(t).name}</b>: {getTrait(t).description}
-              </li>
-            ))}
-          </ul>
+          <div>
+            <div className="text-2xs font-medium text-ink-400">Personalidade</div>
+            <ul className="space-y-1 text-xs leading-snug text-ink-400">
+              {child.traits.map((t) => (
+                <li key={t}>
+                  <b className="text-ink-200">{getTrait(t).name}</b>: {getTrait(t).description}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <Meter label="Relação com você" value={child.bond} />
           {child.stage !== 'other' && (
             <Meter
@@ -94,20 +207,22 @@ function ChildCard({ child }: { child: Child }) {
         </div>
       </div>
 
+      <ChildHeritage child={child} />
+
       {canKart && (
-        <div className="space-y-2 border-ink-800 border-t pt-3">
+        <div className="space-y-2 border-ink-800 border-t pt-4">
           <SupportPicker label="Investimento no kart:" value={child.kartFunding} onChange={(v) => setKartFunding(child.id, v)} />
           <p className="text-xs leading-snug text-ink-400">
-            Parcial: {formatMoney(FAMILY.KART_COST.basic)} por ano (rende 60%). Total: {formatMoney(FAMILY.KART_COST.full)} por ano. Formação acumulada:{' '}
-            <b className="text-ink-100">{counted(child.kartYears.toFixed(1).replace('.', ','), 'ano', 'anos')}</b>; cada ano vale cerca de{' '}
-            {FAMILY.START_PER_KART_YEAR} pontos em todos os atributos na estreia.
+            Parcial: {formatMoney(FAMILY.KART_COST.basic)} por ano (rende {percent(FAMILY.KART_YIELD.basic)}). Total: {formatMoney(FAMILY.KART_COST.full)} por
+            ano. Formação acumulada: <b className="text-ink-100">{counted(child.kartYears.toFixed(1).replace('.', ','), 'ano', 'anos')}</b>; cada ano vale cerca
+            de {FAMILY.START_PER_KART_YEAR} pontos em todos os atributos na estreia.
           </p>
         </div>
       )}
 
       {racing && child.driver && (
-        <div className="space-y-3 border-ink-800 border-t pt-3">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="space-y-4 border-ink-800 border-t pt-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Nota geral" value={Math.floor(overallRating(child.driver.attributes))} hint={`Potencial ${Math.floor(child.driver.potential)}`} />
             <Stat label="Reputação" value={Math.floor(racing.reputation)} />
             <Stat label="Custo para a família" value={formatMoney(racing.familyCost)} hint="por temporada" />
@@ -207,13 +322,14 @@ export function FamilyScreen() {
   const morale = partnerMoraleEffect(career.family);
   const cost = familyAnnualCost(career);
   const canHandOver = career.mode === 'executive' && career.executiveOffseason !== null;
+  const ownTraits = activeBirth(career) !== null;
 
   return (
     <div>
       <PageHeader
         title="Família e dinastia"
         eyebrow={
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <LifeBackLink />
             <span>
               Família {career.dynasty.surname} · {career.dynasty.generation}ª geração
@@ -227,7 +343,7 @@ export function FamilyScreen() {
 
       {tab === 'family' && (
         <div className="grid items-start gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <Card title="Vida a dois" bodyClassName="space-y-3">
+          <Card title="Vida a dois" bodyClassName="space-y-4">
             {partner ? (
               <>
                 <div>
@@ -257,7 +373,7 @@ export function FamilyScreen() {
               <p className="text-sm text-ink-300">
                 {player.age < FAMILY.PARTNER_MIN_AGE
                   ? `Ainda é cedo. A partir dos ${FAMILY.PARTNER_MIN_AGE} anos, você pode conhecer alguém no começo de uma temporada.`
-                  : 'Você está solteiro. A cada começo de temporada há uma chance de conhecer alguém.'}
+                  : 'Sem relacionamento no momento. A cada começo de temporada há uma chance de conhecer alguém.'}
                 {divorces > 0 && ` Separações: ${divorces}.`}
               </p>
             )}
@@ -267,24 +383,29 @@ export function FamilyScreen() {
             </p>
           </Card>
 
-          <Card title="Você" bodyClassName="space-y-3">
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+          <Card title="Você" bodyClassName="space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-4">
               <Stat label="Idade" value={player.age} hint={career.mode === 'driver' ? 'Piloto em atividade' : 'Aposentado das pistas'} />
               <Stat label="Geração" value={`${career.dynasty.generation}ª`} />
               <Stat label="Filhos" value={children.length} hint={children.length > 0 ? `${formatMoney(cost)} por ano` : `Máximo: ${FAMILY.MAX_CHILDREN}`} />
               <Stat label="Risco anual de morte" value={`${(mortalityRisk(player.age) * 100).toLocaleString('pt-BR')}%`} hint="Cresce com a idade" />
             </div>
             <p className="text-xs leading-snug text-ink-300">
-              A carreira é da família. Quando o personagem morre ou passa o comando, um herdeiro assume: um filho que corre continua nas pistas; um herdeiro
-              adulto assume o patrimônio e a equipe. Os filhos herdam parte do seu talento (metade vem de você, um quinto do parceiro e o resto é acaso).
+              A carreira é da família. Quando o personagem morre ou passa o comando, alguém da família assume: quem já corre pode continuar nas pistas; quem é
+              adulto pode assumir o patrimônio e a equipe. Cada filho herda parte do talento ({percent(FAMILY.TALENT_PARENT)} vem de você,{' '}
+              {percent(FAMILY.TALENT_PARTNER)} da outra metade do casal e o resto é acaso) e parte dos talentos e defeitos de nascença:{' '}
+              {ownTraits
+                ? `cada um dos seus passa para cada filho com ${percent(HERITAGE.INHERIT_CHANCE)} de chance, e o resto é sorteado.`
+                : 'como esta carreira não tem nascimento sorteado, os dos filhos são todos sorteados.'}{' '}
+              Eles ficam ocultos até o teste no kart, aos {HERITAGE.KART_TEST_AGE} anos, e as temporadas de carreira própria.
             </p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <Button disabled={!canHandOver} onClick={beginHandover}>
                 Passar o comando em vida
               </Button>
               <span className="min-w-40 flex-1 text-xs leading-snug text-ink-400">
                 {canHandOver
-                  ? 'Imposto de 4% sobre o patrimônio (metade do imposto de herança).'
+                  ? `Imposto de ${percent(ASSET_RULES.HANDOVER_TAX)} sobre o patrimônio acima de ${formatMoney(ASSET_RULES.INHERITANCE_EXEMPT)} (o de herança é ${percent(ASSET_RULES.INHERITANCE_TAX)}).`
                   : 'Disponível no fechamento de uma temporada, depois de se aposentar das pistas.'}
               </span>
             </div>
