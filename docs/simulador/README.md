@@ -85,3 +85,27 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
     têm de crescer. "Saldo" é lances vencidos menos perdidos por corrida; o registro do lance não
     diz quantas posições ele valeu, e o relatório não estima;
   - "rivalidade nova" é o toque num lance com um piloto que ainda não era rival.
+- A seção 11 (Fase 6) mede a dinastia. Desde a Fase 6, a linha de comando joga duas gerações por
+  padrão (`--generations 2`): depois das temporadas pedidas, cada carreira continua com o mesmo
+  robô. A 1ª geração corre até os 36 anos, faz o ano de transição, vira dirigente (compra uma
+  equipe se o caixa permitir, aceita um cargo ou acompanha de fora) e passa o comando em vida quando
+  um filho com carreira de piloto chega aos 16 anos; sem filho piloto, aos 60, e o parente jovem
+  herda (morrer antes também abre a sucessão). O robô escolhe o herdeiro pelo que se vê (degrau,
+  teste no kart, avaliação dos treinadores, talentos e defeitos revelados, idade) e a vaga (uma
+  equipe da frente, se o patrimônio cobrir; senão, a da família; senão, a equipe em que já corria),
+  e a 2ª geração corre até os 36 anos ou 22 temporadas. O bônus de talento (`--talent`) vale para o
+  piloto de cada geração: o herdeiro o recebe ao assumir o carro, como o piloto da semente na
+  criação. As seções 1 a 10 continuam medindo só as temporadas pedidas da 1ª geração: com
+  `--generations 1`, o relatório traz só as seções 1 a 10, como até a Fase 5, e leva uns 25 s; com
+  as duas gerações, cerca de 2 min (quase 3 com `--talent 8`, em que as carreiras vão mais longe).
+  O que conferir:
+  - na tabela das gerações, a 1ª conta a vida de piloto inteira (até parar), e não só as
+    temporadas da amostra; o critério da fase é a 2ª geração chegar mais longe em média ("degrau
+    mais alto", "monopostos", "topo" e a comparação pela semente) sem ganhar tudo ("não ganha
+    tudo": a parcela das temporadas da 2ª geração com título e o máximo numa carreira);
+  - a herança (patrimônio deixado, imposto, parte dos irmãos e o que ficou com o herdeiro), a vaga
+    do herdeiro, o que se sabia dele na escolha, os filhos por família, os testes no kart, os
+    traços revelados antes da escolha, os parentes por caminho, o papel do ano de transição e as
+    temporadas pela equipe da família;
+  - em cada fechamento da dinastia o simulador confere a integridade da carreira e o formato do
+    save: um estado inválido para o comando com a semente e a temporada.
