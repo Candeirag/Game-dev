@@ -34,6 +34,7 @@ import { INTENSITY_GAIN, developAfterRound, type AttributeDelta } from './develo
 import { LIFESTYLE_RULES } from '@/data/assets';
 import { partnerMoraleEffect } from '../dynasty/family';
 import { familyTrainingFactors } from '../dynasty/heritage';
+import { pressureRound } from '../dynasty/surname';
 import { hasPersonalProperty, settleAssetsRound } from '../economy/assets';
 import { post, settleRound } from './economy';
 import { economyTrainingFactor } from './hubs';
@@ -143,6 +144,13 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
     return { ...d, condition, injury };
   });
   career = { ...career, drivers };
+  // Fase 6: o peso do sobrenome e a equipe da família (moral e imprensa; nada muda na primeira geração).
+  const pressure = pressureRound(career, record);
+  if (pressure.morale !== 0)
+    career = {
+      ...career,
+      drivers: career.drivers.map((d) => (d.isPlayer ? { ...d, condition: { ...d.condition, morale: clamp(d.condition.morale + pressure.morale) } } : d)),
+    };
   const player = getPlayer(career);
   if (player.injury && (!playerBefore.injury || entry?.injured)) {
     msg(
@@ -293,6 +301,7 @@ export function applyRoundEffects(input: CareerState, record: RoundRecord, gridD
     else if (entry.position <= team.driverTarget) reaction = 'Um resultado sólido, dentro do que a equipe espera.';
     else reaction = `A equipe esperava mais. A meta é terminar a temporada entre os ${team.driverTarget} primeiros.`;
     msg('team', 'team', `${team.name}: avaliação da etapa`, `${reaction} Confiança da equipe em você: ${Math.round(career.relations.teamTrust)}/100.`);
+    messages.push(...pressure.messages);
   } else {
     msg(
       'race',

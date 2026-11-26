@@ -857,8 +857,9 @@ export const SURNAME = {
   BAD_RESULT_WEIGHT: 0.6,
   // Terminar na metade de trás do campeonato custa até estes pontos de reputação a mais.
   BACK_HALF_REPUTATION: 3,
-  // Por etapa: moral perdida ao terminar fora dos 10 primeiros (ou abandonar), com peso 1.
+  // Por etapa: moral perdida ao terminar fora dos ROUND_TOP primeiros (ou abandonar), com peso 1.
   ROUND_MORALE: 2,
+  ROUND_TOP: 10,
   // Chance de a imprensa comparar com o antecessor numa etapa (só mensagem).
   PRESS_CHANCE: 0.25,
 } as const;
@@ -932,8 +933,10 @@ export const RELATIVES = {
   // Idade em que um parente passa a trabalhar e em que para.
   WORK_FROM_AGE: 22,
   WORK_UNTIL_AGE: 68,
-  // Contratado pela equipe da família, aceita ganhar esta fração do salário de mercado.
+  // Contratado pela equipe da família, aceita ganhar esta fração do salário de mercado (também na
+  // renovação), com contrato desta duração em temporadas, e não sai na renovação.
   STAFF_SALARY_SHARE: 0.7,
+  STAFF_CONTRACT_SEASONS: 2,
   // Um parente nos boxes ou na direção de outra equipe abre portas: interesse extra das equipes por
   // parente nesses caminhos, até o teto.
   CONTACT_INTEREST: 3,

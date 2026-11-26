@@ -6,7 +6,7 @@
  * custo em pontos de interesse, e a equipe cede enquanto houver margem. Quando
  * a paciência acaba, a proposta é retirada.
  */
-import { RUNNING_COSTS } from '@/config/balance';
+import { FAMILY_TEAM, RUNNING_COSTS } from '@/config/balance';
 import type { CareerState, Contract, Offer, Team } from '@/domain/schemas';
 import { getCategory, type CategoryDefinition } from '@/data/categories';
 import { CATEGORY_HUB, RENTAL_CATEGORY } from '@/data/hubs';
@@ -17,6 +17,7 @@ import { moveCost } from './hubs';
 import { categoryRequirements, type Requirement } from './license';
 import { MARKET, reachableCategories, targetInterest, teamsOfCategory } from './market';
 import { getPlayer, teamKey } from './selectors';
+import { familyTeamStake } from '../dynasty/surname';
 import { expectedSponsorship, renewSponsors } from './sponsors';
 import { money } from './selectors';
 
@@ -114,12 +115,29 @@ export function buildOffer(
 }
 
 /**
+ * A proposta da equipe da família (Fase 6): interesse máximo, a vaga por FAMILY_TEAM.SEAT_SHARE do
+ * preço de tabela (o resto é a família) e sem cláusula de desempenho (a família não demite o
+ * herdeiro).
+ */
+function familyOffer(career: CareerState, category: CategoryDefinition, team: Team, rank: number, kind: Offer['kind']): Offer {
+  const offer = buildOffer(career, category, team, rank, kind, 100);
+  return {
+    ...offer,
+    seatCost: roundTo(lerp(category.economy.seatCost, rank / 9) * FAMILY_TEAM.SEAT_SHARE, 500),
+    clauses: { ...offer.clauses, performanceTarget: null },
+    firstDriverPossible: true,
+  };
+}
+
+/**
  * Propostas para a próxima temporada.
  * - Contrato vigente: opção de simplesmente cumpri-lo.
  * - Contrato no fim: a equipe atual propõe renovação se ainda confia no piloto.
  * - Outras equipes da categoria, da categoria acima e da categoria abaixo:
  *   propõem conforme o interesse; de cada grupo ficam as três equipes mais
  *   fortes entre as interessadas.
+ * - Equipe da família (Fase 6): se a família tem 100% de uma equipe de uma categoria ao alcance,
+ *   ela sempre propõe, com interesse máximo (`familyOffer`), no lugar da proposta comum.
  * - Rede de segurança: a equipe mais fraca de um degrau abaixo (nunca mais
  *   que um; no primeiro degrau, a do próprio) sempre aluga uma vaga, para a
  *   carreira nunca travar. Ela custa
@@ -137,10 +155,18 @@ export function generateOffers(career: CareerState, reputation: number, contract
   for (const category of categories) {
     const kind: Offer['kind'] = category.tier > current.tier ? 'promotion' : category.tier < current.tier ? 'demotion' : 'transfer';
     const group: Offer[] = [];
+    const family: Offer[] = [];
     // As equipes são percorridas da mais forte para a mais fraca: ficam as três
     // melhores entre as interessadas, que são as propostas que mais importam.
     rankTeams(teamsOfCategory(career, category.id)).forEach((team, rank) => {
       const isCurrentTeam = category.id === current.id && team.id === player.teamId;
+      const isFamilyTeam = familyTeamStake(career, category.id, team.id) !== null;
+      // A equipe da família propõe sempre, sem ocupar a vaga das outras no grupo (com contrato em
+      // vigor, quem já corre por ela só tem a opção de cumpri-lo).
+      if (isFamilyTeam && !(isCurrentTeam && contractStatus === 'active')) {
+        (isCurrentTeam ? own : family).push(familyOffer(career, category, team, rank, isCurrentTeam ? 'renewal' : kind));
+        return;
+      }
       const interest = targetInterest(career, category, team, rank, reputation);
       if (isCurrentTeam) {
         if (contractStatus === 'active') {
@@ -174,7 +200,7 @@ export function generateOffers(career: CareerState, reputation: number, contract
         group.push(buildOffer(career, category, team, rank, kind, interest, scholarship));
       }
     });
-    offers.push(...group);
+    offers.push(...family, ...group);
   }
   offers.unshift(...own);
 

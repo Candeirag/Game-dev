@@ -17,6 +17,7 @@ import type {
   InboxMessage,
   ManagedTeam,
   ResearchSpend,
+  RelativePath,
   RoundRecord,
   StaffMember,
   StaffRole,
@@ -33,6 +34,8 @@ import { overallRating } from '../simulation/performance';
 import { rankTeams } from '../world/generation';
 import { money } from '../career/selectors';
 import { counted } from '@/domain/text';
+import { RELATIVES } from '@/config/balance';
+import { familyYear, isWorkingAge } from '../dynasty/relatives';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 const lerp = (range: readonly [number, number], t: number) => range[0] + (range[1] - range[0]) * t;
@@ -174,6 +177,68 @@ export function buildStaffMarket(careerSeed: number, season: number, categoryId:
   return market;
 }
 
+/** Funções que um parente pode ocupar, pelo caminho dele (Fase 6). Quem foi para os negócios não vai para os boxes. */
+const familyStaffRoles: Readonly<Record<RelativePath, readonly StaffRole[]>> = {
+  engineer: ['chiefEngineer', 'technicalDirector'],
+  sportingDirector: ['sportingDirector'],
+  business: [],
+};
+
+const familyStaffPrefix = 'staff-family-';
+
+/** O profissional é um parente do personagem (Fase 6): o id é `staff-family-<parente>-<função>`. */
+export function isFamilyStaff(member: Pick<StaffMember, 'id'>): boolean {
+  return member.id.startsWith(familyStaffPrefix);
+}
+
+/** O id do parente por trás de um profissional da família (null para os outros). */
+export function familyStaffRelativeId(member: Pick<StaffMember, 'id'>): string | null {
+  if (!isFamilyStaff(member)) return null;
+  return member.id.slice(familyStaffPrefix.length, member.id.lastIndexOf('-'));
+}
+
+/**
+ * Os parentes contratáveis (Fase 6): um profissional por parente em idade de trabalho e por função
+ * que casa com o caminho dele (engenharia: engenheiro-chefe e diretor técnico; direção esportiva:
+ * diretor esportivo). A nota é o nível dele no ofício, e o salário, RELATIVES.STAFF_SALARY_SHARE do
+ * de mercado. Quem já está contratado (`hired`) não é oferecido de novo.
+ */
+export function familyStaff(
+  career: CareerState,
+  categoryId: ManagedTeam['categoryId'],
+  hired: readonly Pick<StaffMember, 'id'>[],
+  season: number,
+): StaffMember[] {
+  const year = familyYear(career);
+  const taken = new Set(hired.map(familyStaffRelativeId));
+  const out: StaffMember[] = [];
+  for (const relative of career.dynasty.relatives) {
+    if (taken.has(relative.id) || !isWorkingAge(relative, year)) continue;
+    for (const role of familyStaffRoles[relative.path]) {
+      out.push({
+        id: `${familyStaffPrefix}${relative.id}-${role}`,
+        name: `${relative.firstName} ${relative.lastName}`,
+        role,
+        rating: relative.skill,
+        salary: Math.round((staffSalary(categoryId, relative.skill, role) * RELATIVES.STAFF_SALARY_SHARE) / 100) * 100,
+        contractEnd: season + RELATIVES.STAFF_CONTRACT_SEASONS - 1,
+      });
+    }
+  }
+  return out;
+}
+
+/** O mercado de profissionais com os parentes contratáveis no fim (a sorte dos outros candidatos não muda). */
+export function withFamilyStaff(
+  career: CareerState,
+  categoryId: ManagedTeam['categoryId'],
+  hired: readonly Pick<StaffMember, 'id'>[],
+  season: number,
+  market: readonly StaffMember[],
+): StaffMember[] {
+  return [...market, ...familyStaff(career, categoryId, hired, season)];
+}
+
 function teamSponsor(seed: number, perSeason: number, season: number, target: number, taken: ReadonlySet<string>): TeamSponsor {
   const rng = createRng(seed);
   const pool = TEAM_SPONSOR_NAMES.filter((n) => !taken.has(n));
@@ -310,7 +375,7 @@ export function createManagedTeam(career: CareerState, teamId: string, options: 
     boardTarget,
     strikes: 0,
     staff,
-    staffMarket: buildStaffMarket(career.seed, season, categoryId, reputation),
+    staffMarket: withFamilyStaff(career, categoryId, staff, season, buildStaffMarket(career.seed, season, categoryId, reputation)),
     engineers: departments,
     mechanics: departments,
     facilities: options.founded
@@ -370,7 +435,10 @@ export function hireStaff(career: CareerState, staffId: string): CareerState {
   const current = m.staff.find((s) => s.role === candidate.role);
   // Indenização de quem sai: metade do salário de um ano.
   let next = current ? spend(m, 'staff', -current.salary * 0.5) : m;
-  next = { ...next, staff: [...next.staff.filter((s) => s.role !== candidate.role), candidate], staffMarket: next.staffMarket.filter((s) => s.id !== staffId) };
+  // Um parente contratado sai do mercado nas duas funções que poderia ocupar (Fase 6).
+  const relativeId = familyStaffRelativeId(candidate);
+  const market = next.staffMarket.filter((s) => s.id !== staffId && (relativeId === null || familyStaffRelativeId(s) !== relativeId));
+  next = { ...next, staff: [...next.staff.filter((s) => s.role !== candidate.role), candidate], staffMarket: market };
   return syncManagedTeam({ ...career, management: next });
 }
 

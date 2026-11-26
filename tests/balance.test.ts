@@ -77,6 +77,10 @@ const NOT_BALANCE = new Set([
   // vida. Os números estão em RELATIVES, em src/config/balance.ts.
   'RELATIVE_PATH_INFO',
   'ELDER_ROLE_INFO',
+  // Sobrenome e equipe da família (Fase 6): as mensagens da imprensa. As chances e os pesos estão em
+  // SURNAME e FAMILY_TEAM, em src/config/balance.ts.
+  'SURNAME_PRESS_TEXTS',
+  'FAVORITISM_PRESS_TEXTS',
   // Ano de transição (Fase 6): os nomes dos papéis, as marcas inventadas, as mensagens e os eventos
   // do ano. Os cachês, as chances e o tamanho de cada efeito estão em TRANSITION, em
   // src/config/balance.ts; os eventos usam degraus e chances com nome.

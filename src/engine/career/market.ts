@@ -13,6 +13,7 @@ import { hashSeed } from '../rng';
 import { overallRating } from '../simulation/performance';
 import { generateDriver, rankTeams } from '../world/generation';
 import { driverStandings, fullName, getPlayer, teamKey } from './selectors';
+import { familyContactsInterest } from '../dynasty/surname';
 
 const clamp = (v: number, min = 0, max = 100) => Math.min(max, Math.max(min, v));
 
@@ -53,7 +54,9 @@ export function reachableCategories(career: CareerState): CategoryDefinition[] {
  *   duas posições abaixo da meta vale 50%; cada posição soma ou tira 10%);
  * - 30% nível: nota geral comparada ao nível dos pilotos daquela equipe;
  * - 15% reputação e 10% juventude.
- * A equipe atual pondera também a confiança que tem no piloto.
+ * Somam-se a academia, a vitrine do polo e, da segunda geração em diante, os contatos da família
+ * (sobrenome e parentes nos boxes, Fase 6). A equipe atual pondera também a confiança que tem no
+ * piloto.
  */
 export function targetInterest(career: CareerState, category: CategoryDefinition, team: Team, rank: number, reputation = career.reputation): number {
   const player = getPlayer(career);
@@ -70,6 +73,9 @@ export function targetInterest(career: CareerState, category: CategoryDefinition
   if (career.academy && team.affiliation === career.academy.f1TeamId) value += MARKET.ACADEMY_BONUS;
   // Quem mora num polo de fora aparece para as equipes dos campeonatos dali.
   if (getHub(career.hub.id).foreign && CATEGORY_HUB[category.id] === career.hub.id) value += HUB_RULES.VISIBILITY_INTEREST;
+  // Fase 6: o sobrenome e os parentes nos boxes abrem portas (zero na primeira geração).
+  const contacts = familyContactsInterest(career);
+  if (contacts > 0) value += contacts;
   if (category.id === career.categoryId && team.id === player.teamId) value = 0.6 * value + 0.4 * career.relations.teamTrust;
   return clamp(value);
 }

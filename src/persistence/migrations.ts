@@ -224,7 +224,10 @@ function migrateV1(data: Loose): Loose {
 
   // O fechamento de temporada de um save parado no fim do ano é feito depois de todas as
   // migrações (ver migrateCareerData), quando os dados já estão no formato atual.
-  const career: CareerState = { ...migrated, marketInterest: updateMarketInterest(migrated, 1) };
+  // A regra atual do interesse olha os contatos da família (Fase 6), que um save da versão 1 ainda
+  // não tem: a conta usa uma dinastia vazia, de primeira geração (contatos zero), sem gravá-la.
+  const firstGeneration = { generation: 1, surname: '', lineage: [], relatives: [], elders: [] };
+  const career: CareerState = { ...migrated, marketInterest: updateMarketInterest({ ...migrated, dynasty: firstGeneration }, 1) };
   return career as unknown as Loose;
 }
 

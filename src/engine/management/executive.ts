@@ -34,6 +34,7 @@ import { ASSET_RULES, LIFESTYLE_RULES } from '@/data/assets';
 import { CATEGORIES, getCategory, type CategoryDefinition } from '@/data/categories';
 import { MANAGEMENT, TEAM_ECONOMY, teamValue } from '@/data/management';
 import { TEAM_TARGETS } from '@/data/teams';
+import { RELATIVES } from '@/config/balance';
 import { computeDriverStandings, computeTeamStandings } from '../championship/standings';
 import { conditionAfterRace, recoverInjury, rollInjury } from '../career/condition';
 import { buildCalendar } from '../career/createCareer';
@@ -58,6 +59,7 @@ import { familyTrainingFactors } from '../dynasty/heritage';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { refreshElders } from '../dynasty/relatives';
 import { checkMortality } from '../dynasty/succession';
+import { favoritismExecutiveRound, favoritismExecutiveSeason } from '../dynasty/surname';
 import {
   activeTransition,
   addTransitionEvent,
@@ -90,6 +92,8 @@ import {
   settleTeamRound,
   staffRating,
   syncManagedTeam,
+  withFamilyStaff,
+  isFamilyStaff,
 } from './team';
 import { money } from '../career/selectors';
 import { categoryRef } from '@/domain/categoryNames';
@@ -294,6 +298,10 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
     const result = settleTeamRound(career, record);
     career = { ...career, management: result.management, teams: result.teams };
     for (const item of result.messages) msg(item.id, item.category, item.title, item.body);
+    // Fase 6: filho na própria equipe atrás do companheiro rende conversa de favorecimento.
+    const favoritism = favoritismExecutiveRound(career, record);
+    if (favoritism.teamReputation !== 0)
+      career = { ...career, management: { ...result.management, reputation: clamp(result.management.reputation + favoritism.teamReputation) } };
     const team = managedTeam(career);
     const mine = record.race.entries.filter((e) => e.teamId === result.management.teamId);
     const position = computeTeamStandings(career.rounds, career.teams, career.adjustments).find((s) => s.teamId === result.management.teamId)?.position ?? 10;
@@ -307,6 +315,7 @@ export function applyExecutiveRoundEffects(input: CareerState, record: RoundReco
       `Etapa ${round}: resultado da ${team?.name ?? 'equipe'}`,
       `${lines.join('. ')}. Vencedor: ${winner ? fullName(winner) : '-'}. A equipe é a ${position}ª no campeonato (meta: ${result.management.boardTarget}ª). Caixa: ${money(career, result.management.budget)}.`,
     );
+    messages.push(...favoritism.messages);
   } else {
     // No ano de transição (Fase 6), o papel paga o cachê da etapa e a mensagem é a dele.
     const transition = transitionRound(career, record);
@@ -558,6 +567,12 @@ function staffYearEnd(career: CareerState, m: ManagedTeam, notes: string[]): Sta
     const rng = createRng(hashSeed(career.seed, career.season, 'staff-year', person.id));
     const rating = Math.round(clamp(person.rating + gaussian(rng) * 1.5, 30, 97));
     if (person.contractEnd <= career.season) {
+      // Um parente (Fase 6) renova sempre, com o desconto de família sobre o salário de mercado.
+      if (isFamilyStaff(person)) {
+        const salary = Math.round((staffSalary(m.categoryId, rating, person.role) * RELATIVES.STAFF_SALARY_SHARE) / 100) * 100;
+        staff.push({ ...person, rating, contractEnd: career.season + RELATIVES.STAFF_CONTRACT_SEASONS, salary });
+        continue;
+      }
       // Profissional muito acima do nível da equipe tende a aceitar proposta de fora.
       if (rating - m.reputation > 15 && rng.next() < 0.5) {
         notes.push(`${person.name} não renovou e deixou a equipe. A função fica vaga até você contratar alguém.`);
@@ -659,12 +674,16 @@ export function closeExecutiveSeason(career: CareerState): CareerState {
     // Reputação do dirigente: mesma escala do piloto, com a posição da equipe convertida para a escala de 20 carros.
     const prestige = (REPUTATION.TIER_BASE[category.tier] ?? 0) + positionPrestige(position * 2 - 1);
     reputation = Math.round(clamp(reputation + (prestige - reputation) * 0.3));
+    // Fase 6: filho na própria equipe, comparado com o companheiro no campeonato.
+    const favoritism = favoritismExecutiveSeason(career, driverStandings);
+    reputation = clamp(reputation + favoritism.personal);
+    notes.push(...favoritism.notes);
     management = {
       ...management,
       budget,
       prize,
       strikes,
-      reputation: teamReputation,
+      reputation: clamp(teamReputation + favoritism.team),
       sponsors,
       staff: staffYearEnd(career, management, notes),
       previousPosition: position,
@@ -1076,7 +1095,14 @@ export function startExecutiveSeason(career: CareerState, plan: ExecutivePlan): 
         fieldGains: {},
         ledger: {},
         deals,
-        staffMarket: buildStaffMarket(career.seed, nextSeason, previous.categoryId, previous.reputation),
+        // Os parentes em idade de trabalho entram no mercado depois dos outros (Fase 6).
+        staffMarket: withFamilyStaff(
+          state,
+          previous.categoryId,
+          previous.staff,
+          nextSeason,
+          buildStaffMarket(career.seed, nextSeason, previous.categoryId, previous.reputation),
+        ),
       },
     };
   } else if (options && targetTeamId) {

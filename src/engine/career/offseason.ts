@@ -32,6 +32,7 @@ import { birthTrainingFactor } from '../birth/effects';
 import { closeFamilyYear } from '../dynasty/family';
 import { beginSeasonFamily } from '../dynasty/familyEvents';
 import { checkMortality, touchLineage } from '../dynasty/succession';
+import { pressureSeason } from '../dynasty/surname';
 import { closeAssetsYear, settleDebts } from '../economy/assets';
 import { closeSeasonFinance, payInvestor, post } from './economy';
 import { economyTrainingFactor, hubAfterSigning, moveCost, moveSummary, needsMove, sideJobAllowed } from './hubs';
@@ -110,11 +111,10 @@ export function closeSeason(career: CareerState): CareerState {
   // Vaquinha da cidade: a torcida cobra o resultado da temporada seguinte à arrecadação.
   const crowdTarget = crowdfundTarget(career);
   const crowdMissed = crowdTarget !== null && me.position > crowdTarget;
-  const reputationAfter = clamp(
-    reputationAfterSeason(career.reputation, me.position, me.wins, category.tier) + mediaBoost + (crowdMissed ? CROWDFUND.MISS_REPUTATION : 0),
-    0,
-    100,
-  );
+  // Fase 6: o sobrenome (resultado ruim pesa mais) e a equipe da família (comparação com o companheiro).
+  const seasonReputation = reputationAfterSeason(career.reputation, me.position, me.wins, category.tier);
+  const pressure = pressureSeason(career, standings, seasonReputation);
+  const reputationAfter = clamp(seasonReputation + pressure.reputation + mediaBoost + (crowdMissed ? CROWDFUND.MISS_REPUTATION : 0), 0, 100);
   const licensePointsEarned = licensePointsFor(category.id, me.position);
   const license = {
     ...career.license,
@@ -187,6 +187,7 @@ export function closeSeason(career: CareerState): CareerState {
     crowdfund = { ...crowdfund, settled: true };
   }
 
+  notes.push(...pressure.notes);
   notes.push(...assets.notes);
   // A família também fecha o ano: temporada dos filhos, aniversários e a relação do casal.
   const family = closeFamilyYear(career);
