@@ -480,6 +480,10 @@ describe('o herdeiro: o que se sabe dele e o nascimento', () => {
       movedSeason: null,
     });
     expect(birth.traits).toEqual(child.birthTraits);
+    // A tela reconhece o nascimento de herdeiro pelo motor; o do fundador, mesmo filho de ex-piloto, não é.
+    expect(engine.isHeirBirth(birth)).toBe(true);
+    expect(engine.isHeirBirth(career.birth!)).toBe(false);
+    expect(engine.isHeirBirth({ ...career.birth!, origin: 'racer-parent' })).toBe(false);
     expect(HOMETOWNS.some((h) => h.id === birth.hometownId && h.region === 'capital')).toBe(true);
     for (const key of APTITUDE_KEYS) {
       expect(birth.aptitudes[key]).toBeGreaterThanOrEqual(HERITAGE.APTITUDE_MIN);

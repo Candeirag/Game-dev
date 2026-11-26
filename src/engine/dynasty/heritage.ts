@@ -269,6 +269,17 @@ export function heirOutlook(career: CareerState, heir: HeirOption): HeirOutlook 
   };
 }
 
+/** O que fica no lugar das profissões dos pais no nascimento de quem herdou a carreira da família. */
+const heirParents = 'dinastia';
+
+/**
+ * O nascimento é de quem herdou a carreira da família (`heirBirth`), não de um fundador sorteado: a
+ * tela troca as profissões dos pais pela família da dinastia.
+ */
+export function isHeirBirth(birth: Birth): boolean {
+  return birth.origin === 'racer-parent' && birth.parents.mother === heirParents && birth.parents.father === heirParents;
+}
+
 /**
  * O nascimento de um herdeiro que assume a família: filho de ex-piloto, nascido na capital (na
  * cidade do antecessor, se ele era de lá), sem economias nem ajuda (o patrimônio vem pela herança),
@@ -306,7 +317,7 @@ export function heirBirth(career: CareerState, heir: HeirOption, driverId?: stri
     rerolls: 0,
     hometownId,
     region: 'capital',
-    parents: { mother: 'dinastia', father: 'dinastia' },
+    parents: { mother: heirParents, father: heirParents },
     savings: 0,
     support: { perSeason: 0, seasons: 0 },
     aptitudes,
