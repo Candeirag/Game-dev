@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { feedback, feedbackOnce } from '../feedback/feedback';
-import { ArrowRight, Check as CheckIcon, ChevronRight, MapPin, TriangleAlert } from 'lucide-react';
+import { ArrowRight, Check as CheckIcon, ChevronRight, House, MapPin, TriangleAlert } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FIRST_FORMULA_CATEGORY_ID, categoryRef } from '@/domain/categoryNames';
 import type { Offer, Offseason } from '@/domain/schemas';
@@ -11,6 +11,7 @@ import {
   canAcceptOffer,
   categoryRequirements,
   fullName,
+  isFamilyTeamOffer,
   licensePointsTotal,
   negotiationMargin,
   offerHelp,
@@ -26,7 +27,7 @@ import {
 import { useGameStore } from '@/store/gameStore';
 import { VEHICLES } from '@/data/vehicles';
 import { CarSprite } from '../components/CarSprite';
-import { Button, Card, Check, cx, EmptyState, Meter, PageHeader, Pill, Stat, Tabs, TeamSwatch } from '@/ui/kit';
+import { Button, Card, Check, Chip, cx, EmptyState, Meter, PageHeader, Pill, Stat, Tabs, TeamSwatch } from '@/ui/kit';
 import { formatMoney } from '../format';
 import { useCareerView } from '../hooks/useCareer';
 import { counted } from '@/domain/text';
@@ -359,6 +360,7 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
   const blocked = !withdrawn && !canAcceptOffer(career, offer);
   const help = blocked ? offerHelp(career, offer) : null;
   const pricing = offerPricing(career, offer);
+  const family = isFamilyTeamOffer(career, offer);
   return (
     <button
       type="button"
@@ -383,6 +385,11 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
           {offer.seatCost > 0 && pricing.discount >= 0.01 && ` (−${Math.round(pricing.discount * 100)}%)`}
         </span>
       </span>
+      {family && (
+        <span className="pl-4">
+          <FamilyTeamChip />
+        </span>
+      )}
       {/* O requisito que falta, pelo nome; e, se uma porta dos Caminhos resolve, qual. */}
       {help && (
         <span className="flex w-full items-start gap-1 pl-4 text-xs text-gold-400">
@@ -394,6 +401,15 @@ function OfferRow({ offer, selected, onSelect }: { offer: Offer; selected: boole
         </span>
       )}
     </button>
+  );
+}
+
+/** A marca da proposta da equipe da família (a de que a família tem 100%): palavra e ícone, além da cor. */
+function FamilyTeamChip() {
+  return (
+    <Chip size="sm" icon={<House size={12} strokeWidth={2.5} aria-hidden className="shrink-0" />}>
+      Equipe da família
+    </Chip>
   );
 }
 
@@ -455,6 +471,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
   const team = teamsOfCategory(career, offer.categoryId).find((t) => t.id === offer.teamId);
   const rank = rankTeams(teamsOfCategory(career, offer.categoryId)).findIndex((t) => t.id === offer.teamId) + 1;
   const courted = offer.kind !== 'continue' && offer.kind !== 'fallback';
+  const family = isFamilyTeamOffer(career, offer);
 
   return (
     <Card
@@ -467,6 +484,7 @@ function OfferDetail({ offer }: { offer: Offer }) {
       action={
         <span className="flex shrink-0 flex-wrap justify-end gap-2 py-1">
           <Pill tone={kindTone(offer)}>{OFFER_KIND_LABELS[offer.kind]}</Pill>
+          {family && <FamilyTeamChip />}
           {offer.scholarship > 0 && <Pill tone="good">Bolsa de {Math.round(offer.scholarship * 100)}%</Pill>}
           {withdrawn && <Pill tone="bad">Retirada</Pill>}
         </span>
@@ -527,6 +545,15 @@ function OfferDetail({ offer }: { offer: Offer }) {
           {offer.kind === 'fallback' && (
             <p className="text-xs text-ink-400">
               Vaga de aluguel, sem exigências: custa dinheiro, mas pode ser paga a crédito. É a rede de segurança da carreira.
+            </p>
+          )}
+          {family && (
+            <p className="flex items-start gap-1 text-xs text-gold-400">
+              <TriangleAlert size={13} strokeWidth={2} aria-hidden className="mt-px shrink-0" />
+              <span className="min-w-0">
+                Equipe da família: a imprensa vai falar em favorecimento. Cada etapa atrás do companheiro custa moral, e terminar o ano atrás dele custa
+                reputação; terminar à frente cala a conversa.
+              </span>
             </p>
           )}
           {fee > 0 && <p className="text-xs text-gold-400">Aceitar esta proposta rompe o contrato vigente: multa de {formatMoney(fee)}.</p>}
@@ -635,12 +662,13 @@ function Retirement() {
   return (
     <section aria-label="Aposentadoria das pistas" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-ink-700 pt-3">
       <p className="min-w-0 flex-1 basis-80 text-xs text-ink-400">
-        <b className="font-semibold text-ink-300">Aposentadoria das pistas.</b> Pendurar o capacete é definitivo para este personagem, mas a carreira continua:
+        <b className="font-semibold text-ink-300">Aposentadoria das pistas.</b> Pendurar o capacete é definitivo para este personagem, mas a carreira continua.
+        O primeiro ano fora do carro pode ter um papel (mentoria de um jovem piloto, comentários na TV ou a imagem de uma marca), com cachê e um legado; depois,
         você passa a atuar como dirigente (investidor, chefe de equipe ou dono) e acompanha os filhos.
         {confirming &&
           (career.offseason
-            ? ' Como a temporada já acabou, as propostas de cargo e as equipes à venda aparecem em seguida.'
-            : ' No meio da temporada, o reserva assume o seu carro e você acompanha o resto do campeonato de fora.')}
+            ? ' Como a temporada já acabou, o ano de transição, as propostas de cargo e as equipes à venda aparecem em seguida.'
+            : ' No meio da temporada, o reserva assume o seu carro. Com boa parte do calendário pela frente, o ano de transição pode começar logo; senão, ele fica para o fechamento.')}
       </p>
       <div className="flex shrink-0 flex-wrap gap-2">
         {confirming ? (
