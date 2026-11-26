@@ -205,7 +205,8 @@ export interface GameStore {
   setChildSupport(childId: string, support: SupportLevel): void;
   beginHandover(): void;
   cancelHandover(): void;
-  resolveSuccession(heirId: string, path: 'driver' | 'executive'): void;
+  /** Escolhe quem assume a família e por qual caminho; pelas pistas, `seat` é a vaga da primeira temporada (padrão: a equipe em que já corria). */
+  resolveSuccession(heirId: string, path: 'driver' | 'executive', seat?: engine.HeirSeat): void;
 
   /* Gestão de equipe */
   hireStaff(staffId: string): void;
@@ -739,8 +740,8 @@ export const useGameStore = create<GameStore>((set, get) => {
     setChildSupport: action(engine.setChildSupport),
     beginHandover: action(engine.beginHandover),
     cancelHandover: action(engine.cancelHandover),
-    resolveSuccession(heirId, path) {
-      apply((c) => engine.resolveSuccession(c, heirId, path), { save: true });
+    resolveSuccession(heirId, path, seat) {
+      apply((c) => engine.resolveSuccession(c, heirId, path, seat), { save: true });
       if (!get().notice) set({ ...RACE_RESET, lastOutcome: null });
     },
 
