@@ -2,10 +2,10 @@
  * Árvore da família: as gerações numa linha vertical (o tronco), da primeira à atual, e, dentro de
  * cada geração, os ramos (filhos, parentes) presos por traços.
  *
- * A ligação é desenhada só com bordas na cor de linha forte dos tokens (`ink-600`): o tronco com
- * 2 px, que desce do marcador de uma geração até o da seguinte, e os ramos com 1 px, no desenho de
- * "├─" e "└─". O marcador da geração atual é vermelho e traz a palavra "Atual" embaixo, nunca só a
- * cor.
+ * A ligação é desenhada só com bordas na cor de contorno dos tokens (`ink-500`, 3:1 sobre as chapas,
+ * porque é ela que diz quem vem de quem): o tronco com 2 px, que desce do marcador de uma geração até
+ * o da seguinte, e os ramos com 1 px, no desenho de "├─" e "└─". O marcador da geração atual é
+ * vermelho e traz a palavra "Atual" embaixo, nunca só a cor.
  *
  * É feita de listas aninhadas (`ol` das gerações, `ul` dos ramos): o leitor de tela anuncia os
  * níveis, e a conferência de alvos de toque aceita os itens de uma mesma lista um embaixo do outro.
@@ -53,7 +53,7 @@ export function TreeGeneration({
           {marker}
         </span>
         {current && <span className="mt-1 text-2xs font-semibold text-apex-400">Atual</span>}
-        <span className="mt-1 w-0 flex-1 border-ink-600 border-l-2 group-last/generation:hidden" />
+        <span className="mt-1 w-0 flex-1 border-ink-500 border-l-2 group-last/generation:hidden" />
       </div>
       <div className="min-w-0 pb-6 group-last/generation:pb-0">
         <span className="sr-only">
@@ -85,7 +85,7 @@ export function TreeBranches({ label, title, children, className }: { label: str
 /** Um ramo: o traço vertical que vem de cima e o traço curto até o conteúdo ("├─"; no último, "└─"). */
 export function TreeBranch({ children }: { children: ReactNode }) {
   return (
-    <li className="relative pb-2 pl-6 before:absolute before:top-0 before:left-2 before:h-full before:border-ink-600 before:border-l after:absolute after:top-3 after:left-2 after:w-3 after:border-ink-600 after:border-t last:pb-0 last:before:h-3">
+    <li className="relative pb-2 pl-6 before:absolute before:top-0 before:left-2 before:h-full before:border-ink-500 before:border-l after:absolute after:top-3 after:left-2 after:w-3 after:border-ink-500 after:border-t last:pb-0 last:before:h-3">
       {children}
     </li>
   );

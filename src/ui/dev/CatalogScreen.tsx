@@ -590,7 +590,7 @@ export default function CatalogScreen() {
                   <div className="font-display text-xl font-bold uppercase leading-tight text-ink-100">Rita Duarte</div>
                   <p className="text-sm text-ink-300">1998 a 2049 · À frente da família de 2014 a 2049</p>
                 </div>
-                <TreeBranches title="Seguiram outro caminho" label="Filhos de Rita Duarte que seguiram outro caminho">
+                <TreeBranches title="Seguiram outro caminho" label="Parentes da 1ª geração que seguiram outro caminho">
                   <TreeBranch>
                     <span className="text-sm font-semibold text-ink-100">Caio Duarte</span>
                     <span className="block text-xs text-ink-300">Engenharia · nível no ofício: 64</span>
@@ -608,7 +608,7 @@ export default function CatalogScreen() {
                   <div className="font-display text-xl font-bold uppercase leading-tight text-ink-100">Téo Duarte</div>
                   <p className="text-sm text-ink-300">Nascimento em 2027 · 22 anos</p>
                 </div>
-                <TreeBranches title="Filhos" label="Filhos de Téo Duarte">
+                <TreeBranches title="Próxima geração" label="Próxima geração da família Duarte">
                   <TreeBranch>
                     <span className="text-sm font-semibold text-ink-100">Nina Duarte</span>
                     <span className="block text-xs text-ink-300">3 anos · Criança</span>
@@ -618,9 +618,9 @@ export default function CatalogScreen() {
             </TreeGeneration>
           </GenerationTree>
           <p className="text-xs text-ink-400">
-            O tronco (2 px, linha forte) desce do marcador de uma geração até o da seguinte; os ramos (1 px) prendem filhos e parentes no desenho de "├─" e
-            "└─". A geração atual tem o marcador vermelho e a palavra "Atual" embaixo. São listas aninhadas (`ol` das gerações, `ul` dos ramos), sem nada
-            clicável dentro; o conteúdo de cada geração é livre.
+            O tronco (2 px, na cor de contorno, com 3:1 sobre as chapas) desce do marcador de uma geração até o da seguinte; os ramos (1 px, na mesma cor)
+            prendem filhos e parentes no desenho de "├─" e "└─". A geração atual tem o marcador vermelho e a palavra "Atual" embaixo. São listas aninhadas (`ol`
+            das gerações, `ul` dos ramos), sem nada clicável dentro; o conteúdo de cada geração é livre.
           </p>
         </Section>
 
