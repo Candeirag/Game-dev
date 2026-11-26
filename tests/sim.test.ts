@@ -35,7 +35,18 @@ import {
   dynastyPolicy,
   heirTakesOver,
 } from '../sim/dynasty';
-import { BOT_HEIR_SCORE, BOT_HEIR_SEAT_ORDER, botChooseHeir, botHeirScore, botSuccession, pickBestOffer, playRound, resolvePending } from '../sim/policy';
+import {
+  BOT_HEIR_SCORE,
+  BOT_HEIR_SEAT_ORDER,
+  botChildProspect,
+  botChooseHeir,
+  botHeirScore,
+  botSuccession,
+  botWantsHandover,
+  pickBestOffer,
+  playRound,
+  resolvePending,
+} from '../sim/policy';
 import { formatReport } from '../sim/report';
 import {
   type CareerSample,
@@ -1463,6 +1474,56 @@ describe('o robô na sucessão (Fase 6)', () => {
     expect(botHeirScore(outlook({ age: BOT_HEIR_SCORE.YOUTH_AGE }))).toBe(0);
     expect(botHeirScore(outlook({ age: BOT_HEIR_SCORE.YOUTH_AGE + 7 }))).toBe(-7 * BOT_HEIR_SCORE.AGE);
   });
+
+  it('espera passar o comando enquanto um irmão mais novo, que quer correr, parece mais promissor que os filhos prontos', async () => {
+    const { newCareer, playSeason } = await import('./helpers');
+    const { retireFromDriving, startChildCareer } = await import('@/engine');
+    const closed = resolvePending(playSeason(newCareer(9)));
+    const exec = retireFromDriving({ ...closed, finance: { ...closed.finance, cash: 5_000_000 } });
+    const kid = (id: string, patch: Partial<CareerState['family']['children'][number]>) => ({
+      id,
+      firstName: id,
+      lastName: 'Teste',
+      nationality: 'BR',
+      age: 10,
+      traits: ['calm' as const],
+      talent: 75,
+      interest: 80,
+      bond: 70,
+      stage: 'child' as const,
+      kartFunding: 'none' as const,
+      kartYears: 0,
+      support: 'none' as const,
+      driver: null,
+      racing: null,
+      birthTraits: [],
+      kartTest: null,
+      ...patch,
+    });
+    // O mais velho (teto 76, "Mediano") corre e tem 18 anos; o mais novo (teto 92, "Fora de série") faz kart.
+    let c: CareerState = {
+      ...exec,
+      family: {
+        ...exec.family,
+        children: [kid('velho', { age: 18, talent: 76, kartYears: 4 }), kid('novo', { age: 11, talent: 92, kartYears: 2, stage: 'karting' })],
+      },
+    };
+    c = startChildCareer(c, 'velho', 'full');
+    const [velho, novo] = c.family.children;
+    expect(childScoutReport(velho!)).toBe('Mediano');
+    expect(childScoutReport(novo!)).toBe('Fora de série');
+    expect(botChildProspect(novo!)).toBeGreaterThan(botChildProspect(velho!));
+    const policy = { handoverHeirAge: 18, handoverAge: 60 };
+    // Pelo primeiro filho pronto, passa já; pelo que se vê, espera o mais novo.
+    expect(botWantsHandover(c, policy)).toBe(true);
+    expect(botWantsHandover(c, { ...policy, heirChoice: 'outlook' })).toBe(false);
+    // Se o mais novo não quer correr, não há o que esperar.
+    const unwilling: CareerState = { ...c, family: { ...c.family, children: c.family.children.map((k) => (k.id === 'novo' ? { ...k, interest: 10 } : k)) } };
+    expect(botWantsHandover(unwilling, { ...policy, heirChoice: 'outlook' })).toBe(true);
+    // A idade-limite do pai encerra a espera.
+    const old: CareerState = { ...c, drivers: c.drivers.map((d) => (d.isPlayer ? { ...d, age: 60 } : d)) };
+    expect(botWantsHandover(old, { ...policy, heirChoice: 'outlook' })).toBe(true);
+  });
 });
 
 describe('dinastia em carreiras de verdade (Fase 6)', () => {
@@ -1501,12 +1562,15 @@ describe('dinastia em carreiras de verdade (Fase 6)', () => {
       expect(dynasty.gen1.end).toBe('retired');
       expect(dynasty.gen1.seasons.at(-1)?.age).toBe(SIM_DYNASTY.RETIRE_AGE);
       expect(dynasty.afterDriving.transition, `semente ${seed}`).not.toBeNull();
-      // A 2ª geração começa na sucessão e vai até os 36 anos ou o limite de temporadas.
-      expect(dynasty.gen2?.end, `semente ${seed}`).toMatch(/^(retired|limit)$/);
+      // A 2ª geração começa na sucessão e vai até os 36 anos ou o limite de temporadas (ou até um
+      // acidente fatal ou a morte, que também encerram a amostra).
+      const end = dynasty.gen2?.end;
+      expect(end, `semente ${seed}`).toMatch(/^(retired|limit|accident|death)$/);
       const gen2 = dynasty.gen2?.seasons ?? [];
       expect(gen2.length).toBeGreaterThan(0);
       expect(gen2.length).toBeLessThanOrEqual(SIM_DYNASTY.GEN2_MAX_SEASONS);
-      expect(gen2.length === SIM_DYNASTY.GEN2_MAX_SEASONS || (gen2.at(-1)?.age ?? 0) >= SIM_DYNASTY.RETIRE_AGE).toBe(true);
+      if (end === 'retired' || end === 'limit')
+        expect(gen2.length === SIM_DYNASTY.GEN2_MAX_SEASONS || (gen2.at(-1)?.age ?? 0) >= SIM_DYNASTY.RETIRE_AGE).toBe(true);
       expect(gen2.map((s) => s.age)).toEqual(gen2.map((_, n) => (dynasty.gen2?.startAge ?? 0) + n));
       // Cada passo: integridade e formato do save; a 1ª e a 2ª geração passam por ele.
       const mine = steps.filter((step) => step.seed === seed);
@@ -1601,19 +1665,25 @@ describe('dinastia em carreiras de verdade (Fase 6)', () => {
   });
 
   it('a 2ª geração prefere a equipe da família quando ela está no degrau mais alto ao alcance; sem a preferência, a mais forte', () => {
-    const state = opened[0];
-    if (!state) throw new Error('Nenhuma sucessão aberta na amostra.');
-    // O herdeiro corre a primeira temporada e chega ao fechamento com as propostas.
-    let c = heirTakesOver(state, dynastyPolicy(SIM_CHOICES), 0);
-    while (c.nextRoundIndex < c.calendar.length) c = playRound(c, SIM_CHOICES);
-    c = resolvePending(c);
-    const off = c.offseason;
-    if (!off) throw new Error('Sem fechamento.');
-    const plain = off.offers.find((o) => o.id === pickBestOffer(c));
-    if (!plain) throw new Error('Sem proposta escolhida.');
-    // Outra equipe da mesma categoria, com proposta aceitável, passa a ser da família (participação de 100%).
-    const rival = off.offers.find((o) => o.id !== plain.id && o.categoryId === plain.categoryId && o.kind !== 'fallback' && canAcceptOffer(c, o));
-    if (!rival) throw new Error('Sem outra proposta aceitável na mesma categoria.');
+    // Uma das sucessões da amostra em que, no primeiro fechamento do herdeiro, há outra proposta
+    // aceitável na categoria da escolhida (o cenário do teste).
+    const scenario = opened
+      .map((state) => {
+        // O herdeiro corre a primeira temporada e chega ao fechamento com as propostas.
+        let c = heirTakesOver(state, dynastyPolicy(SIM_CHOICES), 0);
+        while (c.nextRoundIndex < c.calendar.length && !c.succession) c = playRound(c, SIM_CHOICES);
+        c = resolvePending(c);
+        const off = c.offseason;
+        const plain = off?.offers.find((o) => o.id === pickBestOffer(c));
+        // Outra equipe da mesma categoria, com proposta aceitável, passa a ser da família (participação de 100%).
+        const rival = plain
+          ? off?.offers.find((o) => o.id !== plain.id && o.categoryId === plain.categoryId && o.kind !== 'fallback' && canAcceptOffer(c, o))
+          : undefined;
+        return off && plain && rival ? { c, off, plain, rival } : null;
+      })
+      .find((x) => x !== null);
+    if (!scenario) throw new Error('Nenhuma sucessão da amostra com outra proposta aceitável na mesma categoria.');
+    const { c, off, plain, rival } = scenario;
     const stake: TeamStake = {
       id: 'participacao-familia',
       teamId: rival.teamId,

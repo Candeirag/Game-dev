@@ -52,7 +52,7 @@ export const SIM_DYNASTY = {
   /** Idade em que cada geração pendura o capacete (a do robô de sempre). */
   RETIRE_AGE: 36,
   /** Passa o comando em vida quando um filho com carreira de piloto chega a esta idade. */
-  HEIR_RACING_AGE: 16,
+  HEIR_RACING_AGE: 18,
   /** Sem filho piloto, passa o comando a esta idade (o parente jovem herda). */
   HANDOVER_AGE: 60,
   /** A 2ª geração corre no máximo estas temporadas na amostra (ou até RETIRE_AGE, o que vier antes). */

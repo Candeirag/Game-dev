@@ -8,8 +8,10 @@
  * Mexer em qualquer decisão daqui muda os valores gravados em `tests/golden/simulation.json`
  * e a linha de base do simulador. Se for de propósito, regrave e explique no PR.
  */
-import type { CareerState, MomentRecord, PracticeProgram, QualifyingApproach, RaceMode } from '@/domain/schemas';
+import type { CareerState, Child, MomentRecord, PracticeProgram, QualifyingApproach, RaceMode } from '@/domain/schemas';
+import { BIRTH_TRAITS } from '@/data/birth';
 import { getCategory } from '@/data/categories';
+import { FAMILY } from '@/data/family';
 import * as engine from '@/engine';
 
 export interface Choices {
@@ -277,12 +279,15 @@ export const BOT_TRANSITION_ORDER = ['commentator', 'ambassador', 'mentor'] as c
  * escolha pelo que se vê (`botChooseHeir`). É política do robô, não regra do jogo.
  */
 export const BOT_HEIR_SCORE = {
-  /** Por degrau da categoria em que o herdeiro corre (quem não corre, nada). */
-  TIER: 10,
+  /**
+   * Por degrau da categoria em que o herdeiro corre (quem não corre, nada). Pesa menos que a
+   * avaliação dos treinadores: o degrau de agora diz onde o filho está; a avaliação, até onde ele vai.
+   */
+  TIER: 4,
   /** Pelo veredito do teste no kart (sem teste, nada). */
-  KART_TEST: { outstanding: 8, promising: 4, average: 0, limited: -4 },
+  KART_TEST: { outstanding: 6, promising: 3, average: 0, limited: -4 },
   /** Pela avaliação dos treinadores, pelo rótulo que ela mostra (sem avaliação, nada). */
-  SCOUT: { 'Fora de série': 8, 'Muito promissor': 5, Promissor: 2, Mediano: 0, Limitado: -4 } as Readonly<Record<string, number>>,
+  SCOUT: { 'Fora de série': 12, 'Muito promissor': 8, Promissor: 4, Mediano: 0, Limitado: -6 } as Readonly<Record<string, number>>,
   /** Por talento revelado; cada defeito revelado tira o mesmo. */
   TRAIT: 3,
   /** Por ano de idade acima de YOUTH_AGE: quem é mais velho tem menos temporadas pela frente. */
@@ -329,16 +334,45 @@ export function botChooseHeir(career: CareerState): { heirId: string; seat: engi
 }
 
 /**
+ * O que se vê de um filho antes de ele correr, na escala de `botHeirScore` sem o degrau e a idade:
+ * a avaliação dos treinadores, o teste no kart e os talentos e defeitos já revelados.
+ */
+export function botChildProspect(child: Child): number {
+  const score = BOT_HEIR_SCORE;
+  const scout = engine.childScoutReport(child);
+  const verdict = child.kartTest ? engine.kartTestVerdict(child.kartTest.gap) : null;
+  const revealed = child.birthTraits.filter((t) => t.revealedSeason !== null);
+  const talents = revealed.filter((t) => BIRTH_TRAITS[t.id].kind === 'talent').length;
+  return (scout ? (score.SCOUT[scout] ?? 0) : 0) + (verdict ? score.KART_TEST[verdict] : 0) + (talents - (revealed.length - talents)) * score.TRAIT;
+}
+
+/**
  * O robô dirigente passa o comando em vida neste fechamento? Aos `handoverAge` anos ou, com
  * `handoverHeirAge`, assim que um filho com carreira de piloto chega a essa idade. Com
- * `transitionFirst`, espera o ano de transição enquanto algum papel estiver ao alcance.
+ * `transitionFirst`, espera o ano de transição enquanto algum papel estiver ao alcance. Com
+ * `heirChoice: 'outlook'`, espera também enquanto um irmão mais novo, que ainda não corre mas quer
+ * correr, parecer mais promissor que todos os filhos já prontos (como faria quem escolhe o herdeiro
+ * pelo que vê); a idade `handoverAge` encerra a espera.
  */
 export function botWantsHandover(career: CareerState, policy: LifePolicy): boolean {
   if (career.mode !== 'executive' || !career.executiveOffseason) return false;
   if (policy.transitionFirst && engine.transitionOffers(career).some((o) => o.available)) return false;
   if (policy.handoverAge !== undefined && engine.getPlayer(career).age >= policy.handoverAge) return true;
   const heirAge = policy.handoverHeirAge;
-  return heirAge !== undefined && career.family.children.some((k) => k.stage === 'racing' && k.driver !== null && k.racing !== null && k.age >= heirAge);
+  if (heirAge === undefined) return false;
+  const children = career.family.children;
+  const ready = children.filter((k) => k.stage === 'racing' && k.driver !== null && k.racing !== null && k.age >= heirAge);
+  if (ready.length === 0) return false;
+  if (policy.heirChoice !== 'outlook') return true;
+  const best = Math.max(...ready.map(botChildProspect));
+  // Um irmão que corre mas ainda não tem a idade, ou que ainda vai começar (quer correr), e parece melhor.
+  const coming = children.some(
+    (k) =>
+      !ready.includes(k) &&
+      (k.stage === 'racing' || ((k.stage === 'child' || k.stage === 'karting') && k.interest >= FAMILY.CAREER_INTEREST)) &&
+      botChildProspect(k) > best,
+  );
+  return !coming;
 }
 
 /** O ano de transição no primeiro papel disponível na ordem do robô, ou null fora da janela. */
