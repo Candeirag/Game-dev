@@ -105,3 +105,25 @@ A carreira A continua na semente `20260321`, no terceiro sorteio. Ela agora faz 
 kart regional (8º e 2º) e uma no kart nacional (2º), sobe para a Fórmula Júnior (11º) e volta ao
 kart nacional (5º). Antes eram duas na Fórmula Júnior. O caminho que o teste exige continua coberto
 (a Fórmula Elite vem da carreira C).
+
+## Fase 6 (26/11/2026): dinastia
+
+O arquivo foi regravado três vezes nesta fase, e nas três só a coluna `hash` mudou nos 65 pontos:
+resultados, pontos, finanças, reputação, posições e classificações ficaram idênticos. O hash muda
+porque o estado da carreira ganhou campos da versão 10 do save:
+
+- `f4af321`: os dados da dinastia e do ano de transição (`birthTraits` e `kartTest` em cada filho;
+  `traits`, `partnerName` e `path` em cada geração da linhagem; os parentes e o personagem anterior
+  vivo na dinastia; `transition`);
+- `b901103`: o personagem anterior vivo deixou de ser um campo só (`elder: null`) e virou a lista
+  `elders: []`;
+- `7822722`: `retiredSeason`, a temporada em que o personagem parou de correr.
+
+Nas duas últimas, antes de regravar, o arquivo antigo foi conferido com o campo novo ignorado no
+resumo, e passou sem mudança. As regras que mudam a 1ª geração de propósito (filhos que nascem por cartões de
+vida pessoal, o teste no kart aos 12 anos e o ano de transição na aposentadoria) não aparecem nas
+carreiras de referência, que não têm um filho por cartão, um filho na idade do teste nem uma
+aposentadoria; as regras da 2ª geração em diante (sobrenome, imprensa, maus investimentos) não valem
+nelas. A calibragem do fim da fase (a herança de talento, a partilha da herança, os cartões de filho
+mais raros e o robô da dinastia) também não mexeu no arquivo. Quem mede a dinastia é a seção 11 do
+simulador (`docs/simulador/fase-6*.txt`).

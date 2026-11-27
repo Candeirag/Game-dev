@@ -22,6 +22,9 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
 | `fase-5.txt` | `npm run sim -- --seeds 50 --seasons 15`, com os eventos encadeados (seção 10 nova: cartões por etapa e por temporada, categorias, cadeias começadas e concluídas, escolhas de traço e aptidão, propostas de patrocínio e textos repetidos por carreira) |
 | `fase-5-talento-4.txt` | o mesmo, com `--talent 4` |
 | `fase-5-talento-8.txt` | o mesmo, com `--talent 8` |
+| `fase-6.txt` | `npm run sim -- --seeds 50 --seasons 15`, com a dinastia: duas gerações por padrão (linha "Dinastia:" no cabeçalho e seção 11 nova: gerações lado a lado, comparação pela semente, herança, vaga do herdeiro, filhos e testes no kart, parentes, ano de transição, equipe da família). As seções 1 a 10 continuam medindo as 15 temporadas da 1ª geração e só diferem das da Fase 5 pelos filhos que nascem por cartões de vida pessoal |
+| `fase-6-talento-4.txt` | o mesmo, com `--talent 4` |
+| `fase-6-talento-8.txt` | o mesmo, com `--talent 8` |
 
 ## Como usar numa fase
 
@@ -32,12 +35,17 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
    ```
 
    Desde a Fase 6, o comando joga duas gerações por padrão, e o relatório ganha a linha "Dinastia:"
-   no cabeçalho e a seção 11. Para comparar com os relatórios da Fase 0 à Fase 5, que têm uma
-   geração só, rode com `--generations 1` (sai idêntico ao formato antigo):
+   no cabeçalho e a seção 11; a comparação de uma fase nova é com `fase-6.txt`, no comando padrão.
+   Para comparar com os relatórios da Fase 0 à Fase 5, que têm uma geração só, rode com
+   `--generations 1` (sai idêntico ao formato antigo e leva uns 30 s, contra 2 a 3 minutos das duas
+   gerações):
 
    ```
    npm run sim --silent -- --generations 1 > /tmp/agora.txt && diff docs/simulador/fase-5.txt /tmp/agora.txt
    ```
+
+   As seções 1 a 10 do comando padrão saem iguais às de `--generations 1`: a 2ª geração só entra
+   na seção 11.
 
 2. Depois da mudança, gere o relatório da fase (`--out docs/simulador/fase-N.txt`) e cole no PR
    o que mudou em relação ao anterior. Mudança que afeta as categorias de cima aparece melhor
@@ -110,7 +118,7 @@ tem data, duração nem número de versão: enquanto nenhuma regra do jogo mudar
   como o robô de sempre). O bônus de talento (`--talent`) vale para o piloto de cada geração: o
   herdeiro o recebe ao assumir o carro, como o piloto da semente na criação. As seções 1 a 10
   continuam medindo só as temporadas pedidas da 1ª geração: com `--generations 1`, o relatório
-  traz só as seções 1 a 10, como até a Fase 5, e leva uns 25 s; com as duas gerações, cerca de
+  traz só as seções 1 a 10, como até a Fase 5, e leva uns 30 s; com as duas gerações, cerca de
   2 min (quase 3 com `--talent 8`, em que as carreiras vão mais longe).
   O que conferir:
   - na tabela das gerações, a 1ª conta a vida de piloto inteira (até parar), e não só as

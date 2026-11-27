@@ -91,7 +91,8 @@ Se você precisar contrariar uma delas, pare e pergunte antes.
 O Playwright usa o Chromium. Em uma máquina nova: `npx playwright install chromium`.
 Para depurar um teste do navegador: `npx playwright test <arquivo> --trace on`.
 
-Simulador: `npm run sim -- --seeds 50 --seasons 15` (o padrão; cerca de 25 s). Outras opções:
+Simulador: `npm run sim -- --seeds 50 --seasons 15` (o padrão: duas gerações, cerca de 2 a 3 minutos;
+com `--generations 1`, só a 1ª geração e sem a seção 11, cerca de 30 s). Outras opções:
 `--first-seed N`, `--talent N` (0 = o robô puro; 4 = bom jogador; 8 = excelente),
 `--moments style|safe|bold` (como o robô responde aos lances; o padrão, `style`, deixa o estilo do
 piloto decidir), `--json`, `--out arquivo`, `--help`. O relatório vai para a saída padrão e não tem data nem duração: com
@@ -107,7 +108,7 @@ os mesmos argumentos e o mesmo código, sai sempre igual.
 - **Identificadores.** Os ids das categorias (`f4`, `f3`, `f2`, `f1`, `kart-…`) e das equipes
   estão nos saves e entram nas sementes. O nome exibido pode mudar; o id, não
   (`tests/names.test.ts` trava a lista).
-- **Saves.** Os de `tests/fixtures/` (versões 1 a 9) têm de continuar abrindo e jogáveis. Os
+- **Saves.** Os de `tests/fixtures/` (versões 1 a 10) têm de continuar abrindo e jogáveis. Os
   das versões antigas são registros e nunca são regravados.
 - **Telas.** `e2e/telas.spec.ts` abre todas as telas principais em 844×390 (a referência),
   390×844, 1180×820 e 1366×768, tira um print de cada (em `test-results/telas/`) e falha se uma
@@ -125,7 +126,8 @@ simulador, que só usam a API pública do motor).
 - Regra de jogo só no motor. Componentes React e a store não decidem nada do jogo.
 - Nascimento (Fase 2): sorteio, efeitos, revelação dos traços e mudança em `src/engine/birth`;
   números em `balance.ts` (`BIRTH`, `TRAIT_EFFECTS`…), textos em `src/data/birth.ts`. Vale só para
-  o personagem que o sorteou (`activeBirth`); saves antigos têm `birth: null`.
+  o personagem dono dele (`activeBirth`): quem o sorteou ou, desde a Fase 6, o filho ou o parente
+  jovem que herda (`heirBirth`); saves antigos têm `birth: null`.
 - Economia, polos e portas (Fase 3): polos em `src/data/hubs.ts` e `src/engine/career/hubs.ts`;
   portas (academia, vaquinha, investidor, trabalho paralelo, último recurso) e o retrato da tela
   Caminhos em `src/engine/career/paths.ts`; custos por etapa em `economy.ts`; escada e rompimento
@@ -160,6 +162,31 @@ simulador, que só usam a API pública do motor).
   sabe o gênero do piloto). `tests/storyEvents.test.ts` valida os dados (condições, referências,
   marcadores, cadeias sem ponta solta, texto único no catálogo); `tests/story.test.ts`, o motor; a
   seção 10 do simulador conta os cartões, as cadeias e os textos repetidos (tem de dar zero).
+- Dinastia e aposentadoria (Fase 6): o motor fica em `src/engine/dynasty`. Herança dos talentos e
+  defeitos de nascença, teste no kart, o que se sabe de cada herdeiro (`heirOutlook`) e o nascimento
+  do filho ou parente jovem que herda (`heirBirth`, origem `racer-parent`) em `heritage.ts`; sucessão, vaga do
+  herdeiro piloto (`heirSeatOptions`: a equipe atual, uma equipe da frente paga pela herança ou a
+  equipe da família), partilha e quem passou o comando em vida (`dynasty.elders`) em `succession.ts`;
+  parentes (os irmãos que não herdaram: engenharia, negócios ou direção esportiva) em `relatives.ts`;
+  placar e árvore em `lineage.ts`; ano de transição (mentoria, comentários na TV, imagem de uma marca)
+  em `transition.ts`, que entra pelo plano `{ kind: 'transition', role }` de `startExecutiveSeason`
+  ou por `beginTransition` logo depois de parar no meio do ano; sobrenome, imprensa e favorecimento em
+  `surname.ts`; maus investimentos e o evento do teste no kart em `familyEvents.ts`. Números em
+  `balance.ts` (`HERITAGE`, `TRANSITION`, `SURNAME`, `HEIR_START`, `FAMILY_TEAM`, `BAD_INVESTMENT`,
+  `RELATIVES`), mais `FAMILY` (`src/data/family.ts`: herança de talento, sobrenome, filhos) e
+  `ASSET_RULES` (`src/data/assets.ts`: imposto e parte dos irmãos); textos em `src/data/heritage.ts`,
+  `dynasty.ts`, `transition.ts`, `familyTexts.ts` e nos cartões de `src/data/events` (filhos que
+  nascem por vida pessoal, sobrenome, favorecimento; condição `generation`, marcadores `{antecessor}`,
+  `{sobrenome}` e `{bebe}`). Vão para o save (v10) os traços e o teste de cada filho, os traços, o
+  parceiro e o caminho de cada geração, `dynasty.relatives`, `dynasty.elders`, `transition` e
+  `retiredSeason`. Regras que não podem quebrar: só herdeiros começam numa equipe boa (o fundador
+  nunca); as regras da 2ª geração em diante (sobrenome, imprensa, maus investimentos, cartões com
+  `generation` mínima 2) não consomem sorteio nem mudam nada na 1ª; a parte dos irmãos sai do dinheiro
+  líquido depois do imposto e nunca deixa o herdeiro devendo; textos sem gênero (para "você", o
+  parceiro, os filhos e quem passou o comando); o ano de transição vale uma vez por personagem; cada
+  sorteio novo tem nome próprio (lista em ARCHITECTURE.md). Testes: `tests/heritage.test.ts`,
+  `tests/dynasty.test.ts`, `tests/transition.test.ts`, `tests/surname.test.ts` e a seção 11 do
+  simulador (duas gerações; a 2ª tem de chegar mais longe em média sem ganhar tudo).
 - Toda aleatoriedade vem de `src/engine/rng.ts`, com semente (regra 4).
 - Dinheiro só por `src/domain/money.ts` (motor: `money(career, valor)`; interface:
   `formatMoney`). Plurais por `src/domain/text.ts`. Nome de categoria em frase só por
