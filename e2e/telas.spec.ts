@@ -387,6 +387,169 @@ for (const formato of TELAS) {
       await conferirTela(page, 'dirigente-carreira-com-equipe', formato.nome);
       expect(erros).toEqual([]);
     });
+
+    /* ---------------- Fase 6: dinastia e aposentadoria (saves da versão 10) ---------------- */
+
+    test('dinastia: árvore e placar, pela Vida e pela Família, e a ficha do herdeiro', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.segundaGeracao);
+      const principal = page.getByRole('main');
+      await irPara(page, 'Vida');
+      await principal.getByRole('link', { name: /^Dinastia/ }).click();
+      await expect(page.getByRole('heading', { name: 'Dinastia', level: 1 })).toBeVisible();
+      // A árvore: as duas gerações no tronco, quem passou o comando em vida e os irmãos que seguiram outro caminho.
+      await expect(principal).toContainText('Passou o comando em vida');
+      await expect(principal).toContainText('Seguiram outro caminho');
+      await expect(principal).toContainText('Engenharia');
+      await conferirTela(page, 'dinastia-arvore', formato.nome);
+      await principal.getByRole('tab', { name: 'Placar', exact: true }).click();
+      await expect(page).toHaveURL(/tab=placar/);
+      await expect(principal).toContainText('Placar da dinastia');
+      await conferirTela(page, 'dinastia-placar', formato.nome);
+      // Também se chega pela Família, pelo atalho do cabeçalho.
+      await irPara(page, 'Vida');
+      await principal.getByRole('link', { name: /^Família/ }).click();
+      await principal.getByRole('link', { name: 'Árvore e placar' }).click();
+      await expect(page.getByRole('heading', { name: 'Dinastia', level: 1 })).toBeVisible();
+      // A ficha de quem herdou a carreira: o nascimento vem da família de piloto, com os traços já revelados.
+      await irPara(page, 'Piloto');
+      await principal.getByRole('tab', { name: 'Nascimento', exact: true }).click();
+      await expect(principal).toContainText('Talentos e defeitos');
+      await conferirTela(page, 'piloto-nascimento-herdeiro', formato.nome);
+      expect(erros).toEqual([]);
+    });
+
+    test('família: os filhos com os traços ocultos e o teste no kart', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.filhosNoTesteDoKart);
+      // O cartão do teste no kart de quem fez 12 anos, no painel.
+      await expect(page.getByRole('region', { name: 'Dia de avaliação no kartódromo' })).toBeVisible();
+      await conferirTela(page, 'painel-teste-no-kart', formato.nome);
+      const principal = page.getByRole('main');
+      await irPara(page, 'Vida');
+      await principal.getByRole('link', { name: /^Família/ }).click();
+      await principal.getByRole('tab', { name: 'Filhos', exact: true }).click();
+      const filhos = principal.getByRole('list').first();
+      // Quem já fez o teste: o tempo e o veredito, e parte dos traços revelada.
+      await filhos.getByRole('button', { name: /^Maya/ }).click();
+      await expect(principal).toContainText('Talentos e defeitos de nascença');
+      await expect(principal).toContainText(/\d\.\d{3} s do tempo de referência/);
+      await conferirTela(page, 'familia-filhos-teste-no-kart', formato.nome);
+      // Quem ainda é criança: todos os traços ocultos e a data do teste.
+      await filhos.getByRole('button', { name: /^Ayrton/ }).click();
+      await expect(principal).not.toContainText('Todos revelados');
+      await expect(principal).toContainText(/O teste vem no começo da temporada em que Ayrton tiver 12 anos/);
+      await conferirTela(page, 'familia-filhos-tracos-ocultos', formato.nome);
+      expect(erros).toEqual([]);
+    });
+
+    test('sucessão com vários filhos: o que se sabe de cada um e as vagas da próxima temporada', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.sucessaoComVariosFilhos);
+      await expect(page.getByRole('heading', { name: 'Quem assume a família?', level: 1 })).toBeVisible();
+      const lista = page.getByRole('main').getByRole('list').first();
+      await expect(lista.getByRole('button')).toHaveCount(7);
+      await conferirTela(page, 'sucessao-varios-filhos', formato.nome);
+      // Um filho piloto: o caminho nas pistas e as três vagas (mesma força, equipe da frente, equipe da família).
+      await lista.getByRole('button', { name: /^Nico Teste/ }).click();
+      const familia = page.getByRole('button', { name: /^Equipe da família/ });
+      await expect(page.getByRole('button', { name: /^Mesma força/ })).toBeEnabled();
+      await expect(page.getByRole('button', { name: /^Equipe da frente/ })).toBeEnabled();
+      await familia.click();
+      await expect(familia).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('main')).toContainText('Favorecimento: a imprensa vai cobrar');
+      await conferirTela(page, 'sucessao-vagas', formato.nome);
+      await expect(familia).toHaveAttribute('aria-pressed', 'true');
+      expect(erros).toEqual([]);
+    });
+
+    test('aposentadoria no meio do ano: as propostas do ano de transição e o começo do papel', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.aposentadoriaNoMeioDoAno);
+      // O painel avisa que a proposta vale até a próxima etapa.
+      await expect(page.getByRole('main')).toContainText('Você acabou de parar de correr');
+      await conferirTela(page, 'transicao-meio-do-ano-painel', formato.nome);
+      await irPara(page, 'Carreira');
+      const principal = page.getByRole('main');
+      await expect(principal).toContainText('Ano de transição');
+      // A mentoria fica indisponível (ninguém para acompanhar), com o motivo por escrito.
+      await expect(page.getByRole('button', { name: /^Mentoria/ })).toBeDisabled();
+      await expect(principal).toContainText('Nenhum jovem piloto para acompanhar');
+      const comentarios = page.getByRole('button', { name: /^Comentários na TV/ });
+      await comentarios.click();
+      await conferirTela(page, 'transicao-meio-do-ano', formato.nome);
+      // A moldura muda de formato no print da página inteira; a escolha continua de pé.
+      await expect(comentarios).toHaveAttribute('aria-pressed', 'true');
+      // Começar o papel agora: ele vale pelo resto da temporada, e o painel passa a mostrá-lo.
+      await page.getByRole('button', { name: 'Começar o ano de transição' }).click();
+      await irPara(page, 'Painel');
+      await expect(page.getByRole('main')).toContainText('Comentários na TV');
+      await expect(page.getByRole('main')).toContainText('Cachê recebido');
+      expect(erros).toEqual([]);
+    });
+
+    test('ano de transição: o cartão no fechamento e o painel durante o ano', async ({ page }) => {
+      const erros = vigiarErros(page);
+      // No fechamento logo depois de parar: o ano de transição antes das propostas de cargo.
+      await abrirSave(page, SAVES.fechamentoComAnoDeTransicao);
+      await irPara(page, 'Carreira');
+      const principal = page.getByRole('main');
+      await expect(principal).toContainText('pela próxima temporada inteira');
+      await expect(page.getByRole('button', { name: /^Imagem de uma marca/ })).toBeEnabled();
+      await conferirTela(page, 'transicao-fechamento', formato.nome);
+      // Durante o ano (a imagem de uma marca): cachê, marca e legado no painel, com um cartão do papel pendente.
+      await abrirSave(page, SAVES.anoDeTransicao);
+      await expect(page.getByRole('region', { name: 'Lote com defeito' })).toBeVisible();
+      await expect(principal).toContainText('Calçados Passo Largo');
+      await expect(principal).toContainText('Cachê recebido');
+      await conferirTela(page, 'transicao-painel', formato.nome);
+      await irPara(page, 'Fim de semana');
+      await conferirTela(page, 'transicao-fim-de-semana', formato.nome);
+      expect(erros).toEqual([]);
+    });
+
+    test('dirigente com filhos pilotos: o aviso de favorecimento e os parentes no mercado', async ({ page }) => {
+      const erros = vigiarErros(page);
+      // Fechamento do dono da equipe, com dois filhos entre os candidatos.
+      await abrirSave(page, SAVES.dirigenteComFilhoPiloto);
+      await irPara(page, 'Carreira');
+      const principal = page.getByRole('main');
+      await principal.getByRole('tab', { name: 'Pilotos', exact: true }).click();
+      await expect(principal).toContainText(/a imprensa vai falar em favorecimento/);
+      await conferirTela(page, 'dirigente-pilotos-com-filho', formato.nome);
+      // Na segunda geração, quem seguiu pela engenharia aparece no mercado de profissionais, marcado como família.
+      await abrirSave(page, SAVES.segundaGeracaoDonaDeEquipe);
+      await irPara(page, 'Gestão');
+      await principal.getByRole('tab', { name: 'Equipe técnica', exact: true }).click();
+      const engenheiro = principal.getByRole('button', { name: /^Engenheiro-chefe/ });
+      await engenheiro.click();
+      await expect(principal).toContainText(/Olívia Teste · nota \d+/);
+      await expect(principal).toContainText('salário de família');
+      await expect(engenheiro).toHaveAttribute('aria-pressed', 'true');
+      // O print de página inteira muda a altura da janela (e a moldura deitada/em pé): a escolha da
+      // tela não é conferida depois dele.
+      await conferirTela(page, 'gestao-parentes-no-mercado', formato.nome);
+      expect(erros).toEqual([]);
+    });
+
+    test('herdeiro nas pistas: a proposta da equipe da família e os apoios de legado', async ({ page }) => {
+      const erros = vigiarErros(page);
+      await abrirSave(page, SAVES.herdeiroComEquipeDaFamilia);
+      await irPara(page, 'Carreira');
+      const principal = page.getByRole('main');
+      const proposta = principal.getByRole('button', { name: /^Castilla Racing.*Equipe da família/ });
+      await proposta.click();
+      await expect(proposta).toHaveAttribute('aria-pressed', 'true');
+      await expect(principal).toContainText('Equipe da família: a imprensa vai falar em favorecimento');
+      await conferirTela(page, 'propostas-equipe-da-familia', formato.nome);
+      // Os apoios sem meta: a empresa do irmão e a marca do ano de transição.
+      await irPara(page, 'Vida');
+      await principal.getByRole('link', { name: /^Patrocínios/ }).click();
+      await expect(principal).toContainText('Empresa de Nico Teste');
+      await expect(principal).toContainText('Calçados Passo Largo');
+      await conferirTela(page, 'financas-patrocinios-legado', formato.nome);
+      expect(erros).toEqual([]);
+    });
   });
 }
 

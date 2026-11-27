@@ -31,6 +31,22 @@ export const SAVES = {
   /** Saves da versão 9 (Fase 5): o rival do kart de volta nas fórmulas, com o cartão do reencontro pendente; e um cartão com escolha de traço. */
   historiaRival: 'tests/fixtures/v9/historia-rival-do-kart-nas-formulas.json',
   escolhaDeTraco: 'tests/fixtures/v9/cartao-com-escolha-de-traco.json',
+  /**
+   * Saves da versão 10 (Fase 6), todos da mesma família (semente 3): a aposentadoria no meio do ano
+   * e no fechamento, com as propostas do ano de transição; o ano de transição em andamento (embaixador,
+   * com um cartão pendente); os filhos no teste do kart; o dirigente com dois filhos candidatos; a
+   * sucessão com quatro filhos e as vagas; a segunda geração nas pistas e nos negócios; e o herdeiro
+   * no fechamento, com a proposta da equipe da família e os apoios de legado.
+   */
+  aposentadoriaNoMeioDoAno: 'tests/fixtures/v10/aposentadoria-no-meio-do-ano.json',
+  fechamentoComAnoDeTransicao: 'tests/fixtures/v10/fechamento-com-ano-de-transicao.json',
+  anoDeTransicao: 'tests/fixtures/v10/ano-de-transicao-em-andamento.json',
+  filhosNoTesteDoKart: 'tests/fixtures/v10/filhos-no-teste-do-kart.json',
+  dirigenteComFilhoPiloto: 'tests/fixtures/v10/dirigente-com-filho-piloto.json',
+  sucessaoComVariosFilhos: 'tests/fixtures/v10/sucessao-com-varios-filhos.json',
+  segundaGeracao: 'tests/fixtures/v10/dinastia-segunda-geracao.json',
+  herdeiroComEquipeDaFamilia: 'tests/fixtures/v10/herdeiro-com-equipe-da-familia.json',
+  segundaGeracaoDonaDeEquipe: 'tests/fixtures/v10/segunda-geracao-dona-de-equipe.json',
 } as const;
 
 /** Nomes de marcas reais que saves antigos traziam por extenso e que não podem aparecer em tela nenhuma. */
